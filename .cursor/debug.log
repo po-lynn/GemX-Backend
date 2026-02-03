@@ -1,0 +1,6 @@
+{"hypothesisId":"H1","location":"register/route.ts:POST","message":"request parsed","data":{"rawPhone":"09123456789","nameLen":9,"hasPassword":true},"timestamp":1769952771454,"sessionId":"debug-session"}
+{"hypothesisId":"H3","location":"register/route.ts:before signUpEmail","message":"calling signUpEmail","data":{"phone":"+959123456789","email":"user_959123456789@phone.local","name":"Aung Aung","hasPassword":true},"timestamp":1769952771455,"sessionId":"debug-session"}
+{"hypothesisId":"H3","location":"register/route.ts:after signUpEmail","message":"signUpEmail success","data":{"userId":"EI3NsrPZdn8pUXcLtIoubuvkaWNG8HOV"},"timestamp":1769952773065,"sessionId":"debug-session"}
+{"hypothesisId":"H1","location":"register/route.ts:POST","message":"request parsed","data":{"rawPhone":"09123456799","nameLen":11,"hasPassword":true},"timestamp":1769952892587,"sessionId":"debug-session"}
+{"hypothesisId":"H3","location":"register/route.ts:before signUpEmail","message":"calling signUpEmail","data":{"phone":"+959123456799","email":"user_959123456799@phone.local","name":"Maung Maung","hasPassword":true},"timestamp":1769952892589,"sessionId":"debug-session"}
+{"hypothesisId":"H3","location":"register/route.ts:after signUpEmail","message":"signUpEmail success","data":{"userId":"Kt0PapnjHsFSMBIpUK6EVIPYp1GBZX7f"},"timestamp":1769952893998,"sessionId":"debug-session"}
