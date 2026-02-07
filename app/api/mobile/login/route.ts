@@ -41,10 +41,7 @@ export async function POST(req: Request) {
     const email = internalEmailFromPhone(phone);
 
     const result = await auth.api.signInEmail({
-      body: {
-        email,
-        password,
-      },
+      body: { email, password },
     });
 
     return Response.json(result, { status: 200 });
