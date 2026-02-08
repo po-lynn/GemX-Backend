@@ -1,11 +1,17 @@
 import Link from "next/link"
 import { ProductForm } from "@/features/products/components/ProductForm"
-import { getCachedCategories } from "@/features/products/db/cache/products"
+import {
+  getCachedCategoriesTree,
+  getCachedSpeciesByCategoryMap,
+} from "@/features/products/db/cache/products"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
 export default async function AdminProductsNewPage() {
-  const categories = await getCachedCategories()
+  const [categoryTree, speciesByCategory] = await Promise.all([
+    getCachedCategoriesTree(),
+    getCachedSpeciesByCategoryMap(),
+  ])
 
   return (
     <div className="container my-6 space-y-6">
@@ -24,7 +30,12 @@ export default async function AdminProductsNewPage() {
         </div>
       </div>
 
-      <ProductForm mode="create" categories={categories} />
+      <ProductForm
+        key="new"
+        mode="create"
+        categoryTree={categoryTree}
+        speciesByCategory={speciesByCategory}
+      />
     </div>
   )
 }

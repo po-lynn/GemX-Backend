@@ -5,18 +5,29 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookOpen, Package, ReceiptText } from "lucide-react";
+import { LayoutDashboard, BookOpen, Package, ReceiptText, FolderTree, Gem } from "lucide-react";
 
-type Item = {
+type NavItem = {
   href: string;
   label: string;
   icon: React.ElementType;
 };
 
-const items: Item[] = [
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navGroups: (NavItem | NavGroup)[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/courses", label: "Courses", icon: BookOpen },
-  { href: "/admin/products", label: "Products", icon: Package },
+  {
+    label: "Catalog",
+    items: [
+      { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/categories", label: "Categories", icon: FolderTree },
+      { href: "/admin/species", label: "Species", icon: Gem },
+    ],
+  },
   { href: "/admin/sales", label: "Sales", icon: ReceiptText },
 ];
 
@@ -37,11 +48,11 @@ export function AdminSidebar({ className }: { className?: string }) {
           <Image
             src="/ds.png"
             alt="Dandelion logo"
-            width={22}
-            height={22}
+            width={55}
+            height={55}
             className="rounded-md"
           />
-          <span className="font-semibold tracking-tight">Dandelion</span>
+          <span className="font-semibold tracking-tight">GemX Marketplace</span>
         </Link>
         <Badge className="ml-auto rounded-full px-2">Admin</Badge>
       </div>
@@ -53,41 +64,80 @@ export function AdminSidebar({ className }: { className?: string }) {
         </div>
 
         <nav className="space-y-1">
-          {items.map((it) => {
+          {navGroups.map((item) => {
             const isActive = (href: string) => {
               if (href === "/admin") return pathname === "/admin";
               return pathname === href || pathname.startsWith(href + "/");
             };
 
-            const active = isActive(it.href);
-            const Icon = it.icon;
-
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={cn(
-                  "group flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition",
-                  active
-                    ? "bg-accent text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                )}
-              >
-                <Icon
+            if ("href" in item) {
+              const active = isActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
                   className={cn(
-                    "h-4 w-4",
+                    "group flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition",
                     active
-                      ? "text-foreground"
-                      : "text-muted-foreground group-hover:text-foreground"
+                      ? "bg-accent text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   )}
-                />
-                <span className="font-medium">{it.label}</span>
+                >
+                  <Icon
+                    className={cn(
+                      "h-4 w-4",
+                      active
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                  />
+                  <span className="font-medium">{item.label}</span>
+                  {active ? (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                  ) : null}
+                </Link>
+              );
+            }
 
-                {/* subtle active indicator */}
-                {active ? (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
-                ) : null}
-              </Link>
+            const group = item;
+            return (
+              <div key={group.label} className="pt-2 first:pt-0">
+                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </div>
+                <div className="mt-0.5 space-y-0.5">
+                  {group.items.map((it) => {
+                    const active = isActive(it.href);
+                    const Icon = it.icon;
+                    return (
+                      <Link
+                        key={it.href}
+                        href={it.href}
+                        className={cn(
+                          "group flex h-9 items-center gap-3 rounded-lg px-3 pl-4 text-sm transition",
+                          active
+                            ? "bg-accent text-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            active
+                              ? "text-foreground"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          )}
+                        />
+                        <span className="font-medium">{it.label}</span>
+                        {active ? (
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>

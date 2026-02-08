@@ -3,10 +3,15 @@ import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
   getProductById,
-  getAllCategories,
 } from "../products"
 import type { ProductForEdit } from "../products"
-import type { CategoryOption } from "../products"
+import type { CategoryOption, CategoryTreeNode, SpeciesOption } from "../products"
+import {
+  getCachedCategories as getCategories,
+  getCachedCategoriesTree as getCategoriesTree,
+  getCachedSpecies as getSpecies,
+  getCachedSpeciesByCategoryMap as getSpeciesByCategory,
+} from "@/features/categories/db/cache/categories"
 
 export function getProductsGlobalTag() {
   return getGlobalTag("products")
@@ -20,6 +25,10 @@ export function getCategoriesGlobalTag() {
   return getGlobalTag("categories")
 }
 
+export function getSpeciesGlobalTag() {
+  return getGlobalTag("species")
+}
+
 export async function getCachedProduct(id: string): Promise<ProductForEdit | null> {
   "use cache"
   cacheTag(getProductIdTag(id))
@@ -27,9 +36,21 @@ export async function getCachedProduct(id: string): Promise<ProductForEdit | nul
 }
 
 export async function getCachedCategories(): Promise<CategoryOption[]> {
-  "use cache"
-  cacheTag(getCategoriesGlobalTag())
-  return getAllCategories()
+  return getCategories()
+}
+
+export async function getCachedCategoriesTree(): Promise<CategoryTreeNode[]> {
+  return getCategoriesTree()
+}
+
+export async function getCachedSpecies(): Promise<SpeciesOption[]> {
+  return getSpecies()
+}
+
+export async function getCachedSpeciesByCategoryMap(): Promise<
+  Record<string, SpeciesOption[]>
+> {
+  return getSpeciesByCategory()
 }
 
 export async function getAdminProducts(opts: {

@@ -4,11 +4,14 @@ import {
   productCategory,
   productImage,
 } from "@/drizzle/schema/product-schema"
+import { species } from "@/drizzle/schema/category-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
+import type { ProductCreate } from "@/features/products/schemas/products"
 
 export type AdminProductRow = {
   id: string
+  sku: string | null
   title: string
   description: string | null
   price: string
@@ -16,6 +19,8 @@ export type AdminProductRow = {
   categoryId: string | null
   categoryName: string | null
   categorySlug: string | null
+  speciesId: string | null
+  speciesName: string | null
   condition: string | null
   location: string | null
   status: "active" | "sold" | "hidden"
@@ -51,6 +56,7 @@ export async function getAdminProductsFromDb(opts: {
     db
       .select({
         id: product.id,
+        sku: product.sku,
         title: product.title,
         description: product.description,
         price: product.price,
@@ -58,6 +64,8 @@ export async function getAdminProductsFromDb(opts: {
         categoryId: product.categoryId,
         categoryName: productCategory.name,
         categorySlug: productCategory.slug,
+        speciesId: product.speciesId,
+        speciesName: species.name,
         condition: product.condition,
         location: product.location,
         status: product.status,
@@ -70,6 +78,7 @@ export async function getAdminProductsFromDb(opts: {
       })
       .from(product)
       .leftJoin(productCategory, eq(product.categoryId, productCategory.id))
+      .leftJoin(species, eq(product.speciesId, species.id))
       .innerJoin(user, eq(product.sellerId, user.id))
       .where(searchCondition)
       .orderBy(desc(product.createdAt))
@@ -105,6 +114,7 @@ export async function getAdminProductsFromDb(opts: {
 
   const products: AdminProductRow[] = productsData.map((p) => ({
     id: p.id,
+    sku: p.sku,
     title: p.title,
     description: p.description,
     price: String(p.price),
@@ -112,6 +122,8 @@ export async function getAdminProductsFromDb(opts: {
     categoryId: p.categoryId,
     categoryName: p.categoryName,
     categorySlug: p.categorySlug,
+    speciesId: p.speciesId,
+    speciesName: p.speciesName,
     condition: p.condition,
     location: p.location,
     status: p.status,
@@ -131,11 +143,23 @@ export async function getAdminProductsFromDb(opts: {
 
 export type ProductForEdit = {
   id: string
+  sku: string | null
   title: string
   description: string | null
   price: string
   currency: "USD" | "MMK"
+  isNegotiable: boolean
   categoryId: string | null
+  speciesId: string | null
+  weightCarat: string | null
+  dimensions: string | null
+  color: string | null
+  shape: string | null
+  treatment: string | null
+  origin: string | null
+  certLabName: string | null
+  certReportNumber: string | null
+  certReportUrl: string | null
   condition: string | null
   location: string | null
   status: "active" | "sold" | "hidden"
@@ -149,11 +173,23 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
   const [row] = await db
     .select({
       id: product.id,
+      sku: product.sku,
       title: product.title,
       description: product.description,
       price: product.price,
       currency: product.currency,
+      isNegotiable: product.isNegotiable,
       categoryId: product.categoryId,
+      speciesId: product.speciesId,
+      weightCarat: product.weightCarat,
+      dimensions: product.dimensions,
+      color: product.color,
+      shape: product.shape,
+      treatment: product.treatment,
+      origin: product.origin,
+      certLabName: product.certLabName,
+      certReportNumber: product.certReportNumber,
+      certReportUrl: product.certReportUrl,
       condition: product.condition,
       location: product.location,
       status: product.status,
@@ -174,11 +210,23 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
 
   return {
     id: row.id,
+    sku: row.sku,
     title: row.title,
     description: row.description,
     price: String(row.price),
     currency: row.currency,
+    isNegotiable: row.isNegotiable,
     categoryId: row.categoryId,
+    speciesId: row.speciesId,
+    weightCarat: row.weightCarat ? String(row.weightCarat) : null,
+    dimensions: row.dimensions,
+    color: row.color,
+    shape: row.shape,
+    treatment: row.treatment,
+    origin: row.origin,
+    certLabName: row.certLabName,
+    certReportNumber: row.certReportNumber,
+    certReportUrl: row.certReportUrl,
     condition: row.condition,
     location: row.location,
     status: row.status,
@@ -189,46 +237,51 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
   }
 }
 
-export type CategoryOption = { id: string; name: string; slug: string }
+// Re-export category/species types and functions from categories feature
+export type {
+  CategoryOption,
+  CategoryWithParent,
+  CategoryTreeNode,
+  SpeciesOption,
+} from "@/features/categories/db/categories"
+export {
+  getAllCategories,
+  getCategoriesWithParent,
+  getCategoriesTree,
+  getAllSpecies,
+} from "@/features/categories/db/categories"
 
-export async function getAllCategories(): Promise<CategoryOption[]> {
-  const rows = await db
-    .select({
-      id: productCategory.id,
-      name: productCategory.name,
-      slug: productCategory.slug,
-    })
-    .from(productCategory)
-    .orderBy(productCategory.name)
-
-  return rows
-}
-
-export type CreateProductInput = {
-  title: string
-  description?: string | null
-  price: string
-  currency: "USD" | "MMK"
-  categoryId?: string | null
-  condition?: string | null
-  location?: string | null
+export type CreateProductInput = ProductCreate & {
   sellerId: string
-  imageUrls?: string[]
 }
 
 export async function createProductInDb(input: CreateProductInput): Promise<string> {
+  const values: typeof product.$inferInsert = {
+    title: input.title,
+    sku: input.sku ?? null,
+    description: input.description ?? null,
+    price: input.price,
+    currency: input.currency,
+    isNegotiable: input.isNegotiable ?? false,
+    categoryId: input.categoryId ?? null,
+    speciesId: input.speciesId ?? null,
+    weightCarat: input.weightCarat ?? null,
+    dimensions: input.dimensions ?? null,
+    color: input.color ?? null,
+    shape: input.shape ?? null,
+    treatment: input.treatment ?? null,
+    origin: input.origin ?? null,
+    certLabName: input.certLabName ?? null,
+    certReportNumber: input.certReportNumber ?? null,
+    certReportUrl: input.certReportUrl ?? null,
+    condition: input.condition ?? null,
+    location: input.location ?? null,
+    sellerId: input.sellerId,
+  }
+
   const [inserted] = await db
     .insert(product)
-    .values({
-      title: input.title,
-      description: input.description ?? null,
-      price: input.price,
-      currency: input.currency,
-      categoryId: input.categoryId ?? null,
-      condition: input.condition ?? null,
-      location: input.location ?? null,
-      sellerId: input.sellerId,
-    })
+    .values(values)
     .returning({ id: product.id })
 
   const productId = inserted!.id
@@ -249,10 +302,22 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
 
 export type UpdateProductInput = {
   title?: string
+  sku?: string | null
   description?: string | null
   price?: string
   currency?: "USD" | "MMK"
+  isNegotiable?: boolean
   categoryId?: string | null
+  speciesId?: string | null
+  weightCarat?: string | null
+  dimensions?: string | null
+  color?: string | null
+  shape?: string | null
+  treatment?: string | null
+  origin?: string | null
+  certLabName?: string | null
+  certReportNumber?: string | null
+  certReportUrl?: string | null
   condition?: string | null
   location?: string | null
   status?: "active" | "sold" | "hidden"
@@ -269,10 +334,25 @@ export async function updateProductInDb(
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
+  if (rest.sku !== undefined) updates.sku = rest.sku
   if (rest.description !== undefined) updates.description = rest.description
   if (rest.price !== undefined) updates.price = rest.price
   if (rest.currency !== undefined) updates.currency = rest.currency
+  if (rest.isNegotiable !== undefined) updates.isNegotiable = rest.isNegotiable
   if (rest.categoryId !== undefined) updates.categoryId = rest.categoryId
+  if (rest.speciesId !== undefined) updates.speciesId = rest.speciesId
+  if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
+  if (rest.dimensions !== undefined) updates.dimensions = rest.dimensions
+  if (rest.color !== undefined) updates.color = rest.color
+  if (rest.shape !== undefined)
+    updates.shape = rest.shape as (typeof product.$inferInsert)["shape"]
+  if (rest.treatment !== undefined)
+    updates.treatment = rest.treatment as (typeof product.$inferInsert)["treatment"]
+  if (rest.origin !== undefined) updates.origin = rest.origin
+  if (rest.certLabName !== undefined) updates.certLabName = rest.certLabName
+  if (rest.certReportNumber !== undefined)
+    updates.certReportNumber = rest.certReportNumber
+  if (rest.certReportUrl !== undefined) updates.certReportUrl = rest.certReportUrl
   if (rest.condition !== undefined) updates.condition = rest.condition
   if (rest.location !== undefined) updates.location = rest.location
   if (rest.status !== undefined) updates.status = rest.status

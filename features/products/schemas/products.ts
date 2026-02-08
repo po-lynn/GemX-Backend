@@ -28,14 +28,48 @@ export const productFeaturedActionSchema = z.object({
   featured: z.number().int().min(0),
 })
 
+export const productShapeSchema = z.enum([
+  "Oval",
+  "Cushion",
+  "Round",
+  "Pear",
+  "Heart",
+])
+export const productTreatmentSchema = z.enum([
+  "None",
+  "Heated",
+  "Oiled",
+  "Glass Filled",
+])
+
 export const productCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
+  sku: z.string().max(50).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   price: z.string().refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
     message: "Price must be a valid number",
   }),
   currency: currencySchema.default("USD"),
+  isNegotiable: z.coerce.boolean().default(false),
   categoryId: z.string().uuid().optional().nullable(),
+  speciesId: z.string().uuid().optional().nullable(),
+  weightCarat: z
+    .string()
+    .optional()
+    .nullable()
+    .refine(
+      (v) =>
+        !v || v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
+      { message: "Weight must be a valid number" }
+    ),
+  dimensions: z.string().max(100).optional().nullable(),
+  color: z.string().max(100).optional().nullable(),
+  shape: productShapeSchema.optional().nullable(),
+  treatment: productTreatmentSchema.optional().nullable(),
+  origin: z.string().max(200).optional().nullable(),
+  certLabName: z.string().max(100).optional().nullable(),
+  certReportNumber: z.string().max(100).optional().nullable(),
+  certReportUrl: z.string().max(500).optional().nullable(),
   condition: z.string().max(100).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
   imageUrls: z

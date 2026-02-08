@@ -84,15 +84,31 @@ export async function setProductFeatured(formData: FormData) {
   return { success: true }
 }
 
+function emptyToNull<T>(v: T): T | null | undefined {
+  return v === "" ? null : (v ?? undefined)
+}
+
 export async function createProductAction(formData: FormData) {
   const parsed = productCreateSchema.safeParse({
     title: formData.get("title"),
-    description: formData.get("description") || undefined,
+    sku: emptyToNull(formData.get("sku")),
+    description: emptyToNull(formData.get("description")),
     price: formData.get("price"),
     currency: formData.get("currency") || "USD",
-    categoryId: formData.get("categoryId") || undefined,
-    condition: formData.get("condition") || undefined,
-    location: formData.get("location") || undefined,
+    isNegotiable: formData.get("isNegotiable") === "on" || formData.get("isNegotiable") === "true",
+    categoryId: emptyToNull(formData.get("categoryId")),
+    speciesId: emptyToNull(formData.get("speciesId")),
+    weightCarat: emptyToNull(formData.get("weightCarat")),
+    dimensions: emptyToNull(formData.get("dimensions")),
+    color: emptyToNull(formData.get("color")),
+    shape: emptyToNull(formData.get("shape")),
+    treatment: emptyToNull(formData.get("treatment")),
+    origin: emptyToNull(formData.get("origin")),
+    certLabName: emptyToNull(formData.get("certLabName")),
+    certReportNumber: emptyToNull(formData.get("certReportNumber")),
+    certReportUrl: emptyToNull(formData.get("certReportUrl")),
+    condition: emptyToNull(formData.get("condition")),
+    location: emptyToNull(formData.get("location")),
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
@@ -105,7 +121,26 @@ export async function createProductAction(formData: FormData) {
   }
 
   const productId = await createProductInDb({
-    ...parsed.data,
+    title: parsed.data.title,
+    sku: parsed.data.sku,
+    description: parsed.data.description,
+    price: parsed.data.price,
+    currency: parsed.data.currency,
+    isNegotiable: parsed.data.isNegotiable,
+    categoryId: parsed.data.categoryId,
+    speciesId: parsed.data.speciesId,
+    weightCarat: parsed.data.weightCarat,
+    dimensions: parsed.data.dimensions,
+    color: parsed.data.color,
+    shape: parsed.data.shape,
+    treatment: parsed.data.treatment,
+    origin: parsed.data.origin,
+    certLabName: parsed.data.certLabName,
+    certReportNumber: parsed.data.certReportNumber,
+    certReportUrl: parsed.data.certReportUrl,
+    condition: parsed.data.condition,
+    location: parsed.data.location,
+    imageUrls: parsed.data.imageUrls,
     sellerId: session.user.id,
   })
 
@@ -113,21 +148,29 @@ export async function createProductAction(formData: FormData) {
   return { success: true, productId }
 }
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined)
-}
-
 export async function updateProductAction(formData: FormData) {
   const parsed = productUpdateSchema.safeParse({
     productId: formData.get("productId"),
     title: formData.get("title") || undefined,
+    sku: emptyToNull(formData.get("sku")),
     description: emptyToNull(formData.get("description")),
     price: (() => {
       const v = formData.get("price")
       return v === "" ? undefined : v
     })(),
     currency: formData.get("currency") || undefined,
+    isNegotiable: formData.get("isNegotiable") === "on" || formData.get("isNegotiable") === "true",
     categoryId: emptyToNull(formData.get("categoryId")),
+    speciesId: emptyToNull(formData.get("speciesId")),
+    weightCarat: emptyToNull(formData.get("weightCarat")),
+    dimensions: emptyToNull(formData.get("dimensions")),
+    color: emptyToNull(formData.get("color")),
+    shape: emptyToNull(formData.get("shape")),
+    treatment: emptyToNull(formData.get("treatment")),
+    origin: emptyToNull(formData.get("origin")),
+    certLabName: emptyToNull(formData.get("certLabName")),
+    certReportNumber: emptyToNull(formData.get("certReportNumber")),
+    certReportUrl: emptyToNull(formData.get("certReportUrl")),
     condition: emptyToNull(formData.get("condition")),
     location: emptyToNull(formData.get("location")),
     imageUrls: formData.get("imageUrls") || undefined,
@@ -144,10 +187,22 @@ export async function updateProductAction(formData: FormData) {
   const { productId, ...data } = parsed.data
   await updateProductInDb(productId, {
     title: data.title,
+    sku: data.sku,
     description: data.description,
     price: data.price,
     currency: data.currency,
+    isNegotiable: data.isNegotiable,
     categoryId: data.categoryId,
+    speciesId: data.speciesId,
+    weightCarat: data.weightCarat,
+    dimensions: data.dimensions,
+    color: data.color,
+    shape: data.shape,
+    treatment: data.treatment,
+    origin: data.origin,
+    certLabName: data.certLabName,
+    certReportNumber: data.certReportNumber,
+    certReportUrl: data.certReportUrl,
     condition: data.condition,
     location: data.location,
     imageUrls: data.imageUrls,
