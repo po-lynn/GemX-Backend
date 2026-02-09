@@ -109,6 +109,9 @@ export async function createProductAction(formData: FormData) {
     certReportUrl: emptyToNull(formData.get("certReportUrl")),
     condition: emptyToNull(formData.get("condition")),
     location: emptyToNull(formData.get("location")),
+    status: formData.get("status") || undefined,
+    isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    colorGrade: emptyToNull(formData.get("colorGrade")),
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
@@ -140,6 +143,9 @@ export async function createProductAction(formData: FormData) {
     certReportUrl: parsed.data.certReportUrl,
     condition: parsed.data.condition,
     location: parsed.data.location,
+    status: parsed.data.status,
+    isFeatured: parsed.data.isFeatured,
+    colorGrade: parsed.data.colorGrade,
     imageUrls: parsed.data.imageUrls,
     sellerId: session.user.id,
   })
@@ -173,6 +179,9 @@ export async function updateProductAction(formData: FormData) {
     certReportUrl: emptyToNull(formData.get("certReportUrl")),
     condition: emptyToNull(formData.get("condition")),
     location: emptyToNull(formData.get("location")),
+    status: formData.get("status") || undefined,
+    isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    colorGrade: emptyToNull(formData.get("colorGrade")),
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
@@ -205,6 +214,9 @@ export async function updateProductAction(formData: FormData) {
     certReportUrl: data.certReportUrl,
     condition: data.condition,
     location: data.location,
+    status: data.status,
+    isFeatured: data.isFeatured,
+    colorGrade: data.colorGrade,
     imageUrls: data.imageUrls,
   })
 

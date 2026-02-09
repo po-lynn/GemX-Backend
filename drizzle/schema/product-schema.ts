@@ -15,6 +15,7 @@ import { productCategory, species, categorySpecies } from "./category-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
   "active",   // In Stock
+  "archive",  // Archived
   "sold",     // Sold
   "hidden",   // Reserved / hidden
 ]);
@@ -77,7 +78,9 @@ export const product = pgTable(
     moderationStatus: productModerationEnum("moderation_status")
       .notNull()
       .default("pending"),
+    isFeatured: boolean("is_featured").notNull().default(false),
     featured: integer("featured").notNull().default(0), // 0 = not featured, higher = sort order
+    colorGrade: text("color_grade"),
     sellerId: text("seller_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -98,6 +101,8 @@ export const product = pgTable(
     index("product_sku_idx").on(table.sku),
     index("product_weightCarat_idx").on(table.weightCarat),
     index("product_shape_idx").on(table.shape),
+    index("product_isFeatured_idx").on(table.isFeatured),
+    index("product_colorGrade_idx").on(table.colorGrade),
   ]
 );
 

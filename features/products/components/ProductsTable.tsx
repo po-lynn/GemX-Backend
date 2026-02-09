@@ -88,9 +88,11 @@ export function ProductsTable({
                       variant={
                         p.status === "active"
                           ? "default"
-                          : p.status === "sold"
+                          : p.status === "archive"
                             ? "secondary"
-                            : "outline"
+                            : p.status === "sold"
+                              ? "secondary"
+                              : "outline"
                       }
                     >
                       {p.status}
@@ -108,7 +110,7 @@ export function ProductsTable({
                     >
                       {p.moderationStatus}
                     </Badge>
-                    {p.featured > 0 && (
+                    {(p.isFeatured || p.featured > 0) && (
                       <Badge className="ml-1" variant="outline">
                         Featured
                       </Badge>

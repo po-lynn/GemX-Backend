@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const productStatusSchema = z.enum(["active", "sold", "hidden"])
+export const productStatusSchema = z.enum(["active", "archive", "sold", "hidden"])
 export const productModerationSchema = z.enum([
   "pending",
   "approved",
@@ -72,6 +72,9 @@ export const productCreateSchema = z.object({
   certReportUrl: z.string().max(500).optional().nullable(),
   condition: z.string().max(100).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
+  status: productStatusSchema.optional(),
+  isFeatured: z.coerce.boolean().optional(),
+  colorGrade: z.string().max(50).optional().nullable(),
   imageUrls: z
     .string()
     .optional()

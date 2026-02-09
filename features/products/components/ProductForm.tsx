@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
 import type { CategoryTreeNode, SpeciesOption } from "@/features/products/db/products"
@@ -18,8 +19,45 @@ import type { CategoryTreeNode, SpeciesOption } from "@/features/products/db/pro
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-muted/20 p-6">
+      <div className="mb-6 flex items-start gap-4">
+        <div
+          className="mt-0.5 h-8 w-0.5 shrink-0 rounded-full bg-primary/70"
+          aria-hidden
+        />
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          )}
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
+}
+
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
 const TREATMENTS = ["None", "Heated", "Oiled", "Glass Filled"] as const
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
+  { value: "archive", label: "Archive", color: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
+  { value: "sold", label: "Sold", color: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30" },
+  { value: "hidden", label: "Hidden", color: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
+] as const
 
 type Props = {
   mode: "create" | "edit"
@@ -59,6 +97,9 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
 
   const [parentId, setParentId] = useState(initialCategory.parentId)
   const [subcategoryId, setSubcategoryId] = useState(initialCategory.subcategoryId)
+  const [status, setStatus] = useState<"active" | "archive" | "sold" | "hidden">(
+    (product?.status as "active" | "archive" | "sold" | "hidden") ?? "active"
+  )
 
   const parentMap = useMemo(() => {
     const map = new Map<string, CategoryTreeNode>()
@@ -102,18 +143,28 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
     }
   }
 
+  const statusOpt = STATUS_OPTIONS.find((o) => o.value === status)
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEdit ? "Edit Product" : "New Product"}</CardTitle>
-        <CardDescription>
-          {isEdit
-            ? "Update product details"
-            : "Add a new product to the marketplace"}
-        </CardDescription>
+    <Card className="shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-border pb-6">
+        <div>
+          <CardTitle>{isEdit ? "Edit Product" : "New Product"}</CardTitle>
+          <CardDescription>
+            {isEdit
+              ? "Update product details"
+              : "Add a new product to the marketplace"}
+          </CardDescription>
+        </div>
+        <Badge
+          variant="outline"
+          className={`shrink-0 font-medium ${statusOpt?.color ?? ""}`}
+        >
+          {statusOpt?.label ?? status}
+        </Badge>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           {isEdit && (
             <input
               type="hidden"
@@ -122,9 +173,10 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
             />
           )}
 
-          {/* Basic info */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Basic Info</h3>
+          <FormSection
+            title="Basic Info"
+            description="Core product identification and description"
+          >
             <div className="space-y-2">
               <label htmlFor="title" className="text-sm font-medium">
                 Title *
@@ -140,20 +192,19 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 className={inputClass}
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="sku" className="text-sm font-medium">
-                SKU
-              </label>
-              <input
-                id="sku"
-                name="sku"
-                type="text"
-                maxLength={50}
-                defaultValue={product?.sku ?? ""}
-                placeholder="Optional SKU"
-                className={inputClass}
-              />
-            </div>
+            {isEdit && product?.sku && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  SKU
+                </label>
+                <p
+                  className="rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-sm"
+                  aria-label={`SKU: ${product.sku}`}
+                >
+                  {product.sku}
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="description" className="text-sm font-medium">
                 Description
@@ -168,11 +219,12 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 className={inputClass + " min-h-[80px] resize-y"}
               />
             </div>
-          </section>
+          </FormSection>
 
-          {/* Pricing */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Pricing</h3>
+          <FormSection
+            title="Pricing"
+            description="Price, currency, and negotiation options"
+          >
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <label htmlFor="price" className="text-sm font-medium">
@@ -216,11 +268,12 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 </label>
               </div>
             </div>
-          </section>
+          </FormSection>
 
-          {/* Category & Species */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Category & Species</h3>
+          <FormSection
+            title="Category & Species"
+            description="Product classification and taxonomy"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="parentCategoryId" className="text-sm font-medium">
@@ -296,11 +349,12 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
               </div>
             </div>
             <input type="hidden" name="categoryId" value={categoryId} />
-          </section>
+          </FormSection>
 
-          {/* Specifications */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Specifications</h3>
+          <FormSection
+            title="Specifications"
+            description="Physical attributes and gemology details"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="weightCarat" className="text-sm font-medium">
@@ -394,12 +448,67 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                   className={inputClass}
                 />
               </div>
+              <div className="space-y-2">
+                <label htmlFor="colorGrade" className="text-sm font-medium">
+                  Color grade
+                </label>
+                <input
+                  id="colorGrade"
+                  name="colorGrade"
+                  type="text"
+                  maxLength={50}
+                  defaultValue={product?.colorGrade ?? ""}
+                  placeholder="e.g. AAA, Pigeon Blood"
+                  className={inputClass}
+                />
+              </div>
             </div>
-          </section>
+          </FormSection>
 
-          {/* Certification */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Certification</h3>
+          <FormSection
+            title="Status & Visibility"
+            description="Listing status and featured placement"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="status" className="text-sm font-medium">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={status}
+                  onChange={(e) =>
+                    setStatus(e.target.value as "active" | "archive" | "sold" | "hidden")
+                  }
+                  className={inputClass}
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end gap-2 pb-2">
+                <input
+                  id="isFeatured"
+                  name="isFeatured"
+                  type="checkbox"
+                  defaultChecked={product?.isFeatured ?? false}
+                  className="size-4 rounded border-input"
+                />
+                <label htmlFor="isFeatured" className="text-sm font-medium">
+                  Featured
+                </label>
+              </div>
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Certification"
+            description="Lab reports and authenticity documentation"
+          >
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <label htmlFor="certLabName" className="text-sm font-medium">
@@ -442,11 +551,12 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 />
               </div>
             </div>
-          </section>
+          </FormSection>
 
-          {/* Other */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Other</h3>
+          <FormSection
+            title="Other"
+            description="Condition, location, and additional details"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="condition" className="text-sm font-medium">
@@ -477,11 +587,12 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 />
               </div>
             </div>
-          </section>
+          </FormSection>
 
-          {/* Media */}
-          <section className="space-y-4">
-            <h3 className="text-sm font-medium">Images</h3>
+          <FormSection
+            title="Images"
+            description="Product photos and media URLs"
+          >
             <div className="space-y-2">
               <label htmlFor="imageUrls" className="text-sm font-medium">
                 Image URLs
@@ -495,13 +606,15 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
                 className={inputClass + " min-h-[60px] resize-y font-mono text-sm"}
               />
             </div>
-          </section>
+          </FormSection>
 
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3 border-t border-border pt-6">
             <Button type="submit" disabled={loading}>
               {loading ? "Saving..." : isEdit ? "Update" : "Create"}
             </Button>

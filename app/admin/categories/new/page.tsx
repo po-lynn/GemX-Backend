@@ -1,14 +1,16 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CategoryForm } from "@/features/categories/components"
-import { getCachedCategories } from "@/features/categories/db/cache/categories"
-import { getAllSpecies } from "@/features/categories/db/categories"
+import {
+  getCachedCategories,
+  getCachedSpecies,
+} from "@/features/categories/db/cache/categories"
 import { ChevronLeft } from "lucide-react"
 
 export default async function AdminCategoriesNewPage() {
   const [categories, species] = await Promise.all([
     getCachedCategories(),
-    getAllSpecies(),
+    getCachedSpecies(),
   ])
 
   return (

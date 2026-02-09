@@ -20,6 +20,7 @@ type NavGroup = {
 
 const navGroups: (NavItem | NavGroup)[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/credit", label: "Credit", icon: BookOpen },
   {
     label: "Catalog",
     items: [

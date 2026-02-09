@@ -1,4 +1,4 @@
-import { ReactNode } from "react"
+import { ReactNode, Suspense } from "react"
 import AdminNavbarClient from "@/components/admin/AdminNavbarClient"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminSidebarSheet } from "@/components/admin/AdminSidebarSheet"
@@ -33,7 +33,15 @@ export default async function AdminLayout({
 
         {/* IMPORTANT: no mx-auto centering */}
         <main className="w-full px-2 py-4 md:px-3">
-          {children}
+          <Suspense
+            fallback={
+              <div className="container my-6 animate-pulse space-y-4 rounded-lg bg-muted/30 p-6">
+                Loading...
+              </div>
+            }
+          >
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>

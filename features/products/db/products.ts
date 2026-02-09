@@ -23,9 +23,11 @@ export type AdminProductRow = {
   speciesName: string | null
   condition: string | null
   location: string | null
-  status: "active" | "sold" | "hidden"
+  status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
+  isFeatured: boolean
   featured: number
+  colorGrade: string | null
   sellerId: string
   sellerName: string
   sellerPhone: string | null
@@ -70,7 +72,9 @@ export async function getAdminProductsFromDb(opts: {
         location: product.location,
         status: product.status,
         moderationStatus: product.moderationStatus,
+        isFeatured: product.isFeatured,
         featured: product.featured,
+        colorGrade: product.colorGrade,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -128,7 +132,9 @@ export async function getAdminProductsFromDb(opts: {
     location: p.location,
     status: p.status,
     moderationStatus: p.moderationStatus,
+    isFeatured: p.isFeatured,
     featured: p.featured,
+    colorGrade: p.colorGrade,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -162,9 +168,11 @@ export type ProductForEdit = {
   certReportUrl: string | null
   condition: string | null
   location: string | null
-  status: "active" | "sold" | "hidden"
+  status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
+  isFeatured: boolean
   featured: number
+  colorGrade: string | null
   sellerId: string
   imageUrls: string[]
 }
@@ -194,7 +202,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       location: product.location,
       status: product.status,
       moderationStatus: product.moderationStatus,
+      isFeatured: product.isFeatured,
       featured: product.featured,
+      colorGrade: product.colorGrade,
       sellerId: product.sellerId,
     })
     .from(product)
@@ -231,7 +241,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     location: row.location,
     status: row.status,
     moderationStatus: row.moderationStatus,
+    isFeatured: row.isFeatured,
     featured: row.featured,
+    colorGrade: row.colorGrade,
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
   }
@@ -255,10 +267,18 @@ export type CreateProductInput = ProductCreate & {
   sellerId: string
 }
 
+function generateSku(): string {
+  const prefix = "PRD"
+  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()
+  return `${prefix}-${id}`
+}
+
 export async function createProductInDb(input: CreateProductInput): Promise<string> {
+  const sku = input.sku?.trim() ? input.sku.trim() : generateSku()
+
   const values: typeof product.$inferInsert = {
     title: input.title,
-    sku: input.sku ?? null,
+    sku,
     description: input.description ?? null,
     price: input.price,
     currency: input.currency,
@@ -276,6 +296,9 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportUrl: input.certReportUrl ?? null,
     condition: input.condition ?? null,
     location: input.location ?? null,
+    status: input.status ?? "active",
+    isFeatured: input.isFeatured ?? false,
+    colorGrade: input.colorGrade ?? null,
     sellerId: input.sellerId,
   }
 
@@ -320,9 +343,11 @@ export type UpdateProductInput = {
   certReportUrl?: string | null
   condition?: string | null
   location?: string | null
-  status?: "active" | "sold" | "hidden"
+  status?: "active" | "archive" | "sold" | "hidden"
   moderationStatus?: "pending" | "approved" | "rejected"
+  isFeatured?: boolean
   featured?: number
+  colorGrade?: string | null
   imageUrls?: string[]
 }
 
@@ -334,7 +359,12 @@ export async function updateProductInDb(
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
-  if (rest.sku !== undefined) updates.sku = rest.sku
+  if (rest.sku !== undefined) {
+    updates.sku = rest.sku
+  } else {
+    const [row] = await db.select({ sku: product.sku }).from(product).where(eq(product.id, id))
+    if (row && !row.sku) updates.sku = generateSku()
+  }
   if (rest.description !== undefined) updates.description = rest.description
   if (rest.price !== undefined) updates.price = rest.price
   if (rest.currency !== undefined) updates.currency = rest.currency
@@ -358,7 +388,9 @@ export async function updateProductInDb(
   if (rest.status !== undefined) updates.status = rest.status
   if (rest.moderationStatus !== undefined)
     updates.moderationStatus = rest.moderationStatus
+  if (rest.isFeatured !== undefined) updates.isFeatured = rest.isFeatured
   if (rest.featured !== undefined) updates.featured = rest.featured
+  if (rest.colorGrade !== undefined) updates.colorGrade = rest.colorGrade
 
   if (Object.keys(updates).length > 0) {
     await db.update(product).set(updates).where(eq(product.id, id))

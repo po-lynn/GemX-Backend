@@ -1,11 +1,12 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { CategoryForm } from "@/features/categories/components"
 import {
   getCachedCategory,
   getCachedCategories,
+  getCachedSpecies,
 } from "@/features/categories/db/cache/categories"
-import { getAllSpecies } from "@/features/categories/db/categories"
 import { ChevronLeft } from "lucide-react"
 import { notFound } from "next/navigation"
 
@@ -13,13 +14,13 @@ type Props = {
   params: Promise<{ id: string }>
 }
 
-export default async function AdminCategoriesEditPage({ params }: Props) {
+async function AdminCategoriesEditContent({ params }: Props) {
   const { id } = await params
 
   const [category, categories, species] = await Promise.all([
     getCachedCategory(id),
     getCachedCategories(),
-    getAllSpecies(),
+    getCachedSpecies(),
   ])
 
   if (!category) notFound()
@@ -50,5 +51,19 @@ export default async function AdminCategoriesEditPage({ params }: Props) {
         species={species}
       />
     </div>
+  )
+}
+
+export default function AdminCategoriesEditPage(props: Props) {
+  return (
+    <Suspense
+      fallback={
+        <div className="container my-6 animate-pulse space-y-4 rounded-lg bg-muted/30 p-6">
+          Loading...
+        </div>
+      }
+    >
+      <AdminCategoriesEditContent {...props} />
+    </Suspense>
   )
 }
