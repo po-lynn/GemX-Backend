@@ -1,18 +1,9 @@
 import Link from "next/link"
+import { CategoryForm } from "@/features/categories/components/CategoryForm"
 import { Button } from "@/components/ui/button"
-import { CategoryForm } from "@/features/categories/components"
-import {
-  getCachedCategories,
-  getCachedSpecies,
-} from "@/features/categories/db/cache/categories"
 import { ChevronLeft } from "lucide-react"
 
-export default async function AdminCategoriesNewPage() {
-  const [categories, species] = await Promise.all([
-    getCachedCategories(),
-    getCachedSpecies(),
-  ])
-
+export default function AdminCategoriesNewPage() {
   return (
     <div className="container my-6 space-y-6">
       <div className="flex items-center gap-2">
@@ -25,16 +16,12 @@ export default async function AdminCategoriesNewPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">New Category</h1>
           <p className="text-muted-foreground text-sm">
-            Add a root category or subcategory
+            Add a loose stone or jewellery category for products
           </p>
         </div>
       </div>
 
-      <CategoryForm
-        mode="create"
-        parentOptions={categories}
-        species={species}
-      />
+      <CategoryForm mode="create" />
     </div>
   )
 }

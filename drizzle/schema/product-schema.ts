@@ -11,7 +11,7 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
-import { productCategory, species, categorySpecies } from "./category-schema";
+import { category, productTypeEnum } from "./category-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
   "active",   // In Stock
@@ -43,7 +43,7 @@ export const productTreatmentEnum = pgEnum("product_treatment", [
   "Glass Filled",
 ]);
 
-export { productCategory };
+export { productTypeEnum } from "./category-schema";
 
 export const product = pgTable(
   "product",
@@ -55,12 +55,10 @@ export const product = pgTable(
     price: decimal("price", { precision: 14, scale: 2 }).notNull(),
     currency: currencyEnum("currency").notNull().default("USD"),
     isNegotiable: boolean("is_negotiable").notNull().default(false),
-    categoryId: uuid("category_id").references(() => productCategory.id, {
-      onDelete: "set null",
-    }),
-    speciesId: uuid("species_id").references(() => species.id, {
-      onDelete: "set null",
-    }),
+    productType: productTypeEnum("product_type").notNull().default("loose_stone"),
+    categoryId: uuid("category_id").references(() => category.id, { onDelete: "set null" }),
+    materials: text("materials"),
+    qualityGemstones: text("quality_gemstones"),
     // Specifications
     weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }),
     dimensions: text("dimensions"),
@@ -92,8 +90,8 @@ export const product = pgTable(
   },
   (table) => [
     index("product_sellerId_idx").on(table.sellerId),
+    index("product_productType_idx").on(table.productType),
     index("product_categoryId_idx").on(table.categoryId),
-    index("product_speciesId_idx").on(table.speciesId),
     index("product_status_idx").on(table.status),
     index("product_moderationStatus_idx").on(table.moderationStatus),
     index("product_featured_idx").on(table.featured),
@@ -121,21 +119,9 @@ export const productImage = pgTable(
 );
 
 export const productRelations = relations(product, ({ one, many }) => ({
-  category: one(productCategory),
-  species: one(species),
+  category: one(category),
   seller: one(user),
   images: many(productImage),
-}));
-
-export const productCategoryRelations = relations(productCategory, ({ one, many }) => ({
-  parent: one(productCategory, {
-    fields: [productCategory.parentId],
-    references: [productCategory.id],
-    relationName: "categoryParent",
-  }),
-  children: many(productCategory, { relationName: "categoryParent" }),
-  products: many(product),
-  categorySpecies: many(categorySpecies),
 }));
 
 export const productImageRelations = relations(productImage, ({ one }) => ({

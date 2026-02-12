@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, BookOpen, Package, ReceiptText, FolderTree, Gem } from "lucide-react";
+import { LayoutDashboard, BookOpen, Package, ReceiptText, Tags } from "lucide-react";
 
 type NavItem = {
   href: string;
@@ -21,14 +21,8 @@ type NavGroup = {
 const navGroups: (NavItem | NavGroup)[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/credit", label: "Credit", icon: BookOpen },
-  {
-    label: "Catalog",
-    items: [
-      { href: "/admin/products", label: "Products", icon: Package },
-      { href: "/admin/categories", label: "Categories", icon: FolderTree },
-      { href: "/admin/species", label: "Species", icon: Gem },
-    ],
-  },
+  { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/sales", label: "Sales", icon: ReceiptText },
 ];
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
-import type { CategoryTreeNode, SpeciesOption } from "@/features/products/db/products"
 
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
@@ -59,61 +58,28 @@ const STATUS_OPTIONS = [
   { value: "hidden", label: "Hidden", color: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
 ] as const
 
+import type { CategoryRow } from "@/features/categories/db/categories"
+
 type Props = {
   mode: "create" | "edit"
   product?: ProductForEdit | null
-  categoryTree: CategoryTreeNode[]
-  speciesByCategory: Record<string, SpeciesOption[]>
+  categories: CategoryRow[]
 }
 
-function findCategoryInTree(
-  tree: CategoryTreeNode[],
-  id: string
-): { parent: CategoryTreeNode | null; node: CategoryTreeNode } | null {
-  for (const node of tree) {
-    if (node.id === id) return { parent: null, node }
-    for (const child of node.children) {
-      if (child.id === id) return { parent: node, node: child }
-    }
-  }
-  return null
-}
-
-export function ProductForm({ mode, product, categoryTree, speciesByCategory }: Props) {
+export function ProductForm({ mode, product, categories }: Props) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const isEdit = mode === "edit"
 
-  const initialCategory = useMemo(() => {
-    if (!product?.categoryId) return { parentId: "", subcategoryId: "" }
-    const found = findCategoryInTree(categoryTree, product.categoryId)
-    if (!found) return { parentId: "", subcategoryId: "" }
-    return found.parent
-      ? { parentId: found.parent.id, subcategoryId: found.node.id }
-      : { parentId: found.node.id, subcategoryId: "" }
-  }, [product?.categoryId, categoryTree])
-
-  const [parentId, setParentId] = useState(initialCategory.parentId)
-  const [subcategoryId, setSubcategoryId] = useState(initialCategory.subcategoryId)
+  const [productType, setProductType] = useState<"loose_stone" | "jewellery">(
+    product?.productType ?? "loose_stone"
+  )
+  const categoryOptions = categories.filter((c) => c.type === productType)
   const [status, setStatus] = useState<"active" | "archive" | "sold" | "hidden">(
     (product?.status as "active" | "archive" | "sold" | "hidden") ?? "active"
   )
-
-  const parentMap = useMemo(() => {
-    const map = new Map<string, CategoryTreeNode>()
-    for (const node of categoryTree) {
-      map.set(node.id, node)
-    }
-    return map
-  }, [categoryTree])
-
-  const subcategories = parentId ? (parentMap.get(parentId)?.children ?? []) : []
-
-  const categoryId = subcategoryId || parentId || ""
-
-  const availableSpecies = categoryId ? (speciesByCategory[categoryId] ?? []) : []
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -271,84 +237,83 @@ export function ProductForm({ mode, product, categoryTree, speciesByCategory }: 
           </FormSection>
 
           <FormSection
-            title="Category & Species"
-            description="Product classification and taxonomy"
+            title="Product Type & Category"
+            description="Product type (loose stone or jewellery) and category"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="parentCategoryId" className="text-sm font-medium">
-                  Main Category
+                <label htmlFor="productType" className="text-sm font-medium">
+                  Product type
                 </label>
                 <select
-                  id="parentCategoryId"
-                  value={parentId}
-                  onChange={(e) => {
-                    setParentId(e.target.value)
-                    setSubcategoryId("")
-                  }}
-                  className={inputClass}
-                >
-                  <option value="">No category</option>
-                  {categoryTree.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="subcategoryId" className="text-sm font-medium">
-                  Subcategory
-                </label>
-                <select
-                  id="subcategoryId"
-                  value={subcategoryId}
-                  onChange={(e) => setSubcategoryId(e.target.value)}
-                  disabled={!parentId}
-                  className={inputClass}
-                >
-                  <option value="">
-                    {subcategories.length > 0 ? "No subcategory" : "—"}
-                  </option>
-                  {subcategories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="speciesId" className="text-sm font-medium">
-                  Species
-                </label>
-                <select
-                  key={categoryId}
-                  id="speciesId"
-                  name="speciesId"
-                  defaultValue={
-                    availableSpecies.some((s) => s.id === product?.speciesId)
-                      ? (product?.speciesId ?? "")
-                      : ""
+                  id="productType"
+                  name="productType"
+                  value={productType}
+                  onChange={(e) =>
+                    setProductType(e.target.value as "loose_stone" | "jewellery")
                   }
-                  disabled={!categoryId}
+                  className={inputClass}
+                >
+                  <option value="loose_stone">Loose stone</option>
+                  <option value="jewellery">Jewellery</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="categoryId" className="text-sm font-medium">
+                  Category
+                </label>
+                <select
+                  id="categoryId"
+                  name="categoryId"
+                  key={productType}
+                  defaultValue={product?.categoryId ?? ""}
                   className={inputClass}
                 >
                   <option value="">
-                    {availableSpecies.length > 0
-                      ? "No species"
-                      : categoryId
-                        ? "No species configured for this category"
-                        : "Select category first"}
+                    {productType === "loose_stone"
+                      ? "Select stone category"
+                      : "Select jewellery category"}
                   </option>
-                  {availableSpecies.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
+                  {categoryOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
               </div>
+              {productType === "jewellery" && (
+                <>
+                  <div className="space-y-2 sm:col-span-2">
+                    <label htmlFor="materials" className="text-sm font-medium">
+                      Materials (metals)
+                    </label>
+                    <input
+                      id="materials"
+                      name="materials"
+                      type="text"
+                      maxLength={500}
+                      defaultValue={product?.materials ?? ""}
+                      placeholder="e.g. Gold (yellow), Sterling silver"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <label htmlFor="qualityGemstones" className="text-sm font-medium">
+                      Quality / Gemstones
+                    </label>
+                    <input
+                      id="qualityGemstones"
+                      name="qualityGemstones"
+                      type="text"
+                      maxLength={500}
+                      defaultValue={product?.qualityGemstones ?? ""}
+                      placeholder="e.g. Diamonds, Sapphires"
+                      className={inputClass}
+                    />
+                  </div>
+                </>
+              )}
             </div>
-            <input type="hidden" name="categoryId" value={categoryId} />
           </FormSection>
 
           <FormSection

@@ -1,11 +1,8 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ProductForm } from "@/features/products/components/ProductForm"
-import {
-  getCachedProduct,
-  getCachedCategoriesTree,
-  getCachedSpeciesByCategoryMap,
-} from "@/features/products/db/cache/products"
+import { getCachedProduct } from "@/features/products/db/cache/products"
+import { getAllCategories } from "@/features/categories/db/categories"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
@@ -15,10 +12,9 @@ type Props = {
 
 export default async function AdminProductsEditPage({ params }: Props) {
   const { id } = await params
-  const [product, categoryTree, speciesByCategory] = await Promise.all([
+  const [product, categories] = await Promise.all([
     getCachedProduct(id),
-    getCachedCategoriesTree(),
-    getCachedSpeciesByCategoryMap(),
+    getAllCategories(),
   ])
 
   if (!product) notFound()
@@ -40,13 +36,7 @@ export default async function AdminProductsEditPage({ params }: Props) {
         </div>
       </div>
 
-      <ProductForm
-          key={product.id}
-          mode="edit"
-          product={product}
-          categoryTree={categoryTree}
-          speciesByCategory={speciesByCategory}
-        />
+      <ProductForm key={product.id} mode="edit" product={product} categories={categories} />
     </div>
   )
 }

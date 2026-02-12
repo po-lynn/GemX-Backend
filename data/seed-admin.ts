@@ -9,9 +9,9 @@ import "dotenv/config"
 import { auth } from "@/lib/auth"
 
 const ADMIN_EMAIL =
-  process.env.ADMIN_EMAIL ?? "admin@gemx.local"
+  process.env.ADMIN_EMAIL ?? "admin@gemx.com"
 const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ?? "admin-change-me"
+  process.env.ADMIN_PASSWORD ?? "gemx@2026"
 const ADMIN_NAME = process.env.ADMIN_NAME ?? "Admin"
 
 async function main() {

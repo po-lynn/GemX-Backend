@@ -11,10 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "seed:species": "tsx data/seed-species.ts",
-    "seed:categories": "tsx data/seed-categories.ts",
-    "seed:admin": "tsx data/seed-admin.ts",
-    "seed:all": "tsx data/seed-species.ts && tsx data/seed-categories.ts"
+    "seed:admin": "tsx data/seed-admin.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

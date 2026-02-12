@@ -15,7 +15,12 @@ export const user = pgTable("user", {
   username: text("username").unique(),
   displayUsername: text("display_username"),
   role: text("role").notNull(),
+  nrc: text("nrc"),
+  address: text("address"),
   phone: text("phone"),
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
 });
 
 export const session = pgTable(

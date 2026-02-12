@@ -1,10 +1,6 @@
 import { db } from "@/drizzle/db"
-import {
-  product,
-  productCategory,
-  productImage,
-} from "@/drizzle/schema/product-schema"
-import { species } from "@/drizzle/schema/category-schema"
+import { product, productImage } from "@/drizzle/schema/product-schema"
+import { category } from "@/drizzle/schema/category-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
 import type { ProductCreate } from "@/features/products/schemas/products"
@@ -16,11 +12,11 @@ export type AdminProductRow = {
   description: string | null
   price: string
   currency: "USD" | "MMK"
+  productType: "loose_stone" | "jewellery"
   categoryId: string | null
   categoryName: string | null
-  categorySlug: string | null
-  speciesId: string | null
-  speciesName: string | null
+  materials: string | null
+  qualityGemstones: string | null
   condition: string | null
   location: string | null
   status: "active" | "archive" | "sold" | "hidden"
@@ -63,11 +59,11 @@ export async function getAdminProductsFromDb(opts: {
         description: product.description,
         price: product.price,
         currency: product.currency,
+        productType: product.productType,
         categoryId: product.categoryId,
-        categoryName: productCategory.name,
-        categorySlug: productCategory.slug,
-        speciesId: product.speciesId,
-        speciesName: species.name,
+        categoryName: category.name,
+        materials: product.materials,
+        qualityGemstones: product.qualityGemstones,
         condition: product.condition,
         location: product.location,
         status: product.status,
@@ -81,9 +77,8 @@ export async function getAdminProductsFromDb(opts: {
         createdAt: product.createdAt,
       })
       .from(product)
-      .leftJoin(productCategory, eq(product.categoryId, productCategory.id))
-      .leftJoin(species, eq(product.speciesId, species.id))
       .innerJoin(user, eq(product.sellerId, user.id))
+      .leftJoin(category, eq(product.categoryId, category.id))
       .where(searchCondition)
       .orderBy(desc(product.createdAt))
       .limit(limit)
@@ -123,11 +118,11 @@ export async function getAdminProductsFromDb(opts: {
     description: p.description,
     price: String(p.price),
     currency: p.currency,
+    productType: p.productType,
     categoryId: p.categoryId,
-    categoryName: p.categoryName,
-    categorySlug: p.categorySlug,
-    speciesId: p.speciesId,
-    speciesName: p.speciesName,
+    categoryName: p.categoryName ?? null,
+    materials: p.materials,
+    qualityGemstones: p.qualityGemstones,
     condition: p.condition,
     location: p.location,
     status: p.status,
@@ -155,8 +150,10 @@ export type ProductForEdit = {
   price: string
   currency: "USD" | "MMK"
   isNegotiable: boolean
+  productType: "loose_stone" | "jewellery"
   categoryId: string | null
-  speciesId: string | null
+  materials: string | null
+  qualityGemstones: string | null
   weightCarat: string | null
   dimensions: string | null
   color: string | null
@@ -187,8 +184,10 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       price: product.price,
       currency: product.currency,
       isNegotiable: product.isNegotiable,
+      productType: product.productType,
       categoryId: product.categoryId,
-      speciesId: product.speciesId,
+      materials: product.materials,
+      qualityGemstones: product.qualityGemstones,
       weightCarat: product.weightCarat,
       dimensions: product.dimensions,
       color: product.color,
@@ -226,8 +225,10 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     price: String(row.price),
     currency: row.currency,
     isNegotiable: row.isNegotiable,
+    productType: row.productType,
     categoryId: row.categoryId,
-    speciesId: row.speciesId,
+    materials: row.materials,
+    qualityGemstones: row.qualityGemstones,
     weightCarat: row.weightCarat ? String(row.weightCarat) : null,
     dimensions: row.dimensions,
     color: row.color,
@@ -249,22 +250,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
   }
 }
 
-// Re-export category/species types and functions from categories feature
-export type {
-  CategoryOption,
-  CategoryWithParent,
-  CategoryTreeNode,
-  SpeciesOption,
-} from "@/features/categories/db/categories"
-export {
-  getAllCategories,
-  getCategoriesWithParent,
-  getCategoriesTree,
-  getAllSpecies,
-} from "@/features/categories/db/categories"
-
 export type CreateProductInput = ProductCreate & {
   sellerId: string
+  categoryId?: string | null
 }
 
 function generateSku(): string {
@@ -283,8 +271,10 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     price: input.price,
     currency: input.currency,
     isNegotiable: input.isNegotiable ?? false,
+    productType: input.productType ?? "loose_stone",
     categoryId: input.categoryId ?? null,
-    speciesId: input.speciesId ?? null,
+    materials: input.materials ?? null,
+    qualityGemstones: input.qualityGemstones ?? null,
     weightCarat: input.weightCarat ?? null,
     dimensions: input.dimensions ?? null,
     color: input.color ?? null,
@@ -330,8 +320,10 @@ export type UpdateProductInput = {
   price?: string
   currency?: "USD" | "MMK"
   isNegotiable?: boolean
+  productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
-  speciesId?: string | null
+  materials?: string | null
+  qualityGemstones?: string | null
   weightCarat?: string | null
   dimensions?: string | null
   color?: string | null
@@ -369,8 +361,10 @@ export async function updateProductInDb(
   if (rest.price !== undefined) updates.price = rest.price
   if (rest.currency !== undefined) updates.currency = rest.currency
   if (rest.isNegotiable !== undefined) updates.isNegotiable = rest.isNegotiable
+  if (rest.productType !== undefined) updates.productType = rest.productType
   if (rest.categoryId !== undefined) updates.categoryId = rest.categoryId
-  if (rest.speciesId !== undefined) updates.speciesId = rest.speciesId
+  if (rest.materials !== undefined) updates.materials = rest.materials
+  if (rest.qualityGemstones !== undefined) updates.qualityGemstones = rest.qualityGemstones
   if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
   if (rest.dimensions !== undefined) updates.dimensions = rest.dimensions
   if (rest.color !== undefined) updates.color = rest.color

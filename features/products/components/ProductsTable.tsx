@@ -25,7 +25,7 @@ export function ProductsTable({
           <thead>
             <tr className="border-b">
               <th className="h-10 px-4 text-left font-medium">Product</th>
-              <th className="h-10 px-4 text-left font-medium">Category</th>
+              <th className="h-10 px-4 text-left font-medium">Type</th>
               <th className="h-10 px-4 text-left font-medium">Price</th>
               <th className="h-10 px-4 text-left font-medium">Status</th>
               <th className="h-10 px-4 text-left font-medium">Moderation</th>
@@ -69,16 +69,16 @@ export function ProductsTable({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    {p.categoryName ? (
-                      <Link
-                        href={`/admin/products?search=${encodeURIComponent(p.categoryName)}`}
-                        className="text-primary hover:underline"
-                      >
-                        {p.categoryName}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
+                    <span className="capitalize">
+                      {p.productType === "loose_stone" ? "Loose stone" : "Jewellery"}
+                      {p.categoryName ? ` / ${p.categoryName}` : ""}
+                    </span>
+                    {p.productType === "jewellery" &&
+                      (p.materials || p.qualityGemstones) && (
+                        <div className="text-muted-foreground text-xs mt-0.5">
+                          {[p.materials, p.qualityGemstones].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
                   </td>
                   <td className="px-4 py-3">
                     {formatPriceWithCurrency(Number(p.price), p.currency)}

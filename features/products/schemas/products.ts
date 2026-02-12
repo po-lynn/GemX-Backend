@@ -51,8 +51,10 @@ export const productCreateSchema = z.object({
   }),
   currency: currencySchema.default("USD"),
   isNegotiable: z.coerce.boolean().default(false),
+  productType: z.enum(["loose_stone", "jewellery"]).default("loose_stone"),
   categoryId: z.string().uuid().optional().nullable(),
-  speciesId: z.string().uuid().optional().nullable(),
+  materials: z.string().max(500).optional().nullable(),
+  qualityGemstones: z.string().max(500).optional().nullable(),
   weightCarat: z
     .string()
     .optional()

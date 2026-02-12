@@ -1,27 +1,17 @@
 import Link from "next/link"
-import { Suspense } from "react"
-import { Button } from "@/components/ui/button"
-import { CategoryForm } from "@/features/categories/components"
-import {
-  getCachedCategory,
-  getCachedCategories,
-  getCachedSpecies,
-} from "@/features/categories/db/cache/categories"
-import { ChevronLeft } from "lucide-react"
 import { notFound } from "next/navigation"
+import { CategoryForm } from "@/features/categories/components/CategoryForm"
+import { getCategoryById } from "@/features/categories/db/categories"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft } from "lucide-react"
 
 type Props = {
   params: Promise<{ id: string }>
 }
 
-async function AdminCategoriesEditContent({ params }: Props) {
+export default async function AdminCategoriesEditPage({ params }: Props) {
   const { id } = await params
-
-  const [category, categories, species] = await Promise.all([
-    getCachedCategory(id),
-    getCachedCategories(),
-    getCachedSpecies(),
-  ])
+  const category = await getCategoryById(id)
 
   if (!category) notFound()
 
@@ -35,35 +25,12 @@ async function AdminCategoriesEditContent({ params }: Props) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Edit Category
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Update {category.name}
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">Edit Category</h1>
+          <p className="text-muted-foreground text-sm">{category.name}</p>
         </div>
       </div>
 
-      <CategoryForm
-        mode="edit"
-        category={category}
-        parentOptions={categories}
-        species={species}
-      />
+      <CategoryForm mode="edit" category={category} />
     </div>
-  )
-}
-
-export default function AdminCategoriesEditPage(props: Props) {
-  return (
-    <Suspense
-      fallback={
-        <div className="container my-6 animate-pulse space-y-4 rounded-lg bg-muted/30 p-6">
-          Loading...
-        </div>
-      }
-    >
-      <AdminCategoriesEditContent {...props} />
-    </Suspense>
   )
 }

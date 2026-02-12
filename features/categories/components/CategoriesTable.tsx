@@ -1,97 +1,88 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import type { CategoryRow } from "@/features/categories/db/categories"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { CategoryTreeNode } from "@/features/categories/db/categories"
-import { deleteCategoryAction } from "@/features/categories/actions/categories"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil } from "lucide-react"
 
 type Props = {
-  categories: CategoryTreeNode[]
-}
-
-function CategoryRow({
-  router,
-  node,
-  depth,
-}: {
-  router: ReturnType<typeof useRouter>
-  node: CategoryTreeNode
-  depth: number
-}) {
-  async function handleDelete() {
-    if (!confirm(`Delete "${node.name}" and all subcategories?`)) return
-    const form = new FormData()
-    form.set("categoryId", node.id)
-    const result = await deleteCategoryAction(form)
-    if (result?.error) {
-      alert(result.error)
-    } else {
-      router.refresh()
-    }
-  }
-
-  return (
-    <>
-      <tr className="border-b transition-colors hover:bg-muted/50">
-        <td className="px-4 py-3" style={{ paddingLeft: `${depth * 20 + 16}px` }}>
-          <span className="font-medium">{node.name}</span>
-          <span className="ml-2 text-muted-foreground text-sm">
-            /{node.slug}
-          </span>
-        </td>
-        <td className="px-4 py-3 text-muted-foreground text-sm">
-          {node.isLeaf ? "Leaf" : `${node.children.length} subcategories`}
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href={`/admin/categories/${node.id}/edit`}>
-                <Pencil className="size-4" />
-                <span className="sr-only">Edit</span>
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="size-4" />
-              <span className="sr-only">Delete</span>
-            </Button>
-          </div>
-        </td>
-      </tr>
-      {node.children.map((child) => (
-        <CategoryRow
-          key={child.id}
-          router={router}
-          node={child}
-          depth={depth + 1}
-        />
-      ))}
-    </>
-  )
+  categories: CategoryRow[]
 }
 
 export function CategoriesTable({ categories }: Props) {
-  const router = useRouter()
+  const loose = categories.filter((c) => c.type === "loose_stone")
+  const jewellery = categories.filter((c) => c.type === "jewellery")
+
   return (
-    <table className="w-full">
-      <thead>
-        <tr className="border-b">
-          <th className="px-4 py-3 text-left text-sm font-medium">Category</th>
-          <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-          <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {categories.map((node) => (
-          <CategoryRow key={node.id} router={router} node={node} depth={0} />
-        ))}
-      </tbody>
-    </table>
+    <div className="rounded-xl border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Type</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Slug</TableHead>
+            <TableHead className="w-24 text-right">Order</TableHead>
+            <TableHead className="w-20" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loose.length === 0 && jewellery.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-muted-foreground text-center py-8">
+                No categories yet. Add one to use in products.
+              </TableCell>
+            </TableRow>
+          ) : (
+            <>
+              {loose.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Badge variant="secondary">Loose stone</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-sm">{c.slug}</TableCell>
+                  <TableCell className="text-right">{c.sortOrder}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href={`/admin/categories/${c.id}/edit`}>
+                        <Pencil className="size-4" />
+                        <span className="sr-only">Edit</span>
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {jewellery.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Badge variant="outline">Jewellery</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-sm">{c.slug}</TableCell>
+                  <TableCell className="text-right">{c.sortOrder}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href={`/admin/categories/${c.id}/edit`}>
+                        <Pencil className="size-4" />
+                        <span className="sr-only">Edit</span>
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

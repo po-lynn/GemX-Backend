@@ -9,7 +9,12 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: { type: "string", required: true },
+      nrc: { type: "string", required: false, defaultValue: null },
+      address: { type: "string", required: false, defaultValue: null },
       phone: { type: "string", required: false, defaultValue: null },
+      city: { type: "string", required: false, defaultValue: null },
+      state: { type: "string", required: false, defaultValue: null },
+      country: { type: "string", required: false, defaultValue: null },
     },
   },
   plugins: [username(), bearer()],
