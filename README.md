@@ -1,4 +1,6 @@
- npm run db:generate
+npm run db:generate
+
+npm run db:push
 
 2. npm run db:migrate
 npm run db:studio
