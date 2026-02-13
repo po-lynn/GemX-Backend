@@ -1,9 +1,17 @@
 import { db } from "@/drizzle/db"
-import { product, productImage } from "@/drizzle/schema/product-schema"
+import { product, productImage, productJewelleryGemstone } from "@/drizzle/schema/product-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
 import type { ProductCreate } from "@/features/products/schemas/products"
+import type { GemstoneSpec } from "@/features/products/schemas/gemstone-spec"
+
+/** Same spec shape as loose stone; used for jewellery piece gemstones (with categoryId/categoryName). */
+export type JewelleryGemstoneRow = GemstoneSpec & {
+  categoryId: string
+  categoryName: string
+  weightCarat: string
+}
 
 export type AdminProductRow = {
   id: string
@@ -15,6 +23,8 @@ export type AdminProductRow = {
   productType: "loose_stone" | "jewellery"
   categoryId: string | null
   categoryName: string | null
+  stoneCut: "Faceted" | "Cabochon" | null
+  metal: "Gold" | "Silver" | "Other" | null
   materials: string | null
   qualityGemstones: string | null
   condition: string | null
@@ -23,7 +33,6 @@ export type AdminProductRow = {
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
-  colorGrade: string | null
   sellerId: string
   sellerName: string
   sellerPhone: string | null
@@ -62,6 +71,8 @@ export async function getAdminProductsFromDb(opts: {
         productType: product.productType,
         categoryId: product.categoryId,
         categoryName: category.name,
+        stoneCut: product.stoneCut,
+        metal: product.metal,
         materials: product.materials,
         qualityGemstones: product.qualityGemstones,
         condition: product.condition,
@@ -70,7 +81,6 @@ export async function getAdminProductsFromDb(opts: {
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
         featured: product.featured,
-        colorGrade: product.colorGrade,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -121,6 +131,8 @@ export async function getAdminProductsFromDb(opts: {
     productType: p.productType,
     categoryId: p.categoryId,
     categoryName: p.categoryName ?? null,
+    stoneCut: p.stoneCut,
+    metal: p.metal,
     materials: p.materials,
     qualityGemstones: p.qualityGemstones,
     condition: p.condition,
@@ -129,7 +141,6 @@ export async function getAdminProductsFromDb(opts: {
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featured: p.featured,
-    colorGrade: p.colorGrade,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -152,8 +163,11 @@ export type ProductForEdit = {
   isNegotiable: boolean
   productType: "loose_stone" | "jewellery"
   categoryId: string | null
+  stoneCut: "Faceted" | "Cabochon" | null
+  metal: "Gold" | "Silver" | "Other" | null
   materials: string | null
   qualityGemstones: string | null
+  jewelleryGemstones: JewelleryGemstoneRow[]
   weightCarat: string | null
   dimensions: string | null
   color: string | null
@@ -162,6 +176,7 @@ export type ProductForEdit = {
   origin: string | null
   certLabName: string | null
   certReportNumber: string | null
+  certReportDate: string | null
   certReportUrl: string | null
   condition: string | null
   location: string | null
@@ -169,7 +184,6 @@ export type ProductForEdit = {
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
-  colorGrade: string | null
   sellerId: string
   imageUrls: string[]
 }
@@ -186,6 +200,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       isNegotiable: product.isNegotiable,
       productType: product.productType,
       categoryId: product.categoryId,
+      stoneCut: product.stoneCut,
+      metal: product.metal,
       materials: product.materials,
       qualityGemstones: product.qualityGemstones,
       weightCarat: product.weightCarat,
@@ -196,6 +212,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       origin: product.origin,
       certLabName: product.certLabName,
       certReportNumber: product.certReportNumber,
+      certReportDate: product.certReportDate,
       certReportUrl: product.certReportUrl,
       condition: product.condition,
       location: product.location,
@@ -203,7 +220,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
       featured: product.featured,
-      colorGrade: product.colorGrade,
       sellerId: product.sellerId,
     })
     .from(product)
@@ -211,11 +227,52 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
 
   if (!row) return null
 
-  const images = await db
-    .select({ url: productImage.url })
-    .from(productImage)
-    .where(eq(productImage.productId, id))
-    .orderBy(productImage.sortOrder)
+  const [images, gemstoneRows] = await Promise.all([
+    db
+      .select({ url: productImage.url })
+      .from(productImage)
+      .where(eq(productImage.productId, id))
+      .orderBy(productImage.sortOrder),
+    db
+      .select({
+        categoryId: productJewelleryGemstone.categoryId,
+        categoryName: category.name,
+        weightCarat: productJewelleryGemstone.weightCarat,
+        dimensions: productJewelleryGemstone.dimensions,
+        color: productJewelleryGemstone.color,
+        shape: productJewelleryGemstone.shape,
+        treatment: productJewelleryGemstone.treatment,
+        origin: productJewelleryGemstone.origin,
+        cut: productJewelleryGemstone.cut,
+        transparency: productJewelleryGemstone.transparency,
+        comment: productJewelleryGemstone.comment,
+        inclusions: productJewelleryGemstone.inclusions,
+        certReportNumber: productJewelleryGemstone.certReportNumber,
+        certReportDate: productJewelleryGemstone.certReportDate,
+        certLabName: productJewelleryGemstone.certLabName,
+      })
+      .from(productJewelleryGemstone)
+      .innerJoin(category, eq(productJewelleryGemstone.categoryId, category.id))
+      .where(eq(productJewelleryGemstone.productId, id)),
+  ])
+
+  const jewelleryGemstones: JewelleryGemstoneRow[] = gemstoneRows.map((g) => ({
+    categoryId: g.categoryId,
+    categoryName: g.categoryName,
+    weightCarat: String(g.weightCarat),
+    dimensions: g.dimensions ?? null,
+    color: g.color ?? null,
+    shape: g.shape ?? null,
+    treatment: g.treatment ?? null,
+    origin: g.origin ?? null,
+    cut: g.cut ?? null,
+    transparency: g.transparency ?? null,
+    comment: g.comment ?? null,
+    inclusions: g.inclusions ?? null,
+    certReportNumber: g.certReportNumber ?? null,
+    certReportDate: g.certReportDate ?? null,
+    certLabName: g.certLabName ?? null,
+  }))
 
   return {
     id: row.id,
@@ -227,8 +284,11 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     isNegotiable: row.isNegotiable,
     productType: row.productType,
     categoryId: row.categoryId,
+    stoneCut: row.stoneCut,
+    metal: row.metal,
     materials: row.materials,
     qualityGemstones: row.qualityGemstones,
+    jewelleryGemstones,
     weightCarat: row.weightCarat ? String(row.weightCarat) : null,
     dimensions: row.dimensions,
     color: row.color,
@@ -237,6 +297,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     origin: row.origin,
     certLabName: row.certLabName,
     certReportNumber: row.certReportNumber,
+    certReportDate: row.certReportDate ?? null,
     certReportUrl: row.certReportUrl,
     condition: row.condition,
     location: row.location,
@@ -244,7 +305,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
     featured: row.featured,
-    colorGrade: row.colorGrade,
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
   }
@@ -273,6 +333,8 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     isNegotiable: input.isNegotiable ?? false,
     productType: input.productType ?? "loose_stone",
     categoryId: input.categoryId ?? null,
+    stoneCut: input.stoneCut ?? null,
+    metal: input.metal ?? null,
     materials: input.materials ?? null,
     qualityGemstones: input.qualityGemstones ?? null,
     weightCarat: input.weightCarat ?? null,
@@ -283,12 +345,12 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     origin: input.origin ?? null,
     certLabName: input.certLabName ?? null,
     certReportNumber: input.certReportNumber ?? null,
+    certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
     condition: input.condition ?? null,
     location: input.location ?? null,
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
-    colorGrade: input.colorGrade ?? null,
     sellerId: input.sellerId,
   }
 
@@ -310,6 +372,29 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     )
   }
 
+  const gemstones = input.jewelleryGemstones ?? []
+  if (gemstones.length > 0) {
+    await db.insert(productJewelleryGemstone).values(
+      gemstones.map((g) => ({
+        productId,
+        categoryId: g.categoryId,
+        weightCarat: g.weightCarat,
+        dimensions: g.dimensions ?? null,
+        color: g.color ?? null,
+        shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
+        treatment: (g.treatment as (typeof productJewelleryGemstone.$inferInsert)["treatment"]) ?? null,
+        origin: g.origin ?? null,
+        cut: g.cut ?? null,
+        transparency: g.transparency ?? null,
+        comment: g.comment ?? null,
+        inclusions: g.inclusions ?? null,
+        certReportNumber: g.certReportNumber ?? null,
+        certReportDate: g.certReportDate ?? null,
+        certLabName: g.certLabName ?? null,
+      }))
+    )
+  }
+
   return productId
 }
 
@@ -322,8 +407,26 @@ export type UpdateProductInput = {
   isNegotiable?: boolean
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
+  stoneCut?: "Faceted" | "Cabochon" | null
+  metal?: "Gold" | "Silver" | "Other" | null
   materials?: string | null
   qualityGemstones?: string | null
+  jewelleryGemstones?: {
+    categoryId: string
+    weightCarat: string
+    dimensions?: string | null
+    color?: string | null
+    shape?: string | null
+    treatment?: string | null
+    origin?: string | null
+    cut?: string | null
+    transparency?: string | null
+    comment?: string | null
+    inclusions?: string | null
+    certReportNumber?: string | null
+    certReportDate?: string | null
+    certLabName?: string | null
+  }[]
   weightCarat?: string | null
   dimensions?: string | null
   color?: string | null
@@ -332,6 +435,7 @@ export type UpdateProductInput = {
   origin?: string | null
   certLabName?: string | null
   certReportNumber?: string | null
+  certReportDate?: string | null
   certReportUrl?: string | null
   condition?: string | null
   location?: string | null
@@ -339,7 +443,6 @@ export type UpdateProductInput = {
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
   featured?: number
-  colorGrade?: string | null
   imageUrls?: string[]
 }
 
@@ -347,7 +450,7 @@ export async function updateProductInDb(
   id: string,
   input: UpdateProductInput
 ): Promise<void> {
-  const { imageUrls, ...rest } = input
+  const { imageUrls, jewelleryGemstones, ...rest } = input
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
@@ -363,6 +466,8 @@ export async function updateProductInDb(
   if (rest.isNegotiable !== undefined) updates.isNegotiable = rest.isNegotiable
   if (rest.productType !== undefined) updates.productType = rest.productType
   if (rest.categoryId !== undefined) updates.categoryId = rest.categoryId
+  if (rest.stoneCut !== undefined) updates.stoneCut = rest.stoneCut
+  if (rest.metal !== undefined) updates.metal = rest.metal
   if (rest.materials !== undefined) updates.materials = rest.materials
   if (rest.qualityGemstones !== undefined) updates.qualityGemstones = rest.qualityGemstones
   if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
@@ -376,6 +481,7 @@ export async function updateProductInDb(
   if (rest.certLabName !== undefined) updates.certLabName = rest.certLabName
   if (rest.certReportNumber !== undefined)
     updates.certReportNumber = rest.certReportNumber
+  if (rest.certReportDate !== undefined) updates.certReportDate = rest.certReportDate
   if (rest.certReportUrl !== undefined) updates.certReportUrl = rest.certReportUrl
   if (rest.condition !== undefined) updates.condition = rest.condition
   if (rest.location !== undefined) updates.location = rest.location
@@ -384,10 +490,34 @@ export async function updateProductInDb(
     updates.moderationStatus = rest.moderationStatus
   if (rest.isFeatured !== undefined) updates.isFeatured = rest.isFeatured
   if (rest.featured !== undefined) updates.featured = rest.featured
-  if (rest.colorGrade !== undefined) updates.colorGrade = rest.colorGrade
 
   if (Object.keys(updates).length > 0) {
     await db.update(product).set(updates).where(eq(product.id, id))
+  }
+
+  if (jewelleryGemstones !== undefined) {
+    await db.delete(productJewelleryGemstone).where(eq(productJewelleryGemstone.productId, id))
+    if (jewelleryGemstones.length > 0) {
+      await db.insert(productJewelleryGemstone).values(
+        jewelleryGemstones.map((g) => ({
+          productId: id,
+          categoryId: g.categoryId,
+          weightCarat: g.weightCarat,
+          dimensions: g.dimensions ?? null,
+          color: g.color ?? null,
+          shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
+          treatment: (g.treatment as (typeof productJewelleryGemstone.$inferInsert)["treatment"]) ?? null,
+          origin: g.origin ?? null,
+          cut: g.cut ?? null,
+          transparency: g.transparency ?? null,
+          comment: g.comment ?? null,
+          inclusions: g.inclusions ?? null,
+          certReportNumber: g.certReportNumber ?? null,
+          certReportDate: g.certReportDate ?? null,
+          certLabName: g.certLabName ?? null,
+        }))
+      )
+    }
   }
 
   if (imageUrls !== undefined) {

@@ -72,6 +72,8 @@ export function ProductsTable({
                     <span className="capitalize">
                       {p.productType === "loose_stone" ? "Loose stone" : "Jewellery"}
                       {p.categoryName ? ` / ${p.categoryName}` : ""}
+                      {p.productType === "loose_stone" && p.stoneCut ? ` / ${p.stoneCut}` : ""}
+                      {p.productType === "jewellery" && p.metal ? ` / ${p.metal}` : ""}
                     </span>
                     {p.productType === "jewellery" &&
                       (p.materials || p.qualityGemstones) && (

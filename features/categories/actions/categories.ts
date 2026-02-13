@@ -18,12 +18,9 @@ function toSlug(s: string): string {
 }
 
 export async function createCategoryAction(formData: FormData) {
-  const name = formData.get("name")?.toString() ?? ""
-  const slugInput = formData.get("slug")?.toString()?.trim()
   const parsed = categoryCreateSchema.safeParse({
     type: formData.get("type"),
-    name,
-    slug: slugInput ? toSlug(slugInput) : toSlug(name),
+    name: formData.get("name"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
@@ -36,7 +33,10 @@ export async function createCategoryAction(formData: FormData) {
   }
 
   try {
-    await createCategoryInDb(parsed.data)
+    await createCategoryInDb({
+      ...parsed.data,
+      slug: toSlug(parsed.data.name),
+    })
     return { success: true }
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to create category"
@@ -45,13 +45,10 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function updateCategoryAction(formData: FormData) {
-  const name = formData.get("name")?.toString() ?? ""
-  const slugInput = formData.get("slug")?.toString()?.trim()
   const parsed = categoryUpdateSchema.safeParse({
     id: formData.get("id"),
     type: formData.get("type"),
-    name,
-    slug: slugInput ? toSlug(slugInput) : toSlug(name),
+    name: formData.get("name"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
@@ -64,8 +61,10 @@ export async function updateCategoryAction(formData: FormData) {
   }
 
   const { id, ...data } = parsed.data
+  const updatePayload =
+    data.name !== undefined ? { ...data, slug: toSlug(data.name) } : data
   try {
-    await updateCategoryInDb(id, data)
+    await updateCategoryInDb(id, updatePayload)
     return { success: true }
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to update category"

@@ -79,23 +79,8 @@ export function CategoryForm({ mode, category }: Props) {
             className={inputClass}
             required
           />
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="slug" className="text-sm font-medium">
-            Slug
-          </label>
-          <input
-            id="slug"
-            name="slug"
-            type="text"
-            defaultValue={category?.slug ?? ""}
-            placeholder="e.g. ruby, ring"
-            maxLength={100}
-            className={inputClass}
-            required
-          />
           <p className="text-xs text-muted-foreground">
-            Lowercase, letters, numbers, hyphens. Unique per type.
+            Slug is auto-generated from the name (e.g. Ruby → ruby).
           </p>
         </div>
         <div className="space-y-2">

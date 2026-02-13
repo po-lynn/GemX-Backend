@@ -1,4 +1,11 @@
 import { z } from "zod"
+import {
+  jewelleryGemstoneItemSchema,
+  productShapeSchema,
+  productTreatmentSchema,
+} from "./gemstone-spec"
+
+export { productShapeSchema, productTreatmentSchema }
 
 export const productStatusSchema = z.enum(["active", "archive", "sold", "hidden"])
 export const productModerationSchema = z.enum([
@@ -28,20 +35,6 @@ export const productFeaturedActionSchema = z.object({
   featured: z.number().int().min(0),
 })
 
-export const productShapeSchema = z.enum([
-  "Oval",
-  "Cushion",
-  "Round",
-  "Pear",
-  "Heart",
-])
-export const productTreatmentSchema = z.enum([
-  "None",
-  "Heated",
-  "Oiled",
-  "Glass Filled",
-])
-
 export const productCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   sku: z.string().max(50).optional().nullable(),
@@ -53,8 +46,26 @@ export const productCreateSchema = z.object({
   isNegotiable: z.coerce.boolean().default(false),
   productType: z.enum(["loose_stone", "jewellery"]).default("loose_stone"),
   categoryId: z.string().uuid().optional().nullable(),
+  stoneCut: z.enum(["Faceted", "Cabochon"]).optional().nullable(),
+  metal: z.enum(["Gold", "Silver", "Other"]).optional().nullable(),
   materials: z.string().max(500).optional().nullable(),
   qualityGemstones: z.string().max(500).optional().nullable(),
+  jewelleryGemstones: z
+    .string()
+    .optional()
+    .transform((s) => {
+      if (s === undefined || s === null || String(s).trim() === "") return []
+      try {
+        const parsed = JSON.parse(s) as unknown
+        if (!Array.isArray(parsed)) return []
+        return parsed
+          .map((x) => jewelleryGemstoneItemSchema.safeParse(x))
+          .filter((r): r is z.ZodSafeParseSuccess<z.infer<typeof jewelleryGemstoneItemSchema>> => r.success)
+          .map((r) => r.data)
+      } catch {
+        return []
+      }
+    }),
   weightCarat: z
     .string()
     .optional()
@@ -71,12 +82,12 @@ export const productCreateSchema = z.object({
   origin: z.string().max(200).optional().nullable(),
   certLabName: z.string().max(100).optional().nullable(),
   certReportNumber: z.string().max(100).optional().nullable(),
+  certReportDate: z.string().max(50).optional().nullable(),
   certReportUrl: z.string().max(500).optional().nullable(),
   condition: z.string().max(100).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
   status: productStatusSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
-  colorGrade: z.string().max(50).optional().nullable(),
   imageUrls: z
     .string()
     .optional()

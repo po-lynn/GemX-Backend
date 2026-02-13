@@ -43,6 +43,12 @@ export const productTreatmentEnum = pgEnum("product_treatment", [
   "Glass Filled",
 ]);
 
+/** Loose stone only: cut style */
+export const stoneCutEnum = pgEnum("stone_cut", ["Faceted", "Cabochon"]);
+
+/** Jewellery only: primary metal */
+export const metalEnum = pgEnum("metal", ["Gold", "Silver", "Other"]);
+
 export { productTypeEnum } from "./category-schema";
 
 export const product = pgTable(
@@ -57,6 +63,10 @@ export const product = pgTable(
     isNegotiable: boolean("is_negotiable").notNull().default(false),
     productType: productTypeEnum("product_type").notNull().default("loose_stone"),
     categoryId: uuid("category_id").references(() => category.id, { onDelete: "set null" }),
+    /** Loose stone only: Faceted or Cabochon */
+    stoneCut: stoneCutEnum("stone_cut"),
+    /** Jewellery only: Gold, Silver, or Other */
+    metal: metalEnum("metal"),
     materials: text("materials"),
     qualityGemstones: text("quality_gemstones"),
     // Specifications
@@ -66,9 +76,10 @@ export const product = pgTable(
     shape: productShapeEnum("shape"),
     treatment: productTreatmentEnum("treatment"),
     origin: text("origin"),
-    // Certification
+    // Certification (product-level; gemstones can have their own cert fields)
     certLabName: text("cert_lab_name"),
     certReportNumber: text("cert_report_number"),
+    certReportDate: text("cert_report_date"),
     certReportUrl: text("cert_report_url"),
     condition: text("condition"),
     location: text("location"),
@@ -78,7 +89,6 @@ export const product = pgTable(
       .default("pending"),
     isFeatured: boolean("is_featured").notNull().default(false),
     featured: integer("featured").notNull().default(0), // 0 = not featured, higher = sort order
-    colorGrade: text("color_grade"),
     sellerId: text("seller_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -100,7 +110,6 @@ export const product = pgTable(
     index("product_weightCarat_idx").on(table.weightCarat),
     index("product_shape_idx").on(table.shape),
     index("product_isFeatured_idx").on(table.isFeatured),
-    index("product_colorGrade_idx").on(table.colorGrade),
   ]
 );
 
@@ -118,10 +127,48 @@ export const productImage = pgTable(
   (table) => [index("product_image_productId_idx").on(table.productId)]
 );
 
+/** Jewellery only: gemstones on the piece with full specs (like loose stone): Ruby 0.5ct, dimensions, color, shape, etc. */
+export const productJewelleryGemstone = pgTable(
+  "product_jewellery_gemstone",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
+    weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }).notNull(),
+    dimensions: text("dimensions"),
+    color: text("color"),
+    shape: productShapeEnum("shape"),
+    treatment: productTreatmentEnum("treatment"),
+    origin: text("origin"),
+    /** Cut style from report: e.g. Mixed cut, brilliant/step */
+    cut: text("cut"),
+    /** e.g. Transparent */
+    transparency: text("transparency"),
+    /** Comment from report: e.g. No indication of thermal treatment, FTIR-tested */
+    comment: text("comment"),
+    /** Magnification / inclusions: e.g. Rutiles, feathers, solids, zoning */
+    inclusions: text("inclusions"),
+    /** Report number for this stone (e.g. J202007463, GRS2025-080552) */
+    certReportNumber: text("cert_report_number"),
+    /** Report date (e.g. 2024-09-17) */
+    certReportDate: text("cert_report_date"),
+    /** Lab name (e.g. AGGL Gemmological Laboratory Myanmar, GRS Gemresearch Swisslab) */
+    certLabName: text("cert_lab_name"),
+  },
+  (table) => [
+    index("product_jewellery_gemstone_productId_idx").on(table.productId),
+  ]
+);
+
 export const productRelations = relations(product, ({ one, many }) => ({
   category: one(category),
   seller: one(user),
   images: many(productImage),
+  jewelleryGemstones: many(productJewelleryGemstone),
 }));
 
 export const productImageRelations = relations(productImage, ({ one }) => ({
@@ -130,3 +177,17 @@ export const productImageRelations = relations(productImage, ({ one }) => ({
     references: [product.id],
   }),
 }));
+
+export const productJewelleryGemstoneRelations = relations(
+  productJewelleryGemstone,
+  ({ one }) => ({
+    product: one(product, {
+      fields: [productJewelleryGemstone.productId],
+      references: [product.id],
+    }),
+    category: one(category, {
+      fields: [productJewelleryGemstone.categoryId],
+      references: [category.id],
+    }),
+  })
+);
