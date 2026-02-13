@@ -10,5 +10,9 @@ export const categoryUpdateSchema = categoryCreateSchema.partial().extend({
   id: z.string().uuid(),
 })
 
+export const categoryDeleteSchema = z.object({
+  id: z.string().uuid(),
+})
+
 export type CategoryCreate = z.infer<typeof categoryCreateSchema>
 export type CategoryUpdate = z.infer<typeof categoryUpdateSchema>

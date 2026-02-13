@@ -96,3 +96,11 @@ export async function updateCategoryInDb(id: string, input: UpdateCategoryInput)
   if (Object.keys(updates).length === 0) return
   await db.update(category).set(updates).where(eq(category.id, id))
 }
+
+export async function deleteCategoryInDb(id: string): Promise<boolean> {
+  const deleted = await db
+    .delete(category)
+    .where(eq(category.id, id))
+    .returning({ id: category.id })
+  return deleted.length > 0
+}

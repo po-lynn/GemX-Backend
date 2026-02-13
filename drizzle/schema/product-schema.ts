@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 import { category, productTypeEnum } from "./category-schema";
+import { laboratory } from "./laboratory-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
   "active",   // In Stock
@@ -78,6 +79,9 @@ export const product = pgTable(
     origin: text("origin"),
     // Certification (product-level; gemstones can have their own cert fields)
     certLabName: text("cert_lab_name"),
+    laboratoryId: uuid("laboratory_id").references(() => laboratory.id, {
+      onDelete: "set null",
+    }),
     certReportNumber: text("cert_report_number"),
     certReportDate: text("cert_report_date"),
     certReportUrl: text("cert_report_url"),
@@ -110,6 +114,7 @@ export const product = pgTable(
     index("product_weightCarat_idx").on(table.weightCarat),
     index("product_shape_idx").on(table.shape),
     index("product_isFeatured_idx").on(table.isFeatured),
+    index("product_laboratoryId_idx").on(table.laboratoryId),
   ]
 );
 
@@ -166,6 +171,7 @@ export const productJewelleryGemstone = pgTable(
 
 export const productRelations = relations(product, ({ one, many }) => ({
   category: one(category),
+  laboratory: one(laboratory),
   seller: one(user),
   images: many(productImage),
   jewelleryGemstones: many(productJewelleryGemstone),

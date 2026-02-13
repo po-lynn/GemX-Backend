@@ -1,6 +1,10 @@
 export type CACHE_TAG =
   | "products"
   | "users"
+  | "category"
+  | "categories"
+  | "species"
+  | "laboratory"
   | "profile"
   | "home"
   | "rankedProducts"

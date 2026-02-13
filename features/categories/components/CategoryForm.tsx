@@ -51,6 +51,21 @@ export function CategoryForm({ mode, category }: Props) {
 
       <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-6">
         <div className="space-y-2">
+          <label htmlFor="name" className="text-sm font-medium">
+            Name
+          </label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            defaultValue={category?.name ?? ""}
+            placeholder="e.g. Ruby, Ring"
+            maxLength={100}
+            className={inputClass}
+            required
+          />
+        </div>
+        <div className="space-y-2">
           <label htmlFor="type" className="text-sm font-medium">
             Type
           </label>
@@ -66,15 +81,15 @@ export function CategoryForm({ mode, category }: Props) {
           </select>
         </div>
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">
-            Name
+          <label htmlFor="slug" className="text-sm font-medium">
+            Slug
           </label>
           <input
-            id="name"
-            name="name"
+            id="slug"
+            name="slug"
             type="text"
-            defaultValue={category?.name ?? ""}
-            placeholder="e.g. Ruby, Ring"
+            defaultValue={category?.slug ?? ""}
+            placeholder="e.g. ruby, ring"
             maxLength={100}
             className={inputClass}
             required

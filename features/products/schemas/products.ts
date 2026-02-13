@@ -80,7 +80,7 @@ export const productCreateSchema = z.object({
   shape: productShapeSchema.optional().nullable(),
   treatment: productTreatmentSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),
-  certLabName: z.string().max(100).optional().nullable(),
+  laboratoryId: z.string().uuid().optional().nullable(),
   certReportNumber: z.string().max(100).optional().nullable(),
   certReportDate: z.string().max(50).optional().nullable(),
   certReportUrl: z.string().max(500).optional().nullable(),
