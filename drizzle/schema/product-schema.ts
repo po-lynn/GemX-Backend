@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 import { category, productTypeEnum } from "./category-schema";
+import { laboratory } from "./laboratory-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
   "active",   // In Stock
@@ -67,7 +68,9 @@ export const product = pgTable(
     treatment: productTreatmentEnum("treatment"),
     origin: text("origin"),
     // Certification
-    certLabName: text("cert_lab_name"),
+    laboratoryId: uuid("laboratory_id").references(() => laboratory.id, {
+      onDelete: "set null",
+    }),
     certReportNumber: text("cert_report_number"),
     certReportUrl: text("cert_report_url"),
     condition: text("condition"),
@@ -101,6 +104,7 @@ export const product = pgTable(
     index("product_shape_idx").on(table.shape),
     index("product_isFeatured_idx").on(table.isFeatured),
     index("product_colorGrade_idx").on(table.colorGrade),
+    index("product_laboratoryId_idx").on(table.laboratoryId),
   ]
 );
 
@@ -120,6 +124,7 @@ export const productImage = pgTable(
 
 export const productRelations = relations(product, ({ one, many }) => ({
   category: one(category),
+  laboratory: one(laboratory),
   seller: one(user),
   images: many(productImage),
 }));

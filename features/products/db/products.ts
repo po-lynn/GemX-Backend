@@ -1,6 +1,7 @@
 import { db } from "@/drizzle/db"
 import { product, productImage } from "@/drizzle/schema/product-schema"
 import { category } from "@/drizzle/schema/category-schema"
+import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
 import type { ProductCreate } from "@/features/products/schemas/products"
@@ -22,6 +23,7 @@ export type AdminProductRow = {
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
+  laboratoryId: string | null
   featured: number
   colorGrade: string | null
   sellerId: string
@@ -62,6 +64,7 @@ export async function getAdminProductsFromDb(opts: {
         productType: product.productType,
         categoryId: product.categoryId,
         categoryName: category.name,
+        laboratoryId: product.laboratoryId,
         materials: product.materials,
         qualityGemstones: product.qualityGemstones,
         condition: product.condition,
@@ -79,6 +82,7 @@ export async function getAdminProductsFromDb(opts: {
       .from(product)
       .innerJoin(user, eq(product.sellerId, user.id))
       .leftJoin(category, eq(product.categoryId, category.id))
+      .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
       .where(searchCondition)
       .orderBy(desc(product.createdAt))
       .limit(limit)
@@ -126,6 +130,7 @@ export async function getAdminProductsFromDb(opts: {
     condition: p.condition,
     location: p.location,
     status: p.status,
+    laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featured: p.featured,
@@ -160,7 +165,7 @@ export type ProductForEdit = {
   shape: string | null
   treatment: string | null
   origin: string | null
-  certLabName: string | null
+  laboratoryId: string | null
   certReportNumber: string | null
   certReportUrl: string | null
   condition: string | null
@@ -194,7 +199,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       shape: product.shape,
       treatment: product.treatment,
       origin: product.origin,
-      certLabName: product.certLabName,
+      laboratoryId: product.laboratoryId,
       certReportNumber: product.certReportNumber,
       certReportUrl: product.certReportUrl,
       condition: product.condition,
@@ -235,7 +240,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     shape: row.shape,
     treatment: row.treatment,
     origin: row.origin,
-    certLabName: row.certLabName,
+    laboratoryId: row.laboratoryId,
     certReportNumber: row.certReportNumber,
     certReportUrl: row.certReportUrl,
     condition: row.condition,
@@ -281,7 +286,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     shape: input.shape ?? null,
     treatment: input.treatment ?? null,
     origin: input.origin ?? null,
-    certLabName: input.certLabName ?? null,
+    laboratoryId: input.laboratoryId ?? null,
     certReportNumber: input.certReportNumber ?? null,
     certReportUrl: input.certReportUrl ?? null,
     condition: input.condition ?? null,
@@ -330,7 +335,7 @@ export type UpdateProductInput = {
   shape?: string | null
   treatment?: string | null
   origin?: string | null
-  certLabName?: string | null
+  laboratoryId?: string | null
   certReportNumber?: string | null
   certReportUrl?: string | null
   condition?: string | null
@@ -373,7 +378,7 @@ export async function updateProductInDb(
   if (rest.treatment !== undefined)
     updates.treatment = rest.treatment as (typeof product.$inferInsert)["treatment"]
   if (rest.origin !== undefined) updates.origin = rest.origin
-  if (rest.certLabName !== undefined) updates.certLabName = rest.certLabName
+  if (rest.laboratoryId !== undefined) updates.laboratoryId = rest.laboratoryId
   if (rest.certReportNumber !== undefined)
     updates.certReportNumber = rest.certReportNumber
   if (rest.certReportUrl !== undefined) updates.certReportUrl = rest.certReportUrl

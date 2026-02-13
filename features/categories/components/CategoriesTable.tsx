@@ -27,11 +27,11 @@ export function CategoriesTable({ categories }: Props) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Type</TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Type</TableHead>
             <TableHead>Slug</TableHead>
-            <TableHead className="w-24 text-right">Order</TableHead>
-            <TableHead className="w-20" />
+            <TableHead className="w-24">Order</TableHead>
+            <TableHead className="w-20" >Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -45,12 +45,12 @@ export function CategoriesTable({ categories }: Props) {
             <>
               {loose.map((c) => (
                 <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">Loose stone</Badge>
                   </TableCell>
-                  <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-muted-foreground font-mono text-sm">{c.slug}</TableCell>
-                  <TableCell className="text-right">{c.sortOrder}</TableCell>
+                  <TableCell>{c.sortOrder}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" asChild>
                       <Link href={`/admin/categories/${c.id}/edit`}>
@@ -63,12 +63,12 @@ export function CategoriesTable({ categories }: Props) {
               ))}
               {jewellery.map((c) => (
                 <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline">Jewellery</Badge>
                   </TableCell>
-                  <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-muted-foreground font-mono text-sm">{c.slug}</TableCell>
-                  <TableCell className="text-right">{c.sortOrder}</TableCell>
+                  <TableCell>{c.sortOrder}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" asChild>
                       <Link href={`/admin/categories/${c.id}/edit`}>

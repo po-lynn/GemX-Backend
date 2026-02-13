@@ -51,21 +51,6 @@ export function CategoryForm({ mode, category }: Props) {
 
       <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-6">
         <div className="space-y-2">
-          <label htmlFor="type" className="text-sm font-medium">
-            Type
-          </label>
-          <select
-            id="type"
-            name="type"
-            defaultValue={category?.type ?? "loose_stone"}
-            className={inputClass}
-            required
-          >
-            <option value="loose_stone">Loose stone</option>
-            <option value="jewellery">Jewellery</option>
-          </select>
-        </div>
-        <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium">
             Name
           </label>
@@ -79,6 +64,21 @@ export function CategoryForm({ mode, category }: Props) {
             className={inputClass}
             required
           />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="type" className="text-sm font-medium">
+            Type
+          </label>
+          <select
+            id="type"
+            name="type"
+            defaultValue={category?.type ?? "loose_stone"}
+            className={inputClass}
+            required
+          >
+            <option value="loose_stone">Loose stone</option>
+            <option value="jewellery">Jewellery</option>
+          </select>
         </div>
         <div className="space-y-2">
           <label htmlFor="slug" className="text-sm font-medium">

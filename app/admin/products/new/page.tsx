@@ -1,11 +1,15 @@
 import Link from "next/link"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
+import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
 export default async function AdminProductsNewPage() {
-  const categories = await getAllCategories()
+  const [categories, laboratories] = await Promise.all([
+    getAllCategories(),
+    getCachedLaboratories(),
+  ])
 
   return (
     <div className="container my-6 space-y-6">
@@ -24,7 +28,7 @@ export default async function AdminProductsNewPage() {
         </div>
       </div>
 
-      <ProductForm key="new" mode="create" categories={categories} />
+      <ProductForm key="new" mode="create" categories={categories} laboratories={laboratories} />
     </div>
   )
 }

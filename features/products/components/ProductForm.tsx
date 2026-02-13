@@ -66,7 +66,15 @@ type Props = {
   categories: CategoryRow[]
 }
 
-export function ProductForm({ mode, product, categories }: Props) {
+import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
+
+type LabProps = {
+  mode: "create" | "edit"
+  product?: ProductForEdit | null
+  laboratories?: LaboratoryOption[] | null
+}
+
+export function ProductForm({ mode, product, categories, laboratories }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -476,18 +484,26 @@ export function ProductForm({ mode, product, categories }: Props) {
           >
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <label htmlFor="certLabName" className="text-sm font-medium">
-                  Lab name
+                <label htmlFor="laboratoryId" className="text-sm font-medium">
+                  Laboratory
                 </label>
-                <input
-                  id="certLabName"
-                  name="certLabName"
-                  type="text"
-                  maxLength={100}
-                  defaultValue={product?.certLabName ?? ""}
+                <select
+                  id="laboratoryId"
+                  name="laboratoryId"
+                  key={productType}
+                  defaultValue={product?.laboratoryId ?? ""}
                   className={inputClass}
-                />
-              </div>
+                >
+                  <option value="">
+                    Select laboratory name
+                  </option>
+                  {(laboratories ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div> 
               <div className="space-y-2">
                 <label htmlFor="certReportNumber" className="text-sm font-medium">
                   Report number
