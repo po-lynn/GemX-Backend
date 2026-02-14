@@ -55,10 +55,16 @@ export const gemstoneSpecSchema = z.object({
 
 export type GemstoneSpec = z.infer<typeof gemstoneSpecSchema>
 
-/** Jewellery gemstone = category + required weight + full spec (reuses same fields as loose stone) */
+/** Jewellery gemstone = category + required weight + optional piece count + full spec */
 export const jewelleryGemstoneItemSchema = gemstoneSpecSchema.extend({
   categoryId: z.string().uuid(),
   weightCarat: z.string().min(1, "Weight is required"),
+  /** Number of stones of this type (e.g. report "Ruby: 37 pcs") */
+  pieceCount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" || v === undefined || v === null ? undefined : Number(v))),
 })
 
 export type JewelleryGemstoneItem = z.infer<typeof jewelleryGemstoneItemSchema>

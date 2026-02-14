@@ -1,5 +1,9 @@
 import "dotenv/config"
+import { config } from "dotenv"
 import { defineConfig } from "drizzle-kit"
+
+// Next.js uses .env then .env.local (local overrides). Drizzle CLI should match.
+config({ path: ".env.local" })
 
 /** Use DATABASE_URL (Supabase/Vercel) or DB_HOST + DB_USER + DB_NAME + DB_PASSWORD (local). */
 const dbCredentials = process.env.DATABASE_URL

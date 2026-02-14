@@ -12,6 +12,7 @@ export type JewelleryGemstoneRow = GemstoneSpec & {
   categoryId: string
   categoryName: string
   weightCarat: string
+  pieceCount: number | null
 }
 
 export type AdminProductRow = {
@@ -167,6 +168,7 @@ export type ProductForEdit = {
   materials: string | null
   qualityGemstones: string | null
   jewelleryGemstones: JewelleryGemstoneRow[]
+  totalWeightGrams: string | null
   weightCarat: string | null
   dimensions: string | null
   color: string | null
@@ -201,6 +203,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       metal: product.metal,
       materials: product.materials,
       qualityGemstones: product.qualityGemstones,
+      totalWeightGrams: product.totalWeightGrams,
       weightCarat: product.weightCarat,
       dimensions: product.dimensions,
       color: product.color,
@@ -232,6 +235,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       .select({
         categoryId: productJewelleryGemstone.categoryId,
         categoryName: category.name,
+        pieceCount: productJewelleryGemstone.pieceCount,
         weightCarat: productJewelleryGemstone.weightCarat,
         dimensions: productJewelleryGemstone.dimensions,
         color: productJewelleryGemstone.color,
@@ -255,6 +259,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     categoryId: g.categoryId,
     categoryName: g.categoryName,
     weightCarat: String(g.weightCarat),
+    pieceCount: g.pieceCount ?? null,
     dimensions: g.dimensions ?? null,
     color: g.color ?? null,
     shape: g.shape ?? null,
@@ -284,6 +289,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     materials: row.materials,
     qualityGemstones: row.qualityGemstones,
     jewelleryGemstones,
+    totalWeightGrams: row.totalWeightGrams ? String(row.totalWeightGrams) : null,
     weightCarat: row.weightCarat ? String(row.weightCarat) : null,
     dimensions: row.dimensions,
     color: row.color,
@@ -330,6 +336,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     metal: input.metal ?? null,
     materials: input.materials ?? null,
     qualityGemstones: input.qualityGemstones ?? null,
+    totalWeightGrams: input.totalWeightGrams ?? null,
     weightCarat: input.weightCarat ?? null,
     dimensions: input.dimensions ?? null,
     color: input.color ?? null,
@@ -369,6 +376,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
       gemstones.map((g) => ({
         productId,
         categoryId: g.categoryId,
+        pieceCount: g.pieceCount ?? null,
         weightCarat: g.weightCarat,
         dimensions: g.dimensions ?? null,
         color: g.color ?? null,
@@ -405,6 +413,7 @@ export type UpdateProductInput = {
   jewelleryGemstones?: {
     categoryId: string
     weightCarat: string
+    pieceCount?: number | null
     dimensions?: string | null
     color?: string | null
     shape?: string | null
@@ -418,6 +427,7 @@ export type UpdateProductInput = {
     certReportDate?: string | null
     certLabName?: string | null
   }[]
+  totalWeightGrams?: string | null
   weightCarat?: string | null
   dimensions?: string | null
   color?: string | null
@@ -459,6 +469,7 @@ export async function updateProductInDb(
   if (rest.metal !== undefined) updates.metal = rest.metal
   if (rest.materials !== undefined) updates.materials = rest.materials
   if (rest.qualityGemstones !== undefined) updates.qualityGemstones = rest.qualityGemstones
+  if (rest.totalWeightGrams !== undefined) updates.totalWeightGrams = rest.totalWeightGrams
   if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
   if (rest.dimensions !== undefined) updates.dimensions = rest.dimensions
   if (rest.color !== undefined) updates.color = rest.color
@@ -489,6 +500,7 @@ export async function updateProductInDb(
         jewelleryGemstones.map((g) => ({
           productId: id,
           categoryId: g.categoryId,
+          pieceCount: g.pieceCount ?? null,
           weightCarat: g.weightCarat,
           dimensions: g.dimensions ?? null,
           color: g.color ?? null,

@@ -22,28 +22,12 @@ gemx@2026
    - Use **Transaction** pooler (port **6543**) for serverless.
    - Add `?sslmode=require` if not already in the URL.
 3. Optional: run migrations against Supabase from your machine:
-   - Set `DATABASE_URL` in `.env` to that connection string.
+   - Put Supabase `DATABASE_URL` in `.env` (or temporarily in `.env.local`).
    - `npm run db:migrate` (or `db:push` for prototyping).
 
 ### 2. Vercel (app)
 
 1. Push your repo and import the project in [vercel.com](https://vercel.com).
-2. **Settings → Environment Variables** – add:
+2. **Settings → Environment Variables** – add `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` (your production URL). Redeploy.
 
-   | Name           | Value                    | Notes                    |
-   |----------------|--------------------------|--------------------------|
-   | `DATABASE_URL` | `postgresql://...`       | Supabase connection URI  |
-   | `AUTH_SECRET`  | (generate with `openssl rand -base64 32`) | Required |
-   | `AUTH_URL`     | `https://your-app.vercel.app` | Your production URL |
-   | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | From GitHub OAuth app | If using GitHub login |
-   | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`     | From Google Cloud Console | If using Google login |
-
-3. Redeploy so the build uses these variables.
-
-### 3. Auth redirect URLs
-
-In your OAuth providers (GitHub, Google), set the callback URL to:
-
-- `https://your-app.vercel.app/api/auth/callback/github` (or `/callback/google`).
-
-The app uses **DATABASE_URL** in production (Supabase) and **DB_HOST**, **DB_USER**, **DB_NAME**, **DB_PASSWORD** locally.
+**Env files:** **`.env.local`** is for **local development only** (gitignored; never used by Vercel or Supabase). Copy **`.env.example`** to **`.env.local`** and set DATABASE_URL, AUTH_SECRET, AUTH_URL, etc. **Vercel** uses its own env (Project → Settings → Environment Variables); **Supabase** is just the database and doesn’t read env files.

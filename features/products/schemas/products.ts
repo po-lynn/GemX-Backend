@@ -66,6 +66,16 @@ export const productCreateSchema = z.object({
         return []
       }
     }),
+  /** Jewellery only: total weight of piece in grams (metal + stones) */
+  totalWeightGrams: z
+    .string()
+    .optional()
+    .nullable()
+    .refine(
+      (v) =>
+        !v || v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
+      { message: "Total weight (g) must be a valid number" }
+    ),
   weightCarat: z
     .string()
     .optional()

@@ -52,6 +52,11 @@ export const metalEnum = pgEnum("metal", ["Gold", "Silver", "Other"]);
 
 export { productTypeEnum } from "./category-schema";
 
+/**
+ * Two inventory types:
+ * - loose_stone: Loose high-value gemstones; may be certified or appraised separately.
+ * - jewellery: Bundled jewelry (gemstones permanently set in metal); cert may cover whole piece or per-stone.
+ */
 export const product = pgTable(
   "product",
   {
@@ -70,6 +75,8 @@ export const product = pgTable(
     metal: metalEnum("metal"),
     materials: text("materials"),
     qualityGemstones: text("quality_gemstones"),
+    /** Jewellery only: total weight of piece in grams (metal + stones), e.g. from report "Total: 28.48 gm" */
+    totalWeightGrams: decimal("total_weight_grams", { precision: 12, scale: 4 }),
     // Specifications
     weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }),
     dimensions: text("dimensions"),
@@ -141,6 +148,8 @@ export const productJewelleryGemstone = pgTable(
     categoryId: uuid("category_id")
       .notNull()
       .references(() => category.id, { onDelete: "cascade" }),
+    /** Number of stones of this type, e.g. report "Ruby: 37 pcs" */
+    pieceCount: integer("piece_count"),
     weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }).notNull(),
     dimensions: text("dimensions"),
     color: text("color"),

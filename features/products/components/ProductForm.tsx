@@ -102,6 +102,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
   type FormGemstoneEntry = {
     categoryId: string
     weightCarat: string
+    pieceCount: string
     dimensions: string
     color: string
     shape: string
@@ -119,6 +120,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
   const emptyGemstone = (): FormGemstoneEntry => ({
     categoryId: "",
     weightCarat: "",
+    pieceCount: "",
     dimensions: "",
     color: "",
     shape: "",
@@ -136,6 +138,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
     (product?.jewelleryGemstones ?? []).map((g) => ({
       categoryId: g.categoryId,
       weightCarat: g.weightCarat,
+      pieceCount: g.pieceCount != null ? String(g.pieceCount) : "",
       dimensions: g.dimensions ?? "",
       color: g.color ?? "",
       shape: g.shape ?? "",
@@ -203,6 +206,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
             .map((g) => ({
               categoryId: g.categoryId,
               weightCarat: g.weightCarat,
+              pieceCount: g.pieceCount.trim() ? Number(g.pieceCount) : undefined,
               dimensions: g.dimensions.trim() || null,
               color: g.color.trim() || null,
               shape: g.shape || null,
@@ -484,6 +488,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
                             <tr className="border-b border-border bg-muted/30">
                               <th className="px-4 py-2.5 text-left font-medium">Stone</th>
                               <th className="px-4 py-2.5 text-left font-medium">Weight (ct)</th>
+                              <th className="px-4 py-2.5 text-left font-medium">Pieces</th>
                               <th className="px-4 py-2.5 text-right font-medium w-36">Actions</th>
                             </tr>
                           </thead>
@@ -496,6 +501,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
                                 <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/10">
                                   <td className="px-4 py-2.5 font-medium">{stoneName}</td>
                                   <td className="px-4 py-2.5 text-muted-foreground">{row.weightCarat || "—"}</td>
+                                  <td className="px-4 py-2.5 text-muted-foreground">{row.pieceCount || "—"}</td>
                                   <td className="px-4 py-2.5 text-right">
                                     <div className="flex items-center justify-end gap-1">
                                       <Button
@@ -590,6 +596,20 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
                       value={gemstoneDialogForm.weightCarat}
                       onChange={(e) =>
                         setGemstoneDialogForm((prev) => ({ ...prev, weightCarat: e.target.value }))
+                      }
+                      disabled={gemstoneDialogMode === "view"}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Pieces</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="e.g. 37"
+                      className={inputClass}
+                      value={gemstoneDialogForm.pieceCount}
+                      onChange={(e) =>
+                        setGemstoneDialogForm((prev) => ({ ...prev, pieceCount: e.target.value }))
                       }
                       disabled={gemstoneDialogMode === "view"}
                     />
@@ -799,10 +819,26 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
             }
           >
             <div className="grid gap-4 sm:grid-cols-2">
+              {productType === "jewellery" && (
+                <div className="space-y-2">
+                  <label htmlFor="totalWeightGrams" className="text-sm font-medium">
+                    Total weight (g)
+                  </label>
+                  <input
+                    id="totalWeightGrams"
+                    name="totalWeightGrams"
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue={product?.totalWeightGrams ?? ""}
+                    placeholder="e.g. 28.48 (metal + stones)"
+                    className={inputClass}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <label htmlFor="weightCarat" className="text-sm font-medium">
                   {productType === "jewellery"
-                    ? "Total weight (carat)"
+                    ? "Total gem weight (ct)"
                     : "Weight (carat)"}
                 </label>
                 <input
@@ -811,7 +847,7 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
                   type="text"
                   inputMode="decimal"
                   defaultValue={product?.weightCarat ?? ""}
-                  placeholder={productType === "jewellery" ? "e.g. 3.2 (total piece)" : "e.g. 2.5"}
+                  placeholder={productType === "jewellery" ? "e.g. 30.09 (stones only)" : "e.g. 2.5"}
                   className={inputClass}
                 />
               </div>

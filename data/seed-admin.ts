@@ -5,7 +5,7 @@
  * Set ADMIN_EMAIL and ADMIN_PASSWORD in .env, or they default for local dev only.
  * Run: npx tsx data/seed-admin.ts
  */
-import "dotenv/config"
+import "@/data/load-env"
 import { auth } from "@/lib/auth"
 
 const ADMIN_EMAIL =

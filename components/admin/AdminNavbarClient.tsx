@@ -3,6 +3,7 @@
 
 import { authClient } from "@/lib/auth-client"
 import { UserProfileMenu } from "@/components/admin/user-profile-menu"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export default function AdminNavbarClient() {
@@ -33,20 +34,12 @@ export default function AdminNavbarClient() {
           }}
         />
       ) : (
-        <div className="flex items-center gap-2">
-          <button
-            className="hover:bg-accent/10 px-2 py-1 rounded"
-            onClick={() => authClient.signIn.social({ provider: "github" })}
-          >
-            Sign in with GitHub
-          </button>
-          <button
-            className="hover:bg-accent/10 px-2 py-1 rounded"
-            onClick={() => authClient.signIn.social({ provider: "google" })}
-          >
-            Sign in with Google
-          </button>
-        </div>
+        <Link
+          href="/login"
+          className="hover:bg-accent/10 px-2 py-1 rounded text-sm font-medium"
+        >
+          Sign in
+        </Link>
       )}
     </div>
   )
