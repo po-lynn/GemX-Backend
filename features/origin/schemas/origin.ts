@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const originCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
+  country: z.string().min(1, "Country is required").max(200),
 });
 
 export const originUpdateSchema = originCreateSchema.partial().extend({

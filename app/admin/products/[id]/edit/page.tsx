@@ -4,6 +4,7 @@ import { ProductForm } from "@/features/products/components/ProductForm"
 import { getCachedProduct } from "@/features/products/db/cache/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
+import { getCachedOrigins } from "@/features/origin/db/cache/origin"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
@@ -13,10 +14,11 @@ type Props = {
 
 export default async function AdminProductsEditPage({ params }: Props) {
   const { id } = await params
-  const [product, categories, laboratories] = await Promise.all([
+  const [product, categories, laboratories, origins] = await Promise.all([
     getCachedProduct(id),
     getAllCategories(),
     getCachedLaboratories(),
+    getCachedOrigins(),
   ])
 
   if (!product) notFound()
@@ -38,7 +40,7 @@ export default async function AdminProductsEditPage({ params }: Props) {
         </div>
       </div>
 
-      <ProductForm key={product.id} mode="edit" product={product} categories={categories} laboratories={laboratories} />
+      <ProductForm key={product.id} mode="edit" product={product} categories={categories} laboratories={laboratories} origins={origins} />
     </div>
   )
 }

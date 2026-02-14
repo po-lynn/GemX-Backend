@@ -76,11 +76,13 @@ type Props = {
 }
 
 import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
+import type { OriginOption } from "@/features/origin/db/origin"
 
 type LabProps = {
   mode: "create" | "edit"
   product?: ProductForEdit | null
   laboratories?: LaboratoryOption[] | null
+  origins?: OriginOption[] | null
 }
 
 function parseDimensions(value: string | null | undefined): [string, string, string] {
@@ -89,7 +91,7 @@ function parseDimensions(value: string | null | undefined): [string, string, str
   return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]
 }
 
-export function ProductForm({ mode, product, categories, laboratories }: Props & LabProps) {
+export function ProductForm({ mode, product, categories, laboratories, origins }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -975,15 +977,20 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
                     <label htmlFor="origin" className="text-sm font-medium">
                       Origin
                     </label>
-                    <input
+                    <select
                       id="origin"
                       name="origin"
-                      type="text"
-                      maxLength={200}
                       defaultValue={product?.origin ?? ""}
-                      placeholder="e.g. Mogok, Myanmar"
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Select origin</option>
+                      {(origins ?? []).map((o) => (
+                        <option key={o.id} value={o.name}>
+                          {o.name}
+                          {o.country ? ` (${o.country})` : ""}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}

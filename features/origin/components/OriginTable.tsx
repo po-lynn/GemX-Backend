@@ -31,6 +31,7 @@ export function OriginTable({ origins }: Props) {
       <thead>
         <tr className="border-b">
           <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
+          <th className="px-4 py-3 text-left text-sm font-medium">Country</th>
           <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
         </tr>
       </thead>
@@ -38,6 +39,7 @@ export function OriginTable({ origins }: Props) {
         {origins.map((o) => (
           <tr key={o.id} className="border-b transition-colors hover:bg-muted/50">
             <td className="px-4 py-3 font-medium">{o.name}</td>
+            <td className="px-4 py-3 text-muted-foreground text-sm">{o.country}</td>
             <td className="px-4 py-3">
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="icon" asChild>

@@ -2,37 +2,40 @@ import { db } from "@/drizzle/db";
 import { origin } from "@/drizzle/schema/origin-schema";
 import { eq } from "drizzle-orm";
 
-export type OriginOption = { id: string; name: string };
+export type OriginOption = { id: string; name: string; country: string };
 
 export type OriginForEdit = OriginOption;
 
 export async function getAllOrigins(): Promise<OriginOption[]> {
   return db
-    .select({ id: origin.id, name: origin.name })
+    .select({ id: origin.id, name: origin.name, country: origin.country })
     .from(origin)
     .orderBy(origin.name);
 }
 
 export async function getOriginById(id: string): Promise<OriginForEdit | null> {
   const row = await db
-    .select({ id: origin.id, name: origin.name })
+    .select({ id: origin.id, name: origin.name, country: origin.country })
     .from(origin)
     .where(eq(origin.id, id))
     .limit(1);
   return row[0] ?? null;
 }
 
-export async function createOriginInDb(input: { name: string }): Promise<string> {
+export async function createOriginInDb(input: {
+  name: string;
+  country: string;
+}): Promise<string> {
   const [inserted] = await db
     .insert(origin)
-    .values({ name: input.name })
+    .values({ name: input.name, country: input.country })
     .returning({ id: origin.id });
   return inserted!.id;
 }
 
 export async function updateOriginInDb(
   id: string,
-  input: { name?: string }
+  input: { name?: string; country?: string }
 ): Promise<boolean> {
   const updates = Object.fromEntries(
     Object.entries(input).filter(([, v]) => v !== undefined)

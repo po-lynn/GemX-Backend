@@ -20,6 +20,12 @@ import type { OriginForEdit } from "@/features/origin/db/origin";
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
+const COUNTRIES = [
+  "Afghanistan", "Australia", "Brazil", "Cambodia", "Colombia", "India",
+  "Madagascar", "Malawi", "Mozambique", "Myanmar", "Pakistan", "Russia",
+  "Sri Lanka", "Tanzania", "Thailand", "USA", "Vietnam", "Zambia", "Zimbabwe",
+].sort();
+
 type Props = {
   mode: "create" | "edit";
   origin?: OriginForEdit | null;
@@ -79,9 +85,28 @@ export function OriginForm({ mode, origin }: Props) {
               required
               maxLength={200}
               defaultValue={origin?.name ?? ""}
-              placeholder="e.g. Myanmar"
+              placeholder="e.g. Mogok"
               className={inputClass}
             />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="country" className="text-sm font-medium">
+              Country *
+            </label>
+            <select
+              id="country"
+              name="country"
+              required
+              defaultValue={origin?.country ?? ""}
+              className={inputClass}
+            >
+              <option value="">Select country</option>
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">

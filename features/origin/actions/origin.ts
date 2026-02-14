@@ -22,6 +22,7 @@ function emptyToNull<T>(v: T): T | null | undefined {
 export async function createOriginAction(formData: FormData) {
   const parsed = originCreateSchema.safeParse({
     name: emptyToNull(formData.get("name")),
+    country: emptyToNull(formData.get("country")),
   });
   if (!parsed.success) {
     return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
@@ -30,7 +31,10 @@ export async function createOriginAction(formData: FormData) {
   if (!session || !canAdminManageOrigin(session.user.role)) {
     return { error: "Unauthorized" };
   }
-  const originId = await createOriginInDb({ name: parsed.data.name });
+  const originId = await createOriginInDb({
+    name: parsed.data.name,
+    country: parsed.data.country,
+  });
   revalidateOriginCache();
   return { success: true, originId };
 }
@@ -39,6 +43,7 @@ export async function updateOriginAction(formData: FormData) {
   const parsed = originUpdateSchema.safeParse({
     originId: formData.get("originId"),
     name: emptyToNull(formData.get("name")),
+    country: emptyToNull(formData.get("country")),
   });
   if (!parsed.success) {
     return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
