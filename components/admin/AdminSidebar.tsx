@@ -29,7 +29,6 @@ const navGroups: (NavItem | NavGroup)[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/laboratory", label: "Laboratory", icon: FlaskConical },
-      { href: "/admin/species", label: "Species", icon: Gem },
     ],
   },
   { href: "/admin/sales", label: "Sales", icon: ReceiptText },

@@ -940,111 +940,77 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
             </div>
           </FormSection>
 
-          <FormSection
-            title="Certification"
-            description="Lab reports and authenticity documentation"
-          >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <label htmlFor="laboratoryId" className="text-sm font-medium">
-                  Laboratory
-                </label>
-                <select
-                  id="laboratoryId"
-                  name="laboratoryId"
-                  key={productType}
-                  defaultValue={product?.laboratoryId ?? ""}
-                  className={inputClass}
-                >
-                  <option value="">
-                    Select laboratory name
-                  </option>
-                  {(laboratories ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
+          {productType === "loose_stone" && (
+            <FormSection
+              title="Certification"
+              description="Lab reports and authenticity documentation"
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <label htmlFor="laboratoryId" className="text-sm font-medium">
+                    Laboratory
+                  </label>
+                  <select
+                    id="laboratoryId"
+                    name="laboratoryId"
+                    key={productType}
+                    defaultValue={product?.laboratoryId ?? ""}
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Select laboratory name
                     </option>
-                  ))}
-                </select>
-              </div> 
-              <div className="space-y-2">
-                <label htmlFor="certReportNumber" className="text-sm font-medium">
-                  Report number
-                </label>
-                <input
-                  id="certReportNumber"
-                  name="certReportNumber"
-                  type="text"
-                  maxLength={100}
-                  defaultValue={product?.certReportNumber ?? ""}
-                  className={inputClass}
-                />
+                    {(laboratories ?? []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="certReportNumber" className="text-sm font-medium">
+                    Report number
+                  </label>
+                  <input
+                    id="certReportNumber"
+                    name="certReportNumber"
+                    type="text"
+                    maxLength={100}
+                    defaultValue={product?.certReportNumber ?? ""}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="certReportDate" className="text-sm font-medium">
+                    Report date
+                  </label>
+                  <input
+                    id="certReportDate"
+                    name="certReportDate"
+                    type="text"
+                    maxLength={50}
+                    defaultValue={product?.certReportDate ?? ""}
+                    placeholder="e.g. 2024-09-17"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="certReportUrl" className="text-sm font-medium">
+                    Report URL
+                  </label>
+                  <input
+                    id="certReportUrl"
+                    name="certReportUrl"
+                    type="url"
+                    maxLength={500}
+                    defaultValue={product?.certReportUrl ?? ""}
+                    placeholder="https://..."
+                    className={inputClass}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label htmlFor="certReportDate" className="text-sm font-medium">
-                  Report date
-                </label>
-                <input
-                  id="certReportDate"
-                  name="certReportDate"
-                  type="text"
-                  maxLength={50}
-                  defaultValue={product?.certReportDate ?? ""}
-                  placeholder="e.g. 2024-09-17"
-                  className={inputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="certReportUrl" className="text-sm font-medium">
-                  Report URL
-                </label>
-                <input
-                  id="certReportUrl"
-                  name="certReportUrl"
-                  type="url"
-                  maxLength={500}
-                  defaultValue={product?.certReportUrl ?? ""}
-                  placeholder="https://..."
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="Other"
-            description="Condition, location, and additional details"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="condition" className="text-sm font-medium">
-                  Condition
-                </label>
-                <input
-                  id="condition"
-                  name="condition"
-                  type="text"
-                  maxLength={100}
-                  defaultValue={product?.condition ?? ""}
-                  placeholder="e.g. new, used"
-                  className={inputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="location" className="text-sm font-medium">
-                  Location
-                </label>
-                <input
-                  id="location"
-                  name="location"
-                  type="text"
-                  maxLength={200}
-                  defaultValue={product?.location ?? ""}
-                  placeholder="City or region"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          </FormSection>
+            </FormSection>
+          )}
 
           <FormSection
             title="Images"

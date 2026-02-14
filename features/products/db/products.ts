@@ -28,8 +28,6 @@ export type AdminProductRow = {
   metal: "Gold" | "Silver" | "Other" | null
   materials: string | null
   qualityGemstones: string | null
-  condition: string | null
-  location: string | null
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
@@ -78,8 +76,6 @@ export async function getAdminProductsFromDb(opts: {
         laboratoryId: product.laboratoryId,
         materials: product.materials,
         qualityGemstones: product.qualityGemstones,
-        condition: product.condition,
-        location: product.location,
         status: product.status,
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
@@ -139,8 +135,6 @@ export async function getAdminProductsFromDb(opts: {
     metal: p.metal,
     materials: p.materials,
     qualityGemstones: p.qualityGemstones,
-    condition: p.condition,
-    location: p.location,
     status: p.status,
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
@@ -183,8 +177,6 @@ export type ProductForEdit = {
   certReportNumber: string | null
   certReportDate: string | null
   certReportUrl: string | null
-  condition: string | null
-  location: string | null
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
@@ -219,8 +211,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       certReportNumber: product.certReportNumber,
       certReportDate: product.certReportDate,
       certReportUrl: product.certReportUrl,
-      condition: product.condition,
-      location: product.location,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
@@ -304,8 +294,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     certReportNumber: row.certReportNumber,
     certReportDate: row.certReportDate ?? null,
     certReportUrl: row.certReportUrl,
-    condition: row.condition,
-    location: row.location,
     status: row.status,
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
@@ -352,8 +340,6 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportNumber: input.certReportNumber ?? null,
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
-    condition: input.condition ?? null,
-    location: input.location ?? null,
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
     sellerId: input.sellerId,
@@ -442,8 +428,6 @@ export type UpdateProductInput = {
   certReportNumber?: string | null
   certReportDate?: string | null
   certReportUrl?: string | null
-  condition?: string | null
-  location?: string | null
   status?: "active" | "archive" | "sold" | "hidden"
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
@@ -488,8 +472,6 @@ export async function updateProductInDb(
     updates.certReportNumber = rest.certReportNumber
   if (rest.certReportDate !== undefined) updates.certReportDate = rest.certReportDate
   if (rest.certReportUrl !== undefined) updates.certReportUrl = rest.certReportUrl
-  if (rest.condition !== undefined) updates.condition = rest.condition
-  if (rest.location !== undefined) updates.location = rest.location
   if (rest.status !== undefined) updates.status = rest.status
   if (rest.moderationStatus !== undefined)
     updates.moderationStatus = rest.moderationStatus

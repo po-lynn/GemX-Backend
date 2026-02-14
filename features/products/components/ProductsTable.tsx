@@ -60,11 +60,6 @@ export function ProductsTable({
                       )}
                       <div>
                         <div className="font-medium">{p.title}</div>
-                        {p.location && (
-                          <div className="text-muted-foreground text-xs">
-                            {p.location}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </td>

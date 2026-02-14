@@ -81,24 +81,6 @@ export function CategoryForm({ mode, category }: Props) {
           </select>
         </div>
         <div className="space-y-2">
-          <label htmlFor="slug" className="text-sm font-medium">
-            Slug
-          </label>
-          <input
-            id="slug"
-            name="slug"
-            type="text"
-            defaultValue={category?.slug ?? ""}
-            placeholder="e.g. ruby, ring"
-            maxLength={100}
-            className={inputClass}
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Slug is auto-generated from the name (e.g. Ruby → ruby).
-          </p>
-        </div>
-        <div className="space-y-2">
           <label htmlFor="sortOrder" className="text-sm font-medium">
             Sort order
           </label>

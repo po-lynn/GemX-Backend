@@ -3,7 +3,6 @@ export type CACHE_TAG =
   | "users"
   | "category"
   | "categories"
-  | "species"
   | "laboratory"
   | "profile"
   | "home"
