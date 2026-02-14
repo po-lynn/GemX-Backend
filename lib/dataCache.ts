@@ -4,6 +4,7 @@ export type CACHE_TAG =
   | "category"
   | "categories"
   | "laboratory"
+  | "origin"
   | "profile"
   | "home"
   | "rankedProducts"

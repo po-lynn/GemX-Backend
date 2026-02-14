@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -83,6 +83,12 @@ type LabProps = {
   laboratories?: LaboratoryOption[] | null
 }
 
+function parseDimensions(value: string | null | undefined): [string, string, string] {
+  if (!value?.trim()) return ["", "", ""]
+  const parts = value.trim().split(/\s*[x×]\s*/i).map((s) => s.trim())
+  return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]
+}
+
 export function ProductForm({ mode, product, categories, laboratories }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -93,6 +99,21 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
   const [productType, setProductType] = useState<"loose_stone" | "jewellery">(
     product?.productType ?? "loose_stone"
   )
+  const [dimensionsPart1, setDimensionsPart1] = useState(() =>
+    parseDimensions(product?.dimensions)[0]
+  )
+  const [dimensionsPart2, setDimensionsPart2] = useState(() =>
+    parseDimensions(product?.dimensions)[1]
+  )
+  const [dimensionsPart3, setDimensionsPart3] = useState(() =>
+    parseDimensions(product?.dimensions)[2]
+  )
+  useEffect(() => {
+    const [p1, p2, p3] = parseDimensions(product?.dimensions)
+    setDimensionsPart1(p1)
+    setDimensionsPart2(p2)
+    setDimensionsPart3(p3)
+  }, [product?.dimensions])
   const categoryOptions = categories.filter((c) => c.type === productType)
   const stoneOptions = categories.filter((c) => c.type === "loose_stone")
   const [status, setStatus] = useState<"active" | "archive" | "sold" | "hidden">(
@@ -854,17 +875,50 @@ export function ProductForm({ mode, product, categories, laboratories }: Props &
               {productType === "loose_stone" && (
                 <>
                   <div className="space-y-2">
-                    <label htmlFor="dimensions" className="text-sm font-medium">
-                      Dimensions
-                    </label>
+                    <label className="text-sm font-medium">Dimensions</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="dimensionsPart1"
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart1}
+                        onChange={(e) => setDimensionsPart1(e.target.value)}
+                        placeholder="e.g. 8.2"
+                        className={inputClass}
+                      />
+                      <span className="shrink-0 text-muted-foreground" aria-hidden>
+                        ×
+                      </span>
+                      <input
+                        id="dimensionsPart2"
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart2}
+                        onChange={(e) => setDimensionsPart2(e.target.value)}
+                        placeholder="e.g. 6.1"
+                        className={inputClass}
+                      />
+                      <span className="shrink-0 text-muted-foreground" aria-hidden>
+                        ×
+                      </span>
+                      <input
+                        id="dimensionsPart3"
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart3}
+                        onChange={(e) => setDimensionsPart3(e.target.value)}
+                        placeholder="e.g. 4.0"
+                        className={inputClass}
+                      />
+                      <span className="shrink-0 text-muted-foreground" aria-hidden>mm</span>
+                    </div>
                     <input
-                      id="dimensions"
+                      type="hidden"
                       name="dimensions"
-                      type="text"
-                      maxLength={100}
-                      defaultValue={product?.dimensions ?? ""}
-                      placeholder="e.g. 8.2 x 6.1 x 4.3 mm"
-                      className={inputClass}
+                      value={[dimensionsPart1, dimensionsPart2, dimensionsPart3].filter(Boolean).join(" × ") || ""}
                     />
                   </div>
                   <div className="space-y-2">
