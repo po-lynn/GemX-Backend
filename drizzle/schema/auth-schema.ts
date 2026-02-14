@@ -21,6 +21,7 @@ export const user = pgTable("user", {
   city: text("city"),
   state: text("state"),
   country: text("country"),
+  gender: text("gender"),
 });
 
 export const session = pgTable(

@@ -15,6 +15,7 @@ export const auth = betterAuth({
       city: { type: "string", required: false, defaultValue: null },
       state: { type: "string", required: false, defaultValue: null },
       country: { type: "string", required: false, defaultValue: null },
+      gender: { type: "string", required: false, defaultValue: null },
     },
   },
   plugins: [username(), bearer()],

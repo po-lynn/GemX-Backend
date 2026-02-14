@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { LayoutDashboard, BookOpen, Package, ReceiptText, FolderTree, FlaskConical, Globe, Gem } from "lucide-react";
+import { LayoutDashboard, BookOpen, Package, ReceiptText, FolderTree, Users, FlaskConical, Globe, Gem } from "lucide-react";
 
 
 type NavItem = {
@@ -28,6 +28,7 @@ const navGroups: (NavItem | NavGroup)[] = [
     items: [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
+      { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/laboratory", label: "Laboratory", icon: FlaskConical },
       { href: "/admin/origin", label: "Origin", icon: Globe },
     ],
