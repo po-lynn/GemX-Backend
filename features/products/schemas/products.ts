@@ -45,7 +45,16 @@ export const productCreateSchema = z.object({
   currency: currencySchema.default("USD"),
   isNegotiable: z.coerce.boolean().default(false),
   productType: z.enum(["loose_stone", "jewellery"]).default("loose_stone"),
-  categoryId: z.string().uuid().optional().nullable(),
+  categoryId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v == null || v === "") return null
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      return uuidRegex.test(v) ? v : null
+    }),
   stoneCut: z.enum(["Faceted", "Cabochon"]).optional().nullable(),
   metal: z.enum(["Gold", "Silver", "Other"]).optional().nullable(),
   materials: z.string().max(500).optional().nullable(),
@@ -90,7 +99,16 @@ export const productCreateSchema = z.object({
   shape: productShapeSchema.optional().nullable(),
   treatment: productTreatmentSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),
-  laboratoryId: z.string().uuid().optional().nullable(),
+  laboratoryId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v == null || v === "") return null
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      return uuidRegex.test(v) ? v : null
+    }),
   certReportNumber: z.string().max(100).optional().nullable(),
   certReportDate: z.string().max(50).optional().nullable(),
   certReportUrl: z.string().max(500).optional().nullable(),

@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache"
+import { cacheTag, revalidateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
@@ -31,9 +31,10 @@ export async function getAdminProducts(opts: {
   return getAdminProductsFromDb(opts)
 }
 
+/** Invalidate products cache (use in Route Handlers or Server Actions). */
 export function revalidateProductsCache(id?: string) {
-  updateTag(getProductsGlobalTag())
+  revalidateTag(getProductsGlobalTag(), "max")
   if (id) {
-    updateTag(getProductIdTag(id))
+    revalidateTag(getProductIdTag(id), "max")
   }
 }

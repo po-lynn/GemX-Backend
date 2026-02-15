@@ -3,7 +3,7 @@ import { product, productImage, productJewelleryGemstone } from "@/drizzle/schem
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
+import { and, eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
 import type { ProductCreate } from "@/features/products/schemas/products"
 import type { GemstoneSpec } from "@/features/products/schemas/gemstone-spec"
 
@@ -150,6 +150,120 @@ export async function getAdminProductsFromDb(opts: {
 
   const total = countResult[0]?.count ?? 0
 
+  return { products, total }
+}
+
+export async function getProductsBySellerId(
+  sellerId: string,
+  opts: { page?: number; limit?: number; search?: string }
+): Promise<{ products: AdminProductRow[]; total: number }> {
+  const page = opts.page ?? 1
+  const limit = Math.min(opts.limit ?? 20, 100)
+  const offset = (page - 1) * limit
+  const search = opts.search?.trim()
+
+  const searchCondition = search
+    ? or(
+        ilike(product.title, `%${search}%`),
+        ilike(user.name, `%${search}%`),
+        ilike(user.phone ?? "", `%${search}%`),
+        ilike(user.email, `%${search}%`)
+      )
+    : undefined
+
+  const whereClause = searchCondition
+    ? and(eq(product.sellerId, sellerId), searchCondition)
+    : eq(product.sellerId, sellerId)
+
+  const [productsData, countResult] = await Promise.all([
+    db
+      .select({
+        id: product.id,
+        sku: product.sku,
+        title: product.title,
+        description: product.description,
+        price: product.price,
+        currency: product.currency,
+        productType: product.productType,
+        categoryId: product.categoryId,
+        categoryName: category.name,
+        stoneCut: product.stoneCut,
+        metal: product.metal,
+        laboratoryId: product.laboratoryId,
+        materials: product.materials,
+        qualityGemstones: product.qualityGemstones,
+        status: product.status,
+        moderationStatus: product.moderationStatus,
+        isFeatured: product.isFeatured,
+        featured: product.featured,
+        sellerId: product.sellerId,
+        sellerName: user.name,
+        sellerPhone: user.phone,
+        createdAt: product.createdAt,
+      })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id))
+      .leftJoin(category, eq(product.categoryId, category.id))
+      .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
+      .where(whereClause)
+      .orderBy(desc(product.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id))
+      .where(whereClause),
+  ])
+
+  const productIds = productsData.map((p) => p.id)
+  const images =
+    productIds.length > 0
+      ? await db
+          .select({
+            productId: productImage.productId,
+            url: productImage.url,
+            sortOrder: productImage.sortOrder,
+          })
+          .from(productImage)
+          .where(inArray(productImage.productId, productIds))
+          .orderBy(productImage.sortOrder)
+      : []
+
+  const imageByProduct = new Map<string, string>()
+  for (const img of images) {
+    if (!imageByProduct.has(img.productId)) {
+      imageByProduct.set(img.productId, img.url)
+    }
+  }
+
+  const products: AdminProductRow[] = productsData.map((p) => ({
+    id: p.id,
+    sku: p.sku,
+    title: p.title,
+    description: p.description,
+    price: String(p.price),
+    currency: p.currency,
+    productType: p.productType,
+    categoryId: p.categoryId,
+    categoryName: p.categoryName ?? null,
+    stoneCut: p.stoneCut,
+    metal: p.metal,
+    materials: p.materials,
+    qualityGemstones: p.qualityGemstones,
+    status: p.status,
+    laboratoryId: p.laboratoryId,
+    moderationStatus: p.moderationStatus,
+    isFeatured: p.isFeatured,
+    featured: p.featured,
+    sellerId: p.sellerId,
+    sellerName: p.sellerName,
+    sellerPhone: p.sellerPhone,
+    imageUrl: imageByProduct.get(p.id) ?? null,
+    createdAt: p.createdAt,
+  }))
+
+  const total = countResult[0]?.count ?? 0
   return { products, total }
 }
 
