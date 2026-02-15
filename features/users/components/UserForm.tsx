@@ -21,7 +21,13 @@ import { Eye, EyeOff } from "lucide-react";
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
-const ROLES = ["admin", "seller", "mobile", "user"];
+const ROLES = [
+  { value: "", label: "Select role" },
+  { value: "admin", label: "Admin" },
+  { value: "seller", label: "Seller" },
+  { value: "mobile", label: "Mobile" },
+  { value: "user", label: "User" },
+]
 const GENDERS = [
   { value: "", label: "Select gender" },
   { value: "male", label: "Male" },
@@ -172,13 +178,13 @@ export function UserForm({ mode, user }: Props) {
                 id="role"
                 name="role"
                 required
-                defaultValue={user?.role ?? "user"}
+                defaultValue={user?.role ?? ""}
                 className={inputClass}
               >
                 {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
+                  <option key={r.value || "empty"} value={r.value}>
+                  {r.label}
+                </option>
                 ))}
               </select>
             </div>
