@@ -11,15 +11,34 @@ if (!hasUrl && !hasParts) {
   )
 }
 
-/** Vercel + Supabase: set DATABASE_URL. Local: set DB_HOST, DB_USER, DB_NAME, DB_PASSWORD. */
-const connection = hasUrl
-  ? postgres(env.DATABASE_URL!, { max: 1 })
-  : postgres({
-      host: env.DB_HOST!,
-      database: env.DB_NAME!,
-      username: env.DB_USER!,
-      password: env.DB_PASSWORD!,
+const isDev = process.env.NODE_ENV !== "production"
+
+function createConnection(): ReturnType<typeof postgres> {
+  if (hasUrl) {
+    return postgres(env.DATABASE_URL!, {
       max: 1,
+      ssl: "require",
+      connect_timeout: 10,
+      idle_timeout: 20,
+      max_lifetime: 60 * 30, // 30 minutes
     })
+  }
+  return postgres({
+    host: env.DB_HOST!,
+    database: env.DB_NAME!,
+    username: env.DB_USER!,
+    password: env.DB_PASSWORD!,
+    max: 1,
+  })
+}
+
+const globalForDb = globalThis as unknown as { __postgres: ReturnType<typeof postgres> | undefined }
+
+const connection =
+  isDev && globalForDb.__postgres ? globalForDb.__postgres : (() => {
+    const conn = createConnection()
+    if (isDev) globalForDb.__postgres = conn
+    return conn
+  })()
 
 export const db = drizzle(connection, { schema })
