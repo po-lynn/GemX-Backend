@@ -58,8 +58,6 @@ function FormSection({
 }
 
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
-const TREATMENTS = ["None", "Heated", "Oiled", "Glass Filled"] as const
-
 const STATUS_OPTIONS = [
   { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
   { value: "archive", label: "Archive", color: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
@@ -129,7 +127,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     dimensions: string
     color: string
     shape: string
-    treatment: string
     origin: string
     cut: string
     transparency: string
@@ -147,7 +144,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     dimensions: "",
     color: "",
     shape: "",
-    treatment: "",
     origin: "",
     cut: "",
     transparency: "",
@@ -165,7 +161,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
       dimensions: g.dimensions ?? "",
       color: g.color ?? "",
       shape: g.shape ?? "",
-      treatment: g.treatment ?? "",
       origin: g.origin ?? "",
       cut: g.cut ?? "",
       transparency: g.transparency ?? "",
@@ -233,7 +228,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               dimensions: g.dimensions.trim() || null,
               color: g.color.trim() || null,
               shape: g.shape || null,
-              treatment: g.treatment || null,
               origin: g.origin.trim() || null,
               cut: g.cut.trim() || null,
               transparency: g.transparency.trim() || null,
@@ -345,6 +339,21 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     : "Product description"
                 }
                 className={inputClass + " min-h-[80px] resize-y"}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="identification" className="text-sm font-medium">
+                Identification *
+              </label>
+              <input
+                id="identification"
+                name="identification"
+                type="text"
+                required
+                maxLength={500}
+                defaultValue={product?.identification ?? ""}
+                placeholder="e.g. Natural ruby, synthetic, species"
+                className={inputClass}
               />
             </div>
           </FormSection>
@@ -610,7 +619,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Weight (ct)</label>
+                    <label className="text-xs font-medium">Weight (ct) *</label>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -651,7 +660,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Color</label>
+                    <label className="text-xs font-medium">Color *</label>
                     <input
                       type="text"
                       placeholder="e.g. Pigeon Blood Red"
@@ -681,26 +690,8 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Treatment</label>
-                    <select
-                      className={inputClass}
-                      value={gemstoneDialogForm.treatment}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, treatment: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    >
-                      <option value="">Select</option>
-                      {TREATMENTS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-medium">Origin</label>
+                    <label className="text-xs font-medium">Origin *</label>
                     <input
                       type="text"
                       placeholder="e.g. Mogok, Myanmar"
@@ -821,7 +812,10 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                         type="button"
                         onClick={handleSaveGemstoneDialog}
                         disabled={
-                          !gemstoneDialogForm.categoryId || gemstoneDialogForm.weightCarat.trim() === ""
+                          !gemstoneDialogForm.categoryId ||
+                          gemstoneDialogForm.weightCarat.trim() === "" ||
+                          gemstoneDialogForm.color.trim() === "" ||
+                          gemstoneDialogForm.origin.trim() === ""
                         }
                       >
                         {gemstoneDialogMode === "add" ? "Add" : "Save"}
@@ -862,12 +856,13 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 <label htmlFor="weightCarat" className="text-sm font-medium">
                   {productType === "jewellery"
                     ? "Total gem weight (ct)"
-                    : "Weight (carat)"}
+                    : "Weight (carat) *"}
                 </label>
                 <input
                   id="weightCarat"
                   name="weightCarat"
                   type="text"
+                  required={productType === "loose_stone"}
                   inputMode="decimal"
                   defaultValue={product?.weightCarat ?? ""}
                   placeholder={productType === "jewellery" ? "e.g. 30.09 (stones only)" : "e.g. 2.5"}
@@ -924,20 +919,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="color" className="text-sm font-medium">
-                      Color
-                    </label>
-                    <input
-                      id="color"
-                      name="color"
-                      type="text"
-                      maxLength={100}
-                      defaultValue={product?.color ?? ""}
-                      placeholder="e.g. Pigeon Blood Red"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <label htmlFor="shape" className="text-sm font-medium">
                       Shape
                     </label>
@@ -955,31 +936,33 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       ))}
                     </select>
                   </div>
+                </>
+              )}
+              {productType === "loose_stone" && (
+                <>
                   <div className="space-y-2">
-                    <label htmlFor="treatment" className="text-sm font-medium">
-                      Treatment
+                    <label htmlFor="color" className="text-sm font-medium">
+                      Color *
                     </label>
-                    <select
-                      id="treatment"
-                      name="treatment"
-                      defaultValue={product?.treatment ?? ""}
+                    <input
+                      id="color"
+                      name="color"
+                      type="text"
+                      required
+                      maxLength={100}
+                      defaultValue={product?.color ?? ""}
+                      placeholder="e.g. Pigeon Blood Red"
                       className={inputClass}
-                    >
-                      <option value="">Select treatment</option>
-                      {TREATMENTS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="origin" className="text-sm font-medium">
-                      Origin
+                      Origin *
                     </label>
                     <select
                       id="origin"
                       name="origin"
+                      required
                       defaultValue={product?.origin ?? ""}
                       className={inputClass}
                     >

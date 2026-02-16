@@ -37,13 +37,6 @@ export const productShapeEnum = pgEnum("product_shape", [
   "Heart",
 ]);
 
-export const productTreatmentEnum = pgEnum("product_treatment", [
-  "None",
-  "Heated",
-  "Oiled",
-  "Glass Filled",
-]);
-
 /** Loose stone only: cut style */
 export const stoneCutEnum = pgEnum("stone_cut", ["Faceted", "Cabochon"]);
 
@@ -64,6 +57,8 @@ export const product = pgTable(
     sku: text("sku").unique(),
     title: text("title").notNull(),
     description: text("description"),
+    /** Gem/product identification (e.g. natural ruby, synthetic, species). */
+    identification: text("identification"),
     price: decimal("price", { precision: 14, scale: 2 }).notNull(),
     currency: currencyEnum("currency").notNull().default("USD"),
     isNegotiable: boolean("is_negotiable").notNull().default(false),
@@ -73,8 +68,6 @@ export const product = pgTable(
     stoneCut: stoneCutEnum("stone_cut"),
     /** Jewellery only: Gold, Silver, or Other */
     metal: metalEnum("metal"),
-    materials: text("materials"),
-    qualityGemstones: text("quality_gemstones"),
     /** Jewellery only: total weight of piece in grams (metal + stones), e.g. from report "Total: 28.48 gm" */
     totalWeightGrams: decimal("total_weight_grams", { precision: 12, scale: 4 }),
     // Specifications
@@ -82,7 +75,6 @@ export const product = pgTable(
     dimensions: text("dimensions"),
     color: text("color"),
     shape: productShapeEnum("shape"),
-    treatment: productTreatmentEnum("treatment"),
     origin: text("origin"),
     // Certification (product-level; gemstones can have their own cert fields)
     certLabName: text("cert_lab_name"),
@@ -154,7 +146,6 @@ export const productJewelleryGemstone = pgTable(
     dimensions: text("dimensions"),
     color: text("color"),
     shape: productShapeEnum("shape"),
-    treatment: productTreatmentEnum("treatment"),
     origin: text("origin"),
     /** Cut style from report: e.g. Mixed cut, brilliant/step */
     cut: text("cut"),

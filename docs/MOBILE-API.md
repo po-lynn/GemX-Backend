@@ -5,7 +5,7 @@
 
 ## 1. Base URL & Headers
 
-- **Base URL:** `https://your-domain.com` (e.g. `http://localhost:3000` in dev)
+- **Base URL:** `https://gem-x-backend.vercel.app` (e.g. `http://localhost:3000` in dev)
 - **Content-Type:** `application/json` for all request bodies.
 - **Auth:** For protected routes, send the session token:
   - **Header:** `Authorization: Bearer <session_token>`
@@ -185,6 +185,7 @@ Authorization: Bearer <session_token>
       "sku": "PRD-XXX",
       "title": "Blue Sapphire 2ct",
       "description": "...",
+      "identification": "Natural sapphire, heated",
       "price": "2500",
       "currency": "USD",
       "productType": "loose_stone",
@@ -248,10 +249,18 @@ Authorization: Bearer <session_token>
 
 **Request body (JSON):** All fields except `title` and `price` are optional. Send only what you have.
 
-**Required:**
+**Required (all products):**
 
-- `title` (string, 1–200 chars)
+- `title` (string, 1–200 chars) – product name
 - `price` (string or number, e.g. `"2500"` or `2500`)
+- `identification` (string, max 500) – e.g. natural ruby, synthetic, species
+
+**Required when `productType` is `"loose_stone"` only:**
+
+- `weightCarat` (string) – weight in carats (e.g. `"2.5"`)
+- `color` (string, max 100) – e.g. Pigeon Blood Red
+- `origin` (string, max 200) – e.g. Myanmar
+
 
 **Optional (common):**
 
@@ -266,23 +275,26 @@ Authorization: Bearer <session_token>
 **Loose stone:**
 
 - `stoneCut` – `"Faceted"` | `"Cabochon"`
-- `weightCarat`, `dimensions`, `color`, `shape`, `treatment`, `origin`
+- `weightCarat`, `dimensions`, `color`, `shape`, `origin`
 - `shape` – `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`
-- `treatment` – `"None"` | `"Heated"` | `"Oiled"` | `"Glass Filled"`
 - `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl`
 
 **Jewellery:**
 
 - `metal` – `"Gold"` | `"Silver"` | `"Other"`
-- `materials`, `totalWeightGrams`
-- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below)
+- `totalWeightGrams`
+- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
 
-**Minimal example:**
+**Minimal example (all required fields):**
 
 ```json
 {
   "title": "Blue Sapphire 2ct",
   "price": "2500",
+  "identification": "Natural sapphire, heated",
+  "weightCarat": "2",
+  "color": "Blue",
+  "origin": "Myanmar",
   "currency": "USD",
   "productType": "loose_stone"
 }
@@ -302,7 +314,6 @@ Authorization: Bearer <session_token>
   "weightCarat": "2",
   "color": "Blue",
   "shape": "Oval",
-  "treatment": "Heated",
   "origin": "Myanmar",
   "status": "active",
   "imageUrls": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
@@ -323,10 +334,9 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 | `weightCarat` | Yes | string | Total weight in carats for this stone type (e.g. `"1.5"`). |
 | `pieceCount` | No | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”). |
 | `dimensions` | No | string | e.g. `"5x3mm"`. |
-| `color` | No | string | e.g. `"Red"`, `"White"`. |
+| `color` | Yes | string | e.g. `"Red"`, `"White"`. Required for each jewellery gemstone. |
 | `shape` | No | string | `"Oval"` \| `"Cushion"` \| `"Round"` \| `"Pear"` \| `"Heart"`. |
-| `treatment` | No | string | `"None"` \| `"Heated"` \| `"Oiled"` \| `"Glass Filled"`. |
-| `origin` | No | string | e.g. `"Myanmar"`. |
+| `origin` | Yes | string | e.g. `"Myanmar"`. Required for each jewellery gemstone. |
 | `cut` | No | string | Cut style (e.g. `"Brilliant"`, `"Step"`). |
 | `transparency` | No | string | e.g. `"Transparent"`. |
 | `comment` | No | string | Lab comment. |
@@ -343,11 +353,12 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 {
   "title": "18K Gold Ruby & Diamond Ring",
   "description": "Classic solitaire-style ring with natural ruby centre and diamond accents. Lab report available.",
+  "identification": "Natural ruby and diamond, 18K gold",
   "price": "8500",
   "currency": "USD",
   "productType": "jewellery",
+  "categoryId": "CATEGORY_UUID_RING",
   "metal": "Gold",
-  "materials": "18K yellow gold, natural ruby, natural diamonds",
   "totalWeightGrams": "4.2",
   "isNegotiable": true,
   "status": "active",
@@ -364,7 +375,6 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
       "dimensions": "6x5mm",
       "color": "Red",
       "shape": "Oval",
-      "treatment": "Heated",
       "origin": "Myanmar",
       "cut": "Mixed cut",
       "transparency": "Transparent",
@@ -379,8 +389,8 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
       "pieceCount": 12,
       "dimensions": "2mm",
       "color": "White",
+      "origin": "Lab-grown",
       "shape": "Round",
-      "treatment": "None",
       "cut": "Brilliant"
     }
   ]
@@ -393,6 +403,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 {
   "title": "Ruby & Diamond Ring",
   "price": "5000",
+  "identification": "Natural ruby and diamond ring",
   "productType": "jewellery",
   "metal": "Gold",
   "totalWeightGrams": "5.2",
@@ -401,6 +412,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
       "categoryId": "category-uuid-from-api",
       "weightCarat": "1.5",
       "color": "Red",
+      "origin": "Myanmar",
       "shape": "Oval"
     }
   ],

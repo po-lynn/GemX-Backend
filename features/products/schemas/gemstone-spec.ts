@@ -15,13 +15,6 @@ export const productShapeSchema = z.enum([
   "Pear",
   "Heart",
 ])
-export const productTreatmentSchema = z.enum([
-  "None",
-  "Heated",
-  "Oiled",
-  "Glass Filled",
-])
-
 /** Weight (carat) - optional in schema; required in context (e.g. jewellery row) */
 const weightCaratSchema = z
   .string()
@@ -38,7 +31,6 @@ export const gemstoneSpecSchema = z.object({
   dimensions: z.string().max(100).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
   shape: productShapeSchema.optional().nullable(),
-  treatment: productTreatmentSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),
   /** Cut style: e.g. Mixed cut, brilliant/step (jewellery gemstone / report) */
   cut: z.string().max(100).optional().nullable(),
@@ -55,10 +47,12 @@ export const gemstoneSpecSchema = z.object({
 
 export type GemstoneSpec = z.infer<typeof gemstoneSpecSchema>
 
-/** Jewellery gemstone = category + required weight + optional piece count + full spec */
+/** Jewellery gemstone = category + required weight, color, origin + optional piece count + full spec */
 export const jewelleryGemstoneItemSchema = gemstoneSpecSchema.extend({
   categoryId: z.string().uuid(),
   weightCarat: z.string().min(1, "Weight is required"),
+  color: z.string().min(1, "Color is required").max(100),
+  origin: z.string().min(1, "Origin is required").max(200),
   /** Number of stones of this type (e.g. report "Ruby: 37 pcs") */
   pieceCount: z
     .union([z.string(), z.number()])
@@ -80,7 +74,6 @@ export const GEMSTONE_SPEC_FIELD_NAMES = [
   "dimensions",
   "color",
   "shape",
-  "treatment",
   "origin",
   "cut",
   "transparency",

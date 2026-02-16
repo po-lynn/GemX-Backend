@@ -70,12 +70,6 @@ export function ProductsTable({
                       {p.productType === "loose_stone" && p.stoneCut ? ` / ${p.stoneCut}` : ""}
                       {p.productType === "jewellery" && p.metal ? ` / ${p.metal}` : ""}
                     </span>
-                    {p.productType === "jewellery" &&
-                      (p.materials || p.qualityGemstones) && (
-                        <div className="text-muted-foreground text-xs mt-0.5">
-                          {[p.materials, p.qualityGemstones].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
                   </td>
                   <td className="px-4 py-3">
                     {formatPriceWithCurrency(Number(p.price), p.currency)}

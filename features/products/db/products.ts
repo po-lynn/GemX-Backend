@@ -20,6 +20,7 @@ export type AdminProductRow = {
   sku: string | null
   title: string
   description: string | null
+  identification: string | null
   price: string
   currency: "USD" | "MMK"
   productType: "loose_stone" | "jewellery"
@@ -27,8 +28,6 @@ export type AdminProductRow = {
   categoryName: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
-  materials: string | null
-  qualityGemstones: string | null
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
@@ -67,6 +66,7 @@ export async function getAdminProductsFromDb(opts: {
         sku: product.sku,
         title: product.title,
         description: product.description,
+        identification: product.identification,
         price: product.price,
         currency: product.currency,
         productType: product.productType,
@@ -75,8 +75,6 @@ export async function getAdminProductsFromDb(opts: {
         stoneCut: product.stoneCut,
         metal: product.metal,
         laboratoryId: product.laboratoryId,
-        materials: product.materials,
-        qualityGemstones: product.qualityGemstones,
         status: product.status,
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
@@ -127,6 +125,7 @@ export async function getAdminProductsFromDb(opts: {
     sku: p.sku,
     title: p.title,
     description: p.description,
+    identification: p.identification ?? null,
     price: String(p.price),
     currency: p.currency,
     productType: p.productType,
@@ -134,8 +133,6 @@ export async function getAdminProductsFromDb(opts: {
     categoryName: p.categoryName ?? null,
     stoneCut: p.stoneCut,
     metal: p.metal,
-    materials: p.materials,
-    qualityGemstones: p.qualityGemstones,
     status: p.status,
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
@@ -182,6 +179,7 @@ export async function getProductsBySellerId(
         sku: product.sku,
         title: product.title,
         description: product.description,
+        identification: product.identification,
         price: product.price,
         currency: product.currency,
         productType: product.productType,
@@ -190,8 +188,6 @@ export async function getProductsBySellerId(
         stoneCut: product.stoneCut,
         metal: product.metal,
         laboratoryId: product.laboratoryId,
-        materials: product.materials,
-        qualityGemstones: product.qualityGemstones,
         status: product.status,
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
@@ -242,6 +238,7 @@ export async function getProductsBySellerId(
     sku: p.sku,
     title: p.title,
     description: p.description,
+    identification: p.identification ?? null,
     price: String(p.price),
     currency: p.currency,
     productType: p.productType,
@@ -249,8 +246,6 @@ export async function getProductsBySellerId(
     categoryName: p.categoryName ?? null,
     stoneCut: p.stoneCut,
     metal: p.metal,
-    materials: p.materials,
-    qualityGemstones: p.qualityGemstones,
     status: p.status,
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
@@ -272,6 +267,7 @@ export type ProductForEdit = {
   sku: string | null
   title: string
   description: string | null
+  identification: string | null
   price: string
   currency: "USD" | "MMK"
   isNegotiable: boolean
@@ -279,15 +275,12 @@ export type ProductForEdit = {
   categoryId: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
-  materials: string | null
-  qualityGemstones: string | null
   jewelleryGemstones: JewelleryGemstoneRow[]
   totalWeightGrams: string | null
   weightCarat: string | null
   dimensions: string | null
   color: string | null
   shape: string | null
-  treatment: string | null
   origin: string | null
   laboratoryId: string | null
   certReportNumber: string | null
@@ -308,6 +301,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       sku: product.sku,
       title: product.title,
       description: product.description,
+      identification: product.identification,
       price: product.price,
       currency: product.currency,
       isNegotiable: product.isNegotiable,
@@ -315,14 +309,11 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       categoryId: product.categoryId,
       stoneCut: product.stoneCut,
       metal: product.metal,
-      materials: product.materials,
-      qualityGemstones: product.qualityGemstones,
       totalWeightGrams: product.totalWeightGrams,
       weightCarat: product.weightCarat,
       dimensions: product.dimensions,
       color: product.color,
       shape: product.shape,
-      treatment: product.treatment,
       origin: product.origin,
       laboratoryId: product.laboratoryId,
       certReportNumber: product.certReportNumber,
@@ -354,7 +345,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
         dimensions: productJewelleryGemstone.dimensions,
         color: productJewelleryGemstone.color,
         shape: productJewelleryGemstone.shape,
-        treatment: productJewelleryGemstone.treatment,
         origin: productJewelleryGemstone.origin,
         cut: productJewelleryGemstone.cut,
         transparency: productJewelleryGemstone.transparency,
@@ -377,7 +367,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     dimensions: g.dimensions ?? null,
     color: g.color ?? null,
     shape: g.shape ?? null,
-    treatment: g.treatment ?? null,
     origin: g.origin ?? null,
     cut: g.cut ?? null,
     transparency: g.transparency ?? null,
@@ -393,6 +382,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     sku: row.sku,
     title: row.title,
     description: row.description,
+    identification: row.identification ?? null,
     price: String(row.price),
     currency: row.currency,
     isNegotiable: row.isNegotiable,
@@ -400,15 +390,12 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     categoryId: row.categoryId,
     stoneCut: row.stoneCut,
     metal: row.metal,
-    materials: row.materials,
-    qualityGemstones: row.qualityGemstones,
     jewelleryGemstones,
     totalWeightGrams: row.totalWeightGrams ? String(row.totalWeightGrams) : null,
     weightCarat: row.weightCarat ? String(row.weightCarat) : null,
     dimensions: row.dimensions,
     color: row.color,
     shape: row.shape,
-    treatment: row.treatment,
     origin: row.origin,
     laboratoryId: row.laboratoryId,
     certReportNumber: row.certReportNumber,
@@ -441,6 +428,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     title: input.title,
     sku,
     description: input.description ?? null,
+    identification: input.identification ?? null,
     price: input.price,
     currency: input.currency,
     isNegotiable: input.isNegotiable ?? false,
@@ -448,14 +436,11 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     categoryId: input.categoryId ?? null,
     stoneCut: input.stoneCut ?? null,
     metal: input.metal ?? null,
-    materials: input.materials ?? null,
-    qualityGemstones: input.qualityGemstones ?? null,
     totalWeightGrams: input.totalWeightGrams ?? null,
     weightCarat: input.weightCarat ?? null,
     dimensions: input.dimensions ?? null,
     color: input.color ?? null,
     shape: input.shape ?? null,
-    treatment: input.treatment ?? null,
     origin: input.origin ?? null,
     laboratoryId: input.laboratoryId ?? null,
     certReportNumber: input.certReportNumber ?? null,
@@ -495,7 +480,6 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
         dimensions: g.dimensions ?? null,
         color: g.color ?? null,
         shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
-        treatment: (g.treatment as (typeof productJewelleryGemstone.$inferInsert)["treatment"]) ?? null,
         origin: g.origin ?? null,
         cut: g.cut ?? null,
         transparency: g.transparency ?? null,
@@ -515,6 +499,7 @@ export type UpdateProductInput = {
   title?: string
   sku?: string | null
   description?: string | null
+  identification?: string | null
   price?: string
   currency?: "USD" | "MMK"
   isNegotiable?: boolean
@@ -522,8 +507,6 @@ export type UpdateProductInput = {
   categoryId?: string | null
   stoneCut?: "Faceted" | "Cabochon" | null
   metal?: "Gold" | "Silver" | "Other" | null
-  materials?: string | null
-  qualityGemstones?: string | null
   jewelleryGemstones?: {
     categoryId: string
     weightCarat: string
@@ -531,7 +514,6 @@ export type UpdateProductInput = {
     dimensions?: string | null
     color?: string | null
     shape?: string | null
-    treatment?: string | null
     origin?: string | null
     cut?: string | null
     transparency?: string | null
@@ -546,7 +528,6 @@ export type UpdateProductInput = {
   dimensions?: string | null
   color?: string | null
   shape?: string | null
-  treatment?: string | null
   origin?: string | null
   laboratoryId?: string | null
   certReportNumber?: string | null
@@ -574,6 +555,7 @@ export async function updateProductInDb(
     if (row && !row.sku) updates.sku = generateSku()
   }
   if (rest.description !== undefined) updates.description = rest.description
+  if (rest.identification !== undefined) updates.identification = rest.identification
   if (rest.price !== undefined) updates.price = rest.price
   if (rest.currency !== undefined) updates.currency = rest.currency
   if (rest.isNegotiable !== undefined) updates.isNegotiable = rest.isNegotiable
@@ -581,16 +563,12 @@ export async function updateProductInDb(
   if (rest.categoryId !== undefined) updates.categoryId = rest.categoryId
   if (rest.stoneCut !== undefined) updates.stoneCut = rest.stoneCut
   if (rest.metal !== undefined) updates.metal = rest.metal
-  if (rest.materials !== undefined) updates.materials = rest.materials
-  if (rest.qualityGemstones !== undefined) updates.qualityGemstones = rest.qualityGemstones
   if (rest.totalWeightGrams !== undefined) updates.totalWeightGrams = rest.totalWeightGrams
   if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
   if (rest.dimensions !== undefined) updates.dimensions = rest.dimensions
   if (rest.color !== undefined) updates.color = rest.color
   if (rest.shape !== undefined)
     updates.shape = rest.shape as (typeof product.$inferInsert)["shape"]
-  if (rest.treatment !== undefined)
-    updates.treatment = rest.treatment as (typeof product.$inferInsert)["treatment"]
   if (rest.origin !== undefined) updates.origin = rest.origin
   if (rest.laboratoryId !== undefined) updates.laboratoryId = rest.laboratoryId
   if (rest.certReportNumber !== undefined)
@@ -619,7 +597,6 @@ export async function updateProductInDb(
           dimensions: g.dimensions ?? null,
           color: g.color ?? null,
           shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
-          treatment: (g.treatment as (typeof productJewelleryGemstone.$inferInsert)["treatment"]) ?? null,
           origin: g.origin ?? null,
           cut: g.cut ?? null,
           transparency: g.transparency ?? null,

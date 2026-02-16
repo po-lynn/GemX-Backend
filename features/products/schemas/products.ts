@@ -1,11 +1,7 @@
 import { z } from "zod"
-import {
-  jewelleryGemstoneItemSchema,
-  productShapeSchema,
-  productTreatmentSchema,
-} from "./gemstone-spec"
+import { jewelleryGemstoneItemSchema, productShapeSchema } from "./gemstone-spec"
 
-export { productShapeSchema, productTreatmentSchema }
+export { productShapeSchema }
 
 export const productStatusSchema = z.enum(["active", "archive", "sold", "hidden"])
 export const productModerationSchema = z.enum([
@@ -35,10 +31,15 @@ export const productFeaturedActionSchema = z.object({
   featured: z.number().int().min(0),
 })
 
-export const productCreateSchema = z.object({
+/** Base object schema without refinements — use for .partial() in update schema */
+const productCreateBaseSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   sku: z.string().max(50).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
+  identification: z
+    .string()
+    .min(1, "Identification is required")
+    .max(500),
   price: z.string().refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
     message: "Price must be a valid number",
   }),
@@ -57,8 +58,6 @@ export const productCreateSchema = z.object({
     }),
   stoneCut: z.enum(["Faceted", "Cabochon"]).optional().nullable(),
   metal: z.enum(["Gold", "Silver", "Other"]).optional().nullable(),
-  materials: z.string().max(500).optional().nullable(),
-  qualityGemstones: z.string().max(500).optional().nullable(),
   jewelleryGemstones: z
     .string()
     .optional()
@@ -97,7 +96,6 @@ export const productCreateSchema = z.object({
   dimensions: z.string().max(100).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
   shape: productShapeSchema.optional().nullable(),
-  treatment: productTreatmentSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),
   laboratoryId: z
     .string()
@@ -127,7 +125,35 @@ export const productCreateSchema = z.object({
     ),
 })
 
-export const productUpdateSchema = productCreateSchema.partial().extend({
+export const productCreateSchema = productCreateBaseSchema.superRefine(
+  (data, ctx) => {
+    if (data.productType === "loose_stone") {
+      if (!data.weightCarat?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Weight (carat) is required for loose stone",
+          path: ["weightCarat"],
+        })
+      }
+      if (!data.color?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Color is required for loose stone",
+          path: ["color"],
+        })
+      }
+      if (!data.origin?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Origin is required for loose stone",
+          path: ["origin"],
+        })
+      }
+    }
+  }
+)
+
+export const productUpdateSchema = productCreateBaseSchema.partial().extend({
   productId: z.string().uuid(),
 })
 

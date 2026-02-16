@@ -93,6 +93,7 @@ export async function createProductAction(formData: FormData) {
     title: formData.get("title"),
     sku: emptyToNull(formData.get("sku")),
     description: emptyToNull(formData.get("description")),
+    identification: emptyToNull(formData.get("identification")),
     price: formData.get("price"),
     currency: formData.get("currency") || "USD",
     isNegotiable: formData.get("isNegotiable") === "on" || formData.get("isNegotiable") === "true",
@@ -100,15 +101,12 @@ export async function createProductAction(formData: FormData) {
     categoryId: emptyToNull(formData.get("categoryId")),
     stoneCut: emptyToNull(formData.get("stoneCut")) as "Faceted" | "Cabochon" | null | undefined,
     metal: emptyToNull(formData.get("metal")) as "Gold" | "Silver" | "Other" | null | undefined,
-    materials: emptyToNull(formData.get("materials")),
-    qualityGemstones: emptyToNull(formData.get("qualityGemstones")),
     jewelleryGemstones: formData.get("jewelleryGemstones")?.toString() || undefined,
     totalWeightGrams: emptyToNull(formData.get("totalWeightGrams")),
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
     color: emptyToNull(formData.get("color")),
     shape: emptyToNull(formData.get("shape")),
-    treatment: emptyToNull(formData.get("treatment")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
     certReportNumber: emptyToNull(formData.get("certReportNumber")),
@@ -119,7 +117,14 @@ export async function createProductAction(formData: FormData) {
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" }
+    const flat = parsed.error.flatten()
+    const msg =
+      flat.formErrors.join(", ") ||
+      Object.entries(flat.fieldErrors)
+        .map(([k, v]) => `${k}: ${(v as string[])?.[0] ?? "invalid"}`)
+        .join(", ") ||
+      "Invalid input"
+    return { error: msg }
   }
 
   const session = await auth.api.getSession({ headers: await headers() })
@@ -131,6 +136,7 @@ export async function createProductAction(formData: FormData) {
     title: parsed.data.title,
     sku: parsed.data.sku,
     description: parsed.data.description,
+    identification: parsed.data.identification,
     price: parsed.data.price,
     currency: parsed.data.currency,
     isNegotiable: parsed.data.isNegotiable,
@@ -138,15 +144,12 @@ export async function createProductAction(formData: FormData) {
     categoryId: parsed.data.categoryId,
     stoneCut: parsed.data.stoneCut,
     metal: parsed.data.metal,
-    materials: parsed.data.materials,
-    qualityGemstones: parsed.data.qualityGemstones,
     jewelleryGemstones: parsed.data.jewelleryGemstones,
     totalWeightGrams: parsed.data.totalWeightGrams,
     weightCarat: parsed.data.weightCarat,
     dimensions: parsed.data.dimensions,
     color: parsed.data.color,
     shape: parsed.data.shape,
-    treatment: parsed.data.treatment,
     origin: parsed.data.origin,
     laboratoryId: parsed.data.laboratoryId,
     certReportNumber: parsed.data.certReportNumber,
@@ -168,6 +171,7 @@ export async function updateProductAction(formData: FormData) {
     title: formData.get("title") || undefined,
     sku: emptyToNull(formData.get("sku")),
     description: emptyToNull(formData.get("description")),
+    identification: emptyToNull(formData.get("identification")),
     price: (() => {
       const v = formData.get("price")
       return v === "" ? undefined : v
@@ -178,15 +182,12 @@ export async function updateProductAction(formData: FormData) {
     categoryId: emptyToNull(formData.get("categoryId")),
     stoneCut: emptyToNull(formData.get("stoneCut")) as "Faceted" | "Cabochon" | null | undefined,
     metal: emptyToNull(formData.get("metal")) as "Gold" | "Silver" | "Other" | null | undefined,
-    materials: emptyToNull(formData.get("materials")),
-    qualityGemstones: emptyToNull(formData.get("qualityGemstones")),
     jewelleryGemstones: formData.get("jewelleryGemstones")?.toString() || undefined,
     totalWeightGrams: emptyToNull(formData.get("totalWeightGrams")),
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
     color: emptyToNull(formData.get("color")),
     shape: emptyToNull(formData.get("shape")),
-    treatment: emptyToNull(formData.get("treatment")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
     certReportNumber: emptyToNull(formData.get("certReportNumber")),
@@ -197,7 +198,14 @@ export async function updateProductAction(formData: FormData) {
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" }
+    const flat = parsed.error.flatten()
+    const msg =
+      flat.formErrors.join(", ") ||
+      Object.entries(flat.fieldErrors)
+        .map(([k, v]) => `${k}: ${(v as string[])?.[0] ?? "invalid"}`)
+        .join(", ") ||
+      "Invalid input"
+    return { error: msg }
   }
 
   const session = await auth.api.getSession({ headers: await headers() })
@@ -210,6 +218,7 @@ export async function updateProductAction(formData: FormData) {
     title: data.title,
     sku: data.sku,
     description: data.description,
+    identification: data.identification,
     price: data.price,
     currency: data.currency,
     isNegotiable: data.isNegotiable,
@@ -217,15 +226,12 @@ export async function updateProductAction(formData: FormData) {
     categoryId: data.categoryId,
     stoneCut: data.stoneCut,
     metal: data.metal,
-    materials: data.materials,
-    qualityGemstones: data.qualityGemstones,
     jewelleryGemstones: data.jewelleryGemstones,
     totalWeightGrams: data.totalWeightGrams,
     weightCarat: data.weightCarat,
     dimensions: data.dimensions,
     color: data.color,
     shape: data.shape,
-    treatment: data.treatment,
     origin: data.origin,
     laboratoryId: data.laboratoryId,
     certReportNumber: data.certReportNumber,
