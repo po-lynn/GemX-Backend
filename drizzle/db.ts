@@ -11,18 +11,28 @@ if (!hasUrl && !hasParts) {
   )
 }
 
-const isDev = process.env.NODE_ENV !== "production"
+const globalForDb = globalThis as unknown as {
+  __postgres: ReturnType<typeof postgres> | undefined
+}
 
 function createConnection(): ReturnType<typeof postgres> {
   if (hasUrl) {
-    return postgres(env.DATABASE_URL!, {
+    const url = env.DATABASE_URL!
+    // Transaction pooler = :6543/ (can cause hangs). Session pooler = :5432/ (more reliable for this app).
+    const isTransactionPooler = url.includes(":6543/")
+    return postgres(url, {
       max: 1,
       ssl: "require",
       connect_timeout: 10,
-      idle_timeout: 20,
-      max_lifetime: 60 * 30, // 30 minutes
-      // Transaction pooler (port 6543) does not support prepared statements
-      prepare: false,
+      idle_timeout: 120,
+      max_lifetime: 60 * 10,
+      prepare: !isTransactionPooler,
+      fetch_types: false,
+      // Fail queries after 15s instead of hanging (e.g. when pooler connection is stale)
+      connection: { statement_timeout: 15_000 },
+      onclose: () => {
+        globalForDb.__postgres = undefined
+      },
     })
   }
   return postgres({
@@ -34,13 +44,18 @@ function createConnection(): ReturnType<typeof postgres> {
   })
 }
 
-const globalForDb = globalThis as unknown as { __postgres: ReturnType<typeof postgres> | undefined }
-
-// Reuse one client per process (dev and serverless) to avoid connection churn
-const connection = globalForDb.__postgres ?? (() => {
+function getConnection(): ReturnType<typeof postgres> {
+  if (globalForDb.__postgres) return globalForDb.__postgres
   const conn = createConnection()
   globalForDb.__postgres = conn
   return conn
-})()
+}
 
-export const db = drizzle(connection, { schema })
+// Lazy client: each access uses current connection and recovers after close (e.g. pooler closed socket)
+const sqlProxy = new Proxy({} as ReturnType<typeof postgres>, {
+  get(_, prop) {
+    return (getConnection() as unknown as Record<string | symbol, unknown>)[prop]
+  },
+})
+
+export const db = drizzle(sqlProxy, { schema })

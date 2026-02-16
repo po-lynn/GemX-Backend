@@ -19,11 +19,12 @@ gemx@2026
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. **Settings → Database**: copy the **Connection string** (URI).
-   - Use **Transaction** pooler (port **6543**) for serverless.
+   - Prefer **Session** pooler (port **5432**) to avoid "New Product" or other pages hanging with no response. Use **Transaction** (port **6543**) only if you need it for scale.
    - Add `?sslmode=require` if not already in the URL.
 3. Optional: run migrations against Supabase from your machine:
    - Put Supabase `DATABASE_URL` in `.env` (or temporarily in `.env.local`).
    - `npm run db:migrate` (or `db:push` for prototyping).
+4. If the Dashboard shows **"relation supabase_migrations.schema_migrations does not exist"**, run once in **Supabase → SQL Editor**: `scripts/supabase-migrations-schema.sql` (or `psql $DATABASE_URL -f scripts/supabase-migrations-schema.sql`).
 
 ### 2. Vercel (app)
 
