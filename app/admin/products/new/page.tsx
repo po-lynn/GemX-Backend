@@ -1,16 +1,16 @@
 import Link from "next/link"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
-import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
-import { getCachedOrigins } from "@/features/origin/db/cache/origin"
+import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
+import { getAllOrigins } from "@/features/origin/db/origin"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
 export default async function AdminProductsNewPage() {
   const [categories, laboratories, origins] = await Promise.all([
     getAllCategories(),
-    getCachedLaboratories(),
-    getCachedOrigins(),
+    getAllLaboratories(),
+    getAllOrigins(),
   ])
 
   return (

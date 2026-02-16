@@ -3,8 +3,8 @@ import { notFound } from "next/navigation"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getCachedProduct } from "@/features/products/db/cache/products"
 import { getAllCategories } from "@/features/categories/db/categories"
-import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
-import { getCachedOrigins } from "@/features/origin/db/cache/origin"
+import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
+import { getAllOrigins } from "@/features/origin/db/origin"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
@@ -17,8 +17,8 @@ export default async function AdminProductsEditPage({ params }: Props) {
   const [product, categories, laboratories, origins] = await Promise.all([
     getCachedProduct(id),
     getAllCategories(),
-    getCachedLaboratories(),
-    getCachedOrigins(),
+    getAllLaboratories(),
+    getAllOrigins(),
   ])
 
   if (!product) notFound()
