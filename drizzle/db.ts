@@ -21,6 +21,8 @@ function createConnection(): ReturnType<typeof postgres> {
       connect_timeout: 10,
       idle_timeout: 20,
       max_lifetime: 60 * 30, // 30 minutes
+      // Transaction pooler (port 6543) does not support prepared statements
+      prepare: false,
     })
   }
   return postgres({
@@ -34,11 +36,11 @@ function createConnection(): ReturnType<typeof postgres> {
 
 const globalForDb = globalThis as unknown as { __postgres: ReturnType<typeof postgres> | undefined }
 
-const connection =
-  isDev && globalForDb.__postgres ? globalForDb.__postgres : (() => {
-    const conn = createConnection()
-    if (isDev) globalForDb.__postgres = conn
-    return conn
-  })()
+// Reuse one client per process (dev and serverless) to avoid connection churn
+const connection = globalForDb.__postgres ?? (() => {
+  const conn = createConnection()
+  globalForDb.__postgres = conn
+  return conn
+})()
 
 export const db = drizzle(connection, { schema })
