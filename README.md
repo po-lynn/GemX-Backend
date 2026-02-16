@@ -12,7 +12,7 @@ admin@gemx.com
 gemx@2026
 
 ---
-
+#Rebuild
 ## Deploy to Vercel + Supabase
 
 ### 1. Supabase (database)
