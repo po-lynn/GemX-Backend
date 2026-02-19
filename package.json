@@ -14,6 +14,11 @@
     "seed:admin": "tsx data/seed-admin.ts"
   },
   "dependencies": {
+    "@blocknote/core": "^0.46.2",
+    "@blocknote/mantine": "^0.46.2",
+    "@blocknote/react": "^0.46.2",
+    "@mantine/core": "^8.3.11",
+    "@mantine/hooks": "^8.3.11",
     "@radix-ui/react-slot": "^1.2.4",
     "@t3-oss/env-nextjs": "^0.13.10",
     "better-auth": "^1.4.18",
