@@ -1,7 +1,11 @@
 import Link from "next/link"
 import { Suspense } from "react"
 import { getAdminProducts } from "@/features/products/db/cache/products"
-import { ProductsSearchInput, ProductsTable } from "@/features/products/components"
+import {
+  ProductFilters,
+  ProductsSearchInput,
+  ProductsTable,
+} from "@/features/products/components"
 import {
   Card,
   CardContent,
@@ -11,26 +15,79 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
+import { getAllCategories } from "@/features/categories/db/categories"
+import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
+import { getAllOrigins } from "@/features/origin/db/origin"
 import { Plus } from "lucide-react"
 
 type Props = {
-  searchParams: Promise<{ page?: string; search?: string }>
+  searchParams: Promise<{
+    page?: string
+    search?: string
+    productType?: string
+    categoryId?: string
+    status?: string
+    stoneCut?: string
+    shape?: string
+    origin?: string
+    laboratoryId?: string
+  }>
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
   const params = await searchParams
-  const { page, search } = adminProductsSearchSchema.parse({
+  const parsed = adminProductsSearchSchema.parse({
     page: params.page,
     search: params.search,
+    productType: params.productType,
+    categoryId: params.categoryId,
+    status: params.status,
+    stoneCut: params.stoneCut,
+    shape: params.shape,
+    origin: params.origin,
+    laboratoryId: params.laboratoryId,
   })
-
-  const { products, total } = await getAdminProducts({
+  const {
     page,
-    limit: 20,
-    search: search || undefined,
-  })
+    search,
+    productType,
+    categoryId,
+    status,
+    stoneCut,
+    shape,
+    origin,
+    laboratoryId,
+  } = parsed
+
+  const [categories, origins, laboratories, { products, total }] =
+    await Promise.all([
+      getAllCategories(),
+      getAllOrigins(),
+      getAllLaboratories(),
+      getAdminProducts({
+        page,
+        limit: 20,
+        search: search || undefined,
+        productType: productType ?? undefined,
+        categoryId: categoryId ?? undefined,
+        status: status ?? undefined,
+        stoneCut: stoneCut ?? undefined,
+        shape: shape ?? undefined,
+        origin: (origin?.trim() && origin) || undefined,
+        laboratoryId: laboratoryId ?? undefined,
+      }),
+    ])
 
   const totalPages = Math.ceil(total / 20)
+  const filterParams = {
+    productType: productType ?? "",
+    categoryId: categoryId ?? "",
+    status: status ?? "",
+    stoneCut: stoneCut ?? "",
+    shape: shape ?? "",
+    origin: origin ?? "",
+    laboratoryId: laboratoryId ?? "",
+  }
 
   return (
     <div className="container my-6 space-y-6">
@@ -58,6 +115,20 @@ export default async function AdminProductsPage({ searchParams }: Props) {
           <Suspense fallback={null}>
             <ProductsSearchInput defaultValue={search ?? ""} />
           </Suspense>
+          <Suspense fallback={null}>
+            <ProductFilters
+              categories={categories}
+              origins={origins}
+              laboratories={laboratories}
+              productType={filterParams.productType}
+              categoryId={filterParams.categoryId}
+              status={filterParams.status}
+              stoneCut={filterParams.stoneCut}
+              shape={filterParams.shape}
+              origin={filterParams.origin}
+              laboratoryId={filterParams.laboratoryId}
+            />
+          </Suspense>
         </CardHeader>
         <CardContent>
           <ProductsTable
@@ -65,6 +136,13 @@ export default async function AdminProductsPage({ searchParams }: Props) {
             page={page}
             totalPages={totalPages}
             search={search ?? ""}
+            productType={filterParams.productType}
+            categoryId={filterParams.categoryId}
+            status={filterParams.status}
+            stoneCut={filterParams.stoneCut}
+            shape={filterParams.shape}
+            origin={filterParams.origin}
+            laboratoryId={filterParams.laboratoryId}
           />
         </CardContent>
       </Card>

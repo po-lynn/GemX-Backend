@@ -1,9 +1,26 @@
 # Mobile API Documentation
 
+---
+
+## 1. API routes overview
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/mobile/register` | No | Register (phone, password, name) |
+| POST | `/api/mobile/login` | No | Login (phone, password) |
+| GET | `/api/categories` | No | List categories. Query: `type` (optional) |
+| GET | `/api/products` | No | List all products. Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId` |
+| GET | `/api/products/:id` | No | Get single product by ID |
+| GET | `/api/products/mine` | Yes | List current user’s products. Same query params as list all. |
+| POST | `/api/products` | Yes | Create product (JSON body) |
+| PATCH | `/api/products/:id` | Yes | Update product (owner or admin). JSON body. |
+| DELETE | `/api/products/:id` | Yes | Delete product (owner or admin) |
+
+List responses (`GET /api/products`, `GET /api/products/mine`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.
 
 ---
 
-## 1. Base URL & Headers
+## 2. Base URL and headers
 
 - **Base URL:** `https://gem-x-backend.vercel.app` (e.g. `http://localhost:3000` in dev)
 - **Content-Type:** `application/json` for all request bodies.
@@ -13,9 +30,9 @@
 
 ---
 
-## 2. Authentication
+## 3. Authentication
 
-### 2.1 Register (create account)
+### 3.1 Register (create account)
 
 **POST** `/api/mobile/register`
 
@@ -42,7 +59,7 @@
 
 ---
 
-### 2.2 Login
+### 3.2 Login
 
 **POST** `/api/mobile/login`
 
@@ -64,11 +81,11 @@
 
 ---
 
-## 3. Categories (read-only)
+## 4. Categories (read-only)
 
 Used for dropdowns/filters when creating or editing products. **No auth required.**
 
-### 3.1 List categories
+### 4.1 List categories
 
 **GET** `/api/categories`
 
@@ -102,9 +119,9 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 ---
 
-## 4. Products
+## 5. Products
 
-### 4.1 List all products (public)
+### 5.1 List all products (public)
 
 **GET** `/api/products`
 
@@ -112,11 +129,18 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 **Query:**
 
-| Param   | Type   | Default | Description                    |
-|--------|--------|---------|--------------------------------|
-| `page` | number | 1       | Page number                   |
-| `limit`| number | 20      | Items per page (max 100)      |
-| `search` | string | -     | Search in title and seller    |
+| Param        | Type   | Default | Description                                      |
+|-------------|--------|---------|--------------------------------------------------|
+| `page`      | number | 1       | Page number                                     |
+| `limit`     | number | 20      | Items per page (max 100)                         |
+| `search`    | string | -       | Search in title and seller                       |
+| `productType` | string | -     | Filter by type: `loose_stone` or `jewellery`    |
+| `categoryId`  | string | -     | Filter by category UUID (from GET /api/categories) |
+| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden` |
+| `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon` (loose stones) |
+| `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart` |
+| `origin`    | string | -       | Filter by origin name (e.g. from GET /api/origins or your origins list) |
+| `laboratoryId` | string | -     | Filter by laboratory UUID (from GET /api/laboratories) |
 
 **Success (200):** See response shape below.
 
@@ -124,15 +148,22 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 #### Search and filter (products list)
 
-The list endpoints support **search** and **pagination**. Use the same query params for **GET /api/products** (all products) and **GET /api/products/mine** (my products).
+The list endpoints support **search**, **filters**, and **pagination**. Use the same query params for **GET /api/products** (all products) and **GET /api/products/mine** (my products).
 
 **Query parameters**
 
-| Param   | Type   | Default | Description |
-|--------|--------|---------|-------------|
-| `page` | number | 1       | Page number (1-based). |
-| `limit`| number | 20      | Items per page (max 100). |
-| `search` | string | -     | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
+| Param        | Type   | Default | Description |
+|-------------|--------|---------|-------------|
+| `page`      | number | 1       | Page number (1-based). |
+| `limit`     | number | 20      | Items per page (max 100). |
+| `search`    | string | -       | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
+| `productType` | string | -     | Filter by product type: `loose_stone` or `jewellery`. |
+| `categoryId`  | string | -     | Filter by category (UUID from GET /api/categories). |
+| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. |
+| `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon`. |
+| `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`. |
+| `origin`    | string | -       | Filter by origin name. |
+| `laboratoryId` | string | -     | Filter by laboratory (UUID from GET /api/laboratories). |
 
 **What is matched by `search`**
 
@@ -174,7 +205,24 @@ GET /api/products/mine?search=ring
 Authorization: Bearer <session_token>
 ```
 
- 
+**5. Filter by type and status (e.g. active loose stones only)**
+
+```
+GET /api/products?productType=loose_stone&status=active
+GET /api/products/mine?productType=jewellery&status=active
+Authorization: Bearer <session_token>
+```
+
+**6. Filter by cut, shape, origin, or laboratory**
+
+```
+GET /api/products?stoneCut=Cabochon
+GET /api/products?shape=Oval&origin=Myanmar
+GET /api/products?laboratoryId=<uuid-from-api>
+GET /api/products/mine?stoneCut=Faceted&status=active
+Authorization: Bearer <session_token>
+```
+
 **Success (200):**
 
 ```json
@@ -209,7 +257,7 @@ Authorization: Bearer <session_token>
 
 ---
 
-### 4.2 Get single product (public)
+### 5.2 Get single product (public)
 
 **GET** `/api/products/:id`
 
@@ -223,15 +271,18 @@ Authorization: Bearer <session_token>
 
 ---
 
-### 4.3 My products (current user’s list)
+### 5.3 My products (current user’s list)
 
 **GET** `/api/products/mine`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query:** Same as list all — `page`, `limit`, `search`.
+**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`. All are optional.
 
-**Example:** `GET /api/products/mine?page=1&limit=20`
+**Examples:**
+
+- `GET /api/products/mine?page=1&limit=20`
+- `GET /api/products/mine?status=active&stoneCut=Cabochon` (with Bearer token)
 
 **Success (200):** Same shape as “List all products”: `{ "products": [...], "total": n }` but only the logged-in user’s products.
 
@@ -241,7 +292,7 @@ Authorization: Bearer <session_token>
 
 ---
 
-### 4.4 Create product
+### 5.4 Create product
 
 **POST** `/api/products`
 
@@ -436,7 +487,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-### 4.5 Update product
+### 5.5 Update product
 
 **PATCH** `/api/products/:id`
 
@@ -471,7 +522,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-### 4.6 Delete product
+### 5.6 Delete product
 
 **DELETE** `/api/products/:id`
 
@@ -493,7 +544,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-## 5. Quick flow for React Native
+## 6. Quick flow for React Native
 
 1. **Auth**
    - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
@@ -505,11 +556,11 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
    - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 
 3. **Browse**
-   - List: `GET /api/products?page=1&limit=20`.
+   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`).
    - Detail: `GET /api/products/:id`.
 
 4. **My products**
-   - List: `GET /api/products/mine?page=1&limit=20` (with Bearer token).
+   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse; with Bearer token).
 
 5. **Sell**
    - Create: `POST /api/products` with JSON body (with Bearer token).
@@ -518,7 +569,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-## 6. Error format
+## 7. Error format
 
 - **Body:** `{ "error": "Human-readable message" }`.
 - **Validation (400):** May also include `details`: `{ "fieldName": ["error message"] }`.
@@ -526,16 +577,16 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-## 7. Summary table
+## 8. Summary table
 
 | Method | Path                     | Auth   | Description           |
 |--------|--------------------------|--------|-----------------------|
 | POST   | `/api/mobile/register`   | No     | Register              |
 | POST   | `/api/mobile/login`      | No     | Login                 |
-| GET    | `/api/categories`        | No     | List categories       |
-| GET    | `/api/products`          | No     | List all products     |
+| GET    | `/api/categories`        | No     | List categories (`?type` optional) |
+| GET    | `/api/products`          | No     | List all products (see 5.1 for query params) |
 | GET    | `/api/products/:id`      | No     | Get one product       |
-| GET    | `/api/products/mine`     | Yes    | List my products      |
+| GET    | `/api/products/mine`     | Yes    | List my products (same query params as list all) |
 | POST   | `/api/products`          | Yes    | Create product        |
 | PATCH  | `/api/products/:id`      | Yes    | Update (owner/admin)  |
 | DELETE | `/api/products/:id`      | Yes    | Delete (owner/admin)  |

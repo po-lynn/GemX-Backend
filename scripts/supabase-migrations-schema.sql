@@ -1,5 +1,7 @@
--- Fix: "relation supabase_migrations.schema_migrations does not exist"
--- Supabase Dashboard expects this table. Run once in Supabase SQL Editor or: psql $DATABASE_URL -f scripts/supabase-migrations-schema.sql
+-- When to run: Only if the Supabase Dashboard shows the error
+--   "relation supabase_migrations.schema_migrations does not exist"
+-- This does NOT fix app hangs; use Session pooler (port 5432) for that.
+-- Run once: Supabase → SQL Editor → paste this file → Run (or: psql $DATABASE_URL -f scripts/supabase-migrations-schema.sql)
 
 CREATE SCHEMA IF NOT EXISTS supabase_migrations;
 

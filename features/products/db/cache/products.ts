@@ -3,6 +3,7 @@ import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
   getProductById,
+  getProductsBySellerId,
 } from "../products"
 import type { ProductForEdit } from "../products"
 
@@ -24,11 +25,38 @@ export async function getAdminProducts(opts: {
   page?: number
   limit?: number
   search?: string
+  productType?: "loose_stone" | "jewellery"
+  categoryId?: string | null
+  status?: "active" | "archive" | "sold" | "hidden"
+  stoneCut?: "Faceted" | "Cabochon"
+  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  origin?: string
+  laboratoryId?: string | null
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())
 
   return getAdminProductsFromDb(opts)
+}
+
+export async function getCachedProductsBySellerId(
+  sellerId: string,
+  opts: {
+    page?: number
+    limit?: number
+    search?: string
+    productType?: "loose_stone" | "jewellery"
+    categoryId?: string | null
+    status?: "active" | "archive" | "sold" | "hidden"
+    stoneCut?: "Faceted" | "Cabochon"
+    shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+    origin?: string
+    laboratoryId?: string | null
+  }
+) {
+  "use cache"
+  cacheTag(getProductsGlobalTag())
+  return getProductsBySellerId(sellerId, opts)
 }
 
 /** Invalidate products cache (use in Route Handlers or Server Actions). */

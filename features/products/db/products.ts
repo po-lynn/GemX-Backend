@@ -44,6 +44,13 @@ export async function getAdminProductsFromDb(opts: {
   page?: number
   limit?: number
   search?: string
+  productType?: "loose_stone" | "jewellery"
+  categoryId?: string | null
+  status?: "active" | "archive" | "sold" | "hidden"
+  stoneCut?: "Faceted" | "Cabochon"
+  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  origin?: string
+  laboratoryId?: string | null
 }): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)
@@ -58,6 +65,20 @@ export async function getAdminProductsFromDb(opts: {
         ilike(user.email, `%${search}%`)
       )
     : undefined
+
+  const filterConditions = [
+    searchCondition,
+    opts.productType ? eq(product.productType, opts.productType) : undefined,
+    opts.categoryId != null ? eq(product.categoryId, opts.categoryId) : undefined,
+    opts.status ? eq(product.status, opts.status) : undefined,
+    opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
+    opts.shape ? eq(product.shape, opts.shape) : undefined,
+    opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+    opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+  ].filter(Boolean)
+
+  const whereClause =
+    filterConditions.length > 0 ? and(...filterConditions) : undefined
 
   const [productsData, countResult] = await Promise.all([
     db
@@ -88,7 +109,7 @@ export async function getAdminProductsFromDb(opts: {
       .innerJoin(user, eq(product.sellerId, user.id))
       .leftJoin(category, eq(product.categoryId, category.id))
       .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
-      .where(searchCondition)
+      .where(whereClause)
       .orderBy(desc(product.createdAt))
       .limit(limit)
       .offset(offset),
@@ -96,7 +117,7 @@ export async function getAdminProductsFromDb(opts: {
       .select({ count: sql<number>`count(*)::int` })
       .from(product)
       .innerJoin(user, eq(product.sellerId, user.id))
-      .where(searchCondition),
+      .where(whereClause),
   ])
 
   const productIds = productsData.map((p) => p.id)
@@ -152,7 +173,18 @@ export async function getAdminProductsFromDb(opts: {
 
 export async function getProductsBySellerId(
   sellerId: string,
-  opts: { page?: number; limit?: number; search?: string }
+  opts: {
+    page?: number
+    limit?: number
+    search?: string
+    productType?: "loose_stone" | "jewellery"
+    categoryId?: string | null
+    status?: "active" | "archive" | "sold" | "hidden"
+    stoneCut?: "Faceted" | "Cabochon"
+    shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+    origin?: string
+    laboratoryId?: string | null
+  }
 ): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)
@@ -168,9 +200,19 @@ export async function getProductsBySellerId(
       )
     : undefined
 
-  const whereClause = searchCondition
-    ? and(eq(product.sellerId, sellerId), searchCondition)
-    : eq(product.sellerId, sellerId)
+  const filterConditions = [
+    eq(product.sellerId, sellerId),
+    searchCondition,
+    opts.productType ? eq(product.productType, opts.productType) : undefined,
+    opts.categoryId != null ? eq(product.categoryId, opts.categoryId) : undefined,
+    opts.status ? eq(product.status, opts.status) : undefined,
+    opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
+    opts.shape ? eq(product.shape, opts.shape) : undefined,
+    opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+    opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+  ].filter(Boolean)
+
+  const whereClause = and(...filterConditions)
 
   const [productsData, countResult] = await Promise.all([
     db

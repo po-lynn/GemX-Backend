@@ -11,9 +11,26 @@ export const productModerationSchema = z.enum([
 ])
 export const currencySchema = z.enum(["USD", "MMK"])
 
+const optionalUuid = z
+  .string()
+  .optional()
+  .transform((v) => {
+    if (v == null || v === "") return undefined
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(v) ? v : undefined
+  })
+
 export const adminProductsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   search: z.string().optional(),
+  productType: z.enum(["loose_stone", "jewellery"]).optional(),
+  categoryId: optionalUuid,
+  status: productStatusSchema.optional(),
+  stoneCut: z.enum(["Faceted", "Cabochon"]).optional(),
+  shape: productShapeSchema.optional(),
+  origin: z.string().max(200).optional(),
+  laboratoryId: optionalUuid,
 })
 
 export const productModerationActionSchema = z.object({

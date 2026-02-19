@@ -10,6 +10,37 @@ type Props = {
   page: number
   totalPages: number
   search: string
+  productType?: string
+  categoryId?: string
+  status?: string
+  stoneCut?: string
+  shape?: string
+  origin?: string
+  laboratoryId?: string
+}
+
+function buildQueryString(params: {
+  page: number
+  search?: string
+  productType?: string
+  categoryId?: string
+  status?: string
+  stoneCut?: string
+  shape?: string
+  origin?: string
+  laboratoryId?: string
+}): string {
+  const sp = new URLSearchParams()
+  sp.set("page", String(params.page))
+  if (params.search?.trim()) sp.set("search", params.search.trim())
+  if (params.productType?.trim()) sp.set("productType", params.productType.trim())
+  if (params.categoryId?.trim()) sp.set("categoryId", params.categoryId.trim())
+  if (params.status?.trim()) sp.set("status", params.status.trim())
+  if (params.stoneCut?.trim()) sp.set("stoneCut", params.stoneCut.trim())
+  if (params.shape?.trim()) sp.set("shape", params.shape.trim())
+  if (params.origin?.trim()) sp.set("origin", params.origin.trim())
+  if (params.laboratoryId?.trim()) sp.set("laboratoryId", params.laboratoryId.trim())
+  return sp.toString()
 }
 
 export function ProductsTable({
@@ -17,7 +48,27 @@ export function ProductsTable({
   page,
   totalPages,
   search,
+  productType = "",
+  categoryId = "",
+  status = "",
+  stoneCut = "",
+  shape = "",
+  origin = "",
+  laboratoryId = "",
 }: Props) {
+  const base = "/admin/products"
+  const query = (p: number) =>
+    buildQueryString({
+      page: p,
+      search,
+      productType,
+      categoryId,
+      status,
+      stoneCut,
+      shape,
+      origin,
+      laboratoryId,
+    })
   return (
     <>
       <div className="overflow-x-auto">
@@ -137,13 +188,7 @@ export function ProductsTable({
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild disabled={page <= 1}>
-              <Link
-                href={
-                  page <= 1
-                    ? "#"
-                    : `/admin/products?page=${page - 1}${search ? `&search=${encodeURIComponent(search)}` : ""}`
-                }
-              >
+              <Link href={page <= 1 ? "#" : `${base}?${query(page - 1)}`}>
                 Previous
               </Link>
             </Button>
@@ -154,11 +199,7 @@ export function ProductsTable({
               disabled={page >= totalPages}
             >
               <Link
-                href={
-                  page >= totalPages
-                    ? "#"
-                    : `/admin/products?page=${page + 1}${search ? `&search=${encodeURIComponent(search)}` : ""}`
-                }
+                href={page >= totalPages ? "#" : `${base}?${query(page + 1)}`}
               >
                 Next
               </Link>
