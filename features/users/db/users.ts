@@ -9,6 +9,7 @@ export type UserRow = {
   role: string;
   phone: string | null;
   gender: string | null;
+  dateOfBirth: string | null;
   emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +45,7 @@ export async function getAllUsersFromDb(opts?: {
       role: user.role,
       phone: user.phone,
       gender: user.gender,
+      dateOfBirth: user.dateOfBirth,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -63,6 +65,7 @@ export async function getUserById(id: string): Promise<UserForEdit | null> {
       role: user.role,
       phone: user.phone,
       gender: user.gender,
+      dateOfBirth: user.dateOfBirth,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -86,6 +89,7 @@ export type UpdateUserInput = {
   role?: string;
   phone?: string | null;
   gender?: string | null;
+  dateOfBirth?: string | null;
   username?: string | null;
   displayUsername?: string | null;
   nrc?: string | null;

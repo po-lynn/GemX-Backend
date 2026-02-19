@@ -26,6 +26,12 @@ export async function createUserAction(formData: FormData) {
     role: formData.get("role"),
     phone: emptyToNull(formData.get("phone")),
     gender: emptyToNull(formData.get("gender")),
+    dateOfBirth: emptyToNull(formData.get("dateOfBirth")),
+    nrc: emptyToNull(formData.get("nrc")),
+    address: emptyToNull(formData.get("address")),
+    city: emptyToNull(formData.get("city")),
+    state: emptyToNull(formData.get("state")),
+    country: emptyToNull(formData.get("country")),
   });
   if (!parsed.success) {
     return {
@@ -48,6 +54,12 @@ export async function createUserAction(formData: FormData) {
       role: parsed.data.role,
       phone: (parsed.data.phone ?? "").trim() || undefined,
       gender: (parsed.data.gender ?? "").trim() || undefined,
+      dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
+      nrc: (parsed.data.nrc ?? "").trim() || undefined,
+      address: (parsed.data.address ?? "").trim() || undefined,
+      city: (parsed.data.city ?? "").trim() || undefined,
+      state: (parsed.data.state ?? "").trim() || undefined,
+      country: (parsed.data.country ?? "").trim() || undefined,
     },
   });
   if (result && "error" in result && result.error) {
@@ -72,6 +84,7 @@ export async function updateUserAction(formData: FormData) {
     role: emptyToNull(formData.get("role")),
     phone: emptyToNull(formData.get("phone")),
     gender: emptyToNull(formData.get("gender")),
+    dateOfBirth: emptyToNull(formData.get("dateOfBirth")),
     username: emptyToNull(formData.get("username")),
     displayUsername: emptyToNull(formData.get("displayUsername")),
     nrc: emptyToNull(formData.get("nrc")),

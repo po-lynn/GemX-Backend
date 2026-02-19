@@ -36,6 +36,14 @@ const GENDERS = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
+const COUNTRIES = [
+  "Afghanistan", "Australia", "Brazil", "Cambodia", "China", "Colombia",
+  "India", "Indonesia", "Japan", "Madagascar", "Malawi", "Malaysia",
+  "Mozambique", "Myanmar", "Pakistan", "Philippines", "Russia",
+  "Singapore", "South Korea", "Sri Lanka", "Tanzania", "Thailand",
+  "UK", "USA", "Vietnam", "Zambia", "Zimbabwe",
+].sort();
+
 type Props = {
   mode: "create" | "edit";
   user?: UserForEdit | null;
@@ -63,8 +71,7 @@ export function UserForm({ mode, user }: Props) {
         setLoading(false);
         return;
       }
-      router.push("/admin/users");
-      router.refresh();
+      await router.push("/admin/users");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -205,64 +212,96 @@ export function UserForm({ mode, user }: Props) {
                 ))}
               </select>
             </div>
-            {isEdit && (
-              <>
-                <div className="space-y-2">
-                  <label htmlFor="address" className="text-sm font-medium">
-                    Address
-                  </label>
-                  <input
-                    id="address"
-                    name="address"
-                    type="text"
-                    maxLength={500}
-                    defaultValue={user?.address ?? ""}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-2">
-                    <label htmlFor="city" className="text-sm font-medium">
-                      City
-                    </label>
-                    <input
-                      id="city"
-                      name="city"
-                      type="text"
-                      maxLength={100}
-                      defaultValue={user?.city ?? ""}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="state" className="text-sm font-medium">
-                      State
-                    </label>
-                    <input
-                      id="state"
-                      name="state"
-                      type="text"
-                      maxLength={100}
-                      defaultValue={user?.state ?? ""}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="country" className="text-sm font-medium">
-                      Country
-                    </label>
-                    <input
-                      id="country"
-                      name="country"
-                      type="text"
-                      maxLength={100}
-                      defaultValue={user?.country ?? ""}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="space-y-2">
+              <label htmlFor="dateOfBirth" className="text-sm font-medium">
+                Date of birth
+              </label>
+              <input
+                id="dateOfBirth"
+                name="dateOfBirth"
+                type="date"
+                defaultValue={user?.dateOfBirth ?? ""}
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="nrc" className="text-sm font-medium">
+                Identification number
+              </label>
+              <input
+                id="nrc"
+                name="nrc"
+                type="text"
+                maxLength={100}
+                defaultValue={user?.nrc ?? ""}
+                placeholder="e.g. NRC number"
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="address" className="text-sm font-medium">
+                Address
+              </label>
+              <input
+                id="address"
+                name="address"
+                type="text"
+                maxLength={500}
+                defaultValue={user?.address ?? ""}
+                placeholder="Street, building"
+                className={inputClass}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <label htmlFor="city" className="text-sm font-medium">
+                  City
+                </label>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  maxLength={100}
+                  defaultValue={user?.city ?? ""}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="state" className="text-sm font-medium">
+                  State
+                </label>
+                <input
+                  id="state"
+                  name="state"
+                  type="text"
+                  maxLength={100}
+                  defaultValue={user?.state ?? ""}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="country" className="text-sm font-medium">
+                  Country
+                </label>
+                <select
+                  id="country"
+                  name="country"
+                  defaultValue={user?.country ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">Select country</option>
+                  {user?.country &&
+                    !COUNTRIES.includes(user.country) && (
+                      <option value={user.country}>{user.country}</option>
+                    )}
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
