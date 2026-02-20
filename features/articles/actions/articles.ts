@@ -70,15 +70,15 @@ export async function updateArticleAction(formData: FormData) {
   if (!session || !canAdminManageArticles(session.user.role)) {
     return { error: "Unauthorized" };
   }
-  const { articleId, ...data } = parsed.data;
-  const updates: Parameters<typeof updateArticleInDb>[1] = { ...data };
-  if (data.slug !== undefined) {
-    updates.slug = data.slug.trim().toLowerCase();
+  const { articleId, publishDate, ...rest } = parsed.data;
+  const updates: Parameters<typeof updateArticleInDb>[1] = { ...rest };
+  if (rest.slug !== undefined) {
+    updates.slug = rest.slug.trim().toLowerCase();
   }
-  if (data.publishDate !== undefined) {
+  if (publishDate !== undefined) {
     updates.publishDate =
-      data.publishDate && String(data.publishDate).trim()
-        ? new Date(data.publishDate)
+      publishDate && String(publishDate).trim()
+        ? new Date(publishDate)
         : null;
   }
   await updateArticleInDb(articleId, updates);

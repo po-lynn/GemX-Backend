@@ -64,13 +64,11 @@ export async function updateNewsAction(formData: FormData) {
   if (!session || !canAdminManageNews(session.user.role)) {
     return { error: "Unauthorized" };
   }
-  const { newsId, ...data } = parsed.data;
-  const updates: Parameters<typeof updateNewsInDb>[1] = { ...data };
-  if (data.publish !== undefined) {
+  const { newsId, publish, ...rest } = parsed.data;
+  const updates: Parameters<typeof updateNewsInDb>[1] = { ...rest };
+  if (publish !== undefined) {
     updates.publish =
-      data.publish && String(data.publish).trim()
-        ? new Date(data.publish)
-        : null;
+      publish && String(publish).trim() ? new Date(publish) : null;
   }
   await updateNewsInDb(newsId, updates);
   return { success: true, newsId };

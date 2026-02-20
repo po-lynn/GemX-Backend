@@ -6,13 +6,13 @@ import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import "@blocknote/core/fonts/inter.css";
-import type { BlockNoteDocument } from "@blocknote/core";
+import type { PartialBlock } from "@blocknote/core";
 
-function parseInitialContent(content: string | null | undefined): BlockNoteDocument | undefined {
+function parseInitialContent(content: string | null | undefined): PartialBlock[] | undefined {
   if (!content || !content.trim()) return undefined;
   try {
     const parsed = JSON.parse(content);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed as BlockNoteDocument;
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as PartialBlock[];
     return undefined;
   } catch {
     return undefined;
