@@ -5,6 +5,7 @@ export const laboratory = pgTable("laboratory", {
   name: text("name").notNull(),
   address: text("address").notNull(),
   phone: text("phone").notNull(),
+  precaution: text("precaution").default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

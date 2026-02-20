@@ -4,6 +4,7 @@ export const laboratoryCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   address: z.string().min(1, "Address is required").max(500),
   phone: z.string().min(1, "Phone is required").max(100),
+  precaution: z.string().max(2000).optional().nullable(),
 });
 
 export const laboratoryUpdateSchema = laboratoryCreateSchema.partial().extend({
