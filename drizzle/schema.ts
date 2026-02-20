@@ -4,4 +4,6 @@ export * from "./schema/userRole"
 export * from "./schema/product-schema"
 export * from "./schema/laboratory-schema"
 export * from "./schema/origin-schema"
+export * from "./schema/news-schema"
+export * from "./schema/articles-schema"
  

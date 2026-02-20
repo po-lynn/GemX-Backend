@@ -122,6 +122,20 @@ export function LaboratoryForm({ mode, laboratory }: Props) {
                 className={inputClass}
               />
             </div>
+            <div className="space-y-2">
+              <label htmlFor="precaution" className="text-sm font-medium">
+                Precaution
+              </label>
+              <textarea
+                id="precaution"
+                name="precaution"
+                rows={3}
+                maxLength={2000}
+                defaultValue={laboratory?.precaution ?? ""}
+                placeholder="Safety or handling precautions (optional)"
+                className={inputClass + " min-h-[80px] resize-y"}
+              />
+            </div>
           </section>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

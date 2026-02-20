@@ -24,6 +24,7 @@ export async function createLaboratoryAction(formData: FormData) {
     name: formData.get("name"),
     address: emptyToNull(formData.get("address")),
     phone: emptyToNull(formData.get("phone")),
+    precaution: emptyToNull(formData.get("precaution")),
   });
 
   if (!parsed.success) {
@@ -42,6 +43,7 @@ export async function createLaboratoryAction(formData: FormData) {
     name: parsed.data.name,
     address: parsed.data.address,
     phone: parsed.data.phone,
+    precaution: parsed.data.precaution,
   });
 
   revalidateLaboratoryCache();
@@ -54,6 +56,7 @@ export async function updateLaboratoryAction(formData: FormData) {
     name: formData.get("name") || undefined,
     address: emptyToNull(formData.get("address")),
     phone: emptyToNull(formData.get("phone")),
+    precaution: emptyToNull(formData.get("precaution")),
   });
 
   if (!parsed.success) {

@@ -7,6 +7,7 @@ export type LaboratoryOption = {
   name: string;
   address: string;
   phone: string;
+  precaution: string | null;
 };
 
 export type LaboratoryForEdit = LaboratoryOption;
@@ -18,6 +19,7 @@ export async function getAllLaboratories(): Promise<LaboratoryOption[]> {
       name: laboratory.name,
       address: laboratory.address,
       phone: laboratory.phone,
+      precaution: laboratory.precaution,
     })
     .from(laboratory)
     .orderBy(laboratory.name);
@@ -32,6 +34,7 @@ export async function getLaboratoryById(
       name: laboratory.name,
       address: laboratory.address,
       phone: laboratory.phone,
+      precaution: laboratory.precaution,
     })
     .from(laboratory)
     .where(eq(laboratory.id, id))
@@ -44,6 +47,7 @@ export async function createLaboratoryInDb(input: {
   name: string;
   address: string;
   phone: string;
+  precaution?: string | null;
 }): Promise<string> {
   const [inserted] = await db
     .insert(laboratory)
@@ -51,6 +55,7 @@ export async function createLaboratoryInDb(input: {
       name: input.name,
       address: input.address,
       phone: input.phone,
+      precaution: input.precaution ?? "",
     })
     .returning({ id: laboratory.id });
 
@@ -59,7 +64,7 @@ export async function createLaboratoryInDb(input: {
 
 export async function updateLaboratoryInDb(
   id: string,
-  input: { name?: string; address?: string; phone?: string }
+  input: { name?: string; address?: string; phone?: string; precaution?: string | null }
 ): Promise<boolean> {
   const updates = Object.fromEntries(
     Object.entries(input).filter(([, v]) => v !== undefined)

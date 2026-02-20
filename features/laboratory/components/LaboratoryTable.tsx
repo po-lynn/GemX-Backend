@@ -33,6 +33,7 @@ export function LaboratoryTable({ laboratories }: Props) {
           <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
           <th className="px-4 py-3 text-left text-sm font-medium">Address</th>
           <th className="px-4 py-3 text-left text-sm font-medium">Phone</th>
+          <th className="px-4 py-3 text-left text-sm font-medium">Precaution</th>
           <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
         </tr>
       </thead>
@@ -48,6 +49,9 @@ export function LaboratoryTable({ laboratories }: Props) {
             </td>
             <td className="px-4 py-3 text-muted-foreground text-sm">
               {lab.phone}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground text-sm max-w-[180px] truncate" title={lab.precaution ?? ""}>
+              {lab.precaution || "—"}
             </td>
             <td className="px-4 py-3">
               <div className="flex justify-end gap-2">
