@@ -11,6 +11,16 @@ export const productModerationSchema = z.enum([
 ])
 export const currencySchema = z.enum(["USD", "MMK"])
 
+/** Product identification / treatment type (dropdown). */
+export const PRODUCT_IDENTIFICATION_OPTIONS = [
+  "Natural",
+  "Heat Treated",
+  "Treatments",
+  "Others",
+] as const
+export const productIdentificationSchema = z.enum(PRODUCT_IDENTIFICATION_OPTIONS)
+export type ProductIdentification = z.infer<typeof productIdentificationSchema>
+
 const optionalUuid = z
   .string()
   .optional()
@@ -53,10 +63,7 @@ const productCreateBaseSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   sku: z.string().max(50).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
-  identification: z
-    .string()
-    .min(1, "Identification is required")
-    .max(500),
+  identification: productIdentificationSchema.default("Natural"),
   price: z.string().refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
     message: "Price must be a valid number",
   }),

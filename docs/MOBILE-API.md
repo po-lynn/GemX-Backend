@@ -233,7 +233,7 @@ Authorization: Bearer <session_token>
       "sku": "PRD-XXX",
       "title": "Blue Sapphire 2ct",
       "description": "...",
-      "identification": "Natural sapphire, heated",
+      "identification": "Natural",
       "price": "2500",
       "currency": "USD",
       "productType": "loose_stone",
@@ -304,7 +304,7 @@ Authorization: Bearer <session_token>
 
 - `title` (string, 1–200 chars) – product name
 - `price` (string or number, e.g. `"2500"` or `2500`)
-- `identification` (string, max 500) – e.g. natural ruby, synthetic, species
+- `identification` (string) – one of: `"Natural"`, `"Heat Treated"`, `"Treatments"`, `"Others"`
 
 **Required when `productType` is `"loose_stone"` only:**
 
@@ -342,7 +342,7 @@ Authorization: Bearer <session_token>
 {
   "title": "Blue Sapphire 2ct",
   "price": "2500",
-  "identification": "Natural sapphire, heated",
+  "identification": "Natural",
   "weightCarat": "2",
   "color": "Blue",
   "origin": "Myanmar",
@@ -404,7 +404,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 {
   "title": "18K Gold Ruby & Diamond Ring",
   "description": "Classic solitaire-style ring with natural ruby centre and diamond accents. Lab report available.",
-  "identification": "Natural ruby and diamond, 18K gold",
+  "identification": "Natural",
   "price": "8500",
   "currency": "USD",
   "productType": "jewellery",
@@ -454,7 +454,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 {
   "title": "Ruby & Diamond Ring",
   "price": "5000",
-  "identification": "Natural ruby and diamond ring",
+  "identification": "Natural",
   "productType": "jewellery",
   "metal": "Gold",
   "totalWeightGrams": "5.2",

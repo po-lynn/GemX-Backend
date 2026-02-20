@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
+import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { Eye, Pencil, Trash2 } from "lucide-react"
 
 const inputClass =
@@ -345,16 +346,27 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               <label htmlFor="identification" className="text-sm font-medium">
                 Identification *
               </label>
-              <input
+              <select
                 id="identification"
                 name="identification"
-                type="text"
                 required
-                maxLength={500}
-                defaultValue={product?.identification ?? ""}
-                placeholder="e.g. Natural ruby, synthetic, species"
+                defaultValue={
+                  product?.identification &&
+                  PRODUCT_IDENTIFICATION_OPTIONS.includes(
+                    product.identification as (typeof PRODUCT_IDENTIFICATION_OPTIONS)[number]
+                  )
+                    ? product.identification
+                    : "Natural"
+                }
                 className={inputClass}
-              />
+              >
+                <option value="">Select…</option>
+                {PRODUCT_IDENTIFICATION_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
           </FormSection>
 

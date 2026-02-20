@@ -4,7 +4,10 @@ import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { and, eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
-import type { ProductCreate } from "@/features/products/schemas/products"
+import type {
+  ProductCreate,
+  ProductIdentification,
+} from "@/features/products/schemas/products"
 import type { GemstoneSpec } from "@/features/products/schemas/gemstone-spec"
 
 /** Same spec shape as loose stone; used for jewellery piece gemstones (with categoryId/categoryName). */
@@ -541,7 +544,7 @@ export type UpdateProductInput = {
   title?: string
   sku?: string | null
   description?: string | null
-  identification?: string | null
+  identification?: ProductIdentification | null
   price?: string
   currency?: "USD" | "MMK"
   isNegotiable?: boolean

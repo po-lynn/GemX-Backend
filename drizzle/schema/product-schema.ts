@@ -43,6 +43,14 @@ export const stoneCutEnum = pgEnum("stone_cut", ["Faceted", "Cabochon"]);
 /** Jewellery only: primary metal */
 export const metalEnum = pgEnum("metal", ["Gold", "Silver", "Other"]);
 
+/** Product identification / treatment type */
+export const productIdentificationEnum = pgEnum("product_identification", [
+  "Natural",
+  "Heat Treated",
+  "Treatments",
+  "Others",
+]);
+
 export { productTypeEnum } from "./category-schema";
 
 /**
@@ -57,8 +65,8 @@ export const product = pgTable(
     sku: text("sku").unique(),
     title: text("title").notNull(),
     description: text("description"),
-    /** Gem/product identification (e.g. natural ruby, synthetic, species). */
-    identification: text("identification"),
+    /** Product identification / treatment: Natural, Heat Treated, Treatments, Others */
+    identification: productIdentificationEnum("identification").default("Natural"),
     price: decimal("price", { precision: 14, scale: 2 }).notNull(),
     currency: currencyEnum("currency").notNull().default("USD"),
     isNegotiable: boolean("is_negotiable").notNull().default(false),
