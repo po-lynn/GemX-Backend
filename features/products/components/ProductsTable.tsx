@@ -82,7 +82,7 @@ export function ProductsTable({
               <th className="h-10 px-4 text-left font-medium">Moderation</th>
               <th className="h-10 px-4 text-left font-medium">Seller</th>
               <th className="h-10 px-4 text-left font-medium">Created</th>
-              <th className="h-10 px-4 text-right font-medium">Actions</th>
+              <th className="h-10 px-4 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
