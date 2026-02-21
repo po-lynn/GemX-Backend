@@ -1,5 +1,6 @@
 // app/api/mobile/register/route.ts
 import { auth } from "@/lib/auth";
+import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
 
 function normalizeMyanmarPhone(input: string) {
   let p = String(input || "").trim();
@@ -56,6 +57,9 @@ export async function POST(req: Request) {
       body: signUpBody,
     });
 
+    if (result && !("error" in result)) {
+      await applyDefaultPointsToNewUser(email);
+    }
     return Response.json(result, { status: 201 });
   } catch (err: unknown) {
     const e = err as { message?: string; name?: string; cause?: unknown; stack?: string };

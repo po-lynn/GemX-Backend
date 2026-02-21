@@ -69,6 +69,7 @@ export function UsersTable({ users }: Props) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead className="w-20">Points</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead className="w-24">Actions</TableHead>
@@ -78,7 +79,7 @@ export function UsersTable({ users }: Props) {
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground text-center py-8"
                 >
                   No users yet.
@@ -92,6 +93,7 @@ export function UsersTable({ users }: Props) {
                   <TableCell>
                     <Badge variant="secondary">{u.role}</Badge>
                   </TableCell>
+                  <TableCell className="tabular-nums">{u.points}</TableCell>
                   <TableCell>{u.phone ?? "—"}</TableCell>
                   <TableCell>{u.gender ?? "—"}</TableCell>
                   <TableCell>

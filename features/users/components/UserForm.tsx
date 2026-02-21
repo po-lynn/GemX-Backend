@@ -224,6 +224,22 @@ export function UserForm({ mode, user }: Props) {
                 className={inputClass}
               />
             </div>
+            {isEdit && (
+              <div className="space-y-2">
+                <label htmlFor="points" className="text-sm font-medium">
+                  Points
+                </label>
+                <input
+                  id="points"
+                  name="points"
+                  type="number"
+                  min={0}
+                  step={1}
+                  defaultValue={user?.points ?? 0}
+                  className={inputClass}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="nrc" className="text-sm font-medium">
                 Identification number

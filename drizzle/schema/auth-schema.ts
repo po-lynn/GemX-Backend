@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, date } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, date, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -23,6 +23,7 @@ export const user = pgTable("user", {
   country: text("country"),
   gender: text("gender"),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
+  points: integer("points").notNull().default(0),
 });
 
 export const session = pgTable(

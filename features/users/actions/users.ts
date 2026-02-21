@@ -13,6 +13,7 @@ import {
   updateUserInDb,
   deleteUserInDb,
 } from "@/features/users/db/users";
+import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
 
 function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
@@ -73,6 +74,7 @@ export async function createUserAction(formData: FormData) {
     }
     return { error: msg };
   }
+  await applyDefaultPointsToNewUser(email);
   return { success: true };
 }
 
@@ -92,6 +94,12 @@ export async function updateUserAction(formData: FormData) {
     city: emptyToNull(formData.get("city")),
     state: emptyToNull(formData.get("state")),
     country: emptyToNull(formData.get("country")),
+    points: (() => {
+      const v = formData.get("points");
+      if (v === null || v === undefined || v === "") return undefined;
+      const n = parseInt(String(v), 10);
+      return Number.isNaN(n) ? undefined : n;
+    })(),
   });
   if (!parsed.success) {
     return {
