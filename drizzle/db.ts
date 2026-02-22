@@ -18,17 +18,17 @@ const globalForDb = globalThis as unknown as {
 function createConnection(): ReturnType<typeof postgres> {
   if (hasUrl) {
     const url = env.DATABASE_URL!
-    // Transaction pooler = :6543/ (can cause hangs). Session pooler = :5432/ (more reliable for this app).
+    // Use Transaction mode (port 6543) in production to avoid "max clients reached" with serverless.
+    // Session mode (5432) has a small pool; many serverless instances exhaust it.
     const isTransactionPooler = url.includes(":6543/")
     return postgres(url, {
       max: 1,
       ssl: "require",
       connect_timeout: 10,
-      idle_timeout: 120,
-      max_lifetime: 60 * 10,
+      idle_timeout: isTransactionPooler ? 60 : 120,
+      max_lifetime: isTransactionPooler ? 300 : 60 * 10,
       prepare: !isTransactionPooler,
       fetch_types: false,
-      // Fail queries after 15s instead of hanging (e.g. when pooler connection is stale)
       connection: { statement_timeout: 15_000 },
       onclose: () => {
         globalForDb.__postgres = undefined
