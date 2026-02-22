@@ -395,9 +395,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
         transparency: productJewelleryGemstone.transparency,
         comment: productJewelleryGemstone.comment,
         inclusions: productJewelleryGemstone.inclusions,
-        certReportNumber: productJewelleryGemstone.certReportNumber,
-        certReportDate: productJewelleryGemstone.certReportDate,
-        certLabName: productJewelleryGemstone.certLabName,
       })
       .from(productJewelleryGemstone)
       .innerJoin(category, eq(productJewelleryGemstone.categoryId, category.id))
@@ -417,9 +414,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     transparency: g.transparency ?? null,
     comment: g.comment ?? null,
     inclusions: g.inclusions ?? null,
-    certReportNumber: g.certReportNumber ?? null,
-    certReportDate: g.certReportDate ?? null,
-    certLabName: g.certLabName ?? null,
   }))
 
   return {
@@ -530,9 +524,6 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
         transparency: g.transparency ?? null,
         comment: g.comment ?? null,
         inclusions: g.inclusions ?? null,
-        certReportNumber: g.certReportNumber ?? null,
-        certReportDate: g.certReportDate ?? null,
-        certLabName: g.certLabName ?? null,
       }))
     )
   }
@@ -564,9 +555,6 @@ export type UpdateProductInput = {
     transparency?: string | null
     comment?: string | null
     inclusions?: string | null
-    certReportNumber?: string | null
-    certReportDate?: string | null
-    certLabName?: string | null
   }[]
   totalWeightGrams?: string | null
   weightCarat?: string | null
@@ -647,9 +635,6 @@ export async function updateProductInDb(
           transparency: g.transparency ?? null,
           comment: g.comment ?? null,
           inclusions: g.inclusions ?? null,
-          certReportNumber: g.certReportNumber ?? null,
-          certReportDate: g.certReportDate ?? null,
-          certLabName: g.certLabName ?? null,
         }))
       )
     }

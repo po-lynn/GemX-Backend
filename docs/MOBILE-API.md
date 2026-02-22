@@ -392,9 +392,6 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 | `transparency` | No | string | e.g. `"Transparent"`. |
 | `comment` | No | string | Lab comment. |
 | `inclusions` | No | string | e.g. `"Rutiles, feathers"`. |
-| `certReportNumber` | No | string | Certificate report number. |
-| `certReportDate` | No | string | Certificate date. |
-| `certLabName` | No | string | Lab name. |
 
 **Sample: jewellery product with gemstones (create by seller)**
 
@@ -429,10 +426,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
       "origin": "Myanmar",
       "cut": "Mixed cut",
       "transparency": "Transparent",
-      "comment": "No indication of thermal treatment",
-      "certReportNumber": "GL-2024-001",
-      "certReportDate": "2024-01-15",
-      "certLabName": "Gem Lab"
+      "comment": "No indication of thermal treatment"
     },
     {
       "categoryId": "CATEGORY_UUID_DIAMOND",

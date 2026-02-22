@@ -133,9 +133,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     transparency: string
     comment: string
     inclusions: string
-    certReportNumber: string
-    certReportDate: string
-    certLabName: string
     categoryName?: string
   }
   const emptyGemstone = (): FormGemstoneEntry => ({
@@ -150,9 +147,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     transparency: "",
     comment: "",
     inclusions: "",
-    certReportNumber: "",
-    certReportDate: "",
-    certLabName: "",
   })
   const [jewelleryGemstones, setJewelleryGemstones] = useState<FormGemstoneEntry[]>(
     (product?.jewelleryGemstones ?? []).map((g) => ({
@@ -167,9 +161,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
       transparency: g.transparency ?? "",
       comment: g.comment ?? "",
       inclusions: g.inclusions ?? "",
-      certReportNumber: g.certReportNumber ?? "",
-      certReportDate: g.certReportDate ?? "",
-      certLabName: g.certLabName ?? "",
     }))
   )
   const [gemstoneDialogOpen, setGemstoneDialogOpen] = useState(false)
@@ -234,9 +225,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               transparency: g.transparency.trim() || null,
               comment: g.comment.trim() || null,
               inclusions: g.inclusions.trim() || null,
-              certReportNumber: g.certReportNumber.trim() || null,
-              certReportDate: g.certReportDate.trim() || null,
-              certLabName: g.certLabName.trim() || null,
             }))
         )
       )
@@ -715,7 +703,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       disabled={gemstoneDialogMode === "view"}
                     />
                   </div>
-                  <p className="text-xs font-medium text-muted-foreground sm:col-span-2 mt-2">From gem report</p>
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium">Cut</label>
                     <input
@@ -764,46 +751,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       value={gemstoneDialogForm.inclusions}
                       onChange={(e) =>
                         setGemstoneDialogForm((prev) => ({ ...prev, inclusions: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <p className="text-xs font-medium text-muted-foreground sm:col-span-2 mt-2">Certification (report)</p>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Lab name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. AGGL, GRS Gemresearch Swisslab"
-                      className={inputClass}
-                      value={gemstoneDialogForm.certLabName}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, certLabName: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Report number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. J202007463, GRS2025-080552"
-                      className={inputClass}
-                      value={gemstoneDialogForm.certReportNumber}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, certReportNumber: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Report date</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 2024-09-17"
-                      className={inputClass}
-                      value={gemstoneDialogForm.certReportDate}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, certReportDate: e.target.value }))
                       }
                       disabled={gemstoneDialogMode === "view"}
                     />
@@ -1032,77 +979,75 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             </div>
           </FormSection>
 
-          {productType === "loose_stone" && (
-            <FormSection
-              title="Certification"
-              description="Lab reports and authenticity documentation"
-            >
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <label htmlFor="laboratoryId" className="text-sm font-medium">
-                    Laboratory
-                  </label>
-                  <select
-                    id="laboratoryId"
-                    name="laboratoryId"
-                    key={productType}
-                    defaultValue={product?.laboratoryId ?? ""}
-                    className={inputClass}
-                  >
-                    <option value="">
-                      Select laboratory name
+          <FormSection
+            title="Certification"
+            description="Lab reports and authenticity documentation"
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <label htmlFor="laboratoryId" className="text-sm font-medium">
+                  Laboratory
+                </label>
+                <select
+                  id="laboratoryId"
+                  name="laboratoryId"
+                  key={productType}
+                  defaultValue={product?.laboratoryId ?? ""}
+                  className={inputClass}
+                >
+                  <option value="">
+                    Select laboratory name
+                  </option>
+                  {(laboratories ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
                     </option>
-                    {(laboratories ?? []).map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="certReportNumber" className="text-sm font-medium">
-                    Report number
-                  </label>
-                  <input
-                    id="certReportNumber"
-                    name="certReportNumber"
-                    type="text"
-                    maxLength={100}
-                    defaultValue={product?.certReportNumber ?? ""}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="certReportDate" className="text-sm font-medium">
-                    Report date
-                  </label>
-                  <input
-                    id="certReportDate"
-                    name="certReportDate"
-                    type="text"
-                    maxLength={50}
-                    defaultValue={product?.certReportDate ?? ""}
-                    placeholder="e.g. 2024-09-17"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="certReportUrl" className="text-sm font-medium">
-                    Report URL
-                  </label>
-                  <input
-                    id="certReportUrl"
-                    name="certReportUrl"
-                    type="url"
-                    maxLength={500}
-                    defaultValue={product?.certReportUrl ?? ""}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
-                </div>
+                  ))}
+                </select>
               </div>
-            </FormSection>
-          )}
+              <div className="space-y-2">
+                <label htmlFor="certReportNumber" className="text-sm font-medium">
+                  Report number
+                </label>
+                <input
+                  id="certReportNumber"
+                  name="certReportNumber"
+                  type="text"
+                  maxLength={100}
+                  defaultValue={product?.certReportNumber ?? ""}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="certReportDate" className="text-sm font-medium">
+                  Report date
+                </label>
+                <input
+                  id="certReportDate"
+                  name="certReportDate"
+                  type="text"
+                  maxLength={50}
+                  defaultValue={product?.certReportDate ?? ""}
+                  placeholder="e.g. 2024-09-17"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="certReportUrl" className="text-sm font-medium">
+                  Report URL
+                </label>
+                <input
+                  id="certReportUrl"
+                  name="certReportUrl"
+                  type="url"
+                  maxLength={500}
+                  defaultValue={product?.certReportUrl ?? ""}
+                  placeholder="https://..."
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </FormSection>
 
           <FormSection
             title="Images"

@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server"
+import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
 import { createProductInDb } from "@/features/products/db/products"
@@ -12,6 +12,7 @@ import type { z } from "zod"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
 
 export async function GET(request: NextRequest) {
+  await connection()
   try {
     const { searchParams } = new URL(request.url)
     const parsed = adminProductsSearchSchema.safeParse({

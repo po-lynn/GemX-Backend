@@ -163,12 +163,6 @@ export const productJewelleryGemstone = pgTable(
     comment: text("comment"),
     /** Magnification / inclusions: e.g. Rutiles, feathers, solids, zoning */
     inclusions: text("inclusions"),
-    /** Report number for this stone (e.g. J202007463, GRS2025-080552) */
-    certReportNumber: text("cert_report_number"),
-    /** Report date (e.g. 2024-09-17) */
-    certReportDate: text("cert_report_date"),
-    /** Lab name (e.g. AGGL Gemmological Laboratory Myanmar, GRS Gemresearch Swisslab) */
-    certLabName: text("cert_lab_name"),
   },
   (table) => [
     index("product_jewellery_gemstone_productId_idx").on(table.productId),

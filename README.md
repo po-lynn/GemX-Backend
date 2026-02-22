@@ -32,3 +32,18 @@ gemx@2026
 2. **Settings → Environment Variables** – add `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` (your production URL). Redeploy.
 
 **Env files:** **`.env.local`** is for **local development only** (gitignored; never used by Vercel or Supabase). Copy **`.env.example`** to **`.env.local`** and set DATABASE_URL, AUTH_SECRET, AUTH_URL, etc. **Vercel** uses its own env (Project → Settings → Environment Variables); **Supabase** is just the database and doesn’t read env files.
+
+
+Gewellery -. Ring, Earings, Necklaces , Pendants ,  Bracelet , Bangles , Accessories
+
+Promote Premium asset at product entry 
+Privilege Assist, Direct Assist,Private Assist
+Precaution at entry form. product details
+To request Premium assist service for user  at home page
+Gold => 30000 Credits,
+Platium => 50000 Credits
+profile  သည် Company ထက် private account  ပိုများမယ်
+My wallet how many credits
+promotion items
+ဆိုပြီးရေးထားမယ် နိုပ်လိုက်မှ ပြပေးမယ်
+verification ကို phone နဲ့သော်လည်းကောင်း social နဲ့သော်လည်းကောင်းလုပ်မယ်

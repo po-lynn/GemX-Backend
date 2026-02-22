@@ -40,9 +40,6 @@ export const gemstoneSpecSchema = z.object({
   comment: z.string().max(500).optional().nullable(),
   /** Inclusions: e.g. Rutiles, feathers, solids */
   inclusions: z.string().max(500).optional().nullable(),
-  certReportNumber: z.string().max(100).optional().nullable(),
-  certReportDate: z.string().max(50).optional().nullable(),
-  certLabName: z.string().max(100).optional().nullable(),
 })
 
 export type GemstoneSpec = z.infer<typeof gemstoneSpecSchema>
@@ -79,9 +76,6 @@ export const GEMSTONE_SPEC_FIELD_NAMES = [
   "transparency",
   "comment",
   "inclusions",
-  "certReportNumber",
-  "certReportDate",
-  "certLabName",
 ] as const
 
 export type GemstoneSpecFieldName = (typeof GEMSTONE_SPEC_FIELD_NAMES)[number]

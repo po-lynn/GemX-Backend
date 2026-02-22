@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server"
+import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonError } from "@/lib/api"
 import { getCachedProductsBySellerId } from "@/features/products/db/cache/products"
@@ -6,6 +6,7 @@ import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
 
 export async function GET(request: NextRequest) {
+  await connection()
   try {
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session) return jsonError("Unauthorized", 401)

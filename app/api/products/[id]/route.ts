@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server"
+import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
 import { canAdminManageProducts } from "@/features/products/permissions/products"
@@ -19,6 +19,7 @@ export async function GET(
   _request: NextRequest,
   { params }: RouteParams
 ) {
+  await connection()
   try {
     const { id } = await params
     const product = await getCachedProduct(id)

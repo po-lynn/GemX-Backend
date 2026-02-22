@@ -1,8 +1,9 @@
-import { NextRequest } from "next/server"
+import { NextRequest, connection } from "next/server"
 import { jsonCached, jsonError } from "@/lib/api"
 import { getCategoriesByType, getAllCategories } from "@/features/categories/db/categories"
 
 export async function GET(request: NextRequest) {
+  await connection()
   try {
     const type = new URL(request.url).searchParams.get("type")
     const categories =

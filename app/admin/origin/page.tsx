@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +13,7 @@ import { OriginTable } from "@/features/origin/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
 export default async function AdminOriginPage() {
+  await connection();
   const origins = await getCachedOrigins();
 
   return (
