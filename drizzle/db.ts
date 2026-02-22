@@ -18,13 +18,13 @@ const globalForDb = globalThis as unknown as {
 function createConnection(): ReturnType<typeof postgres> {
   if (hasUrl) {
     const url = env.DATABASE_URL!
-    // Use Transaction mode (port 6543) in production to avoid "max clients reached" with serverless.
-    // Session mode (5432) has a small pool; many serverless instances exhaust it.
+    // Transaction mode (6543) = higher capacity but can hang during Next.js prerender/build.
+    // If you see "Prerendering" hang, use Session mode (5432) for that env (see README).
     const isTransactionPooler = url.includes(":6543/")
-    return postgres(url, {
+    const client = postgres(url, {
       max: 1,
       ssl: "require",
-      connect_timeout: 10,
+      connect_timeout: isTransactionPooler ? 5 : 10,
       idle_timeout: isTransactionPooler ? 60 : 120,
       max_lifetime: isTransactionPooler ? 300 : 60 * 10,
       prepare: !isTransactionPooler,
@@ -34,6 +34,7 @@ function createConnection(): ReturnType<typeof postgres> {
         globalForDb.__postgres = undefined
       },
     })
+    return client
   }
   return postgres({
     host: env.DB_HOST!,

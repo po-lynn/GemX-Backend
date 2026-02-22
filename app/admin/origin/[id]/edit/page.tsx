@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import { OriginForm } from "@/features/origin/components";
 import { getCachedOriginById } from "@/features/origin/db/cache/origin";
@@ -11,6 +12,7 @@ type Props = {
 };
 
 async function AdminOriginEditContent({ params }: Props) {
+  await connection();
   const { id } = await params;
   const origin = await getCachedOriginById(id);
 

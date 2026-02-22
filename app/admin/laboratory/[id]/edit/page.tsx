@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import { LaboratoryForm } from "@/features/laboratory/components";
 import { getCachedLaboratoryById } from "@/features/laboratory/db/cache/laboratory";
@@ -11,6 +12,7 @@ type Props = {
 };
 
 async function AdminLaboratoryEditContent({ params }: Props) {
+  await connection();
   const { id } = await params;
   const laboratory = await getCachedLaboratoryById(id);
 

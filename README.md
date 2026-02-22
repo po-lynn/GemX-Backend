@@ -19,7 +19,8 @@ gemx@2026
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. **Settings → Database**: copy the **Connection string** (URI).
-   - Prefer **Session** pooler (port **5432**) to avoid "New Product" or other pages hanging with no response. Use **Transaction** (port **6543**) only if you need it for scale.
+   - **Session mode (port 5432)** – use for local dev and for `next build`. With many serverless instances you may hit "max clients reached".
+   - **Transaction mode (port 6543)** – use in production for higher capacity. If the app or build **stuck at "Prerendering" with no response**, use **5432** for that env (e.g. keep 5432 in `.env.local`; use 6543 only in Vercel Production if you’ve ensured no DB during prerender).
    - Add `?sslmode=require` if not already in the URL.
 3. Optional: run migrations against Supabase from your machine:
    - Put Supabase `DATABASE_URL` in `.env` (or temporarily in `.env.local`).

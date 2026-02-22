@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import { ArticleForm } from "@/features/articles/components";
 import { getArticleById } from "@/features/articles/db/articles";
@@ -11,6 +12,7 @@ type Props = {
 };
 
 async function AdminArticleEditContent({ params }: Props) {
+  await connection();
   const { id } = await params;
   const article = await getArticleById(id);
 

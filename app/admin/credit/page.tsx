@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import { getPointManagementSettings } from "@/features/points/db/points";
 import { PointManagementForm } from "@/features/points/components/PointManagementForm";
 import { ChevronLeft } from "lucide-react";
 
 export default async function AdminCreditPage() {
+  await connection();
   const settings = await getPointManagementSettings();
 
   return (

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import { Suspense } from "react"
 import { getAdminProducts } from "@/features/products/db/cache/products"
 import {
@@ -35,6 +36,7 @@ type Props = {
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
+  await connection()
   const params = await searchParams
   const parsed = adminProductsSearchSchema.parse({
     page: params.page,
@@ -59,24 +61,22 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     laboratoryId,
   } = parsed
 
-  const [categories, origins, laboratories, { products, total }] =
-    await Promise.all([
-      getAllCategories(),
-      getAllOrigins(),
-      getAllLaboratories(),
-      getAdminProducts({
-        page,
-        limit: 20,
-        search: search || undefined,
-        productType: productType ?? undefined,
-        categoryId: categoryId ?? undefined,
-        status: status ?? undefined,
-        stoneCut: stoneCut ?? undefined,
-        shape: shape ?? undefined,
-        origin: (origin?.trim() && origin) || undefined,
-        laboratoryId: laboratoryId ?? undefined,
-      }),
-    ])
+  // With Transaction pooler (6543), avoid concurrent queries on the single connection to prevent hang.
+  const categories = await getAllCategories()
+  const origins = await getAllOrigins()
+  const laboratories = await getAllLaboratories()
+  const { products, total } = await getAdminProducts({
+    page,
+    limit: 20,
+    search: search || undefined,
+    productType: productType ?? undefined,
+    categoryId: categoryId ?? undefined,
+    status: status ?? undefined,
+    stoneCut: stoneCut ?? undefined,
+    shape: shape ?? undefined,
+    origin: (origin?.trim() && origin) || undefined,
+    laboratoryId: laboratoryId ?? undefined,
+  })
 
   const totalPages = Math.ceil(total / 20)
   const filterParams = {

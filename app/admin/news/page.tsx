@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +13,7 @@ import { NewsTable } from "@/features/news/components";
 import { ChevronLeft, Plus, Newspaper } from "lucide-react";
 
 export default async function AdminNewsPage() {
+  await connection();
   const news = await getAllNewsFromDb();
 
   return (

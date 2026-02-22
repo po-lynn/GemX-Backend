@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
@@ -7,11 +8,11 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft } from "lucide-react"
 
 export default async function AdminProductsNewPage() {
-  const [categories, laboratories, origins] = await Promise.all([
-    getAllCategories(),
-    getAllLaboratories(),
-    getAllOrigins(),
-  ])
+  await connection()
+  // Sequential to avoid hang with Transaction pooler (6543).
+  const categories = await getAllCategories()
+  const laboratories = await getAllLaboratories()
+  const origins = await getAllOrigins()
 
   return (
     <div className="container my-6 space-y-6">

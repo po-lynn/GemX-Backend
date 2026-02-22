@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +13,7 @@ import { UsersTable } from "@/features/users/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
 export default async function AdminUsersPage() {
+  await connection();
   const users = await getAllUsersFromDb();
 
   return (

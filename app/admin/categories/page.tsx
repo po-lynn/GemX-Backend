@@ -1,10 +1,12 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { CategoriesTable } from "@/features/categories/components/CategoriesTable"
 
 export default async function AdminCategoriesPage() {
+  await connection()
   const categories = await getAllCategories()
 
   return (

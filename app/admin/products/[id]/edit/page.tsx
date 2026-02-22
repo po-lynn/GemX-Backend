@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { connection } from "next/server"
 import { notFound } from "next/navigation"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getCachedProduct } from "@/features/products/db/cache/products"
@@ -13,13 +14,13 @@ type Props = {
 }
 
 export default async function AdminProductsEditPage({ params }: Props) {
+  await connection()
   const { id } = await params
-  const [product, categories, laboratories, origins] = await Promise.all([
-    getCachedProduct(id),
-    getAllCategories(),
-    getAllLaboratories(),
-    getAllOrigins(),
-  ])
+  // Sequential to avoid hang with Transaction pooler (6543).
+  const product = await getCachedProduct(id)
+  const categories = await getAllCategories()
+  const laboratories = await getAllLaboratories()
+  const origins = await getAllOrigins()
 
   if (!product) notFound()
 
