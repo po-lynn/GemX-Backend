@@ -15,8 +15,12 @@
 | POST | `/api/products` | Yes | Create product (JSON body) |
 | PATCH | `/api/products/:id` | Yes | Update product (owner or admin). JSON body. |
 | DELETE | `/api/products/:id` | Yes | Delete product (owner or admin) |
+| GET | `/api/news` | No | List news. Query: `page`, `limit`, `status` (optional) |
+| GET | `/api/news/:id` | No | Get single news by ID (published only) |
+| GET | `/api/articles` | No | List articles. Query: `page`, `limit`, `status` (optional) |
+| GET | `/api/articles/:id` | No | Get single article by ID (published only) |
 
-List responses (`GET /api/products`, `GET /api/products/mine`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.
+List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.
 
 ---
 
@@ -538,7 +542,165 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-## 6. Quick flow for React Native
+## 6. News (read-only)
+
+News items are managed in the admin; the mobile app can list and read **published** news. No auth required.
+
+### 6.1 List news (public)
+
+**GET** `/api/news`
+
+**Auth:** Not required.
+
+**Query:**
+
+| Param   | Type   | Default      | Description                                              |
+|--------|--------|--------------|----------------------------------------------------------|
+| `page` | number | 1            | Page number (1-based).                                  |
+| `limit`| number | 20           | Items per page (max 100).                                |
+| `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+
+**Examples:**
+
+- First page (published only): `GET /api/news`
+- With pagination: `GET /api/news?page=2&limit=10`
+- Drafts (if needed for internal use): `GET /api/news?status=draft`
+
+**Success (200):**
+
+```json
+{
+  "news": [
+    {
+      "id": "uuid",
+      "title": "News title",
+      "content": "[]",
+      "status": "published",
+      "publish": "2025-01-15T00:00:00.000Z",
+      "createdAt": "2025-01-10T12:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    }
+  ],
+  "total": 42
+}
+```
+
+- **news:** Array of news items (ordered by publish date, then updatedAt).
+- **total:** Total number of items matching the filter (for pagination).
+- **content:** Stored as JSON (e.g. BlockNote document); parse in the app if needed for rich text.
+
+---
+
+### 6.2 Get single news (public)
+
+**GET** `/api/news/:id`
+
+**Auth:** Not required.
+
+Returns a single published news item by ID. Draft items return **404**.
+
+**Success (200):** Single news object.
+
+```json
+{
+  "id": "uuid",
+  "title": "News title",
+  "content": "[]",
+  "status": "published",
+  "publish": "2025-01-15T00:00:00.000Z",
+  "createdAt": "2025-01-10T12:00:00.000Z",
+  "updatedAt": "2025-01-15T00:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- **404** – `{ "error": "News not found" }` (invalid id or item is draft).
+
+---
+
+## 7. Articles (read-only)
+
+Articles are managed in the admin; the mobile app can list and read **published** articles. No auth required.
+
+### 7.1 List articles (public)
+
+**GET** `/api/articles`
+
+**Auth:** Not required.
+
+**Query:**
+
+| Param   | Type   | Default      | Description                                              |
+|--------|--------|--------------|----------------------------------------------------------|
+| `page` | number | 1            | Page number (1-based).                                  |
+| `limit`| number | 20           | Items per page (max 100).                                |
+| `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+
+**Examples:**
+
+- First page (published only): `GET /api/articles`
+- With pagination: `GET /api/articles?page=2&limit=10`
+
+**Success (200):**
+
+```json
+{
+  "articles": [
+    {
+      "id": "uuid",
+      "title": "Article title",
+      "slug": "article-slug",
+      "content": "[]",
+      "author": "Author name",
+      "status": "published",
+      "publishDate": "2025-01-15T00:00:00.000Z",
+      "createdAt": "2025-01-10T12:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z"
+    }
+  ],
+  "total": 42
+}
+```
+
+- **articles:** Array of articles (ordered by publishDate, then updatedAt).
+- **total:** Total number of items matching the filter (for pagination).
+- **content:** Stored as JSON (e.g. BlockNote document); parse in the app for rich text.
+- **slug:** URL-friendly identifier; can be used for SEO or detail routes.
+
+---
+
+### 7.2 Get single article (public)
+
+**GET** `/api/articles/:id`
+
+**Auth:** Not required.
+
+Returns a single published article by ID. Draft items return **404**.
+
+**Success (200):** Single article object.
+
+```json
+{
+  "id": "uuid",
+  "title": "Article title",
+  "slug": "article-slug",
+  "content": "[]",
+  "author": "Author name",
+  "status": "published",
+  "publishDate": "2025-01-15T00:00:00.000Z",
+  "createdAt": "2025-01-10T12:00:00.000Z",
+  "updatedAt": "2025-01-15T00:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- **404** – `{ "error": "Article not found" }` (invalid id or item is draft).
+
+---
+
+## 8. Quick flow for React Native
 
 1. **Auth**
    - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
@@ -561,9 +723,17 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
    - Edit: `PATCH /api/products/:id` (with Bearer token).
    - Delete: `DELETE /api/products/:id` (with Bearer token).
 
+6. **News**
+   - List: `GET /api/news?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
+   - Detail: `GET /api/news/:id` (returns 404 for drafts).
+
+7. **Articles**
+   - List: `GET /api/articles?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
+   - Detail: `GET /api/articles/:id` (returns 404 for drafts).
+
 ---
 
-## 7. Error format
+## 9. Error format
 
 - **Body:** `{ "error": "Human-readable message" }`.
 - **Validation (400):** May also include `details`: `{ "fieldName": ["error message"] }`.
@@ -571,7 +741,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-## 8. Summary table
+## 10. Summary table
 
 | Method | Path                     | Auth   | Description           |
 |--------|--------------------------|--------|-----------------------|
@@ -584,3 +754,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 | POST   | `/api/products`          | Yes    | Create product        |
 | PATCH  | `/api/products/:id`      | Yes    | Update (owner/admin)  |
 | DELETE | `/api/products/:id`      | Yes    | Delete (owner/admin)  |
+| GET    | `/api/news`              | No     | List news (`?page`, `?limit`, `?status`) |
+| GET    | `/api/news/:id`          | No     | Get one news (published only) |
+| GET    | `/api/articles`          | No     | List articles (`?page`, `?limit`, `?status`) |
+| GET    | `/api/articles/:id`      | No     | Get one article (published only) |
