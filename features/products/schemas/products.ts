@@ -43,6 +43,11 @@ export const adminProductsSearchSchema = z.object({
   laboratoryId: optionalUuid,
 })
 
+export type AdminProductsSearchParams = z.infer<typeof adminProductsSearchSchema>
+
+/** Default page size for admin products list. */
+export const ADMIN_PRODUCTS_PAGE_SIZE = 6
+
 export const productModerationActionSchema = z.object({
   productId: z.string().uuid(),
   moderationStatus: productModerationSchema,

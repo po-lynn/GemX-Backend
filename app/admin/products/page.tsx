@@ -15,7 +15,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { adminProductsSearchSchema } from "@/features/products/schemas/products"
+import {
+  adminProductsSearchSchema,
+  ADMIN_PRODUCTS_PAGE_SIZE,
+} from "@/features/products/schemas/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
@@ -65,9 +68,11 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   const categories = await getAllCategories()
   const origins = await getAllOrigins()
   const laboratories = await getAllLaboratories()
+
+  const limit = ADMIN_PRODUCTS_PAGE_SIZE
   const { products, total } = await getAdminProducts({
     page,
-    limit: 20,
+    limit,
     search: search || undefined,
     productType: productType ?? undefined,
     categoryId: categoryId ?? undefined,
@@ -78,8 +83,9 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     laboratoryId: laboratoryId ?? undefined,
   })
 
-  const totalPages = Math.ceil(total / 20)
-  const filterParams = {
+  const totalPages = Math.ceil(total / limit)
+  const filters = {
+    search: search ?? "",
     productType: productType ?? "",
     categoryId: categoryId ?? "",
     status: status ?? "",
@@ -113,20 +119,20 @@ export default async function AdminProductsPage({ searchParams }: Props) {
             {total} product{total !== 1 ? "s" : ""} total
           </CardDescription>
           <Suspense fallback={null}>
-            <ProductsSearchInput defaultValue={search ?? ""} />
+            <ProductsSearchInput defaultValue={filters.search} />
           </Suspense>
           <Suspense fallback={null}>
             <ProductFilters
               categories={categories}
               origins={origins}
               laboratories={laboratories}
-              productType={filterParams.productType}
-              categoryId={filterParams.categoryId}
-              status={filterParams.status}
-              stoneCut={filterParams.stoneCut}
-              shape={filterParams.shape}
-              origin={filterParams.origin}
-              laboratoryId={filterParams.laboratoryId}
+              productType={filters.productType}
+              categoryId={filters.categoryId}
+              status={filters.status}
+              stoneCut={filters.stoneCut}
+              shape={filters.shape}
+              origin={filters.origin}
+              laboratoryId={filters.laboratoryId}
             />
           </Suspense>
         </CardHeader>
@@ -135,14 +141,8 @@ export default async function AdminProductsPage({ searchParams }: Props) {
             products={products}
             page={page}
             totalPages={totalPages}
-            search={search ?? ""}
-            productType={filterParams.productType}
-            categoryId={filterParams.categoryId}
-            status={filterParams.status}
-            stoneCut={filterParams.stoneCut}
-            shape={filterParams.shape}
-            origin={filterParams.origin}
-            laboratoryId={filterParams.laboratoryId}
+            total={total}
+            filters={filters}
           />
         </CardContent>
       </Card>
