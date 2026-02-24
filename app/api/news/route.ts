@@ -1,8 +1,9 @@
-import { NextRequest } from "next/server";
+import { NextRequest, connection } from "next/server";
 import { jsonCached, jsonError } from "@/lib/api";
 import { getNewsPaginatedFromDb } from "@/features/news/db/news";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
