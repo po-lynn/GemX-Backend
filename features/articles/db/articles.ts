@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { articles } from "@/drizzle/schema/articles-schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export type ArticleRow = {
   id: string;
@@ -34,6 +34,28 @@ export async function getArticleBySlug(slug: string): Promise<ArticleRow | null>
     .where(eq(articles.slug, slug))
     .limit(1);
   return row ?? null;
+}
+
+/** List articles with pagination. Optional status filter (default: only published). */
+export async function getArticlesPaginatedFromDb(options: {
+  page: number;
+  limit: number;
+  status?: "draft" | "published";
+}): Promise<{ items: ArticleRow[]; total: number }> {
+  const { page, limit, status = "published" } = options;
+  const where = eq(articles.status, status);
+  const [items, countResult] = await Promise.all([
+    db
+      .select()
+      .from(articles)
+      .where(where)
+      .orderBy(desc(articles.publishDate ?? articles.updatedAt))
+      .limit(limit)
+      .offset((page - 1) * limit),
+    db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
+  ]);
+  const total = countResult[0]?.count ?? 0;
+  return { items, total };
 }
 
 export async function createArticleInDb(input: {

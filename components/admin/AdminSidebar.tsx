@@ -93,10 +93,8 @@ export function AdminSidebar({ className }: { className?: string }) {
                 >
                   <Icon
                     className={cn(
-                      "h-4 w-4",
-                      active
-                        ? "text-foreground"
-                        : "text-muted-foreground group-hover:text-foreground"
+                      "h-4 w-4 text-[#9B5CFF]",
+                      active ? "opacity-100" : "opacity-70 group-hover:opacity-100"
                     )}
                   />
                   <span className="font-medium">{item.label}</span>
@@ -130,10 +128,8 @@ export function AdminSidebar({ className }: { className?: string }) {
                       >
                         <Icon
                           className={cn(
-                            "h-4 w-4 shrink-0",
-                            active
-                              ? "text-foreground"
-                              : "text-muted-foreground group-hover:text-foreground"
+                            "h-4 w-4 shrink-0 text-[#9B5CFF]",
+                            active ? "opacity-100" : "opacity-70 group-hover:opacity-100"
                           )}
                         />
                         <span className="font-medium">{it.label}</span>

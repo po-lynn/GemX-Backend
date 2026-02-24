@@ -31,7 +31,6 @@ export function LaboratoryForm({ mode, laboratory }: Props) {
   const [loading, setLoading] = useState(false);
 
   const isEdit = mode === "edit";
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);

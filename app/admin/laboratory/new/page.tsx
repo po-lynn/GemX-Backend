@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LaboratoryForm } from "@/features/laboratory/components";
+import { NewLaboratoryFormWrapper } from "./NewLaboratoryFormWrapper";
 import { ChevronLeft } from "lucide-react";
 
 export default function AdminLaboratoryNewPage() {
@@ -23,7 +23,7 @@ export default function AdminLaboratoryNewPage() {
         </div>
       </div>
 
-      <LaboratoryForm mode="create" />
+      <NewLaboratoryFormWrapper />
     </div>
   );
 }

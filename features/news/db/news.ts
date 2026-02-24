@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { news } from "@/drizzle/schema/news-schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export type NewsRow = {
   id: string;
@@ -19,6 +19,30 @@ export async function getAllNewsFromDb(): Promise<NewsRow[]> {
 export async function getNewsById(id: string): Promise<NewsRow | null> {
   const [row] = await db.select().from(news).where(eq(news.id, id)).limit(1);
   return row ?? null;
+}
+
+/** List news with pagination. Optional status filter (default: only published). */
+export async function getNewsPaginatedFromDb(options: {
+  page: number;
+  limit: number;
+  status?: "draft" | "published";
+}): Promise<{ items: NewsRow[]; total: number }> {
+  const { page, limit, status = "published" } = options;
+  const where = status ? eq(news.status, status) : undefined;
+  const [items, countResult] = await Promise.all([
+    db
+      .select()
+      .from(news)
+      .where(where)
+      .orderBy(desc(news.publish ?? news.updatedAt))
+      .limit(limit)
+      .offset((page - 1) * limit),
+    where
+      ? db.select({ count: sql<number>`count(*)::int` }).from(news).where(where)
+      : db.select({ count: sql<number>`count(*)::int` }).from(news),
+  ]);
+  const total = countResult[0]?.count ?? 0;
+  return { items, total };
 }
 
 export async function createNewsInDb(input: {
