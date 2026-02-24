@@ -48,3 +48,11 @@ My wallet how many credits
 promotion items
 ဆိုပြီးရေးထားမယ် နိုပ်လိုက်မှ ပြပေးမယ်
 verification ကို phone နဲ့သော်လည်းကောင်း social နဲ့သော်လည်းကောင်းလုပ်မယ်
+
+discussion
+
+Add detail of seller 
+/api/products/:id
+API for Origin,
+/api/profile -> return current profile
+lab API

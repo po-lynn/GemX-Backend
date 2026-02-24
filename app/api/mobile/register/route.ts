@@ -30,6 +30,13 @@ export async function POST(req: Request) {
     const rawPhone = body?.phone;
     const password = String(body?.password || "");
     const name = String(body?.name || "Mobile User");
+    const nrc = body?.nrc != null ? String(body.nrc).trim() || null : null;
+    const address = body?.address != null ? String(body.address).trim() || null : null;
+    const city = body?.city != null ? String(body.city).trim() || null : null;
+    const state = body?.state != null ? String(body.state).trim() || null : null;
+    const country = body?.country != null ? String(body.country).trim() || null : null;
+    const gender = body?.gender != null ? String(body.gender).trim() || null : null;
+    const dateOfBirth = body?.dateOfBirth != null ? String(body.dateOfBirth).trim() || null : null;
 
     const phone = normalizeMyanmarPhone(rawPhone);
 
@@ -51,19 +58,32 @@ export async function POST(req: Request) {
       displayUsername: name,
       phone,
       role: "mobile",
+      nrc,
+      address,
+      city,
+      state,
+      country,
+      gender,
+      dateOfBirth,
     };
 
     const result = await auth.api.signUpEmail({
       body: signUpBody,
     });
 
-    if (result && !("error" in result)) {
+    if (result && "error" in result) {
+      const msg = typeof result.error === "string" ? result.error : String((result as { error?: unknown }).error ?? "Registration failed");
+      const status = msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique") ? 409 : 400;
+      return Response.json({ error: msg }, { status });
+    }
+
+    if (result) {
       await applyDefaultPointsToNewUser(email);
     }
     return Response.json(result, { status: 201 });
   } catch (err: unknown) {
-    const e = err as { message?: string; name?: string; cause?: unknown; stack?: string };
-    const msg = String(e?.message ?? "");
+    const e = err as { message?: string; cause?: { message?: string }; name?: string; stack?: string };
+    const msg = String(e?.message ?? (e?.cause && typeof e.cause === "object" && "message" in e.cause ? (e.cause as { message?: string }).message : "") ?? "");
 
     if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
       return Response.json(
@@ -72,6 +92,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return Response.json({ error: "Registration failed" }, { status: 500 });
+    const errorMessage = msg.trim() || "Registration failed";
+    return Response.json({ error: errorMessage }, { status: 500 });
   }
 }

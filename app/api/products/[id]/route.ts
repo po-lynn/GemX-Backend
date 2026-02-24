@@ -10,6 +10,7 @@ import {
   getCachedProduct,
   revalidateProductsCache,
 } from "@/features/products/db/cache/products"
+import { getUserById } from "@/features/users/db/users"
 import { productUpdateSchema } from "@/features/products/schemas/products"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
 
@@ -24,7 +25,17 @@ export async function GET(
     const { id } = await params
     const product = await getCachedProduct(id)
     if (!product) return jsonError("Product not found", 404)
-    return jsonCached(product)
+    const sellerUser = await getUserById(product.sellerId)
+    const seller = sellerUser
+      ? {
+          id: sellerUser.id,
+          name: sellerUser.name,
+          phone: sellerUser.phone ?? null,
+          username: sellerUser.username ?? null,
+          displayUsername: sellerUser.displayUsername ?? null,
+        }
+      : null
+    return jsonCached({ ...product, seller })
   } catch (error) {
     console.error("GET /api/products/[id]:", error)
     return jsonError("Failed to fetch product", 500)

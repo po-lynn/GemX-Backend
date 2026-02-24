@@ -9,9 +9,12 @@
 | POST | `/api/mobile/register` | No | Register (phone, password, name) |
 | POST | `/api/mobile/login` | No | Login (phone, password) |
 | GET | `/api/categories` | No | List categories. Query: `type` (optional) |
+| GET | `/api/origins` | No | List origins (for product create/edit). |
+| GET | `/api/laboratories` | No | List laboratories (for product create/edit). |
 | GET | `/api/products` | No | List all products. Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId` |
 | GET | `/api/products/:id` | No | Get single product by ID |
 | GET | `/api/products/mine` | Yes | List current user’s products. Same query params as list all. |
+| GET | `/api/profile` | Yes | Get current user profile and their products (optional query: page, limit, filters). |
 | POST | `/api/products` | Yes | Create product (JSON body) |
 | PATCH | `/api/products/:id` | Yes | Update product (owner or admin). JSON body. |
 | DELETE | `/api/products/:id` | Yes | Delete product (owner or admin) |
@@ -42,13 +45,29 @@ List responses (`GET /api/products`, `GET /api/products/mine`) may be cached (e.
 {
   "phone": "09123456789",
   "password": "your-secure-password",
-  "name": "John Doe"
+  "name": "John Doe",
+  "nrc": "12/ABC(N)123456",
+  "address": "No. 1, Main Road",
+  "city": "Yangon",
+  "state": "Yangon",
+  "country": "Myanmar",
+  "gender": "male",
+  "dateOfBirth": "1990-01-15"
 }
 ```
 
-- **phone:** Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`).
-- **password:** Required.
-- **name:** Optional; defaults to `"Mobile User"`.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| **phone** | string | Yes | Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`). |
+| **password** | string | Yes | User password. |
+| **name** | string | No | Display name; defaults to `"Mobile User"`. |
+| **nrc** | string | No | National Registration Card number. |
+| **address** | string | No | Street address. |
+| **city** | string | No | City. |
+| **state** | string | No | State / region. |
+| **country** | string | No | Country. |
+| **gender** | string | No | Gender (e.g. `male`, `female`, `other`). |
+| **dateOfBirth** | string | No | Date of birth (e.g. `YYYY-MM-DD`). |
 
 **Success (201):** Response body is the auth result (user + session). Store the **session token** from the response for the `Authorization: Bearer` header.
 
@@ -116,6 +135,58 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 ```
 
 **Use in app:** Call this once (e.g. on app start or when opening “Add product”), cache the list, and use `id` / `name` for product `categoryId` and UI.
+
+---
+
+### 4.2 List origins (for product create/edit)
+
+**GET** `/api/origins`
+
+**Auth:** Not required.
+
+**Success (200):** Array of origins.
+
+```json
+[
+  { "id": "uuid", "name": "Myanmar", "country": "Myanmar" },
+  { "id": "uuid", "name": "Sri Lanka", "country": "Sri Lanka" }
+]
+```
+
+| Field    | Type   | Description        |
+|----------|--------|--------------------|
+| `id`     | string | Origin UUID        |
+| `name`   | string | Origin name        |
+| `country`| string | Country            |
+
+**Use in app:** Call when building the product form (create/edit). Use `name` for the product `origin` field (loose stones and jewellery gemstones) or for filter dropdowns.
+
+---
+
+### 4.3 List laboratories (for product create/edit)
+
+**GET** `/api/laboratories`
+
+**Auth:** Not required.
+
+**Success (200):** Array of laboratories.
+
+```json
+[
+  { "id": "uuid", "name": "GIA", "address": "123 Lab St", "phone": "+1234567890", "precaution": null },
+  { "id": "uuid", "name": "Local Lab", "address": "456 Gem Rd", "phone": "+959123456789", "precaution": "Re-check recommended" }
+]
+```
+
+| Field       | Type   | Description        |
+|------------|--------|--------------------|
+| `id`       | string | Laboratory UUID    |
+| `name`     | string | Laboratory name    |
+| `address`  | string | Address            |
+| `phone`    | string | Phone              |
+| `precaution` | string \| null | Optional precaution note |
+
+**Use in app:** Call when building the product form (create/edit). Use `id` for the product `laboratoryId` field (certification) or for filter dropdowns.
 
 ---
 
@@ -263,7 +334,15 @@ Authorization: Bearer <session_token>
 
 **Auth:** Not required.
 
-**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, etc.).
+**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, etc.). The response includes a **`seller`** object (or `null` if seller not found) with:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Seller user ID |
+| `name` | string | Seller display name |
+| `phone` | string \| null | Seller phone (for contact) |
+| `username` | string \| null | Seller username |
+| `displayUsername` | string \| null | Seller display username |
 
 **Errors:**
 
@@ -292,7 +371,56 @@ Authorization: Bearer <session_token>
 
 ---
 
-### 5.4 Create product
+### 5.4 Get profile (current user + their products)
+
+**GET** `/api/profile`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Query (optional):** Same as **List all products** for the products list: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`. Omit for default (page 1, limit 20).
+
+**Success (200):**
+
+```json
+{
+  "profile": {
+    "id": "user-uuid",
+    "name": "John Doe",
+    "email": "user_09123456789@phone.local",
+    "phone": "+959123456789",
+    "role": "mobile",
+    "username": "959123456789",
+    "displayUsername": "John Doe",
+    "nrc": null,
+    "address": null,
+    "city": null,
+    "state": null,
+    "country": null,
+    "gender": null,
+    "dateOfBirth": null,
+    "points": 0,
+    "emailVerified": false,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "products": {
+    "products": [ { "id": "...", "title": "...", "price": "...", ... } ],
+    "total": 42
+  }
+}
+```
+
+- **profile** – Current user’s profile (id, name, email, phone, role, username, displayUsername, nrc, address, city, state, country, gender, dateOfBirth, points, emailVerified, createdAt, updatedAt).
+- **products** – Same shape as **GET /api/products/mine**: `{ "products": [...], "total": n }` for the current user’s products, with optional pagination/filters via query params.
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }` — missing or invalid token.
+- **404** – `{ "error": "Profile not found" }` — user record not found.
+
+---
+
+### 5.5 Create product
 
 **POST** `/api/products`
 
@@ -481,7 +609,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-### 5.5 Update product
+### 5.6 Update product
 
 **PATCH** `/api/products/:id`
 
@@ -516,7 +644,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 ---
 
-### 5.6 Delete product
+### 5.7 Delete product
 
 **DELETE** `/api/products/:id`
 
@@ -556,7 +684,10 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 4. **My products**
    - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse; with Bearer token).
 
-5. **Sell**
+5. **Profile**
+   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
+
+6. **Sell**
    - Create: `POST /api/products` with JSON body (with Bearer token).
    - Edit: `PATCH /api/products/:id` (with Bearer token).
    - Delete: `DELETE /api/products/:id` (with Bearer token).
@@ -578,9 +709,12 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 | POST   | `/api/mobile/register`   | No     | Register              |
 | POST   | `/api/mobile/login`      | No     | Login                 |
 | GET    | `/api/categories`        | No     | List categories (`?type` optional) |
+| GET    | `/api/origins`           | No     | List origins (for product create/edit) |
+| GET    | `/api/laboratories`      | No     | List laboratories (for product create/edit) |
 | GET    | `/api/products`          | No     | List all products (see 5.1 for query params) |
 | GET    | `/api/products/:id`      | No     | Get one product       |
 | GET    | `/api/products/mine`     | Yes    | List my products (same query params as list all) |
+| GET    | `/api/profile`           | Yes    | Get profile and own products (optional query params) |
 | POST   | `/api/products`          | Yes    | Create product        |
 | PATCH  | `/api/products/:id`      | Yes    | Update (owner/admin)  |
 | DELETE | `/api/products/:id`      | Yes    | Delete (owner/admin)  |
