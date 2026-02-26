@@ -28,9 +28,14 @@ import { Pencil, Trash2 } from "lucide-react";
 const ELLIPSIS_PREV = -1;
 const ELLIPSIS_NEXT = -2;
 
-function buildQueryString(page: number): string {
+export type UserTableFilters = { country?: string; state?: string; city?: string };
+
+function buildQueryString(page: number, filters: UserTableFilters): string {
   const sp = new URLSearchParams();
   sp.set("page", String(page));
+  if (filters.country?.trim()) sp.set("country", filters.country.trim());
+  if (filters.state?.trim()) sp.set("state", filters.state.trim());
+  if (filters.city?.trim()) sp.set("city", filters.city.trim());
   return sp.toString();
 }
 
@@ -52,9 +57,10 @@ type Props = {
   page: number;
   totalPages: number;
   total: number;
+  filters?: UserTableFilters;
 };
 
-export function UsersTable({ users, page, totalPages, total }: Props) {
+export function UsersTable({ users, page, totalPages, total, filters = {} }: Props) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
@@ -86,7 +92,7 @@ export function UsersTable({ users, page, totalPages, total }: Props) {
   }
 
   const base = "/admin/users";
-  const query = (p: number) => buildQueryString(p);
+  const query = (p: number) => buildQueryString(p, filters);
   const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
@@ -101,6 +107,7 @@ export function UsersTable({ users, page, totalPages, total }: Props) {
               <TableHead className="w-20">Points</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Gender</TableHead>
+              <TableHead className="w-20">Verified</TableHead>
               <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,7 +115,7 @@ export function UsersTable({ users, page, totalPages, total }: Props) {
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-muted-foreground text-center py-8"
                 >
                   No users yet.
@@ -125,6 +132,15 @@ export function UsersTable({ users, page, totalPages, total }: Props) {
                   <TableCell className="tabular-nums">{u.points}</TableCell>
                   <TableCell>{u.phone ?? "—"}</TableCell>
                   <TableCell>{u.gender ?? "—"}</TableCell>
+                  <TableCell>
+                    {u.role === "user" ? (
+                      <Badge variant={u.verified ? "default" : "secondary"}>
+                        {u.verified ? "Verified" : "—"}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" asChild>

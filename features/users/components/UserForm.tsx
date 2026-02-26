@@ -225,20 +225,23 @@ export function UserForm({ mode, user }: Props) {
               />
             </div>
             {isEdit && (
-              <div className="space-y-2">
-                <label htmlFor="points" className="text-sm font-medium">
-                  Points
-                </label>
-                <input
-                  id="points"
-                  name="points"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={user?.points ?? 0}
-                  className={inputClass}
-                />
-              </div>
+              <>
+                
+                <div className="space-y-2">
+                  <label htmlFor="points" className="text-sm font-medium">
+                    Points
+                  </label>
+                  <input
+                    id="points"
+                    name="points"
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={user?.points ?? 0}
+                    className={inputClass}
+                  />
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <label htmlFor="nrc" className="text-sm font-medium">
@@ -317,6 +320,20 @@ export function UserForm({ mode, user }: Props) {
                   ))}
                 </select>
               </div>
+              {user?.role === "user" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="verified"
+                      name="verified"
+                      type="checkbox"
+                      defaultChecked={user?.verified ?? false}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <label htmlFor="verified" className="text-sm font-medium">
+                      Verified by admin
+                    </label>
+                  </div>
+                )}
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

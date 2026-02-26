@@ -9,10 +9,10 @@ import {
   userDeleteSchema,
 } from "@/features/users/schemas/users";
 import {
-  getUserById,
   updateUserInDb,
   deleteUserInDb,
 } from "@/features/users/db/users";
+import type { UpdateUserInput } from "@/features/users/db/users";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
 
 function emptyToNull<T>(v: T): T | null | undefined {
@@ -100,6 +100,7 @@ export async function updateUserAction(formData: FormData) {
       const n = parseInt(String(v), 10);
       return Number.isNaN(n) ? undefined : n;
     })(),
+    verified: formData.get("verified") === "on",
   });
   if (!parsed.success) {
     return {
@@ -110,7 +111,11 @@ export async function updateUserAction(formData: FormData) {
   if (!session || !canAdminManageUsers(session.user.role)) {
     return { error: "Unauthorized" };
   }
-  const { userId, ...data } = parsed.data;
+  const { userId, ...rest } = parsed.data;
+  const data: UpdateUserInput = { ...rest };
+  if (rest.role === "user") {
+    data.verified = rest.verified === true;
+  }
   await updateUserInDb(userId, data);
   return { success: true, userId };
 }
