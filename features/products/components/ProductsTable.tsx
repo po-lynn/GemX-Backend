@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { formatDate, formatPriceWithCurrency } from "@/lib/formatters"
+import { ELLIPSIS_NEXT, ELLIPSIS_PREV, getPageNumbers } from "@/lib/pagination"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProductRowActions } from "@/features/products/components/ProductRowActions"
@@ -24,9 +25,6 @@ type Props = {
   filters: AdminProductFilters
 }
 
-const ELLIPSIS_PREV = -1
-const ELLIPSIS_NEXT = -2
-
 function buildQueryString(page: number, filters: AdminProductFilters): string {
   const sp = new URLSearchParams()
   sp.set("page", String(page))
@@ -42,19 +40,6 @@ function buildQueryString(page: number, filters: AdminProductFilters): string {
   setIf("origin", filters.origin)
   setIf("laboratoryId", filters.laboratoryId)
   return sp.toString()
-}
-
-export function getPageNumbers(page: number, totalPages: number): number[] {
-  if (totalPages <= 1) return []
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
-  const pages: number[] = [1]
-  const start = Math.max(2, page - 1)
-  const end = Math.min(totalPages - 1, page + 1)
-  if (start > 2) pages.push(ELLIPSIS_PREV)
-  for (let i = start; i <= end; i++) if (!pages.includes(i)) pages.push(i)
-  if (end < totalPages - 1) pages.push(ELLIPSIS_NEXT)
-  pages.push(totalPages)
-  return pages
 }
 
 export function ProductsTable({

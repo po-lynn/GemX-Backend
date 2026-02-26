@@ -2,6 +2,16 @@
 
 ---
 
+## Recent changes
+
+- **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
+- **GET /api/products/:id** – Response now includes a `seller` object (id, name, phone, username, displayUsername) for the product’s seller.
+- **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
+- **GET /api/origins** – List origins for product create/edit (id, name, country).
+- **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
+
+---
+
 ## 1. API routes overview
 
 | Method | Path | Auth | Description |
@@ -77,8 +87,9 @@ List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, 
 
 **Errors:**
 
-- **400** – `{ "error": "Phone must start with 09 and password is required" }`
-- **4xx/5xx** – Check `error` message in body.
+- **400** – `{ "error": "Phone must start with 09 and password is required" }` or other validation message (e.g. `"Password is too short"` from the auth provider).
+- **409** – `{ "error": "This phone number is already registered" }` when the phone is already in use.
+- **4xx/5xx** – Response body includes an `error` string with the actual message (e.g. auth validation errors).
 
 ---
 
@@ -381,7 +392,7 @@ Authorization: Bearer <session_token>
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query (optional):** Same as **List all products** for the products list: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`. Omit for default (page 1, limit 20).
+**Query (optional):** Same as **List all products** for the products list: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`. Omit for default (page 1, limit 20). Note: the products list is **restricted to active products only**; the `status` query param does not override this.
 
 **Success (200):**
 
@@ -415,7 +426,7 @@ Authorization: Bearer <session_token>
 ```
 
 - **profile** – Current user’s profile (id, name, email, phone, role, username, displayUsername, nrc, address, city, state, country, gender, dateOfBirth, points, emailVerified, createdAt, updatedAt).
-- **products** – Same shape as **GET /api/products/mine**: `{ "products": [...], "total": n }` for the current user’s products, with optional pagination/filters via query params.
+- **products** – Same shape as **GET /api/products/mine**: `{ "products": [...], "total": n }` for the current user’s **active** products only, with optional pagination/filters via query params.
 
 **Errors:**
 

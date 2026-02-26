@@ -1,0 +1,3 @@
+#!/bin/sh
+# TDD: block commit if tests fail
+npm run test
