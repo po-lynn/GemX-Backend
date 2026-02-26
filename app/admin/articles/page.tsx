@@ -8,13 +8,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllArticlesFromDb } from "@/features/articles/db/articles";
+import { getArticlesPaginatedFromDb } from "@/features/articles/db/articles";
 import { ArticlesTable } from "@/features/articles/components";
 import { ChevronLeft, Plus, FileText } from "lucide-react";
 
-export default async function AdminArticlesPage() {
+const ARTICLES_PAGE_SIZE = 20;
+
+type Props = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function AdminArticlesPage({ searchParams }: Props) {
   await connection();
-  const articles = await getAllArticlesFromDb();
+  const params = await searchParams;
+  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const { items: articles, total } = await getArticlesPaginatedFromDb({
+    page: rawPage,
+    limit: ARTICLES_PAGE_SIZE,
+  });
+  const totalPages = Math.max(1, Math.ceil(total / ARTICLES_PAGE_SIZE));
 
   return (
     <div className="container my-6 space-y-6">
@@ -48,11 +60,16 @@ export default async function AdminArticlesPage() {
         <CardHeader>
           <CardTitle>All Articles</CardTitle>
           <CardDescription>
-            Create and edit articles with title, slug, author, and BlockNote content.
+            Create and edit articles with title, author, and BlockNote content.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ArticlesTable articles={articles} />
+          <ArticlesTable
+            articles={articles}
+            page={rawPage}
+            totalPages={totalPages}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

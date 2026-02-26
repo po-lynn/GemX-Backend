@@ -112,7 +112,12 @@ export function CategoriesTable({ categories }: Props) {
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">Jewellery</Badge>
+                    <Badge
+                      variant="outline"
+                      style={{ backgroundColor: "#EEEEEE" }}
+                    >
+                      Jewellery
+                    </Badge>
                   </TableCell>
                   <TableCell>{c.sortOrder}</TableCell>
                   <TableCell>

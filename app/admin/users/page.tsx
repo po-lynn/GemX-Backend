@@ -8,13 +8,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllUsersFromDb } from "@/features/users/db/users";
+import { getUsersPaginatedFromDb } from "@/features/users/db/users";
 import { UsersTable } from "@/features/users/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
-export default async function AdminUsersPage() {
+const USERS_PAGE_SIZE = 20;
+
+type Props = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function AdminUsersPage({ searchParams }: Props) {
   await connection();
-  const users = await getAllUsersFromDb();
+  const params = await searchParams;
+  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const { users, total } = await getUsersPaginatedFromDb({
+    page: rawPage,
+    limit: USERS_PAGE_SIZE,
+  });
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
 
   return (
     <div className="container my-6 space-y-6">
@@ -49,13 +61,12 @@ export default async function AdminUsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {users.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No users yet.
-            </p>
-          ) : (
-            <UsersTable users={users} />
-          )}
+          <UsersTable
+            users={users}
+            page={rawPage}
+            totalPages={totalPages}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

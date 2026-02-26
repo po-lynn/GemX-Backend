@@ -21,14 +21,14 @@ export async function getNewsById(id: string): Promise<NewsRow | null> {
   return row ?? null;
 }
 
-/** List news with pagination. Optional status filter (default: only published). */
+/** List news with pagination. Optional status filter (omit for all). */
 export async function getNewsPaginatedFromDb(options: {
   page: number;
   limit: number;
   status?: "draft" | "published";
 }): Promise<{ items: NewsRow[]; total: number }> {
-  const { page, limit, status = "published" } = options;
-  const where = status ? eq(news.status, status) : undefined;
+  const { page, limit, status } = options;
+  const where = status === undefined ? undefined : eq(news.status, status);
   const [items, countResult] = await Promise.all([
     db
       .select()

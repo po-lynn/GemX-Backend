@@ -106,24 +106,6 @@ export function ArticleForm({ mode, article }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="slug" className="text-sm font-medium">
-              Slug *
-            </label>
-            <input
-              id="slug"
-              name="slug"
-              type="text"
-              required
-              maxLength={200}
-              defaultValue={article?.slug ?? ""}
-              placeholder="url-friendly-slug"
-              className={inputClass}
-            />
-            <p className="text-xs text-muted-foreground">
-              Lowercase letters, numbers, and hyphens only (e.g. my-article-title).
-            </p>
-          </div>
-          <div className="space-y-2">
             <label htmlFor="author" className="text-sm font-medium">
               Author
             </label>

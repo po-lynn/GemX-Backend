@@ -8,13 +8,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllNewsFromDb } from "@/features/news/db/news";
+import { getNewsPaginatedFromDb } from "@/features/news/db/news";
 import { NewsTable } from "@/features/news/components";
 import { ChevronLeft, Plus, Newspaper } from "lucide-react";
 
-export default async function AdminNewsPage() {
+const NEWS_PAGE_SIZE = 20;
+
+type Props = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function AdminNewsPage({ searchParams }: Props) {
   await connection();
-  const news = await getAllNewsFromDb();
+  const params = await searchParams;
+  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const { items: news, total } = await getNewsPaginatedFromDb({
+    page: rawPage,
+    limit: NEWS_PAGE_SIZE,
+  });
+  const totalPages = Math.max(1, Math.ceil(total / NEWS_PAGE_SIZE));
 
   return (
     <div className="container my-6 space-y-6">
@@ -52,7 +64,12 @@ export default async function AdminNewsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <NewsTable news={news} />
+          <NewsTable
+            news={news}
+            page={rawPage}
+            totalPages={totalPages}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

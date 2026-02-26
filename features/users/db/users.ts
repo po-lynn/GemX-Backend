@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { eq, asc, ilike, or } from "drizzle-orm";
+import { eq, asc, ilike, or, sql } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -56,6 +56,51 @@ export async function getAllUsersFromDb(opts?: {
     .where(condition)
     .orderBy(asc(user.name));
   return rows;
+}
+
+/** List users with pagination. Optional search (name, email, phone, role). */
+export async function getUsersPaginatedFromDb(options: {
+  page: number;
+  limit: number;
+  search?: string;
+}): Promise<{ users: UserRow[]; total: number }> {
+  const { page, limit, search } = options;
+  const searchTrim = search?.trim();
+  const condition = searchTrim
+    ? or(
+        ilike(user.name, `%${searchTrim}%`),
+        ilike(user.email, `%${searchTrim}%`),
+        ilike(user.phone ?? "", `%${searchTrim}%`),
+        ilike(user.role, `%${searchTrim}%`)
+      )
+    : undefined;
+  const selectFields = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    gender: user.gender,
+    dateOfBirth: user.dateOfBirth,
+    points: user.points,
+    emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+  const [users, countResult] = await Promise.all([
+    db
+      .select(selectFields)
+      .from(user)
+      .where(condition)
+      .orderBy(asc(user.name))
+      .limit(limit)
+      .offset((page - 1) * limit),
+    condition
+      ? db.select({ count: sql<number>`count(*)::int` }).from(user).where(condition)
+      : db.select({ count: sql<number>`count(*)::int` }).from(user),
+  ]);
+  const total = countResult[0]?.count ?? 0;
+  return { users, total };
 }
 
 export async function getUserById(id: string): Promise<UserForEdit | null> {

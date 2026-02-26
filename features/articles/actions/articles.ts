@@ -18,10 +18,19 @@ function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
 }
 
+function slugify(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "article";
+}
+
 export async function createArticleAction(formData: FormData) {
   const parsed = articleCreateSchema.safeParse({
     title: formData.get("title"),
-    slug: formData.get("slug"),
     content: formData.get("content") ?? "[]",
     author: formData.get("author") ?? "",
     status: formData.get("status") || "draft",
@@ -42,7 +51,7 @@ export async function createArticleAction(formData: FormData) {
       : null;
   const articleId = await createArticleInDb({
     title: parsed.data.title,
-    slug: parsed.data.slug.trim().toLowerCase(),
+    slug: slugify(parsed.data.title),
     content: parsed.data.content,
     author: parsed.data.author.trim(),
     status: parsed.data.status,
@@ -55,7 +64,6 @@ export async function updateArticleAction(formData: FormData) {
   const parsed = articleUpdateSchema.safeParse({
     articleId: formData.get("articleId"),
     title: emptyToNull(formData.get("title")),
-    slug: emptyToNull(formData.get("slug")),
     content: emptyToNull(formData.get("content")),
     author: emptyToNull(formData.get("author")),
     status: emptyToNull(formData.get("status")),
@@ -70,7 +78,7 @@ export async function updateArticleAction(formData: FormData) {
   if (!session || !canAdminManageArticles(session.user.role)) {
     return { error: "Unauthorized" };
   }
-  const { articleId, publishDate: publishDateRaw, ...rest } = parsed.data;
+  const { articleId, publishDate: publishDateRaw, title, ...rest } = parsed.data;
   const publishDate: Date | null | undefined =
     publishDateRaw === undefined
       ? undefined
@@ -81,8 +89,9 @@ export async function updateArticleAction(formData: FormData) {
     ...rest,
     publishDate,
   };
-  if (rest.slug !== undefined) {
-    updates.slug = rest.slug.trim().toLowerCase();
+  if (title !== undefined) {
+    updates.title = title;
+    updates.slug = slugify(title);
   }
   await updateArticleInDb(articleId, updates);
   return { success: true, articleId };

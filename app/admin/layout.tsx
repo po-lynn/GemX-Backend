@@ -23,7 +23,7 @@ export default async function AdminLayout({
             <div className="mr-auto leading-tight">
               <div className="text-sm font-medium">Admin</div>
               <div className="text-xs text-muted-foreground">
-                Manage courses, products, sales
+                Manage products, news, articles, users, sales
               </div>
             </div>
 
