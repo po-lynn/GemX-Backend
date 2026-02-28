@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       laboratoryId: laboratoryId ?? undefined,
       isCollectorPiece: isCollectorPiece ?? undefined,
       isPrivilegeAssist: isPrivilegeAssist ?? undefined,
+      sortByPublicPriority: true,
     })
     return jsonCached({ products, total })
   } catch (error) {

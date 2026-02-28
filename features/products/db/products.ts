@@ -37,7 +37,6 @@ export type AdminProductRow = {
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   laboratoryId: string | null
-  featured: number
   sellerId: string
   sellerName: string
   sellerPhone: string | null
@@ -58,6 +57,8 @@ export async function getAdminProductsFromDb(opts: {
   laboratoryId?: string | null
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
+  sortByPublicPriority?: boolean
 }): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)
@@ -107,6 +108,15 @@ export async function getAdminProductsFromDb(opts: {
   const whereClause =
     filterConditions.length > 0 ? and(...filterConditions) : undefined
 
+  const orderByColumns = opts.sortByPublicPriority
+    ? [
+        desc(product.isCollectorPiece),
+        desc(product.isPrivilegeAssist),
+        desc(product.isFeatured),
+        desc(product.createdAt),
+      ]
+    : [desc(product.createdAt)]
+
   const [productsData, countResult] = await Promise.all([
     db
       .select({
@@ -126,7 +136,6 @@ export async function getAdminProductsFromDb(opts: {
         status: product.status,
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
-        featured: product.featured,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
         sellerId: product.sellerId,
@@ -139,7 +148,7 @@ export async function getAdminProductsFromDb(opts: {
       .leftJoin(category, eq(product.categoryId, category.id))
       .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
       .where(whereClause)
-      .orderBy(desc(product.createdAt))
+      .orderBy(...orderByColumns)
       .limit(limit)
       .offset(offset),
     db
@@ -187,7 +196,6 @@ export async function getAdminProductsFromDb(opts: {
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
-    featured: p.featured,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
     sellerId: p.sellerId,
@@ -217,6 +225,7 @@ export async function getProductsBySellerId(
     laboratoryId?: string | null
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
+    sortByPublicPriority?: boolean
   }
 ): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
@@ -267,6 +276,15 @@ export async function getProductsBySellerId(
 
   const whereClause = and(...filterConditions)
 
+  const orderByColumnsSeller = opts.sortByPublicPriority
+    ? [
+        desc(product.isCollectorPiece),
+        desc(product.isPrivilegeAssist),
+        desc(product.isFeatured),
+        desc(product.createdAt),
+      ]
+    : [desc(product.createdAt)]
+
   const [productsData, countResult] = await Promise.all([
     db
       .select({
@@ -286,7 +304,6 @@ export async function getProductsBySellerId(
         status: product.status,
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
-        featured: product.featured,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
         sellerId: product.sellerId,
@@ -299,7 +316,7 @@ export async function getProductsBySellerId(
       .leftJoin(category, eq(product.categoryId, category.id))
       .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
       .where(whereClause)
-      .orderBy(desc(product.createdAt))
+      .orderBy(...orderByColumnsSeller)
       .limit(limit)
       .offset(offset),
     db
@@ -347,7 +364,6 @@ export async function getProductsBySellerId(
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
-    featured: p.featured,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
     sellerId: p.sellerId,
@@ -388,7 +404,6 @@ export type ProductForEdit = {
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
-  featured: number
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   sellerId: string
@@ -423,7 +438,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
-      featured: product.featured,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       sellerId: product.sellerId,
@@ -501,7 +515,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     status: row.status,
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
-    featured: row.featured,
     isCollectorPiece: row.isCollectorPiece,
     isPrivilegeAssist: row.isPrivilegeAssist,
     sellerId: row.sellerId,

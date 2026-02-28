@@ -34,6 +34,7 @@ export async function getAdminProducts(opts: {
   laboratoryId?: string | null
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  sortByPublicPriority?: boolean
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())

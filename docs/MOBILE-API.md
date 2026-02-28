@@ -5,13 +5,13 @@
 ## Recent changes
 
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. New query params: `isCollectorPiece=true` (high-value collector pieces only) and `isPrivilegeAssist=true` (products sold by us only). Product items include `isCollectorPiece` and `isPrivilegeAssist` (boolean).
-- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece` and `isPrivilegeAssist`. Returns all statuses by default (seller sees full list).
-- **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`.
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params: `isCollectorPiece`, `isPrivilegeAssist`. Product items include `isCollectorPiece` and `isPrivilegeAssist` (boolean). **Sort order:** collector pieces first, then privilege assist, then featured (`isFeatured`), then by `createdAt` (newest first). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
+- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece` and `isPrivilegeAssist`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
+- **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`. No numeric `featured` field; use `isFeatured` (boolean).
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
-- **POST /api/products** and **PATCH /api/products/:id** – Request body accepts optional `isCollectorPiece` (boolean) and `isPrivilegeAssist` (boolean) for high-value / sold-by-us flags.
+- **POST /api/products** and **PATCH /api/products/:id** – Request body uses **`jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
 
 ---
 
@@ -218,6 +218,8 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 **Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isCollectorPiece=true` to list only collector pieces (high-value items); use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
 
+**Sort order:** Results are ordered by **public priority**: (1) collector pieces first (`isCollectorPiece` true), (2) then privilege assist (`isPrivilegeAssist` true), (3) then featured (`isFeatured` true), (4) then by `createdAt` (newest first). This order applies to the public list and to search/filter results. The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
+
 **Query:**
 
 | Param        | Type   | Default | Description                                      |
@@ -368,7 +370,7 @@ Authorization: Bearer <session_token>
 }
 ```
 
-Each product item includes `isCollectorPiece` (boolean) and `isPrivilegeAssist` (boolean).
+Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatured` (all booleans). The API does not return a numeric `featured` field.
 
 ---
 
@@ -510,7 +512,7 @@ Each product item includes `isCollectorPiece` (boolean) and `isPrivilegeAssist` 
 
 - `metal` – `"Gold"` | `"Silver"` | `"Other"`
 - `totalWeightGrams`
-- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
+- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Use the key **`jewelleryGemstones`** (lowercase `s`); `jewelleryGemStones` is not accepted. Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
 
 **Minimal example (all required fields):**
 

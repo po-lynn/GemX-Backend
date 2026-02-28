@@ -138,7 +138,7 @@ export function ProductsTable({
                     >
                       {p.moderationStatus}
                     </Badge>
-                    {(p.isFeatured || p.featured > 0) && (
+                    {p.isFeatured && (
                       <Badge className="ml-1" variant="outline">
                         Featured
                       </Badge>
