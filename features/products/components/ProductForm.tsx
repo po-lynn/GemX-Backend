@@ -21,12 +21,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
-import type { ProductForEdit } from "@/features/products/db/products"
+import type { ProductForEdit, ProductFormPagination } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
+import { FormActionBar } from "@/features/products/components/FormActionBar"
+import { cn } from "@/lib/utils"
 import { Eye, Pencil, Trash2 } from "lucide-react"
 
 const inputClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+  "flex h-10 w-full rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] transition-shadow placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0 focus:border-[var(--form-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-sm file:font-medium"
 
 function FormSection({
   title,
@@ -38,34 +40,21 @@ function FormSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-border bg-muted/20 p-6">
-      <div className="mb-6 flex items-start gap-4">
-        <div
-          className="mt-0.5 h-8 w-0.5 shrink-0 rounded-full bg-primary/70"
-          aria-hidden
-        />
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            {title}
-          </h2>
-          {description && (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-          )}
-        </div>
+    <section className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+      <div className="mb-5">
+        <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
+          {title}
+        </h2>
+        {description && (
+          <p className="mt-1 text-sm text-[var(--form-muted-foreground)]">{description}</p>
+        )}
       </div>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-5">{children}</div>
     </section>
   )
 }
 
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
-const STATUS_OPTIONS = [
-  { value: "active", label: "Active", color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
-  { value: "archive", label: "Archive", color: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
-  { value: "sold", label: "Sold", color: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30" },
-  { value: "hidden", label: "Hidden", color: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
-] as const
-
 import type { CategoryRow } from "@/features/categories/db/categories"
 
 type Props = {
@@ -82,6 +71,7 @@ type LabProps = {
   product?: ProductForEdit | null
   laboratories?: LaboratoryOption[] | null
   origins?: OriginOption[] | null
+  pagination?: ProductFormPagination | null
 }
 
 function parseDimensions(value: string | null | undefined): [string, string, string] {
@@ -90,7 +80,7 @@ function parseDimensions(value: string | null | undefined): [string, string, str
   return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]
 }
 
-export function ProductForm({ mode, product, categories, laboratories, origins }: Props & LabProps) {
+export function ProductForm({ mode, product, categories, laboratories, origins, pagination }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -250,37 +240,108 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     }
   }
 
-  const statusOpt = STATUS_OPTIONS.find((o) => o.value === status)
+  const breadcrumbs: { href: string; label: string }[] = isEdit
+    ? [
+        { href: "/admin/products", label: "Products" },
+        { href: `/admin/products/${product?.id}/edit`, label: product?.title ? (product.title.length > 40 ? product.title.slice(0, 40) + "…" : product.title) : "Edit" },
+      ]
+    : [
+        { href: "/admin/products", label: "Products" },
+        { href: "/admin/products/new", label: "New Product" },
+      ]
+
+  const recordTitle = isEdit ? (product?.title ?? "Product") : "New Product"
+  const [notesTab, setNotesTab] = useState<"notes" | "extra">("notes")
+  const [sidebarTab, setSidebarTab] = useState<"message" | "note" | "activity">("activity")
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <CardTitle>{isEdit ? "Edit Product" : "New Product"}</CardTitle>
-          <CardDescription>
-            {isEdit
-              ? "Update product details"
-              : "Add a new product to the marketplace"}
-          </CardDescription>
-        </div>
-        <Badge
-          variant="outline"
-          className={`shrink-0 font-medium ${statusOpt?.color ?? ""}`}
-        >
-          {statusOpt?.label ?? status}
-        </Badge>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-          {isEdit && (
-            <input
-              type="hidden"
-              name="productId"
-              value={product?.id ?? ""}
-            />
-          )}
+    <Card className="odoo-form overflow-hidden rounded-2xl border-0 bg-[var(--form-bg-subtle)] shadow-[var(--form-shadow-md)]">
+      <FormActionBar
+        breadcrumbs={breadcrumbs}
+        currentStatus={status}
+        onStatusChange={(value) => setStatus(value as typeof status)}
+        saveLabel="Save"
+        saveLoading={loading}
+        discardHref="/admin/products"
+        pagination={isEdit && pagination ? pagination : null}
+        formId="product-form"
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px]">
+        {/* Left pane: form content */}
+        <div className="min-w-0 border-r border-[var(--form-border)]">
+          <div className="p-8">
+            {/* Hero: record title + key metrics in a soft card */}
+            <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--form-foreground)] sm:text-3xl">
+                {recordTitle}
+              </h1>
+              <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">Price</div>
+                  <div className="mt-1 text-lg font-semibold text-[var(--form-foreground)]">
+                    {product?.price != null ? `${product.currency} ${product.price}` : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">Status</div>
+                  <div className="mt-1 text-lg font-semibold capitalize text-[var(--form-foreground)]">
+                    {status}
+                  </div>
+                </div>
+                {isEdit && product?.sku && (
+                  <div>
+                    <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">SKU</div>
+                    <div className="mt-1 font-mono text-sm font-semibold text-[var(--form-foreground)]">
+                      {product.sku}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
-          <FormSection
+          <form id="product-form" onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 pb-8">
+            {isEdit && (
+              <input
+                type="hidden"
+                name="productId"
+                value={product?.id ?? ""}
+              />
+            )}
+            <input type="hidden" name="status" value={status} />
+
+            {/* Featured, Collector Piece, Privilege Assist (Odoo-style below product name) */}
+            <div className="-mt-2 flex flex-wrap items-center gap-6 rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-shadow)]">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isFeatured"
+                  defaultChecked={product?.isFeatured ?? false}
+                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                />
+                <span className="text-sm font-medium text-[var(--form-foreground)]">Featured</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isCollectorPiece"
+                  defaultChecked={product?.isCollectorPiece ?? false}
+                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                />
+                <span className="text-sm font-medium text-[var(--form-foreground)]">Collector Piece</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isPrivilegeAssist"
+                  defaultChecked={product?.isPrivilegeAssist ?? false}
+                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                />
+                <span className="text-sm font-medium text-[var(--form-foreground)]">Privilege Assist</span>
+              </label>
+            </div>
+
+            <FormSection
             title="Basic Info"
             description="Core product identification and description"
           >
@@ -297,37 +358,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 defaultValue={product?.title ?? ""}
                 placeholder="Product title"
                 className={inputClass}
-              />
-            </div>
-            {isEdit && product?.sku && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  SKU
-                </label>
-                <p
-                  className="rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-sm"
-                  aria-label={`SKU: ${product.sku}`}
-                >
-                  {product.sku}
-                </p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">
-                Description
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={4}
-                maxLength={5000}
-                defaultValue={product?.description ?? ""}
-                placeholder={
-                  productType === "jewellery"
-                    ? "e.g. Set contents: 1 Necklace, 2 Earrings, 1 Maang Tikka. Describe style (e.g. Noratan bridal), craftsmanship, and condition."
-                    : "Product description"
-                }
-                className={inputClass + " min-h-[80px] resize-y"}
               />
             </div>
             <div className="space-y-2">
@@ -940,70 +970,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           </FormSection>
 
           <FormSection
-            title="Status & Visibility"
-            description="Listing status and featured placement"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="status" className="text-sm font-medium">
-                  Status
-                </label>
-                <select
-                  id="status"
-                  name="status"
-                  value={status}
-                  onChange={(e) =>
-                    setStatus(e.target.value as "active" | "archive" | "sold" | "hidden")
-                  }
-                  className={inputClass}
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end gap-2 pb-2">
-                <input
-                  id="isFeatured"
-                  name="isFeatured"
-                  type="checkbox"
-                  defaultChecked={product?.isFeatured ?? false}
-                  className="size-4 rounded border-input"
-                />
-                <label htmlFor="isFeatured" className="text-sm font-medium">
-                  Featured
-                </label>
-              </div>
-              <div className="flex items-end gap-2 pb-2">
-                <input
-                  id="isCollectorPiece"
-                  name="isCollectorPiece"
-                  type="checkbox"
-                  defaultChecked={product?.isCollectorPiece ?? false}
-                  className="size-4 rounded border-input"
-                />
-                <label htmlFor="isCollectorPiece" className="text-sm font-medium">
-                  Collector piece (high-value, e.g. 1M+)
-                </label>
-              </div>
-              <div className="flex items-end gap-2 pb-2">
-                <input
-                  id="isPrivilegeAssist"
-                  name="isPrivilegeAssist"
-                  type="checkbox"
-                  defaultChecked={product?.isPrivilegeAssist ?? false}
-                  className="size-4 rounded border-input"
-                />
-                <label htmlFor="isPrivilegeAssist" className="text-sm font-medium">
-                  Privilege Assist (sold by us)
-                </label>
-              </div>
-            </div>
-          </FormSection>
-
-          <FormSection
             title="Certification"
             description="Lab reports and authenticity documentation"
           >
@@ -1092,22 +1058,124 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             </div>
           </FormSection>
 
-          {error && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </p>
-          )}
+            {/* Notes / Extra Info tabs */}
+            <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+              <div className="flex gap-1 border-b border-[var(--form-border)]">
+                <button
+                  type="button"
+                  onClick={() => setNotesTab("notes")}
+                  className={cn(
+                    "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                    notesTab === "notes"
+                      ? "border-[var(--form-primary)] text-[var(--form-foreground)]"
+                      : "-mb-px border-transparent text-[var(--form-muted-foreground)] hover:text-[var(--form-foreground)]"
+                  )}
+                >
+                  Notes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotesTab("extra")}
+                  className={cn(
+                    "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                    notesTab === "extra"
+                      ? "border-[var(--form-primary)] text-[var(--form-foreground)]"
+                      : "-mb-px border-transparent text-[var(--form-muted-foreground)] hover:text-[var(--form-foreground)]"
+                  )}
+                >
+                  Extra Info
+                </button>
+              </div>
+              <div className="pt-4">
+                {notesTab === "notes" && (
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={4}
+                    maxLength={5000}
+                    defaultValue={product?.description ?? ""}
+                    placeholder="Add a description..."
+                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
+                  />
+                )}
+                {notesTab === "extra" && (
+                  <p className="text-sm text-[var(--form-muted-foreground)]">Additional details can be added here.</p>
+                )}
+              </div>
+            </div>
 
-          <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : isEdit ? "Update" : "Create"}
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/admin/products">Cancel</Link>
-            </Button>
+            {error && (
+              <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+          </form>
+        </div>
+
+        {/* Right pane: Activity sidebar */}
+        <aside className="hidden lg:block lg:min-w-0 border-l border-[var(--form-border)] bg-[var(--form-sidebar-bg)]">
+          <div className="flex gap-1 border-b border-[var(--form-border)] p-2">
+            <button
+              type="button"
+              onClick={() => setSidebarTab("message")}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                sidebarTab === "message"
+                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
+                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
+              )}
+            >
+              Send message
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab("note")}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                sidebarTab === "note"
+                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
+                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
+              )}
+            >
+              Log note
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarTab("activity")}
+              className={cn(
+                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                sidebarTab === "activity"
+                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
+                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
+              )}
+            >
+              Activity
+            </button>
           </div>
-        </form>
-      </CardContent>
+          <div className="max-h-[60vh] overflow-y-auto p-4">
+            {sidebarTab === "activity" && (
+              <div className="space-y-4 text-sm">
+                <p className="text-[var(--form-muted-foreground)]">No activity yet.</p>
+                <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-4 shadow-[var(--form-shadow)]">
+                  <div className="flex gap-3">
+                    <div className="h-9 w-9 shrink-0 rounded-full bg-[var(--form-muted)]" />
+                    <div>
+                      <div className="font-medium text-[var(--form-foreground)]">Stage changed</div>
+                      <div className="mt-0.5 text-xs text-[var(--form-muted-foreground)]">New → Active</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {sidebarTab === "message" && (
+              <p className="text-sm text-[var(--form-muted-foreground)]">Send a message to the seller or internal note.</p>
+            )}
+            {sidebarTab === "note" && (
+              <p className="text-sm text-[var(--form-muted-foreground)]">Log an internal note for this product.</p>
+            )}
+          </div>
+        </aside>
+      </div>
     </Card>
   )
 }

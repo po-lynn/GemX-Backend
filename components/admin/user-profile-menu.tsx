@@ -16,8 +16,8 @@ export function UserProfileMenu({ user, onSignOut }: { user: User; onSignOut: (f
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="group flex max-w-full items-center gap-2 sm:gap-3 overflow-hidden rounded px-2 py-1 hover:bg-accent/10">
-          <div className="size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
+        <button className="group flex max-w-full items-center gap-2 overflow-hidden rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-border hover:bg-accent/10 sm:gap-3">
+          <div className="size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-border/50">
             {user.image ? (
               <img
                 src={user.image}
@@ -40,8 +40,8 @@ export function UserProfileMenu({ user, onSignOut }: { user: User; onSignOut: (f
           </div>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-3">
-        <div className="flex items-center gap-3 pb-3 border-b">
+      <PopoverContent align="end" className="w-64 rounded-xl border border-border p-0 shadow-lg">
+        <div className="flex items-center gap-3 border-b border-border p-3">
           <div className="size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
             {user.image ? (
               <img
@@ -63,15 +63,15 @@ export function UserProfileMenu({ user, onSignOut }: { user: User; onSignOut: (f
           </div>
         </div>
 
-        <div className="pt-3 space-y-1">
-          <Button variant="ghost" asChild className="w-full justify-start">
+        <div className="p-2 space-y-0.5">
+          <Button variant="ghost" asChild className="w-full justify-start rounded-lg">
             <Link href={`/profile/${user.id}`}>View profile</Link>
           </Button>
-          <Button variant="ghost" asChild className="w-full justify-start">
+          <Button variant="ghost" asChild className="w-full justify-start rounded-lg">
             <Link href={`/profile/${user.id}/edit`}>Edit profile</Link>
           </Button>
           <form action={onSignOut}>
-            <Button variant="ghost" className="w-full justify-start">Sign out</Button>
+            <Button variant="ghost" className="w-full justify-start rounded-lg text-muted-foreground hover:text-foreground">Sign out</Button>
           </form>
         </div>
       </PopoverContent>

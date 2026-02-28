@@ -56,3 +56,17 @@ Add detail of seller
 API for Origin,
 /api/profile -> return current profile
 lab API
+
+
+Favorites / watchlist
+“Save” or “favorite” listings so users can come back to them and compare. Very standard. Needs: userId, productId, and a “Saved” / “Favorites” screen.
+
+Status – e.g. Active / Reserved / Sold / Archived. You already have status.
+“Mark as sold” – Seller marks item sold
+
+Report user – Scam, harassment, etc.
+Block user – So a user can’t see your listings or message you.
+Share listing – Deep link or share to social/WhatsApp so buyers can send the link before calling.
+Recently viewed – Per device or per user.
+“Similar” listings – Same category or same origin/lab on the product page.
+Notifications (push or email)

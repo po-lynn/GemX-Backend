@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useState } from "react"
+import { Search } from "lucide-react"
 
 type Props = {
   defaultValue?: string
@@ -29,22 +30,28 @@ export function ProductsSearchInput({ defaultValue = "" }: Props) {
   )
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 max-w-sm">
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:min-w-[280px]">
+      <div className="relative flex flex-1 items-center">
+        <Search
+          className="absolute left-3 size-4 text-muted-foreground pointer-events-none"
+          aria-hidden
+        />
         <input
           type="search"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search by title, seller, phone, email..."
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gem-focus)] focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Search products"
         />
-        <button
-          type="submit"
-          className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Search
-        </button>
       </div>
+      <button
+        type="submit"
+        className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+      >
+        <Search className="size-4" aria-hidden />
+        Search
+      </button>
     </form>
   )
 }

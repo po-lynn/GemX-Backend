@@ -96,15 +96,17 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="container my-6 space-y-6">
+    <div className="gem-theme container my-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
-          <p className="text-muted-foreground text-sm">
-            Manage products, moderation, and featured status
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Products
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gemstones & jewellery — manage listings, moderation, and status
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="shadow-sm">
           <Link href="/admin/products/new">
             <Plus className="mr-2 size-4" />
             New Product
@@ -112,31 +114,35 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Products</CardTitle>
-          <CardDescription>
-            {total} product{total !== 1 ? "s" : ""} total
-          </CardDescription>
-          <Suspense fallback={null}>
-            <ProductsSearchInput defaultValue={filters.search} />
-          </Suspense>
-          <Suspense fallback={null}>
-            <ProductFilters
-              categories={categories}
-              origins={origins}
-              laboratories={laboratories}
-              productType={filters.productType}
-              categoryId={filters.categoryId}
-              status={filters.status}
-              stoneCut={filters.stoneCut}
-              shape={filters.shape}
-              origin={filters.origin}
-              laboratoryId={filters.laboratoryId}
-            />
-          </Suspense>
+      <Card className="overflow-hidden">
+        <CardHeader className="space-y-4 border-b border-border pb-6">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-lg">All Products</CardTitle>
+            <CardDescription>
+              {total} product{total !== 1 ? "s" : ""} total
+            </CardDescription>
+          </div>
+          <div className="gem-search-bar flex flex-wrap items-center gap-4 p-4">
+            <Suspense fallback={null}>
+              <ProductsSearchInput defaultValue={filters.search} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <ProductFilters
+                categories={categories}
+                origins={origins}
+                laboratories={laboratories}
+                productType={filters.productType}
+                categoryId={filters.categoryId}
+                status={filters.status}
+                stoneCut={filters.stoneCut}
+                shape={filters.shape}
+                origin={filters.origin}
+                laboratoryId={filters.laboratoryId}
+              />
+            </Suspense>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pt-0">
           <ProductsTable
             products={products}
             page={page}

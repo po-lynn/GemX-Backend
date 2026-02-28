@@ -3,7 +3,7 @@ import { product, productImage, productJewelleryGemstone } from "@/drizzle/schem
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { and, eq, exists, ilike, inArray, or, sql, desc } from "drizzle-orm"
+import { and, asc, eq, exists, gt, gte, ilike, inArray, lt, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -520,6 +520,51 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
   }
+}
+
+export type ProductFormPagination = {
+  currentIndex: number
+  total: number
+  prevId: string | null
+  nextId: string | null
+}
+
+/** For Odoo-style form pagination: position in list (ordered by createdAt desc, id desc) and prev/next IDs. */
+export async function getProductFormPagination(productId: string): Promise<ProductFormPagination | null> {
+  const [current] = await db
+    .select({ id: product.id, createdAt: product.createdAt })
+    .from(product)
+    .where(eq(product.id, productId))
+  if (!current) return null
+
+  // List order: desc(createdAt), desc(id). Previous = row above (newer or same date with larger id). Next = row below (older or same date with smaller id).
+  const prevCondition = or(
+    gt(product.createdAt, current.createdAt),
+    and(eq(product.createdAt, current.createdAt), gt(product.id, current.id))
+  )
+  const nextCondition = or(
+    lt(product.createdAt, current.createdAt),
+    and(eq(product.createdAt, current.createdAt), lt(product.id, current.id))
+  )
+
+  const indexWhere = or(
+    gt(product.createdAt, current.createdAt),
+    and(eq(product.createdAt, current.createdAt), gte(product.id, current.id))
+  )
+
+  const [totalResult, indexResult, prevRow, nextRow] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(product),
+    db.select({ count: sql<number>`count(*)::int` }).from(product).where(indexWhere),
+    db.select({ id: product.id }).from(product).where(prevCondition).orderBy(asc(product.createdAt), asc(product.id)).limit(1),
+    db.select({ id: product.id }).from(product).where(nextCondition).orderBy(desc(product.createdAt), desc(product.id)).limit(1),
+  ])
+
+  const total = totalResult[0]?.count ?? 0
+  const currentIndex = indexResult[0]?.count ?? 0
+  const prevId = prevRow[0]?.id ?? null // row above in list
+  const nextId = nextRow[0]?.id ?? null // row below in list
+
+  return { currentIndex, total, prevId, nextId }
 }
 
 export type CreateProductInput = ProductCreate & {

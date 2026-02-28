@@ -36,7 +36,7 @@ export default function AdminNavbarClient() {
       ) : (
         <Link
           href="/login"
-          className="hover:bg-accent/10 px-2 py-1 rounded text-sm font-medium"
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent/50"
         >
           Sign in
         </Link>

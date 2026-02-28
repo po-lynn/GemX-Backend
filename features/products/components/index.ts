@@ -1,3 +1,4 @@
+export { FormActionBar } from "./FormActionBar"
 export { ProductFilters } from "./ProductFilters"
 export { ProductForm } from "./ProductForm"
 export { ProductRowActions } from "./ProductRowActions"

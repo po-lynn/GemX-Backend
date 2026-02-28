@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { deleteProductAction } from "@/features/products/actions/products"
-import { Pencil, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 
 type Props = {
   productId: string
@@ -43,13 +42,7 @@ export function ProductRowActions({ productId, productTitle }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-1">
-      <Button variant="ghost" size="icon" asChild>
-        <Link href={`/admin/products/${productId}/edit`}>
-          <Pencil className="size-4" />
-          <span className="sr-only">Edit</span>
-        </Link>
-      </Button>
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">

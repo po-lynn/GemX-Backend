@@ -115,6 +115,165 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Premium admin theme: dark sidebar, refined surfaces */
+.admin-premium {
+  --admin-sidebar-bg: #0f172a;
+  --admin-sidebar-border: rgba(248, 250, 252, 0.08);
+  --admin-sidebar-text: #f1f5f9;
+  --admin-sidebar-muted: #94a3b8;
+  --admin-sidebar-accent: rgba(155, 92, 255, 0.15);
+  --admin-sidebar-active: #9B5CFF;
+  --admin-header-bg: #ffffff;
+  --admin-header-border: #e2e8f0;
+  --admin-main-bg: #f8fafc;
+}
+.dark .admin-premium {
+  --admin-sidebar-bg: #0c1222;
+  --admin-sidebar-border: rgba(255, 255, 255, 0.06);
+  --admin-sidebar-text: #e2e8f0;
+  --admin-sidebar-muted: #64748b;
+  --admin-header-bg: #0f172a;
+  --admin-header-border: rgba(255, 255, 255, 0.08);
+  --admin-main-bg: #020617;
+}
+
+/* Gemstone / Jewellery theme: list view, search, filter, form */
+.gem-theme {
+  --gem-bg: #faf9f7;
+  --gem-border: #e8e6e1;
+  --gem-muted: #78716c;
+  --gem-accent: #b45309;
+  --gem-accent-soft: rgba(180, 83, 9, 0.08);
+  --gem-focus: #b45309;
+  --gem-card: #ffffff;
+  --gem-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --gem-radius: 0.75rem;
+}
+.dark .gem-theme {
+  --gem-bg: #0c0a09;
+  --gem-border: rgba(255, 255, 255, 0.08);
+  --gem-muted: #a8a29e;
+  --gem-accent: #f59e0b;
+  --gem-accent-soft: rgba(245, 158, 11, 0.12);
+  --gem-focus: #f59e0b;
+  --gem-card: #1c1917;
+  --gem-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+}
+.gem-theme [data-slot="card"] {
+  background-color: var(--gem-card);
+  border-color: var(--gem-border);
+  border-radius: var(--gem-radius);
+  box-shadow: var(--gem-shadow);
+}
+.gem-theme input:focus-visible,
+.gem-theme select:focus-visible,
+.gem-theme textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gem-focus);
+}
+.gem-theme .gem-search-bar {
+  background-color: var(--gem-bg);
+  border: 1px solid var(--gem-border);
+  border-radius: var(--gem-radius);
+}
+.gem-theme .gem-filter-bar {
+  background-color: var(--gem-bg);
+  border: 1px solid var(--gem-border);
+  border-radius: calc(var(--gem-radius) - 2px);
+}
+.gem-theme .gem-section-accent {
+  background: linear-gradient(180deg, var(--gem-accent) 0%, #92400e 100%);
+}
+.gem-theme .gem-table-row-hover:hover {
+  background-color: var(--gem-accent-soft);
+}
+.gem-theme .gem-badge-collector {
+  background-color: var(--gem-accent-soft);
+  color: var(--gem-accent);
+  border-color: rgba(180, 83, 9, 0.25);
+}
+.dark .gem-theme .gem-badge-collector {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+/* Premium form: clean header, card sections, status pills, two-pane layout */
+.odoo-form {
+  --form-bg: #ffffff;
+  --form-bg-subtle: #fafbfc;
+  --form-border: #e8eaed;
+  --form-header-bg: #ffffff;
+  --form-primary: #7c3aed;
+  --form-primary-hover: #6d28d9;
+  --form-primary-foreground: #ffffff;
+  --form-muted: #f1f5f9;
+  --form-muted-foreground: #64748b;
+  --form-foreground: #0f172a;
+  --form-sidebar-bg: #f8fafc;
+  --form-section-bg: #ffffff;
+  --form-section-border: #e2e8f0;
+  --form-input-border: #e2e8f0;
+  --form-focus-ring: #7c3aed;
+  --form-radius: 0.75rem;
+  --form-radius-sm: 0.5rem;
+  --form-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --form-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+}
+.dark .odoo-form {
+  --form-bg: #0f172a;
+  --form-bg-subtle: #1e293b;
+  --form-border: rgba(255,255,255,0.08);
+  --form-header-bg: #0f172a;
+  --form-primary: #8b5cf6;
+  --form-primary-hover: #7c3aed;
+  --form-primary-foreground: #ffffff;
+  --form-muted: #1e293b;
+  --form-muted-foreground: #94a3b8;
+  --form-foreground: #f1f5f9;
+  --form-sidebar-bg: #0f172a;
+  --form-section-bg: #1e293b;
+  --form-section-border: rgba(255,255,255,0.06);
+  --form-input-border: rgba(255,255,255,0.12);
+  --form-focus-ring: #a78bfa;
+  --form-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --form-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+}
+.odoo-form .odoo-header {
+  background: var(--form-header-bg);
+  border-bottom: 1px solid var(--form-border);
+}
+.odoo-form .odoo-btn-primary {
+  background: var(--form-primary);
+  color: var(--form-primary-foreground);
+  box-shadow: var(--form-shadow);
+}
+.odoo-form .odoo-btn-primary:hover:not(:disabled) {
+  background: var(--form-primary-hover);
+}
+.odoo-form .odoo-stage-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--form-radius-sm);
+  background: var(--form-muted);
+  color: var(--form-muted-foreground);
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.odoo-form .odoo-stage-item:hover {
+  background: #e2e8f0;
+  color: var(--form-foreground);
+}
+.dark .odoo-form .odoo-stage-item:hover {
+  background: #334155;
+  color: var(--form-foreground);
+}
+.odoo-form .odoo-stage-item.active {
+  background: var(--form-primary);
+  color: var(--form-primary-foreground);
+  border-color: var(--form-primary);
+}
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

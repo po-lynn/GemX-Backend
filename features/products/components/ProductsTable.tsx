@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { formatDate, formatPriceWithCurrency } from "@/lib/formatters"
 import { ELLIPSIS_NEXT, ELLIPSIS_PREV, getPageNumbers } from "@/lib/pagination"
 import { Badge } from "@/components/ui/badge"
@@ -49,6 +52,7 @@ export function ProductsTable({
   total,
   filters,
 }: Props) {
+  const router = useRouter()
   const base = "/admin/products"
   const query = (p: number) => buildQueryString(p, filters)
   const pageNumbers = getPageNumbers(page, totalPages)
@@ -58,17 +62,17 @@ export function ProductsTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="h-10 px-4 text-left font-medium">Product</th>
-              <th className="h-10 px-4 text-left font-medium">Type</th>
-              <th className="h-10 px-4 text-left font-medium">Price</th>
-              <th className="h-10 px-4 text-left font-medium">Status</th>
-              <th className="h-10 px-4 text-left font-medium">Moderation</th>
-              <th className="h-10 px-4 text-left font-medium">Collector</th>
-              <th className="h-10 px-4 text-left font-medium">Privilege Assist</th>
-              <th className="h-10 px-4 text-left font-medium">Seller</th>
-              <th className="h-10 px-4 text-left font-medium">Created</th>
-              <th className="h-10 px-4 font-medium">Actions</th>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Moderation</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Collector</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Privilege Assist</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Seller</th>
+              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Created</th>
+              <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -76,27 +80,39 @@ export function ProductsTable({
               <tr>
                 <td
                   colSpan={10}
-                  className="h-24 px-4 text-center text-muted-foreground"
+                  className="h-28 px-4 text-center text-muted-foreground"
                 >
                   No products found
                 </td>
               </tr>
             ) : (
               products.map((p) => (
-                <tr key={p.id} className="border-b last:border-0">
+                <tr
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`${base}/${p.id}/edit`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      router.push(`${base}/${p.id}/edit`)
+                    }
+                  }}
+                  className="gem-table-row-hover cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/50"
+                >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.imageUrl ? (
                         <img
                           src={p.imageUrl}
                           alt=""
-                          className="h-10 w-10 rounded-md object-cover"
+                          className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-md bg-muted" />
+                        <div className="h-11 w-11 shrink-0 rounded-lg bg-muted ring-1 ring-border/50" />
                       )}
-                      <div>
-                        <div className="font-medium">{p.title}</div>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-foreground">{p.title}</div>
                       </div>
                     </div>
                   </td>
@@ -146,7 +162,7 @@ export function ProductsTable({
                   </td>
                   <td className="px-4 py-3">
                     {p.isCollectorPiece ? (
-                      <Badge variant="secondary">Collector piece</Badge>
+                      <Badge variant="secondary" className="gem-badge-collector border font-medium">Collector</Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -171,7 +187,7 @@ export function ProductsTable({
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(p.createdAt)}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <ProductRowActions productId={p.id} productTitle={p.title} />
                   </td>
                 </tr>
@@ -182,7 +198,7 @@ export function ProductsTable({
       </div>
 
       {(totalPages >= 1 || products.length > 0) && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-border px-4 pt-4">
           <p className="text-muted-foreground text-sm">
             Page {page} of {totalPages || 1}
             {total > 0 && (
