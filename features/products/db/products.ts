@@ -3,7 +3,7 @@ import { product, productImage, productJewelleryGemstone } from "@/drizzle/schem
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { and, eq, ilike, inArray, or, sql, desc } from "drizzle-orm"
+import { and, eq, exists, ilike, inArray, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -73,10 +73,28 @@ export async function getAdminProductsFromDb(opts: {
       )
     : undefined
 
+  const categoryCondition =
+    opts.categoryId != null
+      ? or(
+          eq(product.categoryId, opts.categoryId),
+          exists(
+            db
+              .select()
+              .from(productJewelleryGemstone)
+              .where(
+                and(
+                  eq(productJewelleryGemstone.productId, product.id),
+                  eq(productJewelleryGemstone.categoryId, opts.categoryId)
+                )
+              )
+          )
+        )
+      : undefined
+
   const filterConditions = [
     searchCondition,
     opts.productType ? eq(product.productType, opts.productType) : undefined,
-    opts.categoryId != null ? eq(product.categoryId, opts.categoryId) : undefined,
+    categoryCondition,
     opts.status ? eq(product.status, opts.status) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,
@@ -215,11 +233,29 @@ export async function getProductsBySellerId(
       )
     : undefined
 
+  const categoryConditionSeller =
+    opts.categoryId != null
+      ? or(
+          eq(product.categoryId, opts.categoryId),
+          exists(
+            db
+              .select()
+              .from(productJewelleryGemstone)
+              .where(
+                and(
+                  eq(productJewelleryGemstone.productId, product.id),
+                  eq(productJewelleryGemstone.categoryId, opts.categoryId)
+                )
+              )
+          )
+        )
+      : undefined
+
   const filterConditions = [
     eq(product.sellerId, sellerId),
     searchCondition,
     opts.productType ? eq(product.productType, opts.productType) : undefined,
-    opts.categoryId != null ? eq(product.categoryId, opts.categoryId) : undefined,
+    categoryConditionSeller,
     opts.status ? eq(product.status, opts.status) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,

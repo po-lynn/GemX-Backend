@@ -34,6 +34,9 @@ export const userUpdateSchema = z.object({
   country: z.string().max(100).optional().nullable(),
   dateOfBirth: z.string().max(20).optional().nullable(),
   points: z.coerce.number().int().min(0).optional(),
+  verified: z
+    .preprocess((v) => v === "on" || v === true, z.boolean())
+    .optional(),
 });
 
 export const userDeleteSchema = z.object({

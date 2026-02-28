@@ -36,14 +36,14 @@ export async function getArticleBySlug(slug: string): Promise<ArticleRow | null>
   return row ?? null;
 }
 
-/** List articles with pagination. Optional status filter (default: only published). */
+/** List articles with pagination. Optional status filter (omit for all). */
 export async function getArticlesPaginatedFromDb(options: {
   page: number;
   limit: number;
   status?: "draft" | "published";
 }): Promise<{ items: ArticleRow[]; total: number }> {
-  const { page, limit, status = "published" } = options;
-  const where = eq(articles.status, status);
+  const { page, limit, status } = options;
+  const where = status === undefined ? undefined : eq(articles.status, status);
   const [items, countResult] = await Promise.all([
     db
       .select()
@@ -52,7 +52,9 @@ export async function getArticlesPaginatedFromDb(options: {
       .orderBy(desc(articles.publishDate ?? articles.updatedAt))
       .limit(limit)
       .offset((page - 1) * limit),
-    db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
+    where
+      ? db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
+      : db.select({ count: sql<number>`count(*)::int` }).from(articles),
   ]);
   const total = countResult[0]?.count ?? 0;
   return { items, total };

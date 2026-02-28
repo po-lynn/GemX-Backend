@@ -8,13 +8,32 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getAllUsersFromDb } from "@/features/users/db/users";
-import { UsersTable } from "@/features/users/components";
+import { getUsersPaginatedFromDb } from "@/features/users/db/users";
+import { UserFilters, UsersTable } from "@/features/users/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
-export default async function AdminUsersPage() {
+const USERS_PAGE_SIZE = 20;
+
+type Props = {
+  searchParams: Promise<{ page?: string; country?: string; state?: string; city?: string }>;
+};
+
+export default async function AdminUsersPage({ searchParams }: Props) {
   await connection();
-  const users = await getAllUsersFromDb();
+  const params = await searchParams;
+  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const country = params.country ?? "";
+  const state = params.state ?? "";
+  const city = params.city ?? "";
+  const { users, total } = await getUsersPaginatedFromDb({
+    page: rawPage,
+    limit: USERS_PAGE_SIZE,
+    country: country || undefined,
+    state: state || undefined,
+    city: city || undefined,
+  });
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+  const filters = { country, state, city };
 
   return (
     <div className="container my-6 space-y-6">
@@ -48,14 +67,15 @@ export default async function AdminUsersPage() {
             Create, edit, or remove user accounts. Only admins can access this.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {users.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No users yet.
-            </p>
-          ) : (
-            <UsersTable users={users} />
-          )}
+        <CardContent className="space-y-4">
+          <UserFilters country={country} state={state} city={city} />
+          <UsersTable
+            users={users}
+            page={rawPage}
+            totalPages={totalPages}
+            total={total}
+            filters={filters}
+          />
         </CardContent>
       </Card>
     </div>
