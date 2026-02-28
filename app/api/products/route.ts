@@ -89,10 +89,14 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { "Cache-Control": "no-store" } }
       )
     }
-    const productId = await createProductInDb({
+    const createInput = {
       ...parsed.data,
       sellerId: session.user.id,
-    })
+      jewelleryGemstones: Array.isArray(parsed.data.jewelleryGemstones)
+        ? parsed.data.jewelleryGemstones
+        : [],
+    }
+    const productId = await createProductInDb(createInput)
     revalidateProductsCache(productId)
     return jsonUncached({ success: true, productId }, { status: 201 })
   } catch (error) {
