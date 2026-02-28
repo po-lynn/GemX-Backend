@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
-import type { ProductForEdit, ProductFormPagination } from "@/features/products/db/products"
+import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { FormActionBar } from "@/features/products/components/FormActionBar"
 import { cn } from "@/lib/utils"
@@ -71,7 +71,6 @@ type LabProps = {
   product?: ProductForEdit | null
   laboratories?: LaboratoryOption[] | null
   origins?: OriginOption[] | null
-  pagination?: ProductFormPagination | null
 }
 
 function parseDimensions(value: string | null | undefined): [string, string, string] {
@@ -80,7 +79,7 @@ function parseDimensions(value: string | null | undefined): [string, string, str
   return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]
 }
 
-export function ProductForm({ mode, product, categories, laboratories, origins, pagination }: Props & LabProps) {
+export function ProductForm({ mode, product, categories, laboratories, origins }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -263,7 +262,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins, 
         saveLabel="Save"
         saveLoading={loading}
         discardHref="/admin/products"
-        pagination={isEdit && pagination ? pagination : null}
         formId="product-form"
       />
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px]">

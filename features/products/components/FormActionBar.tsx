@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ChevronRight, ChevronLeft, Save, Settings2 } from "lucide-react"
+import { ChevronRight, Save, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -12,13 +11,6 @@ import {
 import { cn } from "@/lib/utils"
 
 export type BreadcrumbItem = { href: string; label: string }
-
-export type FormActionBarPagination = {
-  currentIndex: number
-  total: number
-  prevId: string | null
-  nextId: string | null
-}
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -35,7 +27,6 @@ type Props = {
   saveLoading?: boolean
   onSave?: () => void
   discardHref?: string
-  pagination?: FormActionBarPagination | null
   formId?: string
 }
 
@@ -47,11 +38,8 @@ export function FormActionBar({
   saveLoading = false,
   onSave,
   discardHref = "/admin/products",
-  pagination,
   formId,
 }: Props) {
-  const router = useRouter()
-
   return (
     <div className="odoo-form odoo-header">
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
@@ -77,7 +65,7 @@ export function FormActionBar({
           ))}
         </nav>
 
-        {/* Right: Save, Discard, Settings (Status dropdown), Pagination */}
+        {/* Right: Save, Discard, Settings (Status dropdown) */}
         <div className="flex flex-wrap items-center gap-3">
           {formId ? (
             <Button
@@ -146,33 +134,6 @@ export function FormActionBar({
               ))}
             </PopoverContent>
           </Popover>
-
-          {/* Pagination */}
-          {pagination && pagination.total > 0 && (
-            <div className="ml-1 flex items-center overflow-hidden rounded-lg border border-[var(--form-border)] bg-[var(--form-bg)]">
-              <span className="px-3 py-2 text-sm font-medium text-[var(--form-foreground)]">
-                {pagination.currentIndex}/{pagination.total}
-              </span>
-              <button
-                type="button"
-                disabled={!pagination.prevId}
-                onClick={() => pagination.prevId && router.push(`/admin/products/${pagination.prevId}/edit`)}
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center border-l border-[var(--form-border)] text-[var(--form-foreground)] hover:enabled:bg-[var(--form-muted)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous record"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <button
-                type="button"
-                disabled={!pagination.nextId}
-                onClick={() => pagination.nextId && router.push(`/admin/products/${pagination.nextId}/edit`)}
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center border-l border-[var(--form-border)] text-[var(--form-foreground)] hover:enabled:bg-[var(--form-muted)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next record"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

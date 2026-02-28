@@ -57,7 +57,7 @@ API for Origin,
 /api/profile -> return current profile
 lab API
 
-
+Date Range filter
 Favorites / watchlist
 “Save” or “favorite” listings so users can come back to them and compare. Very standard. Needs: userId, productId, and a “Saved” / “Favorites” screen.
 
