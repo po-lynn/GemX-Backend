@@ -976,6 +976,30 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   Featured
                 </label>
               </div>
+              <div className="flex items-end gap-2 pb-2">
+                <input
+                  id="isCollectorPiece"
+                  name="isCollectorPiece"
+                  type="checkbox"
+                  defaultChecked={product?.isCollectorPiece ?? false}
+                  className="size-4 rounded border-input"
+                />
+                <label htmlFor="isCollectorPiece" className="text-sm font-medium">
+                  Collector piece (high-value, e.g. 1M+)
+                </label>
+              </div>
+              <div className="flex items-end gap-2 pb-2">
+                <input
+                  id="isPrivilegeAssist"
+                  name="isPrivilegeAssist"
+                  type="checkbox"
+                  defaultChecked={product?.isPrivilegeAssist ?? false}
+                  className="size-4 rounded border-input"
+                />
+                <label htmlFor="isPrivilegeAssist" className="text-sm font-medium">
+                  Privilege Assist (sold by us)
+                </label>
+              </div>
             </div>
           </FormSection>
 

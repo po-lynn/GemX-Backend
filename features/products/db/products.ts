@@ -34,6 +34,8 @@ export type AdminProductRow = {
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
+  isCollectorPiece: boolean
+  isPrivilegeAssist: boolean
   laboratoryId: string | null
   featured: number
   sellerId: string
@@ -54,6 +56,8 @@ export async function getAdminProductsFromDb(opts: {
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
+  isCollectorPiece?: boolean
+  isPrivilegeAssist?: boolean
 }): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)
@@ -78,6 +82,8 @@ export async function getAdminProductsFromDb(opts: {
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+    opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
+    opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
   ].filter(Boolean)
 
   const whereClause =
@@ -103,6 +109,8 @@ export async function getAdminProductsFromDb(opts: {
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
         featured: product.featured,
+        isCollectorPiece: product.isCollectorPiece,
+        isPrivilegeAssist: product.isPrivilegeAssist,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -162,6 +170,8 @@ export async function getAdminProductsFromDb(opts: {
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featured: p.featured,
+    isCollectorPiece: p.isCollectorPiece,
+    isPrivilegeAssist: p.isPrivilegeAssist,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -187,6 +197,8 @@ export async function getProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    isCollectorPiece?: boolean
+    isPrivilegeAssist?: boolean
   }
 ): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
@@ -213,6 +225,8 @@ export async function getProductsBySellerId(
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+    opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
+    opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
   ].filter(Boolean)
 
   const whereClause = and(...filterConditions)
@@ -237,6 +251,8 @@ export async function getProductsBySellerId(
         moderationStatus: product.moderationStatus,
         isFeatured: product.isFeatured,
         featured: product.featured,
+        isCollectorPiece: product.isCollectorPiece,
+        isPrivilegeAssist: product.isPrivilegeAssist,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -296,6 +312,8 @@ export async function getProductsBySellerId(
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featured: p.featured,
+    isCollectorPiece: p.isCollectorPiece,
+    isPrivilegeAssist: p.isPrivilegeAssist,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -335,6 +353,8 @@ export type ProductForEdit = {
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
+  isCollectorPiece: boolean
+  isPrivilegeAssist: boolean
   sellerId: string
   imageUrls: string[]
 }
@@ -368,6 +388,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
       featured: product.featured,
+      isCollectorPiece: product.isCollectorPiece,
+      isPrivilegeAssist: product.isPrivilegeAssist,
       sellerId: product.sellerId,
     })
     .from(product)
@@ -444,6 +466,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
     featured: row.featured,
+    isCollectorPiece: row.isCollectorPiece,
+    isPrivilegeAssist: row.isPrivilegeAssist,
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
   }
@@ -487,6 +511,8 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportUrl: input.certReportUrl ?? null,
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
+    isCollectorPiece: input.isCollectorPiece ?? false,
+    isPrivilegeAssist: input.isPrivilegeAssist ?? false,
     sellerId: input.sellerId,
   }
 
@@ -570,6 +596,8 @@ export type UpdateProductInput = {
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
   featured?: number
+  isCollectorPiece?: boolean
+  isPrivilegeAssist?: boolean
   imageUrls?: string[]
 }
 
@@ -613,6 +641,8 @@ export async function updateProductInDb(
     updates.moderationStatus = rest.moderationStatus
   if (rest.isFeatured !== undefined) updates.isFeatured = rest.isFeatured
   if (rest.featured !== undefined) updates.featured = rest.featured
+  if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
+  if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist
 
   if (Object.keys(updates).length > 0) {
     await db.update(product).set(updates).where(eq(product.id, id))

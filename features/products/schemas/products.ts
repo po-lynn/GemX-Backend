@@ -41,6 +41,10 @@ export const adminProductsSearchSchema = z.object({
   shape: productShapeSchema.optional(),
   origin: z.string().max(200).optional(),
   laboratoryId: optionalUuid,
+  /** When true, only return collector pieces (high-value items). */
+  isCollectorPiece: z.coerce.boolean().optional(),
+  /** When true, only return Privilege Assist products (sold by us). */
+  isPrivilegeAssist: z.coerce.boolean().optional(),
 })
 
 export type AdminProductsSearchParams = z.infer<typeof adminProductsSearchSchema>
@@ -141,6 +145,8 @@ const productCreateBaseSchema = z.object({
   certReportUrl: z.string().max(500).optional().nullable(),
   status: productStatusSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
+  isCollectorPiece: z.coerce.boolean().optional(),
+  isPrivilegeAssist: z.coerce.boolean().optional(),
   imageUrls: z
     .string()
     .optional()

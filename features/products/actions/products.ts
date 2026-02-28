@@ -114,6 +114,8 @@ export async function createProductAction(formData: FormData) {
     certReportUrl: emptyToNull(formData.get("certReportUrl")),
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
+    isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
@@ -157,6 +159,8 @@ export async function createProductAction(formData: FormData) {
     certReportUrl: parsed.data.certReportUrl,
     status: parsed.data.status,
     isFeatured: parsed.data.isFeatured,
+    isCollectorPiece: parsed.data.isCollectorPiece,
+    isPrivilegeAssist: parsed.data.isPrivilegeAssist,
     imageUrls: parsed.data.imageUrls,
     sellerId: session.user.id,
   })
@@ -195,6 +199,8 @@ export async function updateProductAction(formData: FormData) {
     certReportUrl: emptyToNull(formData.get("certReportUrl")),
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
+    isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     imageUrls: formData.get("imageUrls") || undefined,
   })
   if (!parsed.success) {
@@ -239,6 +245,8 @@ export async function updateProductAction(formData: FormData) {
     certReportUrl: data.certReportUrl,
     status: data.status,
     isFeatured: data.isFeatured,
+    isCollectorPiece: data.isCollectorPiece,
+    isPrivilegeAssist: data.isPrivilegeAssist,
     imageUrls: data.imageUrls,
   })
 

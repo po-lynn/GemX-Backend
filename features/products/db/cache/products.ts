@@ -32,6 +32,8 @@ export async function getAdminProducts(opts: {
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
+  isCollectorPiece?: boolean
+  isPrivilegeAssist?: boolean
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())
@@ -52,6 +54,8 @@ export async function getCachedProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    isCollectorPiece?: boolean
+    isPrivilegeAssist?: boolean
   }
 ) {
   "use cache"

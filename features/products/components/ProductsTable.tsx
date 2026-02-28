@@ -64,6 +64,8 @@ export function ProductsTable({
               <th className="h-10 px-4 text-left font-medium">Price</th>
               <th className="h-10 px-4 text-left font-medium">Status</th>
               <th className="h-10 px-4 text-left font-medium">Moderation</th>
+              <th className="h-10 px-4 text-left font-medium">Collector</th>
+              <th className="h-10 px-4 text-left font-medium">Privilege Assist</th>
               <th className="h-10 px-4 text-left font-medium">Seller</th>
               <th className="h-10 px-4 text-left font-medium">Created</th>
               <th className="h-10 px-4 font-medium">Actions</th>
@@ -73,7 +75,7 @@ export function ProductsTable({
             {products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="h-24 px-4 text-center text-muted-foreground"
                 >
                   No products found
@@ -140,6 +142,20 @@ export function ProductsTable({
                       <Badge className="ml-1" variant="outline">
                         Featured
                       </Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {p.isCollectorPiece ? (
+                      <Badge variant="secondary">Collector piece</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {p.isPrivilegeAssist ? (
+                      <Badge variant="secondary">Privilege Assist</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">

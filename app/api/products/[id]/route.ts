@@ -92,6 +92,8 @@ export async function PATCH(
       certReportUrl: data.certReportUrl,
       status: data.status,
       isFeatured: data.isFeatured,
+      isCollectorPiece: data.isCollectorPiece,
+      isPrivilegeAssist: data.isPrivilegeAssist,
       imageUrls: data.imageUrls,
     })
     revalidateProductsCache(productId)

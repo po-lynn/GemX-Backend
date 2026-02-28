@@ -5,10 +5,13 @@
 ## Recent changes
 
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products/:id** – Response now includes a `seller` object (id, name, phone, username, displayUsername) for the product’s seller.
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. New query params: `isCollectorPiece=true` (high-value collector pieces only) and `isPrivilegeAssist=true` (products sold by us only). Product items include `isCollectorPiece` and `isPrivilegeAssist` (boolean).
+- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece` and `isPrivilegeAssist`. Returns all statuses by default (seller sees full list).
+- **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
+- **POST /api/products** and **PATCH /api/products/:id** – Request body accepts optional `isCollectorPiece` (boolean) and `isPrivilegeAssist` (boolean) for high-value / sold-by-us flags.
 
 ---
 
@@ -21,9 +24,9 @@
 | GET | `/api/categories` | No | List categories. Query: `type` (optional) |
 | GET | `/api/origins` | No | List origins (for product create/edit). |
 | GET | `/api/laboratories` | No | List laboratories (for product create/edit). |
-| GET | `/api/products` | No | List all products. Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId` |
+| GET | `/api/products` | No | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
 | GET | `/api/products/:id` | No | Get single product by ID |
-| GET | `/api/products/mine` | Yes | List current user’s products. Same query params as list all. |
+| GET | `/api/products/mine` | Yes | List current user’s products. All statuses by default. Same query params as list all. |
 | GET | `/api/profile` | Yes | Get current user profile and their products (optional query: page, limit, filters). |
 | POST | `/api/products` | Yes | Create product (JSON body) |
 | PATCH | `/api/products/:id` | Yes | Update product (owner or admin). JSON body. |
@@ -213,6 +216,8 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 **Auth:** Not required.
 
+**Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isCollectorPiece=true` to list only collector pieces (high-value items); use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
+
 **Query:**
 
 | Param        | Type   | Default | Description                                      |
@@ -222,11 +227,13 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 | `search`    | string | -       | Search in title and seller                       |
 | `productType` | string | -     | Filter by type: `loose_stone` or `jewellery`    |
 | `categoryId`  | string | -     | Filter by category UUID (from GET /api/categories) |
-| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden` |
+| `status`    | string | `active` | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to active. |
 | `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon` (loose stones) |
 | `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart` |
 | `origin`    | string | -       | Filter by origin name (e.g. from GET /api/origins or your origins list) |
 | `laboratoryId` | string | -     | Filter by laboratory UUID (from GET /api/laboratories) |
+| `isCollectorPiece` | boolean | -   | When `true`, return only collector pieces (high-value items). |
+| `isPrivilegeAssist` | boolean | -   | When `true`, return only Privilege Assist products (sold by us). |
 
 **Success (200):** See response shape below.
 
@@ -245,11 +252,13 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `search`    | string | -       | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
 | `productType` | string | -     | Filter by product type: `loose_stone` or `jewellery`. |
 | `categoryId`  | string | -     | Filter by category (UUID from GET /api/categories). |
-| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. |
+| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`. |
 | `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon`. |
 | `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`. |
 | `origin`    | string | -       | Filter by origin name. |
 | `laboratoryId` | string | -     | Filter by laboratory (UUID from GET /api/laboratories). |
+| `isCollectorPiece` | boolean | -   | When `true`, only collector pieces. |
+| `isPrivilegeAssist` | boolean | -   | When `true`, only Privilege Assist (sold by us). |
 
 **What is matched by `search`**
 
@@ -309,6 +318,22 @@ GET /api/products/mine?stoneCut=Faceted&status=active
 Authorization: Bearer <session_token>
 ```
 
+**7. Collector pieces only (high-value items)**
+
+```
+GET /api/products?isCollectorPiece=true
+GET /api/products/mine?isCollectorPiece=true
+Authorization: Bearer <session_token>
+```
+
+**8. Privilege Assist only (products sold by us)**
+
+```
+GET /api/products?isPrivilegeAssist=true
+GET /api/products/mine?isPrivilegeAssist=true
+Authorization: Bearer <session_token>
+```
+
 **Success (200):**
 
 ```json
@@ -330,6 +355,8 @@ Authorization: Bearer <session_token>
       "status": "active",
       "moderationStatus": "approved",
       "isFeatured": false,
+      "isCollectorPiece": false,
+      "isPrivilegeAssist": false,
       "sellerId": "uuid",
       "sellerName": "John",
       "sellerPhone": null,
@@ -341,6 +368,8 @@ Authorization: Bearer <session_token>
 }
 ```
 
+Each product item includes `isCollectorPiece` (boolean) and `isPrivilegeAssist` (boolean).
+
 ---
 
 ### 5.2 Get single product (public)
@@ -349,7 +378,7 @@ Authorization: Bearer <session_token>
 
 **Auth:** Not required.
 
-**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, etc.). The response includes a **`seller`** object (or `null` if seller not found) with:
+**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, etc.). The response includes a **`seller`** object (or `null` if seller not found) with:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -371,12 +400,13 @@ Authorization: Bearer <session_token>
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`. All are optional.
+**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. All are optional. My products returns **all statuses** by default (seller sees full list); use `status` to filter.
 
 **Examples:**
 
 - `GET /api/products/mine?page=1&limit=20`
 - `GET /api/products/mine?status=active&stoneCut=Cabochon` (with Bearer token)
+- `GET /api/products/mine?isCollectorPiece=true` (with Bearer token)
 
 **Success (200):** Same shape as “List all products”: `{ "products": [...], "total": n }` but only the logged-in user’s products.
 
@@ -465,6 +495,9 @@ Authorization: Bearer <session_token>
 - `status` – `"active"` | `"archive"` | `"sold"` | `"hidden"`
 - `imageUrls` – array of strings (image URLs)
 - `isNegotiable` (boolean)
+- `isFeatured` (boolean) – mark as featured
+- `isCollectorPiece` (boolean) – high-value collector piece (e.g. 1M+)
+- `isPrivilegeAssist` (boolean) – product sold by us
 
 **Loose stone:**
 
@@ -630,7 +663,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 **Auth:** Required. User can update **only their own** product (or admin can update any).
 
-**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change.
+**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change. Includes optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
 
 **Example:** Change title and price only.
 
@@ -851,11 +884,11 @@ Returns a single published article by ID. Draft items return **404**.
    - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 
 3. **Browse**
-   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`).
+   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
    - Detail: `GET /api/products/:id`.
 
 4. **My products**
-   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse; with Bearer token).
+   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 
 5. **Profile**
    - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
@@ -892,9 +925,9 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/categories`        | No     | List categories (`?type` optional) |
 | GET    | `/api/origins`           | No     | List origins (for product create/edit) |
 | GET    | `/api/laboratories`      | No     | List laboratories (for product create/edit) |
-| GET    | `/api/products`          | No     | List all products (see 5.1 for query params) |
+| GET    | `/api/products`          | No     | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
 | GET    | `/api/products/:id`      | No     | Get one product       |
-| GET    | `/api/products/mine`     | Yes    | List my products (same query params as list all) |
+| GET    | `/api/products/mine`     | Yes    | List my products (all statuses by default; same query params as list all) |
 | GET    | `/api/profile`           | Yes    | Get profile and own products (optional query params) |
 | POST   | `/api/products`          | Yes    | Create product        |
 | PATCH  | `/api/products/:id`      | Yes    | Update (owner/admin)  |

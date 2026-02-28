@@ -98,6 +98,10 @@ export const product = pgTable(
       .default("pending"),
     isFeatured: boolean("is_featured").notNull().default(false),
     featured: integer("featured").notNull().default(0), // 0 = not featured, higher = sort order
+    /** Collector pieces: high-value items (e.g. 1M+); shown in dedicated listing/filters */
+    isCollectorPiece: boolean("is_collector_piece").notNull().default(false),
+    /** Privilege Assist: products sold by us (company); shown in dedicated listing/filters */
+    isPrivilegeAssist: boolean("is_privilege_assist").notNull().default(false),
     sellerId: text("seller_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -119,6 +123,8 @@ export const product = pgTable(
     index("product_weightCarat_idx").on(table.weightCarat),
     index("product_shape_idx").on(table.shape),
     index("product_isFeatured_idx").on(table.isFeatured),
+    index("product_isCollectorPiece_idx").on(table.isCollectorPiece),
+    index("product_isPrivilegeAssist_idx").on(table.isPrivilegeAssist),
     index("product_laboratoryId_idx").on(table.laboratoryId),
   ]
 );

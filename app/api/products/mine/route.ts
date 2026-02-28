@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
       shape: searchParams.get("shape") || undefined,
       origin: searchParams.get("origin") || undefined,
       laboratoryId: searchParams.get("laboratoryId") || undefined,
+      isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
+      isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
     const data: SearchParams = (parsed.success ? parsed.data : { page: 1 }) as SearchParams
@@ -35,9 +37,12 @@ export async function GET(request: NextRequest) {
       shape,
       origin,
       laboratoryId,
+      isCollectorPiece,
+      isPrivilegeAssist,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
+    // Mine: all statuses (seller sees their full list; optional ?status= to filter)
     const { products, total } = await getCachedProductsBySellerId(session.user.id, {
       page,
       limit,
@@ -49,6 +54,8 @@ export async function GET(request: NextRequest) {
       shape: shape ?? undefined,
       origin: origin ?? undefined,
       laboratoryId: laboratoryId ?? undefined,
+      isCollectorPiece: isCollectorPiece ?? undefined,
+      isPrivilegeAssist: isPrivilegeAssist ?? undefined,
     })
 
     return jsonCached({ products, total })

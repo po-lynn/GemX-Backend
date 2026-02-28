@@ -9,6 +9,8 @@ import { auth } from "@/lib/auth"
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 
+const VALID_UUID = "a1b2c3d4-e5f6-4789-a012-345678901234"
+
 vi.mock("next/server", () => ({ connection: vi.fn() }))
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -121,21 +123,21 @@ describe("PATCH /api/products/[id]", () => {
       user: { id: "seller-1", role: "user" },
     } as never)
     vi.mocked(getCachedProduct).mockResolvedValue({
-      id: "p1",
+      id: VALID_UUID,
       sellerId: "seller-1",
     } as never)
-    const req = new Request("http://localhost/api/products/p1", {
+    const req = new Request(`http://localhost/api/products/${VALID_UUID}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Updated Ruby", price: "200" }),
     })
-    const res = await PATCH(req as NextRequest, params("p1"))
+    const res = await PATCH(req as NextRequest, params(VALID_UUID))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data).toHaveProperty("success", true)
-    expect(data).toHaveProperty("productId", "p1")
+    expect(data).toHaveProperty("productId", VALID_UUID)
     expect(updateProductInDb).toHaveBeenCalledWith(
-      "p1",
+      VALID_UUID,
       expect.objectContaining({ title: "Updated Ruby" })
     )
   })
@@ -145,15 +147,15 @@ describe("PATCH /api/products/[id]", () => {
       user: { id: "admin-1", role: "admin" },
     } as never)
     vi.mocked(getCachedProduct).mockResolvedValue({
-      id: "p1",
+      id: VALID_UUID,
       sellerId: "seller-1",
     } as never)
-    const req = new Request("http://localhost/api/products/p1", {
+    const req = new Request(`http://localhost/api/products/${VALID_UUID}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Admin Edit", price: "99" }),
     })
-    const res = await PATCH(req as NextRequest, params("p1"))
+    const res = await PATCH(req as NextRequest, params(VALID_UUID))
     expect(res.status).toBe(200)
     expect(updateProductInDb).toHaveBeenCalled()
   })

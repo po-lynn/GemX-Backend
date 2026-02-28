@@ -39,6 +39,9 @@ describe("GET /api/products", () => {
     expect(data).toHaveProperty("products")
     expect(data).toHaveProperty("total", 1)
     expect(data.products).toHaveLength(1)
+    expect(getAdminProducts).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active" })
+    )
   })
 
   it("passes search params to getAdminProducts", async () => {
