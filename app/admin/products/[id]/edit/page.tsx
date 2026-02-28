@@ -14,10 +14,9 @@ type Props = {
 export default async function AdminProductsEditPage({ params }: Props) {
   await connection()
   const { id } = await params
-  const [product, pagination] = await Promise.all([
-    getCachedProduct(id),
-    getProductFormPagination(id),
-  ])
+  // Sequential loads for Supabase compatibility (avoid Promise.all connection issues)
+  const product = await getCachedProduct(id)
+  const pagination = await getProductFormPagination(id)
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
   const origins = await getAllOrigins()

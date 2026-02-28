@@ -447,31 +447,30 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
 
   if (!row) return null
 
-  const [images, gemstoneRows] = await Promise.all([
-    db
-      .select({ url: productImage.url })
-      .from(productImage)
-      .where(eq(productImage.productId, id))
-      .orderBy(productImage.sortOrder),
-    db
-      .select({
-        categoryId: productJewelleryGemstone.categoryId,
-        categoryName: category.name,
-        pieceCount: productJewelleryGemstone.pieceCount,
-        weightCarat: productJewelleryGemstone.weightCarat,
-        dimensions: productJewelleryGemstone.dimensions,
-        color: productJewelleryGemstone.color,
-        shape: productJewelleryGemstone.shape,
-        origin: productJewelleryGemstone.origin,
-        cut: productJewelleryGemstone.cut,
-        transparency: productJewelleryGemstone.transparency,
-        comment: productJewelleryGemstone.comment,
-        inclusions: productJewelleryGemstone.inclusions,
-      })
-      .from(productJewelleryGemstone)
-      .innerJoin(category, eq(productJewelleryGemstone.categoryId, category.id))
-      .where(eq(productJewelleryGemstone.productId, id)),
-  ])
+  // Sequential queries for Supabase compatibility (avoid Promise.all connection issues)
+  const images = await db
+    .select({ url: productImage.url })
+    .from(productImage)
+    .where(eq(productImage.productId, id))
+    .orderBy(productImage.sortOrder)
+  const gemstoneRows = await db
+    .select({
+      categoryId: productJewelleryGemstone.categoryId,
+      categoryName: category.name,
+      pieceCount: productJewelleryGemstone.pieceCount,
+      weightCarat: productJewelleryGemstone.weightCarat,
+      dimensions: productJewelleryGemstone.dimensions,
+      color: productJewelleryGemstone.color,
+      shape: productJewelleryGemstone.shape,
+      origin: productJewelleryGemstone.origin,
+      cut: productJewelleryGemstone.cut,
+      transparency: productJewelleryGemstone.transparency,
+      comment: productJewelleryGemstone.comment,
+      inclusions: productJewelleryGemstone.inclusions,
+    })
+    .from(productJewelleryGemstone)
+    .innerJoin(category, eq(productJewelleryGemstone.categoryId, category.id))
+    .where(eq(productJewelleryGemstone.productId, id))
 
   const jewelleryGemstones: JewelleryGemstoneRow[] = gemstoneRows.map((g) => ({
     categoryId: g.categoryId,
@@ -552,12 +551,11 @@ export async function getProductFormPagination(productId: string): Promise<Produ
     and(eq(product.createdAt, current.createdAt), gte(product.id, current.id))
   )
 
-  const [totalResult, indexResult, prevRow, nextRow] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(product),
-    db.select({ count: sql<number>`count(*)::int` }).from(product).where(indexWhere),
-    db.select({ id: product.id }).from(product).where(prevCondition).orderBy(asc(product.createdAt), asc(product.id)).limit(1),
-    db.select({ id: product.id }).from(product).where(nextCondition).orderBy(desc(product.createdAt), desc(product.id)).limit(1),
-  ])
+  // Sequential queries for Supabase compatibility (avoid Promise.all connection issues)
+  const totalResult = await db.select({ count: sql<number>`count(*)::int` }).from(product)
+  const indexResult = await db.select({ count: sql<number>`count(*)::int` }).from(product).where(indexWhere)
+  const prevRow = await db.select({ id: product.id }).from(product).where(prevCondition).orderBy(asc(product.createdAt), asc(product.id)).limit(1)
+  const nextRow = await db.select({ id: product.id }).from(product).where(nextCondition).orderBy(desc(product.createdAt), desc(product.id)).limit(1)
 
   const total = totalResult[0]?.count ?? 0
   const currentIndex = indexResult[0]?.count ?? 0
