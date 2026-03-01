@@ -60,11 +60,11 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         </Button>
       </div>
 
-      <Card>
+      <Card className="bg-transparent border-0 shadow-none">
         <CardHeader>
           <CardTitle>All Users</CardTitle>
           <CardDescription>
-            Create, edit, or remove user accounts. Only admins can access this.
+          {total} user{total !== 1 ? "s" : ""} total
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

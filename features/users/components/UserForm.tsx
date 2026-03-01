@@ -16,6 +16,7 @@ import {
   updateUserAction,
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
+import DatePicker from "@/components/date-picker/date-picker";
 import { Eye, EyeOff } from "lucide-react";
 
 const inputClass =
@@ -212,16 +213,16 @@ export function UserForm({ mode, user }: Props) {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
+            <div className="block w-full space-y-2">
               <label htmlFor="dateOfBirth" className="text-sm font-medium">
                 Date of birth
               </label>
-              <input
+              <DatePicker
                 id="dateOfBirth"
                 name="dateOfBirth"
-                type="date"
-                defaultValue={user?.dateOfBirth ?? ""}
-                className={inputClass}
+                value={user?.dateOfBirth ?? ""}
+                placeholder="Pick date of birth"
+                className="w-full"
               />
             </div>
             {isEdit && (

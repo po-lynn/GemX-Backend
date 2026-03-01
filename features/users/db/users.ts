@@ -15,6 +15,9 @@ export type UserRow = {
   verified: boolean;
   createdAt: Date;
   updatedAt: Date;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
 };
 
 export type UserForEdit = UserRow & {
@@ -102,6 +105,9 @@ export async function getUsersPaginatedFromDb(options: {
     verified: user.verified,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
+    city: user.city,
+    state: user.state,
+    country: user.country,
   };
   const [users, countResult] = await Promise.all([
     db
