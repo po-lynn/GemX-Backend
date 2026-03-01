@@ -3,7 +3,7 @@ import { product, productImage, productJewelleryGemstone } from "@/drizzle/schem
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { and, eq, exists, gt, gte, ilike, inArray, lt, or, sql, desc } from "drizzle-orm"
+import { and, asc, eq, exists, gt, gte, ilike, inArray, lt, lte, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -55,10 +55,18 @@ export async function getAdminProductsFromDb(opts: {
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
+  /** Filter by created date (YYYY-MM-DD), inclusive range */
+  createdFrom?: string
+  createdTo?: string
+  isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
   sortByPublicPriority?: boolean
+  /** Admin list sort column */
+  sortBy?: "createdAt" | "title" | "price" | "status"
+  /** Admin list sort direction */
+  sortOrder?: "asc" | "desc"
 }): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)
@@ -92,6 +100,13 @@ export async function getAdminProductsFromDb(opts: {
         )
       : undefined
 
+  const createdFromDate = opts.createdFrom
+    ? new Date(opts.createdFrom + "T00:00:00.000Z")
+    : undefined
+  const createdToDate = opts.createdTo
+    ? new Date(opts.createdTo + "T23:59:59.999Z")
+    : undefined
+
   const filterConditions = [
     searchCondition,
     opts.productType ? eq(product.productType, opts.productType) : undefined,
@@ -101,6 +116,9 @@ export async function getAdminProductsFromDb(opts: {
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+    createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
+    createdToDate ? lte(product.createdAt, createdToDate) : undefined,
+    opts.isFeatured === true ? eq(product.isFeatured, true) : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
   ].filter(Boolean)
@@ -115,7 +133,20 @@ export async function getAdminProductsFromDb(opts: {
         desc(product.isFeatured),
         desc(product.createdAt),
       ]
-    : [desc(product.createdAt)]
+    : (() => {
+        const dir = opts.sortOrder === "asc" ? asc : desc
+        switch (opts.sortBy) {
+          case "title":
+            return [dir(product.title), desc(product.createdAt)]
+          case "price":
+            return [dir(product.price), desc(product.createdAt)]
+          case "status":
+            return [dir(product.status), desc(product.createdAt)]
+          case "createdAt":
+          default:
+            return [dir(product.createdAt)]
+        }
+      })()
 
   const [productsData, countResult] = await Promise.all([
     db

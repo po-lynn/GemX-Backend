@@ -35,6 +35,13 @@ type Props = {
     shape?: string
     origin?: string
     laboratoryId?: string
+    createdFrom?: string
+    createdTo?: string
+    sortBy?: string
+    sortOrder?: string
+    isFeatured?: string
+    isCollectorPiece?: string
+    isPrivilegeAssist?: string
   }>
 }
 
@@ -51,6 +58,13 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     shape: params.shape,
     origin: params.origin,
     laboratoryId: params.laboratoryId,
+    createdFrom: params.createdFrom?.trim() || undefined,
+    createdTo: params.createdTo?.trim() || undefined,
+    sortBy: params.sortBy,
+    sortOrder: params.sortOrder,
+    isFeatured: params.isFeatured,
+    isCollectorPiece: params.isCollectorPiece,
+    isPrivilegeAssist: params.isPrivilegeAssist,
   })
   const {
     page,
@@ -62,6 +76,13 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     shape,
     origin,
     laboratoryId,
+    createdFrom,
+    createdTo,
+    sortBy,
+    sortOrder,
+    isFeatured,
+    isCollectorPiece,
+    isPrivilegeAssist,
   } = parsed
 
   // With Transaction pooler (6543), avoid concurrent queries on the single connection to prevent hang.
@@ -81,6 +102,13 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     shape: shape ?? undefined,
     origin: (origin?.trim() && origin) || undefined,
     laboratoryId: laboratoryId ?? undefined,
+    createdFrom: createdFrom ?? undefined,
+    createdTo: createdTo ?? undefined,
+    sortBy: sortBy ?? undefined,
+    sortOrder: sortOrder ?? undefined,
+    isFeatured: isFeatured ?? undefined,
+    isCollectorPiece: isCollectorPiece ?? undefined,
+    isPrivilegeAssist: isPrivilegeAssist ?? undefined,
   })
 
   const totalPages = Math.ceil(total / limit)
@@ -93,6 +121,13 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     shape: shape ?? "",
     origin: origin ?? "",
     laboratoryId: laboratoryId ?? "",
+    createdFrom: createdFrom ?? "",
+    createdTo: createdTo ?? "",
+    sortBy: sortBy ?? "createdAt",
+    sortOrder: sortOrder ?? "desc",
+    isFeatured: isFeatured === true ? "true" : "",
+    isCollectorPiece: isCollectorPiece === true ? "true" : "",
+    isPrivilegeAssist: isPrivilegeAssist === true ? "true" : "",
   }
 
   return (
@@ -138,6 +173,11 @@ export default async function AdminProductsPage({ searchParams }: Props) {
                 shape={filters.shape}
                 origin={filters.origin}
                 laboratoryId={filters.laboratoryId}
+                createdFrom={filters.createdFrom}
+                createdTo={filters.createdTo}
+                isFeatured={filters.isFeatured === "true"}
+                isCollectorPiece={filters.isCollectorPiece === "true"}
+                isPrivilegeAssist={filters.isPrivilegeAssist === "true"}
               />
             </Suspense>
           </div>

@@ -254,7 +254,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
   const [sidebarTab, setSidebarTab] = useState<"message" | "note" | "activity">("activity")
 
   return (
-    <Card className="odoo-form overflow-hidden rounded-2xl border-0 bg-[var(--form-bg-subtle)] shadow-[var(--form-shadow-md)]">
+    <Card className="odoo-form rounded-2xl border-0 bg-[var(--form-bg-subtle)] shadow-[var(--form-shadow-md)]">
       <FormActionBar
         breadcrumbs={breadcrumbs}
         currentStatus={status}

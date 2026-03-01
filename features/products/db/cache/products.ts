@@ -32,9 +32,14 @@ export async function getAdminProducts(opts: {
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
+  createdFrom?: string
+  createdTo?: string
+  isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   sortByPublicPriority?: boolean
+  sortBy?: "createdAt" | "title" | "price" | "status"
+  sortOrder?: "asc" | "desc"
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())

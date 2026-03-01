@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { formatDate, formatPriceWithCurrency } from "@/lib/formatters"
 import { ELLIPSIS_NEXT, ELLIPSIS_PREV, getPageNumbers } from "@/lib/pagination"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,13 @@ export type AdminProductFilters = {
   shape: string
   origin: string
   laboratoryId: string
+  createdFrom: string
+  createdTo: string
+  sortBy: string
+  sortOrder: string
+  isFeatured: string
+  isCollectorPiece: string
+  isPrivilegeAssist: string
 }
 
 type Props = {
@@ -42,6 +50,13 @@ function buildQueryString(page: number, filters: AdminProductFilters): string {
   setIf("shape", filters.shape)
   setIf("origin", filters.origin)
   setIf("laboratoryId", filters.laboratoryId)
+  setIf("createdFrom", filters.createdFrom)
+  setIf("createdTo", filters.createdTo)
+  if (filters.isFeatured === "true") sp.set("isFeatured", "true")
+  if (filters.isCollectorPiece === "true") sp.set("isCollectorPiece", "true")
+  if (filters.isPrivilegeAssist === "true") sp.set("isPrivilegeAssist", "true")
+  sp.set("sortBy", filters.sortBy?.trim() || "createdAt")
+  sp.set("sortOrder", filters.sortOrder?.trim() || "desc")
   return sp.toString()
 }
 
@@ -57,21 +72,89 @@ export function ProductsTable({
   const query = (p: number) => buildQueryString(p, filters)
   const pageNumbers = getPageNumbers(page, totalPages)
 
+  const currentSortBy = filters.sortBy?.trim() || "createdAt"
+  const currentSortOrder = filters.sortOrder?.trim() || "desc"
+
+  const handleHeaderSort = (column: "title" | "price" | "status" | "createdAt") => {
+    const nextOrder =
+      currentSortBy === column
+        ? currentSortOrder === "asc"
+          ? "desc"
+          : "asc"
+        : "asc"
+    const next = { ...filters, sortBy: column, sortOrder: nextOrder }
+    router.push(`${base}?${buildQueryString(1, next)}`)
+  }
+
+  const thSortableClass =
+    "h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+  const thButtonClass =
+    "group inline-flex h-full w-full items-center gap-1.5 rounded text-left transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+
+  const SortableHeader = ({
+    column,
+    label,
+  }: {
+    column: "title" | "price" | "status" | "createdAt"
+    label: string
+  }) => {
+    const isActive = currentSortBy === column
+    return (
+      <th className={thSortableClass}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleHeaderSort(column)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              handleHeaderSort(column)
+            }
+          }}
+          className={thButtonClass}
+          aria-label={
+            isActive
+              ? `Sort by ${label} ${currentSortOrder === "asc" ? "ascending" : "descending"}, click to toggle`
+              : `Sort by ${label} ascending`
+          }
+        >
+          {label}
+          <span className="inline-flex shrink-0 items-center">
+            {isActive ? (
+              currentSortOrder === "asc" ? (
+                <ArrowUp className="size-3.5" aria-hidden />
+              ) : (
+                <ArrowDown className="size-3.5" aria-hidden />
+              )
+            ) : (
+              <ArrowUpDown
+                className="size-3.5 opacity-0 transition-opacity group-hover:opacity-70"
+                aria-hidden
+              />
+            )}
+          </span>
+        </button>
+      </th>
+    )
+  }
+
   return (
     <>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</th>
+              <SortableHeader column="title" label="Product" />
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</th>
-              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              <SortableHeader column="price" label="Price" />
+              <SortableHeader column="status" label="Status" />
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Moderation</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Collector</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Privilege Assist</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Seller</th>
-              <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Created</th>
+              <SortableHeader column="createdAt" label="Created" />
               <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
             </tr>
           </thead>

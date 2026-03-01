@@ -41,6 +41,16 @@ export const adminProductsSearchSchema = z.object({
   shape: productShapeSchema.optional(),
   origin: z.string().max(200).optional(),
   laboratoryId: optionalUuid,
+  /** Filter by created date: from (inclusive), YYYY-MM-DD */
+  createdFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Filter by created date: to (inclusive), YYYY-MM-DD */
+  createdTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** Sort column for admin product list */
+  sortBy: z.enum(["createdAt", "title", "price", "status"]).optional().default("createdAt"),
+  /** Sort direction */
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  /** When true, only return featured products. */
+  isFeatured: z.coerce.boolean().optional(),
   /** When true, only return collector pieces (high-value items). */
   isCollectorPiece: z.coerce.boolean().optional(),
   /** When true, only return Privilege Assist products (sold by us). */
