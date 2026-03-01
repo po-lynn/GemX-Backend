@@ -11,30 +11,33 @@
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
-- **POST /api/products** and **PATCH /api/products/:id** – Request body uses **`jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
+- **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
+- **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 
 ---
 
 ## 1. API routes overview
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/mobile/register` | No | Register (phone, password, name) |
-| POST | `/api/mobile/login` | No | Login (phone, password) |
-| GET | `/api/categories` | No | List categories. Query: `type` (optional) |
-| GET | `/api/origins` | No | List origins (for product create/edit). |
-| GET | `/api/laboratories` | No | List laboratories (for product create/edit). |
-| GET | `/api/products` | No | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
-| GET | `/api/products/:id` | No | Get single product by ID |
-| GET | `/api/products/mine` | Yes | List current user’s products. All statuses by default. Same query params as list all. |
-| GET | `/api/profile` | Yes | Get current user profile and their products (optional query: page, limit, filters). |
-| POST | `/api/products` | Yes | Create product (JSON body) |
-| PATCH | `/api/products/:id` | Yes | Update product (owner or admin). JSON body. |
-| DELETE | `/api/products/:id` | Yes | Delete product (owner or admin) |
-| GET | `/api/news` | No | List news. Query: `page`, `limit`, `status` (optional) |
-| GET | `/api/news/:id` | No | Get single news by ID (published only) |
-| GET | `/api/articles` | No | List articles. Query: `page`, `limit`, `status` (optional) |
-| GET | `/api/articles/:id` | No | Get single article by ID (published only) |
+
+| Method | Path                   | Auth | Description                                                                                                                                                                                              |
+| ------ | ---------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
+| POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
+| GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
+| GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
+| GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
+| GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
+| GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
+| GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
+| POST   | `/api/products`        | Yes  | Create product (JSON body)                                                                                                                                                                               |
+| PATCH  | `/api/products/:id`    | Yes  | Update product (owner or admin). JSON body.                                                                                                                                                              |
+| DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
+| GET    | `/api/news`            | No   | List news. Query: `page`, `limit`, `status` (optional)                                                                                                                                                   |
+| GET    | `/api/news/:id`        | No   | Get single news by ID (published only)                                                                                                                                                                   |
+| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status` (optional)                                                                                                                                               |
+| GET    | `/api/articles/:id`    | No   | Get single article by ID (published only)                                                                                                                                                                |
+
 
 List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.
 
@@ -73,18 +76,20 @@ List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, 
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| **phone** | string | Yes | Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`). |
-| **password** | string | Yes | User password. |
-| **name** | string | No | Display name; defaults to `"Mobile User"`. |
-| **nrc** | string | No | National Registration Card number. |
-| **address** | string | No | Street address. |
-| **city** | string | No | City. |
-| **state** | string | No | State / region. |
-| **country** | string | No | Country. |
-| **gender** | string | No | Gender (e.g. `male`, `female`, `other`). |
-| **dateOfBirth** | string | No | Date of birth (e.g. `YYYY-MM-DD`). |
+
+| Field           | Type   | Required | Description                                                            |
+| --------------- | ------ | -------- | ---------------------------------------------------------------------- |
+| **phone**       | string | Yes      | Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`). |
+| **password**    | string | Yes      | User password.                                                         |
+| **name**        | string | No       | Display name; defaults to `"Mobile User"`.                             |
+| **nrc**         | string | No       | National Registration Card number.                                     |
+| **address**     | string | No       | Street address.                                                        |
+| **city**        | string | No       | City.                                                                  |
+| **state**       | string | No       | State / region.                                                        |
+| **country**     | string | No       | Country.                                                               |
+| **gender**      | string | No       | Gender (e.g. `male`, `female`, `other`).                               |
+| **dateOfBirth** | string | No       | Date of birth (e.g. `YYYY-MM-DD`).                                     |
+
 
 **Success (201):** Response body is the auth result (user + session). Store the **session token** from the response for the `Authorization: Bearer` header.
 
@@ -128,9 +133,11 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 **Query (optional):**
 
-| Param  | Type   | Description                                  |
-|--------|--------|----------------------------------------------|
+
+| Param  | Type   | Description                                                   |
+| ------ | ------ | ------------------------------------------------------------- |
 | `type` | string | `loose_stone` or `jewellery` to filter by type. Omit for all. |
+
 
 **Examples:**
 
@@ -171,11 +178,13 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 ]
 ```
 
-| Field    | Type   | Description        |
-|----------|--------|--------------------|
-| `id`     | string | Origin UUID        |
-| `name`   | string | Origin name        |
-| `country`| string | Country            |
+
+| Field     | Type   | Description |
+| --------- | ------ | ----------- |
+| `id`      | string | Origin UUID |
+| `name`    | string | Origin name |
+| `country` | string | Country     |
+
 
 **Use in app:** Call when building the product form (create/edit). Use `name` for the product `origin` field (loose stones and jewellery gemstones) or for filter dropdowns.
 
@@ -196,13 +205,15 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 ]
 ```
 
-| Field       | Type   | Description        |
-|------------|--------|--------------------|
-| `id`       | string | Laboratory UUID    |
-| `name`     | string | Laboratory name    |
-| `address`  | string | Address            |
-| `phone`    | string | Phone              |
-| `precaution` | string \| null | Optional precaution note |
+
+| Field        | Type          | Description              |
+| ------------ | ------------- | ------------------------ |
+| `id`         | string        | Laboratory UUID          |
+| `name`       | string        | Laboratory name          |
+| `address`    | string        | Address                  |
+| `phone`      | string        | Phone                    |
+| `precaution` | string | null | Optional precaution note |
+
 
 **Use in app:** Call when building the product form (create/edit). Use `id` for the product `laboratoryId` field (certification) or for filter dropdowns.
 
@@ -222,20 +233,22 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 **Query:**
 
-| Param        | Type   | Default | Description                                      |
-|-------------|--------|---------|--------------------------------------------------|
-| `page`      | number | 1       | Page number                                     |
-| `limit`     | number | 20      | Items per page (max 100)                         |
-| `search`    | string | -       | Search in title and seller                       |
-| `productType` | string | -     | Filter by type: `loose_stone` or `jewellery`    |
-| `categoryId`  | string | -     | Filter by category UUID (from GET /api/categories) |
-| `status`    | string | `active` | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to active. |
-| `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon` (loose stones) |
-| `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart` |
-| `origin`    | string | -       | Filter by origin name (e.g. from GET /api/origins or your origins list) |
-| `laboratoryId` | string | -     | Filter by laboratory UUID (from GET /api/laboratories) |
-| `isCollectorPiece` | boolean | -   | When `true`, return only collector pieces (high-value items). |
-| `isPrivilegeAssist` | boolean | -   | When `true`, return only Privilege Assist products (sold by us). |
+
+| Param               | Type    | Default  | Description                                                                              |
+| ------------------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
+| `page`              | number  | 1        | Page number                                                                              |
+| `limit`             | number  | 20       | Items per page (max 100)                                                                 |
+| `search`            | string  | -        | Search in title and seller                                                               |
+| `productType`       | string  | -        | Filter by type: `loose_stone` or `jewellery`                                             |
+| `categoryId`        | string  | -        | Filter by category UUID (from GET /api/categories)                                       |
+| `status`            | string  | `active` | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to active. |
+| `stoneCut`          | string  | -        | Filter by cut: `Faceted` or `Cabochon` (loose stones)                                    |
+| `shape`             | string  | -        | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`                             |
+| `origin`            | string  | -        | Filter by origin name (e.g. from GET /api/origins or your origins list)                  |
+| `laboratoryId`      | string  | -        | Filter by laboratory UUID (from GET /api/laboratories)                                   |
+| `isCollectorPiece`  | boolean | -        | When `true`, return only collector pieces (high-value items).                            |
+| `isPrivilegeAssist` | boolean | -        | When `true`, return only Privilege Assist products (sold by us).                         |
+
 
 **Success (200):** See response shape below.
 
@@ -247,20 +260,22 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 
 **Query parameters**
 
-| Param        | Type   | Default | Description |
-|-------------|--------|---------|-------------|
-| `page`      | number | 1       | Page number (1-based). |
-| `limit`     | number | 20      | Items per page (max 100). |
-| `search`    | string | -       | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
-| `productType` | string | -     | Filter by product type: `loose_stone` or `jewellery`. |
-| `categoryId`  | string | -     | Filter by category (UUID from GET /api/categories). |
-| `status`    | string | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`. |
-| `stoneCut`  | string | -       | Filter by cut: `Faceted` or `Cabochon`. |
-| `shape`     | string | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`. |
-| `origin`    | string | -       | Filter by origin name. |
-| `laboratoryId` | string | -     | Filter by laboratory (UUID from GET /api/laboratories). |
-| `isCollectorPiece` | boolean | -   | When `true`, only collector pieces. |
-| `isPrivilegeAssist` | boolean | -   | When `true`, only Privilege Assist (sold by us). |
+
+| Param               | Type    | Default | Description                                                                                                                       |
+| ------------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `page`              | number  | 1       | Page number (1-based).                                                                                                            |
+| `limit`             | number  | 20      | Items per page (max 100).                                                                                                         |
+| `search`            | string  | -       | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
+| `productType`       | string  | -       | Filter by product type: `loose_stone` or `jewellery`.                                                                             |
+| `categoryId`        | string  | -       | Filter by category (UUID from GET /api/categories).                                                                               |
+| `status`            | string  | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`.                                        |
+| `stoneCut`          | string  | -       | Filter by cut: `Faceted` or `Cabochon`.                                                                                           |
+| `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`.                                                                     |
+| `origin`            | string  | -       | Filter by origin name.                                                                                                            |
+| `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
+| `isCollectorPiece`  | boolean | -       | When `true`, only collector pieces.                                                                                               |
+| `isPrivilegeAssist` | boolean | -       | When `true`, only Privilege Assist (sold by us).                                                                                  |
+
 
 **What is matched by `search`**
 
@@ -380,15 +395,17 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 
 **Auth:** Not required.
 
-**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, etc.). The response includes a **`seller`** object (or `null` if seller not found) with:
+**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, etc.). The response includes a `**seller`** object (or `null` if seller not found) with:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Seller user ID |
-| `name` | string | Seller display name |
-| `phone` | string \| null | Seller phone (for contact) |
-| `username` | string \| null | Seller username |
-| `displayUsername` | string \| null | Seller display username |
+
+| Field             | Type          | Description                |
+| ----------------- | ------------- | -------------------------- |
+| `id`              | string        | Seller user ID             |
+| `name`            | string        | Seller display name        |
+| `phone`           | string | null | Seller phone (for contact) |
+| `username`        | string | null | Seller username            |
+| `displayUsername` | string | null | Seller display username    |
+
 
 **Errors:**
 
@@ -487,7 +504,6 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 - `color` (string, max 100) – e.g. Pigeon Blood Red
 - `origin` (string, max 200) – e.g. Myanmar
 
-
 **Optional (common):**
 
 - `description` (string)
@@ -512,7 +528,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 
 - `metal` – `"Gold"` | `"Silver"` | `"Other"`
 - `totalWeightGrams`
-- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Use the key **`jewelleryGemstones`** (lowercase `s`); `jewelleryGemStones` is not accepted. Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
+- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Use the key `**jewelleryGemstones`** (lowercase `s`); `jewelleryGemStones` is not accepted. Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
 
 **Minimal example (all required fields):**
 
@@ -557,19 +573,21 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 
 **Each `jewelleryGemstones` item:**
 
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `categoryId` | Yes | string (UUID) | Category of the gem (e.g. Ruby, Diamond). From `/api/categories`. |
-| `weightCarat` | Yes | string | Total weight in carats for this stone type (e.g. `"1.5"`). |
-| `pieceCount` | No | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”). |
-| `dimensions` | No | string | e.g. `"5x3mm"`. |
-| `color` | Yes | string | e.g. `"Red"`, `"White"`. Required for each jewellery gemstone. |
-| `shape` | No | string | `"Oval"` \| `"Cushion"` \| `"Round"` \| `"Pear"` \| `"Heart"`. |
-| `origin` | Yes | string | e.g. `"Myanmar"`. Required for each jewellery gemstone. |
-| `cut` | No | string | Cut style (e.g. `"Brilliant"`, `"Step"`). |
-| `transparency` | No | string | e.g. `"Transparent"`. |
-| `comment` | No | string | Lab comment. |
-| `inclusions` | No | string | e.g. `"Rutiles, feathers"`. |
+
+| Field          | Required | Type             | Description                                                       |
+| -------------- | -------- | ---------------- | ----------------------------------------------------------------- |
+| `categoryId`   | Yes      | string (UUID)    | Category of the gem (e.g. Ruby, Diamond). From `/api/categories`. |
+| `weightCarat`  | Yes      | string           | Total weight in carats for this stone type (e.g. `"1.5"`).        |
+| `pieceCount`   | No       | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”).       |
+| `dimensions`   | No       | string           | e.g. `"5x3mm"`.                                                   |
+| `color`        | Yes      | string           | e.g. `"Red"`, `"White"`. Required for each jewellery gemstone.    |
+| `shape`        | No       | string           | `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`.        |
+| `origin`       | Yes      | string           | e.g. `"Myanmar"`. Required for each jewellery gemstone.           |
+| `cut`          | No       | string           | Cut style (e.g. `"Brilliant"`, `"Step"`).                         |
+| `transparency` | No       | string           | e.g. `"Transparent"`.                                             |
+| `comment`      | No       | string           | Lab comment.                                                      |
+| `inclusions`   | No       | string           | e.g. `"Rutiles, feathers"`.                                       |
+
 
 **Sample: jewellery product with gemstones (create by seller)**
 
@@ -665,7 +683,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 **Auth:** Required. User can update **only their own** product (or admin can update any).
 
-**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change. Includes optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
+**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change. Includes optional `isCollectorPiece` and `isPrivilegeAssist` (boolean). You can update **status** here (e.g. **mark as sold** with `{ "status": "sold" }`) — see **5.6.1 Status update (e.g. Mark as sold)**.
 
 **Example:** Change title and price only.
 
@@ -691,6 +709,51 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 - **401** – Not logged in.
 - **403** – `{ "error": "Forbidden" }` — not the owner and not admin.
 - **404** – Product not found.
+
+---
+
+### 5.6.1 Status update (e.g. Mark as sold)
+
+Product **status** controls listing visibility and seller workflow. Only the **owner** (or admin) can change status via **PATCH** `/api/products/:id`.
+
+**Status values (API):**
+
+
+| API value | UI / meaning | Description                                                |
+| --------- | ------------ | ---------------------------------------------------------- |
+| `active`  | Active       | Listed and visible to buyers. Default for new products.    |
+| `hidden`  | Reserved     | Not shown in public list (e.g. reserved for a buyer).      |
+| `sold`    | Sold         | Item sold; seller marks as sold when the sale is complete. |
+| `archive` | Archived     | No longer for sale; kept for history.                      |
+
+
+**Mark as sold (seller)**
+
+When a seller completes a sale, the app should call:
+
+**PATCH** `/api/products/:id`
+
+**Request body:**
+
+```json
+{
+  "status": "sold"
+}
+```
+
+**Auth:** Required. Must be the product owner (or admin).
+
+**Success (200):** `{ "success": true, "productId": "uuid" }`
+
+**Other status updates**
+
+Same endpoint; send only the fields you change. Examples:
+
+- Reserve listing: `{ "status": "hidden" }`
+- Put back on market: `{ "status": "active" }`
+- Archive: `{ "status": "archive" }`
+
+Public list (**GET /api/products**) returns **active** products only by default. Sellers see all statuses in **GET /api/products/mine** (optionally filter with query `?status=sold`, etc.).
 
 ---
 
@@ -728,11 +791,13 @@ News items are managed in the admin; the mobile app can list and read **publishe
 
 **Query:**
 
-| Param   | Type   | Default      | Description                                              |
-|--------|--------|--------------|----------------------------------------------------------|
-| `page` | number | 1            | Page number (1-based).                                  |
-| `limit`| number | 20           | Items per page (max 100).                                |
+
+| Param    | Type   | Default     | Description                                                               |
+| -------- | ------ | ----------- | ------------------------------------------------------------------------- |
+| `page`   | number | 1           | Page number (1-based).                                                    |
+| `limit`  | number | 20          | Items per page (max 100).                                                 |
 | `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+
 
 **Examples:**
 
@@ -805,11 +870,13 @@ Articles are managed in the admin; the mobile app can list and read **published*
 
 **Query:**
 
-| Param   | Type   | Default      | Description                                              |
-|--------|--------|--------------|----------------------------------------------------------|
-| `page` | number | 1            | Page number (1-based).                                  |
-| `limit`| number | 20           | Items per page (max 100).                                |
+
+| Param    | Type   | Default     | Description                                                               |
+| -------- | ------ | ----------- | ------------------------------------------------------------------------- |
+| `page`   | number | 1           | Page number (1-based).                                                    |
+| `limit`  | number | 20          | Items per page (max 100).                                                 |
 | `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+
 
 **Examples:**
 
@@ -877,36 +944,29 @@ Returns a single published article by ID. Draft items return **404**.
 ## 8. Quick flow for React Native
 
 1. **Auth**
-   - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
-   - From the response, read and store the session token (exact key depends on better-auth response; often `session.token` or similar).
-   - On every protected request, set header: `Authorization: Bearer <stored_token>`.
-
+  - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
+  - From the response, read and store the session token (exact key depends on better-auth response; often `session.token` or similar).
+  - On every protected request, set header: `Authorization: Bearer <stored_token>`.
 2. **Categories**
-   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
-   - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
-
+  - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
+  - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 3. **Browse**
-   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
-   - Detail: `GET /api/products/:id`.
-
+  - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
+  - Detail: `GET /api/products/:id`.
 4. **My products**
-   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
-
+  - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
-   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
-
+  - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
 6. **Sell**
-   - Create: `POST /api/products` with JSON body (with Bearer token).
-   - Edit: `PATCH /api/products/:id` (with Bearer token).
-   - Delete: `DELETE /api/products/:id` (with Bearer token).
-
-6. **News**
-   - List: `GET /api/news?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
-   - Detail: `GET /api/news/:id` (returns 404 for drafts).
-
-7. **Articles**
-   - List: `GET /api/articles?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
-   - Detail: `GET /api/articles/:id` (returns 404 for drafts).
+  - Create: `POST /api/products` with JSON body (with Bearer token).
+  - Edit: `PATCH /api/products/:id` (with Bearer token).
+  - Delete: `DELETE /api/products/:id` (with Bearer token).
+7. **News**
+  - List: `GET /api/news?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
+  - Detail: `GET /api/news/:id` (returns 404 for drafts).
+8. **Articles**
+  - List: `GET /api/articles?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
+  - Detail: `GET /api/articles/:id` (returns 404 for drafts).
 
 ---
 
@@ -920,21 +980,24 @@ Returns a single published article by ID. Draft items return **404**.
 
 ## 10. Summary table
 
-| Method | Path                     | Auth   | Description           |
-|--------|--------------------------|--------|-----------------------|
-| POST   | `/api/mobile/register`   | No     | Register              |
-| POST   | `/api/mobile/login`      | No     | Login                 |
-| GET    | `/api/categories`        | No     | List categories (`?type` optional) |
-| GET    | `/api/origins`           | No     | List origins (for product create/edit) |
-| GET    | `/api/laboratories`      | No     | List laboratories (for product create/edit) |
-| GET    | `/api/products`          | No     | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
-| GET    | `/api/products/:id`      | No     | Get one product       |
-| GET    | `/api/products/mine`     | Yes    | List my products (all statuses by default; same query params as list all) |
-| GET    | `/api/profile`           | Yes    | Get profile and own products (optional query params) |
-| POST   | `/api/products`          | Yes    | Create product        |
-| PATCH  | `/api/products/:id`      | Yes    | Update (owner/admin)  |
-| DELETE | `/api/products/:id`      | Yes    | Delete (owner/admin)  |
-| GET    | `/api/news`              | No     | List news (`?page`, `?limit`, `?status`) |
-| GET    | `/api/news/:id`          | No     | Get one news (published only) |
-| GET    | `/api/articles`          | No     | List articles (`?page`, `?limit`, `?status`) |
-| GET    | `/api/articles/:id`      | No     | Get one article (published only) |
+
+| Method | Path                   | Auth | Description                                                                                                 |
+| ------ | ---------------------- | ---- | ----------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/mobile/register` | No   | Register                                                                                                    |
+| POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
+| GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
+| GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                      |
+| GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
+| GET    | `/api/products`        | No   | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
+| GET    | `/api/products/:id`    | No   | Get one product                                                                                             |
+| GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all)                                   |
+| GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |
+| POST   | `/api/products`        | Yes  | Create product                                                                                              |
+| PATCH  | `/api/products/:id`    | Yes  | Update (owner/admin)                                                                                        |
+| DELETE | `/api/products/:id`    | Yes  | Delete (owner/admin)                                                                                        |
+| GET    | `/api/news`            | No   | List news (`?page`, `?limit`, `?status`)                                                                    |
+| GET    | `/api/news/:id`        | No   | Get one news (published only)                                                                               |
+| GET    | `/api/articles`        | No   | List articles (`?page`, `?limit`, `?status`)                                                                |
+| GET    | `/api/articles/:id`    | No   | Get one article (published only)                                                                            |
+
+

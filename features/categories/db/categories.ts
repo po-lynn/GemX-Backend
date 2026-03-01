@@ -6,6 +6,7 @@ export type CategoryRow = {
   id: string
   type: "loose_stone" | "jewellery"
   name: string
+  shortCode: string | null
   slug: string
   sortOrder: number
 }
@@ -18,6 +19,7 @@ export async function getCategoriesByType(
       id: category.id,
       type: category.type,
       name: category.name,
+      shortCode: category.shortCode,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -34,6 +36,7 @@ export async function getAllCategories(): Promise<CategoryRow[]> {
       id: category.id,
       type: category.type,
       name: category.name,
+      shortCode: category.shortCode,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -49,6 +52,7 @@ export async function getCategoryById(id: string): Promise<CategoryRow | null> {
       id: category.id,
       type: category.type,
       name: category.name,
+      shortCode: category.shortCode,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -61,6 +65,7 @@ export async function getCategoryById(id: string): Promise<CategoryRow | null> {
 export type CreateCategoryInput = {
   type: "loose_stone" | "jewellery"
   name: string
+  shortCode: string
   slug: string
   sortOrder?: number
 }
@@ -71,6 +76,7 @@ export async function createCategoryInDb(input: CreateCategoryInput): Promise<st
     .values({
       type: input.type,
       name: input.name,
+      shortCode: input.shortCode.trim(),
       slug: input.slug,
       sortOrder: input.sortOrder ?? 0,
     })
@@ -83,6 +89,7 @@ export async function createCategoryInDb(input: CreateCategoryInput): Promise<st
 export type UpdateCategoryInput = {
   type?: "loose_stone" | "jewellery"
   name?: string
+  shortCode?: string | null
   slug?: string
   sortOrder?: number
 }
@@ -91,6 +98,7 @@ export async function updateCategoryInDb(id: string, input: UpdateCategoryInput)
   const updates: Partial<typeof category.$inferInsert> = {}
   if (input.type !== undefined) updates.type = input.type
   if (input.name !== undefined) updates.name = input.name
+  if (input.shortCode !== undefined) updates.shortCode = input.shortCode?.trim() || null
   if (input.slug !== undefined) updates.slug = input.slug
   if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder
   if (Object.keys(updates).length === 0) return

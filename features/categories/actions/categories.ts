@@ -22,6 +22,7 @@ export async function createCategoryAction(formData: FormData) {
   const parsed = categoryCreateSchema.safeParse({
     type: formData.get("type"),
     name: formData.get("name"),
+    shortCode: formData.get("shortCode"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
@@ -50,6 +51,7 @@ export async function updateCategoryAction(formData: FormData) {
     id: formData.get("id"),
     type: formData.get("type"),
     name: formData.get("name"),
+    shortCode: formData.get("shortCode"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {

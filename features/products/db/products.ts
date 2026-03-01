@@ -554,17 +554,26 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
 
 export type CreateProductInput = ProductCreate & {
   sellerId: string
-  categoryId?: string | null
+  categoryId: string
 }
 
-function generateSku(): string {
-  const prefix = "PRD"
+/** Generate SKU with category short code prefix, e.g. RUBY-5EE3A8CE04 */
+function generateSku(shortCode: string): string {
+  const prefix = shortCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") || "PRD"
   const id = crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()
   return `${prefix}-${id}`
 }
 
 export async function createProductInDb(input: CreateProductInput): Promise<string> {
-  const sku = input.sku?.trim() ? input.sku.trim() : generateSku()
+  const [categoryRow] = await db
+    .select({ shortCode: category.shortCode })
+    .from(category)
+    .where(eq(category.id, input.categoryId))
+    .limit(1)
+  if (!categoryRow?.shortCode?.trim()) {
+    throw new Error("Category short code is required for SKU generation")
+  }
+  const sku = generateSku(categoryRow.shortCode)
 
   const values: typeof product.$inferInsert = {
     title: input.title,
@@ -575,7 +584,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     currency: input.currency,
     isNegotiable: input.isNegotiable ?? false,
     productType: input.productType ?? "loose_stone",
-    categoryId: input.categoryId ?? null,
+    categoryId: input.categoryId,
     stoneCut: input.stoneCut ?? null,
     metal: input.metal ?? null,
     totalWeightGrams: input.totalWeightGrams ?? null,
@@ -691,8 +700,24 @@ export async function updateProductInDb(
   if (rest.sku !== undefined) {
     updates.sku = rest.sku
   } else {
-    const [row] = await db.select({ sku: product.sku }).from(product).where(eq(product.id, id))
-    if (row && !row.sku) updates.sku = generateSku()
+    const [row] = await db
+      .select({ sku: product.sku, categoryId: product.categoryId })
+      .from(product)
+      .where(eq(product.id, id))
+    if (row && !row.sku) {
+      const categoryIdToUse = rest.categoryId ?? row.categoryId
+      if (categoryIdToUse) {
+        const [cat] = await db
+          .select({ shortCode: category.shortCode })
+          .from(category)
+          .where(eq(category.id, categoryIdToUse))
+          .limit(1)
+        if (cat?.shortCode?.trim()) updates.sku = generateSku(cat.shortCode)
+        else updates.sku = generateSku("PRD")
+      } else {
+        updates.sku = generateSku("PRD")
+      }
+    }
   }
   if (rest.description !== undefined) updates.description = rest.description
   if (rest.identification !== undefined) updates.identification = rest.identification

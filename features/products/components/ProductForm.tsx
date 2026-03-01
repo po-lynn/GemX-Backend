@@ -446,7 +446,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="productType" className="text-sm font-medium">
-                  Product type
+                  Product type *
                 </label>
                 <select
                   id="productType"
@@ -456,6 +456,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     setProductType(e.target.value as "loose_stone" | "jewellery")
                   }
                   className={inputClass}
+                  required
                 >
                   <option value="loose_stone">Loose stone</option>
                   <option value="jewellery">Jewellery</option>
@@ -463,7 +464,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               </div>
               <div className="space-y-2">
                 <label htmlFor="categoryId" className="text-sm font-medium">
-                  Category
+                  Category *
                 </label>
                 <select
                   id="categoryId"
@@ -471,6 +472,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   key={productType}
                   defaultValue={product?.categoryId ?? ""}
                   className={inputClass}
+                  required
                 >
                   <option value="">
                     {productType === "loose_stone"

@@ -3,6 +3,11 @@ import { z } from "zod"
 export const categoryCreateSchema = z.object({
   type: z.enum(["loose_stone", "jewellery"]),
   name: z.string().min(1, "Name is required").max(100),
+  shortCode: z
+    .string()
+    .min(1, "Short code is required")
+    .max(20)
+    .transform((v) => v.trim()),
   sortOrder: z.coerce.number().int().min(0).default(0),
 })
 

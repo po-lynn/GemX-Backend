@@ -20,6 +20,20 @@ vi.mock("@/features/products/db/products", () => ({
   createProductInDb: vi.fn(),
 }))
 
+/** Valid category UUID for product create tests (categoryId is required). */
+const VALID_CATEGORY_ID = "00000000-0000-4000-8000-000000000001"
+
+/** Minimal valid loose_stone body for POST /api/products (includes required categoryId, productType, weightCarat, color, origin). */
+const validLooseStoneBody = {
+  title: "Ruby",
+  price: "100",
+  productType: "loose_stone" as const,
+  categoryId: VALID_CATEGORY_ID,
+  weightCarat: "1",
+  color: "red",
+  origin: "Myanmar",
+}
+
 describe("GET /api/products", () => {
   beforeEach(() => {
     vi.mocked(connection).mockResolvedValue(undefined)
@@ -105,11 +119,10 @@ describe("POST /api/products", () => {
     expect(createProductInDb).not.toHaveBeenCalled()
   })
 
-  it("returns 201 and productId when valid loose_stone body", async () => {
+  it("returns 400 when categoryId is missing", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },
     } as never)
-    vi.mocked(createProductInDb).mockResolvedValue("prod-123")
     const req = new Request("http://localhost/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -123,6 +136,23 @@ describe("POST /api/products", () => {
       }),
     })
     const res = await POST(req as NextRequest)
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data).toHaveProperty("error")
+    expect(createProductInDb).not.toHaveBeenCalled()
+  })
+
+  it("returns 201 and productId when valid loose_stone body", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", role: "user" },
+    } as never)
+    vi.mocked(createProductInDb).mockResolvedValue("prod-123")
+    const req = new Request("http://localhost/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(validLooseStoneBody),
+    })
+    const res = await POST(req as NextRequest)
     expect(res.status).toBe(201)
     const data = await res.json()
     expect(data).toHaveProperty("success", true)
@@ -131,6 +161,7 @@ describe("POST /api/products", () => {
       expect.objectContaining({
         title: "Ruby",
         sellerId: "user-1",
+        categoryId: VALID_CATEGORY_ID,
       })
     )
   })
@@ -143,14 +174,7 @@ describe("POST /api/products", () => {
     const req = new Request("http://localhost/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: "Ruby",
-        price: "100",
-        productType: "loose_stone",
-        weightCarat: "1",
-        color: "red",
-        origin: "Myanmar",
-      }),
+      body: JSON.stringify(validLooseStoneBody),
     })
     const res = await POST(req as NextRequest)
     expect(res.status).toBe(500)

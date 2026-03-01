@@ -66,6 +66,21 @@ export function CategoryForm({ mode, category }: Props) {
           />
         </div>
         <div className="space-y-2">
+          <label htmlFor="shortCode" className="text-sm font-medium">
+            Short Code
+          </label>
+          <input
+            id="shortCode"
+            name="shortCode"
+            type="text"
+            defaultValue={category?.shortCode ?? ""}
+            placeholder="e.g. RUBY, RING"
+            maxLength={20}
+            className={inputClass}
+            required
+          />
+        </div>
+        <div className="space-y-2">
           <label htmlFor="type" className="text-sm font-medium">
             Type
           </label>

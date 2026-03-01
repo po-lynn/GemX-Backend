@@ -66,6 +66,7 @@ export function CategoriesTable({ categories }: Props) {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
+            <TableHead>Short Code</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="w-24">Order</TableHead>
             <TableHead className="w-20" >Actions</TableHead>
@@ -74,7 +75,7 @@ export function CategoriesTable({ categories }: Props) {
         <TableBody>
           {loose.length === 0 && jewellery.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-muted-foreground text-center py-8">
+              <TableCell colSpan={5} className="text-muted-foreground text-center py-8">
                 No categories yet. Add one to use in products.
               </TableCell>
             </TableRow>
@@ -83,6 +84,9 @@ export function CategoriesTable({ categories }: Props) {
               {loose.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-xs">
+                    {c.shortCode ?? "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">Loose stone</Badge>
                   </TableCell>
@@ -111,6 +115,9 @@ export function CategoriesTable({ categories }: Props) {
               {jewellery.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-xs">
+                    {c.shortCode ?? "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
