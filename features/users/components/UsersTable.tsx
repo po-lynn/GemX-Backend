@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/formatters";
+import { Pencil, Trash2, ChevronUp } from "lucide-react";
 
 const ELLIPSIS_PREV = -1;
 const ELLIPSIS_NEXT = -2;
@@ -97,52 +97,90 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
 
   return (
     <>
-      <div className="rounded-xl border bg-card">
+      <div className="overflow-x-auto rounded-none border border-border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="w-20">Points</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead className="w-20">Verified</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
+            <TableRow className="border-0 hover:bg-transparent">
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                <span className="inline-flex items-center gap-1">
+                  ID
+                  <ChevronUp className="size-3.5" aria-hidden />
+                </span>
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Name
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Email
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Group
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Phone
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Country
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                State / Province
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Customer Since
+              </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Confirmed email
+              </TableHead>
+              <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
-                  className="text-muted-foreground text-center py-8"
+                  colSpan={10}
+                  className="text-muted-foreground py-8 text-center"
                 >
                   No users yet.
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{u.role}</Badge>
+              users.map((u, index) => (
+                <TableRow
+                  key={u.id}
+                  className={`border-b border-border/50 ${index % 2 === 1 ? "bg-[#f5f5f5]" : ""}`}
+                >
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.id.slice(0, 8)}
                   </TableCell>
-                  <TableCell className="tabular-nums">{u.points}</TableCell>
-                  <TableCell>{u.phone ?? "—"}</TableCell>
-                  <TableCell>{u.gender ?? "—"}</TableCell>
-                  <TableCell>
-                    {u.role === "user" ? (
-                      <Badge variant={u.verified ? "default" : "secondary"}>
-                        {u.verified ? "Verified" : "—"}
-                      </Badge>
-                    ) : (
-                      "—"
-                    )}
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-medium">
+                    {u.name}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.email}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.role}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.phone ?? "—"}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.country ?? "—"}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.state ?? "—"}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm text-muted-foreground">
+                    {u.createdAt ? formatDate(u.createdAt) : "—"}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
+                    {u.emailVerified ? "Confirmed" : "Confirmation Not Required"}
+                  </TableCell>
+                  <TableCell className="px-3 py-2.5">
+                    <div className="flex items-center justify-center gap-1">
                       <Button variant="ghost" size="icon" asChild>
                         <Link href={`/admin/users/${u.id}/edit`}>
                           <Pencil className="size-4" />
