@@ -1,5 +1,9 @@
 # Test-Driven Development (TDD) Workflow
 
+**Convention:** When you add or change a unit test or test case, update this file (test location, purpose, and what’s covered). See [docs/README.md](./README.md).
+
+---
+
 This project enforces **automated testing best practices**: the **full test suite** (unit, integration, API, and component tests) must pass before any Git commit is allowed.
 
 ## Setup (step by step)
@@ -50,7 +54,7 @@ Run the full suite: `npm run test` (required to pass before commit).
 ## What’s covered
 
 - **Unit:** `lib/formatters`, `lib/pagination` (getPageNumbers), product search schema, `normalizeProductBody`
-- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine` (all with mocked auth, DB, and cache)
+- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine`; uploads: POST `/api/upload/product-media`, POST `/api/upload/certificate` (all with mocked auth, DB, and cache/Supabase)
 
 ## Adding tests
 

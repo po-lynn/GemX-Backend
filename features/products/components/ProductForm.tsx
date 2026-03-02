@@ -25,7 +25,7 @@ import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { FormActionBar } from "@/features/products/components/FormActionBar"
 import { cn } from "@/lib/utils"
-import { Eye, Pencil, Trash2, Upload, Video, X } from "lucide-react"
+import { FileText, Eye, Pencil, Trash2, Upload, Video, X } from "lucide-react"
 
 const inputClass =
   "flex h-10 w-full rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] transition-shadow placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0 focus:border-[var(--form-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-sm file:font-medium"
@@ -82,6 +82,53 @@ function parseDimensions(value: string | null | undefined): [string, string, str
   return [parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]
 }
 
+function isPdfUrl(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.toLowerCase()
+    return path.endsWith(".pdf")
+  } catch {
+    return url.toLowerCase().includes(".pdf")
+  }
+}
+
+function CertificateViewer({ url, onRemove }: { url: string; onRemove: () => void }) {
+  const isPdf = isPdfUrl(url)
+  return (
+    <div className="rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)]/30 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--form-input-border)] px-3 py-2">
+        <span className="text-sm font-medium text-[var(--form-foreground)]">
+          Certificate {isPdf ? "(PDF)" : "(image)"}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={onRemove}
+        >
+          <X className="h-4 w-4 mr-1" />
+          Remove
+        </Button>
+      </div>
+      <div className="min-h-[280px] max-h-[480px] flex items-center justify-center bg-[var(--form-bg)]">
+        {isPdf ? (
+          <iframe
+            src={url}
+            title="Certificate PDF"
+            className="w-full h-[400px] min-h-[360px] border-0"
+          />
+        ) : (
+          <img
+            src={url}
+            alt="Certificate"
+            className="max-w-full max-h-[420px] object-contain"
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function ProductForm({ mode, product, categories, laboratories, origins }: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -118,10 +165,15 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
   const [uploadingVideos, setUploadingVideos] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [certReportUrl, setCertReportUrl] = useState(product?.certReportUrl ?? "")
+  const [uploadingCertificate, setUploadingCertificate] = useState(false)
   useEffect(() => {
     setImageUrlsList(product?.imageUrls ?? [])
     setVideoUrlsList(product?.videoUrls ?? [])
   }, [product?.imageUrls, product?.videoUrls])
+  useEffect(() => {
+    setCertReportUrl(product?.certReportUrl ?? "")
+  }, [product?.certReportUrl])
 
   function handleUploadMedia(type: "image" | "video", files: FileList | null) {
     if (!files?.length) return
@@ -188,6 +240,37 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
       setUploadingVideos(false)
       setUploadProgress(0)
     })
+    xhr.send(formData)
+  }
+
+  function handleUploadCertificate(files: FileList | null) {
+    if (!files?.length) return
+    const file = files[0]
+    setUploadError(null)
+    setUploadingCertificate(true)
+    const formData = new FormData()
+    formData.set("file", file)
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/api/upload/certificate")
+    xhr.addEventListener("load", () => {
+      try {
+        const data = JSON.parse(xhr.responseText || "{}")
+        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+          setCertReportUrl(data.url)
+        } else {
+          setUploadError(data.error || `Upload failed (${xhr.status})`)
+        }
+      } catch {
+        setUploadError("Upload failed")
+      } finally {
+        setUploadingCertificate(false)
+      }
+    })
+    xhr.addEventListener("error", () => {
+      setUploadError("Upload failed")
+      setUploadingCertificate(false)
+    })
+    xhr.addEventListener("abort", () => setUploadingCertificate(false))
     xhr.send(formData)
   }
 
@@ -1105,31 +1188,54 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="certReportUrl" className="text-sm font-medium">
-                  Report URL
-                </label>
-                <input
-                  id="certReportUrl"
-                  name="certReportUrl"
-                  type="url"
-                  maxLength={500}
-                  defaultValue={product?.certReportUrl ?? ""}
-                  placeholder="https://..."
-                  className={inputClass}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">Certificate</span>
+                  <label
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-2 text-sm font-medium text-[var(--form-foreground)]",
+                      uploadingCertificate
+                        ? "cursor-not-allowed opacity-60 pointer-events-none"
+                        : "cursor-pointer hover:bg-[var(--form-muted)]"
+                    )}
+                  >
+                    <FileText className="h-4 w-4" />
+                    {uploadingCertificate ? "Uploading…" : "Upload certificate"}
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+                      className="sr-only"
+                      disabled={uploadingCertificate}
+                      onChange={(e) => {
+                        handleUploadCertificate(e.target.files)
+                        e.target.value = ""
+                      }}
+                    />
+                  </label>
+                </div>
+                <input type="hidden" name="certReportUrl" value={certReportUrl} />
+                <p className="text-xs text-[var(--form-muted-foreground)]">
+                  PDF or image (JPEG, PNG, WebP, GIF). Max 10 MB.
+                </p>
+                {certReportUrl ? (
+                  <CertificateViewer
+                    url={certReportUrl}
+                    onRemove={() => setCertReportUrl("")}
+                  />
+                ) : null}
               </div>
             </div>
           </FormSection>
 
           <FormSection
             title="Images"
-            description="Product photos. Paste URLs or upload files to Supabase."
+            description={`Product photos. Upload files (max ${MAX_PRODUCT_IMAGES}).`}
           >
+            <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="imageUrls" className="text-sm font-medium">
-                  Image URLs <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_IMAGES})</span>
-                </label>
+                <span className="text-sm font-medium">
+                  Upload images <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_IMAGES})</span>
+                </span>
                 <label
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
@@ -1167,23 +1273,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
                 </div>
               )}
-              <textarea
-                id="imageUrls"
-                name="imageUrls"
-                rows={3}
-                value={imageUrlsList.join("\n")}
-                onChange={(e) =>
-                  setImageUrlsList(
-                    e.target.value
-                      .split(/[\n,]/)
-                      .map((u) => u.trim())
-                      .filter(Boolean)
-                      .slice(0, MAX_PRODUCT_IMAGES)
-                  )
-                }
-                placeholder={`One URL per line (max ${MAX_PRODUCT_IMAGES})`}
-                className={inputClass + " min-h-[60px] resize-y font-mono text-sm"}
-              />
               {imageUrlsList.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {imageUrlsList.map((url, idx) => (
@@ -1218,13 +1307,14 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
 
           <FormSection
             title="Videos"
-            description="Product videos. Paste URLs or upload files to Supabase."
+            description={`Product videos. Upload files (max ${MAX_PRODUCT_VIDEOS}).`}
           >
+            <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="videoUrls" className="text-sm font-medium">
-                  Video URLs <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_VIDEOS})</span>
-                </label>
+                <span className="text-sm font-medium">
+                  Upload videos <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_VIDEOS})</span>
+                </span>
                 <label
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
@@ -1262,23 +1352,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
                 </div>
               )}
-              <textarea
-                id="videoUrls"
-                name="videoUrls"
-                rows={2}
-                value={videoUrlsList.join("\n")}
-                onChange={(e) =>
-                  setVideoUrlsList(
-                    e.target.value
-                      .split(/[\n,]/)
-                      .map((u) => u.trim())
-                      .filter(Boolean)
-                      .slice(0, MAX_PRODUCT_VIDEOS)
-                  )
-                }
-                placeholder={`One URL per line (max ${MAX_PRODUCT_VIDEOS})`}
-                className={inputClass + " min-h-[50px] resize-y font-mono text-sm"}
-              />
               {videoUrlsList.length > 0 && (
                 <div className="space-y-4">
                   {videoUrlsList.map((url, idx) => (

@@ -1,5 +1,7 @@
 # Mobile API Documentation
 
+**Convention:** When you change any API (mobile, public, or admin), update the "Recent changes" section and the affected route(s) in this file. See [docs/README.md](./README.md).
+
 ---
 
 ## Recent changes
@@ -13,6 +15,8 @@
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
+- **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
+- **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
 
 ---
 
@@ -26,6 +30,8 @@
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
+| POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
+| POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
 | GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
@@ -46,7 +52,7 @@ List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, 
 ## 2. Base URL and headers
 
 - **Base URL:** `https://gem-x-backend.vercel.app` (e.g. `http://localhost:3000` in dev)
-- **Content-Type:** `application/json` for all request bodies.
+- **Content-Type:** `application/json` for JSON request bodies. For **POST /api/upload/product-media** and **POST /api/upload/certificate** use `multipart/form-data` (do not set Content-Type manually; let the client set it with the boundary).
 - **Auth:** For protected routes, send the session token:
   - **Header:** `Authorization: Bearer <session_token>`
   - Get the token from the **Login** or **Register** response and store it (e.g. SecureStore). Use it on every request that requires auth.
@@ -216,6 +222,96 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 
 
 **Use in app:** Call when building the product form (create/edit). Use `id` for the product `laboratoryId` field (certification) or for filter dropdowns.
+
+---
+
+### 4.4 Product media upload (images and videos)
+
+Use this endpoint to upload product images or videos before creating or updating a product. You get back public URLs to send in `imageUrls` or `videoUrls` in **POST /api/products** or **PATCH /api/products/:id**. Same endpoint as the admin product form; mobile uses it with `Authorization: Bearer <session_token>`.
+
+**POST** `/api/upload/product-media`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Request:** `multipart/form-data` (do not set `Content-Type` manually; the client sets it with the boundary).
+
+| Field   | Type   | Required | Description                                                                 |
+| ------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `type`  | string | Yes      | `image` or `video`. Determines allowed MIME types and size limit.           |
+| `file`  | file   | No*      | Single file. Use when uploading one file.                                    |
+| `files` | file[] | No*      | Multiple files. Use when uploading more than one file.                      |
+
+\* One of `file` or `files` must be present. If both are present, `files` is used.
+
+**Product limits (enforced on create/update):** Up to **10 images** and **5 videos** per product. Upload in batches if needed; collect all URLs and send them in the product payload.
+
+**Allowed types and sizes:**
+
+| type   | Allowed MIME types                          | Max size per file |
+| ------ | -------------------------------------------- | ----------------- |
+| `image` | `image/jpeg`, `image/png`, `image/webp`, `image/gif` | 10 MB              |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` (.mov)   | 100 MB             |
+
+**Example (React Native):** Build `FormData`, append `type` (`image` or `video`) and the file(s) under key `file` or `files`, then POST with Bearer token. Do not set `Content-Type` header (fetch will set `multipart/form-data` with boundary).
+
+**Success (200):**
+
+```json
+{
+  "urls": [
+    "https://...supabase.co/storage/v1/object/public/product-images/userId/uuid.jpg",
+    "https://...supabase.co/storage/v1/object/public/product-images/userId/uuid2.png"
+  ]
+}
+```
+
+Append these URLs to your `imageUrls` or `videoUrls` array when calling **POST /api/products** or **PATCH /api/products/:id**.
+
+**Errors:**
+
+- **400** – Missing or invalid `type` (must be `image` or `video`); no file provided; invalid file type; file too large.
+- **401** – `{ "error": "Unauthorized. Sign in to upload files." }`
+- **503** – Supabase not configured (missing `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY`). Body includes a message.
+- **500** – Upload failed (e.g. Storage error; message may mention RLS if the wrong key is used).
+
+---
+
+### 4.5 Certificate upload (lab report)
+
+Upload a single lab report or certificate file (PDF or image) for a product. Use the returned URL as `certReportUrl` in **POST /api/products** or **PATCH /api/products/:id**. Admin form has no Report URL text input; certificate is upload-only and displayed in a viewer (PDF iframe or image).
+
+**POST** `/api/upload/certificate`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Request:** `multipart/form-data` with one file.
+
+| Field  | Type | Required | Description                    |
+| ------ | ---- | -------- | ------------------------------ |
+| `file` | file | Yes      | Single file (PDF or image).    |
+
+**Allowed types and size:**
+
+| MIME types | Max size |
+| ---------- | -------- |
+| `application/pdf`, `image/jpeg`, `image/png`, `image/webp`, `image/gif` | 10 MB |
+
+**Success (200):**
+
+```json
+{
+  "url": "https://...supabase.co/storage/v1/object/public/product-certificates/userId/uuid.pdf"
+}
+```
+
+Use this `url` as `certReportUrl` when creating or updating the product.
+
+**Errors:**
+
+- **400** – No file provided; invalid file type; file too large.
+- **401** – Unauthorized.
+- **503** – Supabase not configured.
+- **500** – Upload failed.
 
 ---
 
@@ -511,7 +607,8 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 - `productType` – `"loose_stone"` | `"jewellery"` (default `"loose_stone"`)
 - `categoryId` – UUID from `/api/categories`, or omit / send `null`
 - `status` – `"active"` | `"archive"` | `"sold"` | `"hidden"`
-- `imageUrls` – array of strings (image URLs)
+- `imageUrls` – array of strings (image URLs). To get URLs: upload files via **POST /api/upload/product-media** with `type=image`, then use the returned `urls` here. Max 10 images per product.
+- `videoUrls` – array of strings (video URLs). To get URLs: upload via **POST /api/upload/product-media** with `type=video`, then use the returned `urls` here. Max 5 videos per product.
 - `isNegotiable` (boolean)
 - `isFeatured` (boolean) – mark as featured
 - `isCollectorPiece` (boolean) – high-value collector piece (e.g. 1M+)
@@ -522,7 +619,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 - `stoneCut` – `"Faceted"` | `"Cabochon"`
 - `weightCarat`, `dimensions`, `color`, `shape`, `origin`
 - `shape` – `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`
-- `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl`
+- `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` (get URL by uploading via **POST /api/upload/certificate**; no manual URL field in admin form; certificate is shown in a viewer)
 
 **Jewellery:**
 
@@ -958,7 +1055,8 @@ Returns a single published article by ID. Draft items return **404**.
 5. **Profile**
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
 6. **Sell**
-  - Create: `POST /api/products` with JSON body (with Bearer token).
+  - **Upload media first (optional):** For images: `POST /api/upload/product-media` with `type=image` and `file` or `files` (multipart/form-data, Bearer token). For videos: same with `type=video`. Response `{ "urls": ["...", ...] }`. Use these URLs as `imageUrls` / `videoUrls` when creating or updating the product (max 10 images, 5 videos per product). For lab report/certificate: `POST /api/upload/certificate` with `file` (multipart); response `{ "url": "..." }` → use as `certReportUrl`.
+  - Create: `POST /api/products` with JSON body including `imageUrls` / `videoUrls` / `certReportUrl` if you uploaded files (with Bearer token).
   - Edit: `PATCH /api/products/:id` (with Bearer token).
   - Delete: `DELETE /api/products/:id` (with Bearer token).
 7. **News**
@@ -986,8 +1084,10 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
-| GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                      |
+| GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
+| POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
+| POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
 | GET    | `/api/products/:id`    | No   | Get one product                                                                                             |
 | GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all)                                   |

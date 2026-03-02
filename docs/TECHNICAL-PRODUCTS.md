@@ -1,5 +1,9 @@
 # Technical Documentation: Products and Related Features
 
+**Convention:** When you add or change logic, algorithms, or function-level behaviour, document it here (or in the relevant technical doc). See [docs/README.md](./README.md).
+
+---
+
 This document describes the product domain: database schema, validation, business logic, file/video upload flow, and key functions. It focuses on products and their related usage (images, videos, media limits, and API behaviour).
 
 ---
@@ -49,7 +53,7 @@ Stores the core product row. One product belongs to one category, one seller (us
 | `laboratory_id` | uuid | FK → laboratory, on delete set null | Lab reference. |
 | `cert_report_number` | text | | Report number. |
 | `cert_report_date` | text | | Report date. |
-| `cert_report_url` | text | | Report URL. |
+| `cert_report_url` | text | | Certificate file URL (from upload; no manual URL input). |
 | `status` | enum | default `active` | active / archive / sold / hidden. |
 | `moderation_status` | enum | default `pending` | pending / approved / rejected. |
 | `is_featured` | boolean | default false | Featured flag. |
@@ -270,14 +274,14 @@ Queries product, then product_image, then product_video, then product_jewellery_
 - **getSupabaseAdminErrorMessage(): string**  
   - Returns a user-facing message when `getSupabaseAdmin()` is null (missing env vs “use service_role, not anon”).
 
-**Constants:** `PRODUCT_IMAGES_BUCKET = "product-images"`, `PRODUCT_VIDEOS_BUCKET = "product-videos"`.
+**Constants:** `PRODUCT_IMAGES_BUCKET = "product-images"`, `PRODUCT_VIDEOS_BUCKET = "product-videos"`, `PRODUCT_CERTIFICATES_BUCKET = "product-certificates"`.
 
-### 5.2 Upload API route
+### 5.2 Upload API route (images and videos)
 
 **Route:** `POST /api/upload/product-media`  
 **File:** `app/api/upload/product-media/route.ts`.
 
-**Auth:** Requires session (`auth.api.getSession`); 401 if no `session?.user?.id`.
+**Auth:** Requires session (`auth.api.getSession` from request headers); 401 if no `session?.user?.id`. Used by both the **admin product form** (browser) and the **mobile API** (React Native or any client sending `Authorization: Bearer <session_token>`).
 
 **Request:** `FormData`:
 
@@ -305,6 +309,29 @@ Queries product, then product_image, then product_video, then product_jewellery_
 
 Only authenticated users can upload; the server uses the service role key so Storage RLS must allow the service role (see `scripts/supabase-storage-policies.sql`).
 
+### 5.3 Certificate upload API route (lab report)
+
+**Route:** `POST /api/upload/certificate`  
+**File:** `app/api/upload/certificate/route.ts`.
+
+**Auth:** Same as 5.2 (session from headers; used by admin form and mobile).
+
+**Request:** `FormData` with single field `file` (one file).
+
+**Constants:**
+
+- Allowed types: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`, `image/gif`. Max size 10 MB.
+- Bucket: `PRODUCT_CERTIFICATES_BUCKET` (`product-certificates`). Create this bucket in Supabase Dashboard > Storage (e.g. public) and run the RLS script so service_role has full access.
+
+**Algorithm:**
+
+1. Get session; if missing → 401.
+2. `supabase = getSupabaseAdmin()`; if null → 503.
+3. Get single file from FormData key `file`; if not a File → 400.
+4. Validate MIME and size; on failure → 400.
+5. Path: `{session.user.id}/{uuid}.{ext}`; upload to `product-certificates` bucket.
+6. On success return `{ url: publicUrl }` (single URL for product `certReportUrl`).
+
 ---
 
 ## 6. Product form (client): upload and limits
@@ -322,6 +349,8 @@ Only authenticated users can upload; the server uses the service role key so Sto
 - `uploadingImages`, `uploadingVideos`: boolean.
 - `uploadProgress`: 0–100 (for progress bar).
 - `uploadError`: string | null.
+- `certReportUrl`: string (controlled; synced from `product?.certReportUrl`; set only via certificate upload; no Report URL text input).
+- `uploadingCertificate`: boolean.
 
 ### 6.3 Upload handler: `handleUploadMedia(type, files)`
 
@@ -342,12 +371,29 @@ Only authenticated users can upload; the server uses the service role key so Sto
 
 So: upload is only started if adding the new files would not exceed the limit; after success the list is capped again. Progress is derived from `loaded`/`total` of the single XHR upload.
 
-### 6.4 UI behaviour
+### 6.4 Certificate upload: `handleUploadCertificate(files)`
+
+**Algorithm:**
+
+1. If no files, return. Take first file.
+2. Clear `uploadError`; set `uploadingCertificate = true`.
+3. FormData with key `file`; POST to `/api/upload/certificate` via XMLHttpRequest.
+4. On load: if 2xx and `data.url`, set `certReportUrl(data.url)`; else set `uploadError`. Set `uploadingCertificate = false`.
+5. On error/abort: set `uploadingCertificate = false`.
+
+The certificate URL is submitted via a hidden input; the only way to set it is upload (no manual URL field).
+
+### 6.5 Certificate viewer
+
+**Component:** `CertificateViewer({ url, onRemove })` (inline in ProductForm). When `certReportUrl` is set, shows PDF via `<iframe src={url}>` or image via `<img src={url}>` (PDF detected by URL path ending in `.pdf`). "Remove" button clears the URL.
+
+### 6.6 UI behaviour
 
 - Upload buttons (labels + file inputs) are disabled when `uploadingImages`/`uploadingVideos` or when `imageUrlsList.length >= 10` / `videoUrlsList.length >= 5`.
 - Textarea onChange for image URLs: split by newline/comma, trim, filter non-empty, then `.slice(0, MAX_PRODUCT_IMAGES)`. Same for video URLs with `.slice(0, MAX_PRODUCT_VIDEOS)`.
 - Image previews: grid of thumbnails with remove (splice from list). Video previews: `<video controls>` per URL with remove.
 - Progress bar and percentage shown while the corresponding upload is in progress.
+- **Certificate:** Upload-only (no Report URL text input). "Upload certificate" button; after upload, `certReportUrl` is set and **CertificateViewer** shows PDF (iframe) or image (img) with a "Remove" button.
 
 ---
 
@@ -371,6 +417,7 @@ Policies on `storage.objects`:
 
 - **Service role full product-images:** `FOR ALL TO service_role USING (bucket_id = 'product-images') WITH CHECK (bucket_id = 'product-images')`.
 - **Service role full product-videos:** same for `bucket_id = 'product-videos'`.
+- **Service role full product-certificates:** same for `bucket_id = 'product-certificates'` (lab report / certificate uploads).
 
 The app uploads only via the API using the service role key; no policy grants anon/authenticated INSERT on these buckets, so unauthenticated or client-side uploads are not allowed by RLS.
 
@@ -387,7 +434,8 @@ The app uploads only via the API using the service role key; no policy grants an
 | Create | Insert product, then images, videos, gemstones | `createProductInDb` |
 | Update | Update product; replace images/videos/gemstones when provided | `updateProductInDb` |
 | Read one | Product + image URLs + video URLs + jewellery gemstones | `getProductById` |
-| Upload | Auth → Supabase service client → validate type/size → upload per file → return public URLs | `POST /api/upload/product-media`, `lib/supabase/server.ts` |
-| Form limits | Block upload if at cap; cap pasted URLs; cap after append; progress via XHR | `handleUploadMedia`, state, ProductForm.tsx |
+| Upload (images/videos) | Auth → Supabase service client → validate type/size → upload per file → return public URLs | `POST /api/upload/product-media`, `lib/supabase/server.ts` |
+| Upload (certificate) | Single file (PDF/image), max 10 MB → `product-certificates` bucket → return single URL for `certReportUrl` | `POST /api/upload/certificate`, `lib/supabase/server.ts` |
+| Form limits | Block upload if at cap; cap pasted URLs; cap after append; progress via XHR; certificate: one file, set certReportUrl | `handleUploadMedia`, `handleUploadCertificate`, state, ProductForm.tsx |
 
-This covers the technical behaviour of products and related usage (images, videos, limits, and upload flow) end to end.
+This covers the technical behaviour of products and related usage (images, videos, certificate upload, limits, and upload flow) end to end.

@@ -37,3 +37,6 @@ export function getSupabaseAdminErrorMessage(): string {
 /** Bucket names for product media (create these in Supabase Dashboard > Storage). */
 export const PRODUCT_IMAGES_BUCKET = "product-images"
 export const PRODUCT_VIDEOS_BUCKET = "product-videos"
+
+/** Bucket for lab report / certificate files (PDF, images). Create in Supabase Dashboard > Storage. */
+export const PRODUCT_CERTIFICATES_BUCKET = "product-certificates"
