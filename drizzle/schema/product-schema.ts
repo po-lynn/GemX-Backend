@@ -143,6 +143,20 @@ export const productImage = pgTable(
   (table) => [index("product_image_productId_idx").on(table.productId)]
 );
 
+export const productVideo = pgTable(
+  "product_video",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("product_video_productId_idx").on(table.productId)]
+);
+
 /** Jewellery only: gemstones on the piece with full specs (like loose stone): Ruby 0.5ct, dimensions, color, shape, etc. */
 export const productJewelleryGemstone = pgTable(
   "product_jewellery_gemstone",
@@ -186,6 +200,13 @@ export const productRelations = relations(product, ({ one, many }) => ({
 export const productImageRelations = relations(productImage, ({ one }) => ({
   product: one(product, {
     fields: [productImage.productId],
+    references: [product.id],
+  }),
+}));
+
+export const productVideoRelations = relations(productVideo, ({ one }) => ({
+  product: one(product, {
+    fields: [productVideo.productId],
     references: [product.id],
   }),
 }));

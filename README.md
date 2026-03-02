@@ -27,6 +27,8 @@ gemx@2026
    - `npm run db:migrate` (or `db:push` for prototyping).
 4. If the Dashboard shows **"relation supabase_migrations.schema_migrations does not exist"**, run once in **Supabase → SQL Editor**: `scripts/supabase-migrations-schema.sql` (or `psql $DATABASE_URL -f scripts/supabase-migrations-schema.sql`).
 
+**Product file/video uploads (optional):** To enable uploads from the product form, set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Use the **legacy** key: in **Supabase → Project Settings → API**, open the **"Legacy anon, service_role API keys"** tab and copy the **service_role** (secret) value—not the new "Secret keys" (sh.secret.*) or the publishable key. In **Storage**, create two **public** buckets: `product-images` and `product-videos`. If you get **"new row violates row-level security policy"** when uploading, run **Supabase → SQL Editor** with `scripts/supabase-storage-policies.sql`. Then run `npm run db:generate` and `npm run db:push` (or `db:migrate`) to add the `product_video` table.
+
 ### 2. Vercel (app)
 
 1. Push your repo and import the project in [vercel.com](https://vercel.com).

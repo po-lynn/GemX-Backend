@@ -117,6 +117,7 @@ export async function createProductAction(formData: FormData) {
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     imageUrls: formData.get("imageUrls") || undefined,
+    videoUrls: formData.get("videoUrls") || undefined,
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -162,6 +163,7 @@ export async function createProductAction(formData: FormData) {
     isCollectorPiece: parsed.data.isCollectorPiece,
     isPrivilegeAssist: parsed.data.isPrivilegeAssist,
     imageUrls: parsed.data.imageUrls,
+    videoUrls: parsed.data.videoUrls,
     sellerId: session.user.id,
   })
 
@@ -202,6 +204,7 @@ export async function updateProductAction(formData: FormData) {
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     imageUrls: formData.get("imageUrls") || undefined,
+    videoUrls: formData.get("videoUrls") || undefined,
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -248,6 +251,7 @@ export async function updateProductAction(formData: FormData) {
     isCollectorPiece: data.isCollectorPiece,
     isPrivilegeAssist: data.isPrivilegeAssist,
     imageUrls: data.imageUrls,
+    videoUrls: data.videoUrls,
   })
 
   revalidateProductsCache(productId)

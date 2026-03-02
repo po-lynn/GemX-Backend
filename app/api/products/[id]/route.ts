@@ -95,6 +95,7 @@ export async function PATCH(
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
       imageUrls: data.imageUrls,
+      videoUrls: data.videoUrls,
     })
     revalidateProductsCache(productId)
     return jsonUncached({ success: true, productId })

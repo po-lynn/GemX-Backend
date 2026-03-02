@@ -25,10 +25,13 @@ import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { FormActionBar } from "@/features/products/components/FormActionBar"
 import { cn } from "@/lib/utils"
-import { Eye, Pencil, Trash2 } from "lucide-react"
+import { Eye, Pencil, Trash2, Upload, Video, X } from "lucide-react"
 
 const inputClass =
   "flex h-10 w-full rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] transition-shadow placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0 focus:border-[var(--form-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+
+const MAX_PRODUCT_IMAGES = 10
+const MAX_PRODUCT_VIDEOS = 5
 
 function FormSection({
   title,
@@ -109,6 +112,85 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
   const [status, setStatus] = useState<"active" | "archive" | "sold" | "hidden">(
     (product?.status as "active" | "archive" | "sold" | "hidden") ?? "active"
   )
+  const [imageUrlsList, setImageUrlsList] = useState<string[]>(product?.imageUrls ?? [])
+  const [videoUrlsList, setVideoUrlsList] = useState<string[]>(product?.videoUrls ?? [])
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [uploadingVideos, setUploadingVideos] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  useEffect(() => {
+    setImageUrlsList(product?.imageUrls ?? [])
+    setVideoUrlsList(product?.videoUrls ?? [])
+  }, [product?.imageUrls, product?.videoUrls])
+
+  function handleUploadMedia(type: "image" | "video", files: FileList | null) {
+    if (!files?.length) return
+    setUploadError(null)
+    const maxCount = type === "image" ? MAX_PRODUCT_IMAGES : MAX_PRODUCT_VIDEOS
+    const currentList = type === "image" ? imageUrlsList : videoUrlsList
+    const currentCount = currentList.length
+    if (currentCount >= maxCount) {
+      setUploadError(
+        type === "image"
+          ? `Maximum ${MAX_PRODUCT_IMAGES} images. You have ${currentCount}.`
+          : `Maximum ${MAX_PRODUCT_VIDEOS} videos. You have ${currentCount}.`
+      )
+      return
+    }
+    const slotsLeft = maxCount - currentCount
+    if (files.length > slotsLeft) {
+      setUploadError(
+        type === "image"
+          ? `Maximum ${MAX_PRODUCT_IMAGES} images. You have ${currentCount}. Add up to ${slotsLeft} more.`
+          : `Maximum ${MAX_PRODUCT_VIDEOS} videos. You have ${currentCount}. Add up to ${slotsLeft} more.`
+      )
+      return
+    }
+    setUploadProgress(0)
+    if (type === "image") setUploadingImages(true)
+    else setUploadingVideos(true)
+    const formData = new FormData()
+    formData.set("type", type)
+    for (let i = 0; i < files.length; i++) formData.append("files", files[i])
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/api/upload/product-media")
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        setUploadProgress(Math.round((e.loaded / e.total) * 100))
+      }
+    })
+    xhr.addEventListener("load", () => {
+      try {
+        const data = JSON.parse(xhr.responseText || "{}")
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const urls = (data.urls as string[]) ?? []
+          if (type === "image") setImageUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_IMAGES))
+          else setVideoUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_VIDEOS))
+        } else {
+          setUploadError(data.error || `Upload failed (${xhr.status})`)
+        }
+      } catch {
+        setUploadError("Upload failed")
+      } finally {
+        setUploadingImages(false)
+        setUploadingVideos(false)
+        setUploadProgress(0)
+      }
+    })
+    xhr.addEventListener("error", () => {
+      setUploadError("Upload failed")
+      setUploadingImages(false)
+      setUploadingVideos(false)
+      setUploadProgress(0)
+    })
+    xhr.addEventListener("abort", () => {
+      setUploadingImages(false)
+      setUploadingVideos(false)
+      setUploadProgress(0)
+    })
+    xhr.send(formData)
+  }
+
   /** Form state: all string for inputs; maps to JewelleryGemstoneItem when submitting. */
   type FormGemstoneEntry = {
     categoryId: string
@@ -1041,20 +1123,192 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
 
           <FormSection
             title="Images"
-            description="Product photos and media URLs"
+            description="Product photos. Paste URLs or upload files to Supabase."
           >
             <div className="space-y-2">
-              <label htmlFor="imageUrls" className="text-sm font-medium">
-                Image URLs
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="imageUrls" className="text-sm font-medium">
+                  Image URLs <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_IMAGES})</span>
+                </label>
+                <label
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
+                    uploadingImages || imageUrlsList.length >= MAX_PRODUCT_IMAGES
+                      ? "cursor-not-allowed opacity-60 pointer-events-none"
+                      : "cursor-pointer hover:bg-[var(--form-muted)]"
+                  )}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload images {imageUrlsList.length > 0 && `(${imageUrlsList.length}/${MAX_PRODUCT_IMAGES})`}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    className="sr-only"
+                    disabled={uploadingImages || imageUrlsList.length >= MAX_PRODUCT_IMAGES}
+                    onChange={(e) => {
+                      handleUploadMedia("image", e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+                {uploadingImages && (
+                  <span className="text-sm text-[var(--form-muted-foreground)]">Uploading…</span>
+                )}
+              </div>
+              {uploadingImages && (
+                <div className="space-y-1">
+                  <div className="h-2 w-full rounded-full bg-[var(--form-muted)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[var(--form-primary)] transition-[width] duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
+                </div>
+              )}
               <textarea
                 id="imageUrls"
                 name="imageUrls"
                 rows={3}
-                defaultValue={product?.imageUrls?.join("\n") ?? ""}
-                placeholder="One URL per line or comma-separated"
+                value={imageUrlsList.join("\n")}
+                onChange={(e) =>
+                  setImageUrlsList(
+                    e.target.value
+                      .split(/[\n,]/)
+                      .map((u) => u.trim())
+                      .filter(Boolean)
+                      .slice(0, MAX_PRODUCT_IMAGES)
+                  )
+                }
+                placeholder={`One URL per line (max ${MAX_PRODUCT_IMAGES})`}
                 className={inputClass + " min-h-[60px] resize-y font-mono text-sm"}
               />
+              {imageUrlsList.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {imageUrlsList.map((url, idx) => (
+                    <div
+                      key={`${url}-${idx}`}
+                      className="relative group rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)] overflow-hidden aspect-square"
+                    >
+                      <img
+                        src={url}
+                        alt={`Product ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='12'%3EInvalid%3C/text%3E%3C/svg%3E"
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setImageUrlsList((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                        aria-label="Remove image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Videos"
+            description="Product videos. Paste URLs or upload files to Supabase."
+          >
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="videoUrls" className="text-sm font-medium">
+                  Video URLs <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_VIDEOS})</span>
+                </label>
+                <label
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
+                    uploadingVideos || videoUrlsList.length >= MAX_PRODUCT_VIDEOS
+                      ? "cursor-not-allowed opacity-60 pointer-events-none"
+                      : "cursor-pointer hover:bg-[var(--form-muted)]"
+                  )}
+                >
+                  <Video className="h-4 w-4" />
+                  Upload videos {videoUrlsList.length > 0 && `(${videoUrlsList.length}/${MAX_PRODUCT_VIDEOS})`}
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    multiple
+                    className="sr-only"
+                    disabled={uploadingVideos || videoUrlsList.length >= MAX_PRODUCT_VIDEOS}
+                    onChange={(e) => {
+                      handleUploadMedia("video", e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+                {uploadingVideos && (
+                  <span className="text-sm text-[var(--form-muted-foreground)]">Uploading…</span>
+                )}
+              </div>
+              {uploadingVideos && (
+                <div className="space-y-1">
+                  <div className="h-2 w-full rounded-full bg-[var(--form-muted)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[var(--form-primary)] transition-[width] duration-200"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
+                </div>
+              )}
+              <textarea
+                id="videoUrls"
+                name="videoUrls"
+                rows={2}
+                value={videoUrlsList.join("\n")}
+                onChange={(e) =>
+                  setVideoUrlsList(
+                    e.target.value
+                      .split(/[\n,]/)
+                      .map((u) => u.trim())
+                      .filter(Boolean)
+                      .slice(0, MAX_PRODUCT_VIDEOS)
+                  )
+                }
+                placeholder={`One URL per line (max ${MAX_PRODUCT_VIDEOS})`}
+                className={inputClass + " min-h-[50px] resize-y font-mono text-sm"}
+              />
+              {videoUrlsList.length > 0 && (
+                <div className="space-y-4">
+                  {videoUrlsList.map((url, idx) => (
+                    <div
+                      key={`${url}-${idx}`}
+                      className="relative group rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)] overflow-hidden"
+                    >
+                      <video
+                        src={url}
+                        controls
+                        className="w-full max-h-[280px] bg-black"
+                        preload="metadata"
+                        playsInline
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setVideoUrlsList((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+                        aria-label="Remove video"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </FormSection>
 
@@ -1104,9 +1358,9 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               </div>
             </div>
 
-            {error && (
+            {(error || uploadError) && (
               <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {error}
+                {error || uploadError}
               </p>
             )}
           </form>

@@ -1,5 +1,5 @@
 import { db } from "@/drizzle/db"
-import { product, productImage, productJewelleryGemstone } from "@/drizzle/schema/product-schema"
+import { product, productImage, productVideo, productJewelleryGemstone } from "@/drizzle/schema/product-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
@@ -439,6 +439,7 @@ export type ProductForEdit = {
   isPrivilegeAssist: boolean
   sellerId: string
   imageUrls: string[]
+  videoUrls: string[]
 }
 
 export async function getProductById(id: string): Promise<ProductForEdit | null> {
@@ -484,6 +485,11 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     .from(productImage)
     .where(eq(productImage.productId, id))
     .orderBy(productImage.sortOrder)
+  const videos = await db
+    .select({ url: productVideo.url })
+    .from(productVideo)
+    .where(eq(productVideo.productId, id))
+    .orderBy(productVideo.sortOrder)
   const gemstoneRows = await db
     .select({
       categoryId: productJewelleryGemstone.categoryId,
@@ -549,6 +555,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     isPrivilegeAssist: row.isPrivilegeAssist,
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
+    videoUrls: videos.map((v) => v.url),
   }
 }
 
@@ -622,6 +629,17 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     )
   }
 
+  const videoUrls = input.videoUrls ?? []
+  if (videoUrls.length > 0) {
+    await db.insert(productVideo).values(
+      videoUrls.map((url, i) => ({
+        productId,
+        url,
+        sortOrder: i,
+      }))
+    )
+  }
+
   const gemstones = input.jewelleryGemstones ?? []
   if (gemstones.length > 0) {
     await db.insert(productJewelleryGemstone).values(
@@ -687,13 +705,14 @@ export type UpdateProductInput = {
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   imageUrls?: string[]
+  videoUrls?: string[]
 }
 
 export async function updateProductInDb(
   id: string,
   input: UpdateProductInput
 ): Promise<void> {
-  const { imageUrls, jewelleryGemstones, ...rest } = input
+  const { imageUrls, videoUrls, jewelleryGemstones, ...rest } = input
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
@@ -779,6 +798,19 @@ export async function updateProductInDb(
     if (imageUrls.length > 0) {
       await db.insert(productImage).values(
         imageUrls.map((url, i) => ({
+          productId: id,
+          url,
+          sortOrder: i,
+        }))
+      )
+    }
+  }
+
+  if (videoUrls !== undefined) {
+    await db.delete(productVideo).where(eq(productVideo.productId, id))
+    if (videoUrls.length > 0) {
+      await db.insert(productVideo).values(
+        videoUrls.map((url: string, i: number) => ({
           productId: id,
           url,
           sortOrder: i,

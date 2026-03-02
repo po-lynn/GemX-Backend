@@ -162,10 +162,24 @@ const productCreateBaseSchema = z.object({
             .filter(Boolean)
         : []
     ),
+  videoUrls: z
+    .string()
+    .optional()
+    .transform((s) =>
+      s
+        ? s
+            .split(/[\n,]/)
+            .map((u) => u.trim())
+            .filter(Boolean)
+        : []
+    ),
 })
 
-export const productCreateSchema = productCreateBaseSchema.superRefine(
-  (data, ctx) => {
+const MAX_PRODUCT_IMAGES = 10
+const MAX_PRODUCT_VIDEOS = 5
+
+export const productCreateSchema = productCreateBaseSchema
+  .superRefine((data, ctx) => {
     if (data.productType === "loose_stone") {
       if (!data.weightCarat?.trim()) {
         ctx.addIssue({
@@ -189,12 +203,45 @@ export const productCreateSchema = productCreateBaseSchema.superRefine(
         })
       }
     }
-  }
-)
+  })
+  .superRefine((data, ctx) => {
+    if (data.imageUrls && data.imageUrls.length > MAX_PRODUCT_IMAGES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Maximum ${MAX_PRODUCT_IMAGES} images allowed`,
+        path: ["imageUrls"],
+      })
+    }
+    if (data.videoUrls && data.videoUrls.length > MAX_PRODUCT_VIDEOS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Maximum ${MAX_PRODUCT_VIDEOS} videos allowed`,
+        path: ["videoUrls"],
+      })
+    }
+  })
 
-export const productUpdateSchema = productCreateBaseSchema.partial().extend({
-  productId: z.string().uuid(),
-})
+export const productUpdateSchema = productCreateBaseSchema
+  .partial()
+  .extend({
+    productId: z.string().uuid(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.imageUrls && data.imageUrls.length > MAX_PRODUCT_IMAGES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Maximum ${MAX_PRODUCT_IMAGES} images allowed`,
+        path: ["imageUrls"],
+      })
+    }
+    if (data.videoUrls && data.videoUrls.length > MAX_PRODUCT_VIDEOS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Maximum ${MAX_PRODUCT_VIDEOS} videos allowed`,
+        path: ["videoUrls"],
+      })
+    }
+  })
 
 export const productDeleteSchema = z.object({
   productId: z.string().uuid(),
