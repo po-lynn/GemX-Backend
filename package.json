@@ -18,7 +18,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "seed:admin": "tsx data/seed-admin.ts"
+    "seed:admin": "tsx data/seed-admin.ts",
+    "fetch-myanmar-nrc": "node scripts/fetch-myanmar-nrc.js"
   },
   "dependencies": {
     "@blocknote/core": "^0.46.2",

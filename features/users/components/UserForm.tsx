@@ -17,6 +17,7 @@ import {
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
+import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff, Upload } from "lucide-react";
 
@@ -54,6 +55,38 @@ type Props = {
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_IMAGE_SIZE_MB = 5;
 
+/** District can be 3-letter (e.g. AGY) or romanized township code (e.g. AhGaYa). */
+const MYANMAR_NRC_REGEX = /^(\d{1,2})\s*\/\s*([A-Za-z]{3,12})\s*\(\s*(N|NAING)\s*\)\s*(\d{6})$/i;
+
+/** Myanmar NRC state/region codes (1–14). */
+const MYANMAR_NRC_STATES: { value: string; label: string }[] = [
+  { value: "1", label: "1 - Kachin" },
+  { value: "2", label: "2 - Kayah" },
+  { value: "3", label: "3 - Kayin" },
+  { value: "4", label: "4 - Chin" },
+  { value: "5", label: "5 - Sagaing" },
+  { value: "6", label: "6 - Tanintharyi" },
+  { value: "7", label: "7 - Bago" },
+  { value: "8", label: "8 - Magway" },
+  { value: "9", label: "9 - Mandalay" },
+  { value: "10", label: "10 - Mon" },
+  { value: "11", label: "11 - Rakhine" },
+  { value: "12", label: "12 - Yangon" },
+  { value: "13", label: "13 - Shan" },
+  { value: "14", label: "14 - Ayeyarwady" },
+];
+
+/** Township lists by state (from myanmar-nrc-townships.json). Run `node scripts/fetch-myanmar-nrc.js` to refresh from htetoozin/Myanmar-NRC. */
+const MYANMAR_NRC_DISTRICTS_BY_STATE = myanmarNrcTownships as Record<string, { value: string; label: string }[]>;
+
+function parseMyanmarNrc(nrc: string | null | undefined): { state: string; district: string; type: string; number: string } | null {
+  if (!nrc?.trim()) return null;
+  const m = nrc.trim().match(MYANMAR_NRC_REGEX);
+  if (!m) return null;
+  const district = m[2].length === 3 ? m[2].toUpperCase() : m[2];
+  return { state: m[1], district, type: m[3].toUpperCase(), number: m[4] };
+}
+
 export function UserForm({ mode, user }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +95,19 @@ export function UserForm({ mode, user }: Props) {
   const [imageUrl, setImageUrl] = useState<string>(user?.image ?? "");
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [country, setCountry] = useState<string>(user?.country ?? "");
+  const isMyanmar = country === "Myanmar";
+  const parsedNrc = parseMyanmarNrc(user?.nrc ?? undefined);
+  const [nrcState, setNrcState] = useState(parsedNrc?.state ?? "");
+  const [nrcDistrict, setNrcDistrict] = useState(parsedNrc?.district ?? "");
+  const [nrcType, setNrcType] = useState(parsedNrc?.type === "NAING" ? "NAING" : "N");
+  const [nrcNumber, setNrcNumber] = useState(parsedNrc?.number ?? "");
   const isEdit = mode === "edit";
+
+  const myanmarNrcValue =
+    isMyanmar && (nrcState || nrcDistrict || nrcNumber)
+      ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}`
+      : "";
 
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     setImageUploadError(null);
@@ -210,7 +255,7 @@ export function UserForm({ mode, user }: Props) {
               {imageUploadError && (
                 <p className="text-destructive text-xs">{imageUploadError}</p>
               )}
-              <input type="hidden" name="image" value={imageUrl} />
+              <input type="hidden" name="image" value={imageUrl ?? ""} />
             </div>
           )}
           <div className="space-y-4">
@@ -336,7 +381,7 @@ export function UserForm({ mode, user }: Props) {
                   {imageUploadError && (
                     <p className="text-destructive text-xs">{imageUploadError}</p>
                   )}
-                  <input type="hidden" name="image" value={imageUrl} />
+                  <input type="hidden" name="image" value={imageUrl ?? ""} />
                 </div>
               </>
             )}
@@ -407,20 +452,6 @@ export function UserForm({ mode, user }: Props) {
               </>
             )}
             <div className="space-y-2">
-              <label htmlFor="nrc" className="text-sm font-medium">
-                Identification number
-              </label>
-              <input
-                id="nrc"
-                name="nrc"
-                type="text"
-                maxLength={100}
-                defaultValue={user?.nrc ?? ""}
-                placeholder="e.g. NRC number"
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-2">
               <label htmlFor="address" className="text-sm font-medium">
                 Address
               </label>
@@ -435,6 +466,29 @@ export function UserForm({ mode, user }: Props) {
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+                <label htmlFor="country" className="text-sm font-medium">
+                  Country
+                </label>
+                <select
+                  id="country"
+                  name="country"
+                  value={country ?? ""}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select country</option>
+                  {user?.country &&
+                    !COUNTRIES.includes(user.country) && (
+                      <option value={user.country}>{user.country}</option>
+                    )}
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-2">
                 <label htmlFor="city" className="text-sm font-medium">
                   City
@@ -460,30 +514,105 @@ export function UserForm({ mode, user }: Props) {
                   defaultValue={user?.state ?? ""}
                   className={inputClass}
                 />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="country" className="text-sm font-medium">
-                  Country
-                </label>
-                <select
-                  id="country"
-                  name="country"
-                  defaultValue={user?.country ?? ""}
-                  className={inputClass}
-                >
-                  <option value="">Select country</option>
-                  {user?.country &&
-                    !COUNTRIES.includes(user.country) && (
-                      <option value={user.country}>{user.country}</option>
-                    )}
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {user?.role === "user" && (
+              </div> 
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Identification number
+              </label>
+              {isMyanmar ? (
+                <>
+                  
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-state" className="text-xs text-muted-foreground">State / Region</label>
+                      <select
+                        id="nrc-state"
+                        value={nrcState ?? ""}
+                        onChange={(e) => {
+                          setNrcState(e.target.value);
+                          setNrcDistrict("");
+                        }}
+                        className={inputClass}
+                      >
+                        <option value="">Select state</option>
+                        {MYANMAR_NRC_STATES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-district" className="text-xs text-muted-foreground">District / Township</label>
+                      <select
+                        id="nrc-district"
+                        value={nrcDistrict ?? ""}
+                        onChange={(e) => setNrcDistrict(e.target.value)}
+                        className={inputClass}
+                        disabled={!nrcState}
+                      >
+                        <option value="">Select district</option>
+                        {(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).map((d) => (
+                          <option key={d.value} value={d.value}>
+                            {d.label}
+                          </option>
+                        ))}
+                        {nrcDistrict &&
+                          nrcState &&
+                          !(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).some((d) => d.value === nrcDistrict) && (
+                            <option value={nrcDistrict ?? ""}>{nrcDistrict}</option>
+                          )}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-type" className="text-xs text-muted-foreground">Type</label>
+                      <select
+                        id="nrc-type"
+                        value={nrcType ?? "N"}
+                        onChange={(e) => setNrcType(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="N">N</option>
+                        <option value="NAING">NAING</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-number" className="text-xs text-muted-foreground">Number (6 digits)</label>
+                      <input
+                        id="nrc-number"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={nrcNumber ?? ""}
+                        onChange={(e) => setNrcNumber(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        className={inputClass}
+                      />
+                    </div>
+                    <input type="hidden" name="nrc" value={myanmarNrcValue ?? ""} />
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Format: State/District(Type)Number — e.g. 12/ABC(N)123456
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    id="nrc"
+                    name="nrc"
+                    type="text"
+                    maxLength={100}
+                    defaultValue={user?.nrc ?? ""}
+                    placeholder="e.g. ID number"
+                    className={inputClass}
+                  />
+                </>
+              )}
+            </div>
+            
+            
+            {user?.role === "user" && (
                   <div className="flex items-center gap-2">
                     <input
                       id="verified"
@@ -497,7 +626,6 @@ export function UserForm({ mode, user }: Props) {
                     </label>
                   </div>
                 )}
-            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
