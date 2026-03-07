@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDate } from "@/lib/formatters";
-import { Pencil, Trash2, ChevronUp } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 const ELLIPSIS_PREV = -1;
 const ELLIPSIS_NEXT = -2;
@@ -50,6 +50,30 @@ function getPageNumbers(page: number, totalPages: number): number[] {
   if (end < totalPages - 1) pages.push(ELLIPSIS_NEXT);
   pages.push(totalPages);
   return pages;
+}
+
+function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
+  const [loadError, setLoadError] = useState(false);
+  const showImg = imageUrl && !loadError;
+  return (
+    <div className="flex justify-center">
+      {showImg ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className="h-9 w-9 rounded-full object-cover ring-1 ring-border"
+          onError={() => setLoadError(true)}
+        />
+      ) : (
+        <span
+          className="text-muted-foreground flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs"
+          aria-hidden
+        >
+          —
+        </span>
+      )}
+    </div>
+  );
 }
 
 type Props = {
@@ -102,10 +126,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
           <TableHeader>
             <TableRow className="border-0 hover:bg-transparent">
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                <span className="inline-flex items-center gap-1">
-                  ID
-                  <ChevronUp className="size-3.5" aria-hidden />
-                </span>
+                Photo
               </TableHead>
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Name
@@ -152,8 +173,8 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
                   key={u.id}
                   className={`border-b border-border/50 ${index % 2 === 1 ? "bg-[#f5f5f5]" : ""}`}
                 >
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.id.slice(0, 8)}
+                  <TableCell className="border-r border-border/40 px-3 py-2.5">
+                    <UserPhotoCell imageUrl={u.image} />
                   </TableCell>
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-medium">
                     {u.name}

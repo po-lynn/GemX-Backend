@@ -40,3 +40,6 @@ export const PRODUCT_VIDEOS_BUCKET = "product-videos"
 
 /** Bucket for lab report / certificate files (PDF, images). Create in Supabase Dashboard > Storage. */
 export const PRODUCT_CERTIFICATES_BUCKET = "product-certificates"
+
+/** Bucket for user profile images (avatars). Create in Supabase Dashboard > Storage (public for direct links). */
+export const USER_IMAGES_BUCKET = "user-images"

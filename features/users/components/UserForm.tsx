@@ -17,7 +17,8 @@ import {
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
-import { Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Eye, EyeOff, Upload } from "lucide-react";
 
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
@@ -50,12 +51,65 @@ type Props = {
   user?: UserForEdit | null;
 };
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE_MB = 5;
+
 export function UserForm({ mode, user }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>(user?.image ?? "");
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const isEdit = mode === "edit";
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setImageUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) {
+      setImageUrl("");
+      return;
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageUploadError(`Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setImageUploadError(`Max size: ${MAX_IMAGE_SIZE_MB} MB`);
+      e.target.value = "";
+      return;
+    }
+    const fd = new FormData();
+    fd.set("file", file);
+    setUploadingImage(true);
+    try {
+      const res = await fetch("/api/upload/user-image", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImageUploadError(data?.error ?? "Upload failed");
+        e.target.value = "";
+        return;
+      }
+      const url = data?.url;
+      if (url) {
+        setImageUrl(url);
+      } else {
+        setImageUploadError("Upload failed");
+      }
+      e.target.value = "";
+    } catch {
+      setImageUploadError("Upload failed");
+      e.target.value = "";
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,9 +134,29 @@ export function UserForm({ mode, user }: Props) {
     }
   }
 
+  const displayName = user?.name ?? user?.email ?? "User";
+
   return (
     <Card>
       <CardHeader>
+        {isEdit && user && (
+          <div className="mb-2 flex justify-center">
+            <div className="flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
+              {user.image ? (
+                <img
+                  src={user.image}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <CardTitle>{isEdit ? "Edit User" : "New User"}</CardTitle>
         <CardDescription>
           {isEdit
@@ -94,6 +168,50 @@ export function UserForm({ mode, user }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {isEdit && user && (
             <input type="hidden" name="userId" value={user.id} />
+          )}
+          {isEdit && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">Profile image</span>
+                <label
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                    uploadingImage
+                      ? "cursor-not-allowed opacity-60 pointer-events-none"
+                      : "cursor-pointer hover:bg-(--form-muted)"
+                  )}
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploadingImage ? "Uploading…" : "Upload image"}
+                  <input
+                    type="file"
+                    accept={ALLOWED_IMAGE_TYPES.join(",")}
+                    className="sr-only"
+                    disabled={uploadingImage}
+                    onChange={handleImageChange}
+                  />
+                </label>
+                {uploadingImage && (
+                  <span className="text-sm text-muted-foreground">Uploading…</span>
+                )}
+              </div>
+              {(imageUrl || user?.image) && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={imageUrl || user?.image || ""}
+                    alt=""
+                    className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
+                  />
+                  <span className="text-muted-foreground text-xs">
+                    {imageUrl && imageUrl !== (user?.image ?? "") ? "New image will be saved" : "Current profile photo"}
+                  </span>
+                </div>
+              )}
+              {imageUploadError && (
+                <p className="text-destructive text-xs">{imageUploadError}</p>
+              )}
+              <input type="hidden" name="image" value={imageUrl} />
+            </div>
           )}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -146,37 +264,81 @@ export function UserForm({ mode, user }: Props) {
               )}
             </div>
             {!isEdit && (
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    maxLength={100}
-                    placeholder="Min 6 characters"
-                    className={inputClass + " pr-10"}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-9 w-9 shrink-0"
-                    onClick={() => setShowPassword((p) => !p)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </Button>
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      maxLength={100}
+                      placeholder="Min 6 characters"
+                      className={inputClass + " pr-10"}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-9 w-9 shrink-0"
+                      onClick={() => setShowPassword((p) => !p)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">Profile image</span>
+                    <label
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                        uploadingImage
+                          ? "cursor-not-allowed opacity-60 pointer-events-none"
+                          : "cursor-pointer hover:bg-(--form-muted)"
+                      )}
+                    >
+                      <Upload className="h-4 w-4" />
+                      {uploadingImage ? "Uploading…" : "Upload image"}
+                      <input
+                        type="file"
+                        accept={ALLOWED_IMAGE_TYPES.join(",")}
+                        className="sr-only"
+                        disabled={uploadingImage}
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                    {uploadingImage && (
+                      <span className="text-sm text-muted-foreground">Uploading…</span>
+                    )}
+                  </div>
+                  {imageUrl && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        Image will be used as profile photo
+                      </span>
+                    </div>
+                  )}
+                  {imageUploadError && (
+                    <p className="text-destructive text-xs">{imageUploadError}</p>
+                  )}
+                  <input type="hidden" name="image" value={imageUrl} />
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <label htmlFor="role" className="text-sm font-medium">
