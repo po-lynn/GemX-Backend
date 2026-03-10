@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { pushDeviceToken } from "@/drizzle/schema/push-schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 export async function upsertPushToken(params: {
   userId: string;
@@ -42,4 +42,21 @@ export async function getAllPushTokens(opts?: { role?: string }): Promise<
     .from(pushDeviceToken)
     .innerJoin(user, eq(user.id, pushDeviceToken.userId))
     .where(eq(user.role, opts.role));
+}
+
+/** Get push device tokens grouped by userId for the given user IDs (e.g. for admin users table). */
+export async function getPushTokensByUserIds(
+  userIds: string[]
+): Promise<Record<string, { token: string; platform: string | null }[]>> {
+  if (userIds.length === 0) return {};
+  const rows = await db
+    .select({ userId: pushDeviceToken.userId, token: pushDeviceToken.token, platform: pushDeviceToken.platform })
+    .from(pushDeviceToken)
+    .where(inArray(pushDeviceToken.userId, userIds));
+  const byUser: Record<string, { token: string; platform: string | null }[]> = {};
+  for (const r of rows) {
+    if (!byUser[r.userId]) byUser[r.userId] = [];
+    byUser[r.userId].push({ token: r.token, platform: r.platform });
+  }
+  return byUser;
 }

@@ -76,15 +76,19 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
   );
 }
 
+const TRUNCATE_TOKEN_LEN = 24;
+
 type Props = {
   users: UserRow[];
   page: number;
   totalPages: number;
   total: number;
   filters?: UserTableFilters;
+  /** Push device tokens per user id (from getPushTokensByUserIds). */
+  pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>;
 };
 
-export function UsersTable({ users, page, totalPages, total, filters = {} }: Props) {
+export function UsersTable({ users, page, totalPages, total, filters = {}, pushTokensByUserId = {} }: Props) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
@@ -152,6 +156,9 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Confirmed email
               </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Push token
+              </TableHead>
               <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Actions
               </TableHead>
@@ -161,7 +168,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="text-muted-foreground py-8 text-center"
                 >
                   No users yet.
@@ -199,6 +206,24 @@ export function UsersTable({ users, page, totalPages, total, filters = {} }: Pro
                   </TableCell>
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
                     {u.emailVerified ? "Confirmed" : "Confirmation Not Required"}
+                  </TableCell>
+                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-mono text-muted-foreground">
+                    {(() => {
+                      const tokens = pushTokensByUserId[u.id];
+                      if (!tokens?.length) return "—";
+                      const first = tokens[0];
+                      const truncated =
+                        first.token.length > TRUNCATE_TOKEN_LEN
+                          ? `${first.token.slice(0, TRUNCATE_TOKEN_LEN)}…`
+                          : first.token;
+                      return tokens.length === 1 ? (
+                        <span title={first.token}>{truncated}</span>
+                      ) : (
+                        <span title={tokens.map((t) => t.token).join("\n")}>
+                          {truncated} (+{tokens.length - 1})
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
                     <div className="flex items-center justify-center gap-1">
