@@ -162,6 +162,10 @@ export function UserForm({ mode, user }: Props) {
     setLoading(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    // Ensure profile image URL from state is sent (hidden input can be out of sync)
+    if (imageUrl.trim()) {
+      formData.set("image", imageUrl.trim());
+    }
     try {
       const result = isEdit
         ? await updateUserAction(formData)

@@ -10,9 +10,17 @@ const dbSchema = {
   DB_PASSWORD: z.string().optional(),
 }
 
+/** Optional: for push notifications to mobile app (FCM). */
+const firebaseSchema = {
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().optional(),
+}
+
 export const env = createEnv({
   server: {
     ...dbSchema,
+    ...firebaseSchema,
     AUTH_SECRET: z.string().min(1),
     AUTH_URL: z.string().min(1),
   },

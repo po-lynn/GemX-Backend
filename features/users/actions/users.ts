@@ -11,6 +11,7 @@ import {
 import {
   updateUserInDb,
   deleteUserInDb,
+  getUserByEmail,
 } from "@/features/users/db/users";
 import type { UpdateUserInput } from "@/features/users/db/users";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
@@ -78,6 +79,13 @@ export async function createUserAction(formData: FormData) {
     return { error: msg };
   }
   await applyDefaultPointsToNewUser(email);
+  // Ensure profile image is saved (better-auth may not persist image on signup)
+  if (imageUrl) {
+    const newUser = await getUserByEmail(email);
+    if (newUser) {
+      await updateUserInDb(newUser.id, { image: imageUrl });
+    }
+  }
   return { success: true };
 }
 

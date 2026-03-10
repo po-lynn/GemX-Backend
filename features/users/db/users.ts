@@ -131,6 +131,15 @@ export async function getUsersPaginatedFromDb(options: {
   return { users, total };
 }
 
+export async function getUserByEmail(email: string): Promise<{ id: string } | null> {
+  const [row] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email.trim()))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getUserById(id: string): Promise<UserForEdit | null> {
   const [row] = await db
     .select({

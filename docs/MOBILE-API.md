@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
 - **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params: `isCollectorPiece`, `isPrivilegeAssist`. Product items include `isCollectorPiece` and `isPrivilegeAssist` (boolean). **Sort order:** collector pieces first, then privilege assist, then featured (`isFeatured`), then by `createdAt` (newest first). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece` and `isPrivilegeAssist`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
@@ -43,6 +44,8 @@
 | GET    | `/api/news/:id`        | No   | Get single news by ID (published only)                                                                                                                                                                   |
 | GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status` (optional)                                                                                                                                               |
 | GET    | `/api/articles/:id`    | No   | Get single article by ID (published only)                                                                                                                                                                |
+| POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login.                                                                                             |
+| DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
 
 
 List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.

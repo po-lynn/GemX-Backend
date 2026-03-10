@@ -12,7 +12,9 @@ import {
   createArticleInDb,
   updateArticleInDb,
   deleteArticleInDb,
+  getArticleById,
 } from "@/features/articles/db/articles";
+import { sendPushToMobileUsers } from "@/features/push/send-push";
 
 function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
@@ -57,6 +59,13 @@ export async function createArticleAction(formData: FormData) {
     status: parsed.data.status,
     publishDate,
   });
+  if (parsed.data.status === "published") {
+    sendPushToMobileUsers({
+      title: "New article",
+      body: parsed.data.title,
+      data: { articleId, screen: "article" },
+    }).catch((e) => console.error("Push notification failed:", e));
+  }
   return { success: true, articleId };
 }
 
@@ -93,7 +102,16 @@ export async function updateArticleAction(formData: FormData) {
     updates.title = title;
     updates.slug = slugify(title);
   }
+  const previous = await getArticleById(articleId);
   await updateArticleInDb(articleId, updates);
+  if (updates.status === "published" && previous?.status !== "published") {
+    const articleTitle = updates.title ?? previous?.title ?? "New article";
+    sendPushToMobileUsers({
+      title: "New article",
+      body: articleTitle,
+      data: { articleId, screen: "article" },
+    }).catch((e) => console.error("Push notification failed:", e));
+  }
   return { success: true, articleId };
 }
 

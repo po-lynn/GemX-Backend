@@ -6,5 +6,6 @@ export * from "./schema/laboratory-schema"
 export * from "./schema/origin-schema"
 export * from "./schema/news-schema"
 export * from "./schema/articles-schema"
+export * from "./schema/push-schema"
 export * from "./schema/points-schema"
  

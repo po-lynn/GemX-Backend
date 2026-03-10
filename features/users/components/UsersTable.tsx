@@ -61,12 +61,12 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
         <img
           src={imageUrl}
           alt=""
-          className="h-9 w-9 rounded-full object-cover ring-1 ring-border"
+          className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
           onError={() => setLoadError(true)}
         />
       ) : (
         <span
-          className="text-muted-foreground flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs"
+          className="text-muted-foreground flex items-center justify-center h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
           aria-hidden
         >
           —
