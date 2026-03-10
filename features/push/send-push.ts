@@ -3,19 +3,19 @@
 import { env } from "@/data/env/server";
 import { getAllPushTokens } from "@/features/push/db/push-tokens";
 
-let firebaseInitialized = false;
+let firebaseAdmin: typeof import("firebase-admin") | null = null;
 
-function ensureFirebase(): boolean {
-  if (firebaseInitialized) return true;
+async function getFirebaseAdmin(): Promise<typeof import("firebase-admin") | null> {
+  if (firebaseAdmin) return firebaseAdmin;
   const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
   if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
-    return false;
+    return null;
   }
   try {
-    const admin = require("firebase-admin") as typeof import("firebase-admin");
+    const admin = (await import("firebase-admin")).default;
     if (admin.apps.length > 0) {
-      firebaseInitialized = true;
-      return true;
+      firebaseAdmin = admin;
+      return admin;
     }
     const privateKey = FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n");
     admin.initializeApp({
@@ -25,11 +25,11 @@ function ensureFirebase(): boolean {
         privateKey,
       }),
     });
-    firebaseInitialized = true;
-    return true;
+    firebaseAdmin = admin;
+    return admin;
   } catch (e) {
     console.error("Firebase Admin init failed:", e);
-    return false;
+    return null;
   }
 }
 
@@ -49,12 +49,12 @@ export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sen
   const tokenStrings = tokens.map((t) => t.token).filter(Boolean);
   if (tokenStrings.length === 0) return { sent: 0, failed: 0 };
 
-  if (!ensureFirebase()) {
+  const admin = await getFirebaseAdmin();
+  if (!admin) {
     console.warn("Push skipped: FCM not configured (set FIREBASE_* env)");
     return { sent: 0, failed: tokenStrings.length };
   }
 
-  const admin = require("firebase-admin") as typeof import("firebase-admin");
   const message: import("firebase-admin/messaging").MulticastMessage = {
     tokens: tokenStrings,
     notification: {

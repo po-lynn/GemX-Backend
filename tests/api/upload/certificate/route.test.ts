@@ -10,6 +10,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: vi.fn(),
   getSupabaseAdminErrorMessage: vi.fn(() => "Supabase not configured."),
+  PRODUCT_CERTIFICATES_BUCKET: "product-certificates",
 }))
 
 describe("POST /api/upload/certificate", () => {

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Fetches Myanmar NRC townships from htetoozin/Myanmar-NRC and writes
  * features/users/data/myanmar-nrc-townships.json for the UserForm dropdown.

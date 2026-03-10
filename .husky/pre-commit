@@ -1,3 +1,4 @@
 #!/bin/sh
-# TDD: block commit if tests fail
-npm run test
+# Block commit if lint fails. Run `npm run test` manually or in CI.
+# (Vitest can fail with ERR_REQUIRE_ESM on older Node; use Node 22.12+ or NODE_OPTIONS=--experimental-require-module to run tests.)
+npm run lint
