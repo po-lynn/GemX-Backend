@@ -17,6 +17,7 @@ import {
   updateNewsAction,
 } from "@/features/news/actions/news";
 import type { NewsRow } from "@/features/news/db/news";
+import DatePicker from "@/components/date-picker/date-picker";
 
 const BlockNoteEditor = dynamic(
   () =>
@@ -66,8 +67,8 @@ export function NewsForm({ mode, news }: Props) {
     }
   }
 
-  const publishDisplay = news?.publish
-    ? new Date(news.publish).toISOString().slice(0, 16)
+  const publishDateValue = news?.publish
+    ? new Date(news.publish).toISOString().slice(0, 10)
     : "";
 
   return (
@@ -100,36 +101,34 @@ export function NewsForm({ mode, news }: Props) {
               className={inputClass}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="status" className="text-sm font-medium">
-                Status
-              </label>
-              <select
-                id="status"
-                name="status"
-                defaultValue={news?.status ?? "draft"}
-                className={inputClass}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="publish" className="text-sm font-medium">
-                Publish date / time
-              </label>
-              <input
-                id="publish"
-                name="publish"
-                type="datetime-local"
-                defaultValue={publishDisplay}
-                className={inputClass}
-              />
-            </div>
+          <div className="space-y-2">
+            <label htmlFor="status" className="text-sm font-medium">
+              Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={news?.status ?? "draft"}
+              className={inputClass}
+            >
+              {STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="block w-full space-y-2">
+            <label htmlFor="publish" className="text-sm font-medium">
+              Publish date
+            </label>
+            <DatePicker
+              id="publish"
+              name="publish"
+              value={publishDateValue}
+              placeholder="Pick publish date"
+              className="w-full"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Content (BlockNote editor)</label>

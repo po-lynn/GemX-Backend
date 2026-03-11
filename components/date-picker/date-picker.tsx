@@ -56,7 +56,7 @@ export default function DatePicker({
   return (
     <>
       {name && (
-        <input type="hidden" name={name} value={dateString} readOnly />
+        <input type="hidden" name={name} value={dateString ?? ""} readOnly />
       )}
       <Popover>
         <PopoverTrigger asChild>

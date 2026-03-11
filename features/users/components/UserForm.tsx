@@ -17,7 +17,9 @@ import {
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
-import { Eye, EyeOff } from "lucide-react";
+import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
+import { cn } from "@/lib/utils";
+import { Eye, EyeOff, Upload } from "lucide-react";
 
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
@@ -50,12 +52,109 @@ type Props = {
   user?: UserForEdit | null;
 };
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE_MB = 5;
+
+/** District can be 3-letter (e.g. AGY) or romanized township code (e.g. AhGaYa). */
+const MYANMAR_NRC_REGEX = /^(\d{1,2})\s*\/\s*([A-Za-z]{3,12})\s*\(\s*(N|NAING)\s*\)\s*(\d{6})$/i;
+
+/** Myanmar NRC state/region codes (1–14). */
+const MYANMAR_NRC_STATES: { value: string; label: string }[] = [
+  { value: "1", label: "1 - Kachin" },
+  { value: "2", label: "2 - Kayah" },
+  { value: "3", label: "3 - Kayin" },
+  { value: "4", label: "4 - Chin" },
+  { value: "5", label: "5 - Sagaing" },
+  { value: "6", label: "6 - Tanintharyi" },
+  { value: "7", label: "7 - Bago" },
+  { value: "8", label: "8 - Magway" },
+  { value: "9", label: "9 - Mandalay" },
+  { value: "10", label: "10 - Mon" },
+  { value: "11", label: "11 - Rakhine" },
+  { value: "12", label: "12 - Yangon" },
+  { value: "13", label: "13 - Shan" },
+  { value: "14", label: "14 - Ayeyarwady" },
+];
+
+/** Township lists by state (from myanmar-nrc-townships.json). Run `node scripts/fetch-myanmar-nrc.js` to refresh from htetoozin/Myanmar-NRC. */
+const MYANMAR_NRC_DISTRICTS_BY_STATE = myanmarNrcTownships as Record<string, { value: string; label: string }[]>;
+
+function parseMyanmarNrc(nrc: string | null | undefined): { state: string; district: string; type: string; number: string } | null {
+  if (!nrc?.trim()) return null;
+  const m = nrc.trim().match(MYANMAR_NRC_REGEX);
+  if (!m) return null;
+  const district = m[2].length === 3 ? m[2].toUpperCase() : m[2];
+  return { state: m[1], district, type: m[3].toUpperCase(), number: m[4] };
+}
+
 export function UserForm({ mode, user }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>(user?.image ?? "");
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [country, setCountry] = useState<string>(user?.country ?? "");
+  const isMyanmar = country === "Myanmar";
+  const parsedNrc = parseMyanmarNrc(user?.nrc ?? undefined);
+  const [nrcState, setNrcState] = useState(parsedNrc?.state ?? "");
+  const [nrcDistrict, setNrcDistrict] = useState(parsedNrc?.district ?? "");
+  const [nrcType, setNrcType] = useState(parsedNrc?.type === "NAING" ? "NAING" : "N");
+  const [nrcNumber, setNrcNumber] = useState(parsedNrc?.number ?? "");
   const isEdit = mode === "edit";
+
+  const myanmarNrcValue =
+    isMyanmar && (nrcState || nrcDistrict || nrcNumber)
+      ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}`
+      : "";
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setImageUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) {
+      setImageUrl("");
+      return;
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageUploadError(`Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setImageUploadError(`Max size: ${MAX_IMAGE_SIZE_MB} MB`);
+      e.target.value = "";
+      return;
+    }
+    const fd = new FormData();
+    fd.set("file", file);
+    setUploadingImage(true);
+    try {
+      const res = await fetch("/api/upload/user-image", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImageUploadError(data?.error ?? "Upload failed");
+        e.target.value = "";
+        return;
+      }
+      const url = data?.url;
+      if (url) {
+        setImageUrl(url);
+      } else {
+        setImageUploadError("Upload failed");
+      }
+      e.target.value = "";
+    } catch {
+      setImageUploadError("Upload failed");
+      e.target.value = "";
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,6 +162,10 @@ export function UserForm({ mode, user }: Props) {
     setLoading(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
+    // Ensure profile image URL from state is sent (hidden input can be out of sync)
+    if (imageUrl.trim()) {
+      formData.set("image", imageUrl.trim());
+    }
     try {
       const result = isEdit
         ? await updateUserAction(formData)
@@ -80,9 +183,29 @@ export function UserForm({ mode, user }: Props) {
     }
   }
 
+  const displayName = user?.name ?? user?.email ?? "User";
+
   return (
     <Card>
       <CardHeader>
+        {isEdit && user && (
+          <div className="mb-2 flex justify-center">
+            <div className="flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
+              {user.image ? (
+                <img
+                  src={user.image}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <CardTitle>{isEdit ? "Edit User" : "New User"}</CardTitle>
         <CardDescription>
           {isEdit
@@ -94,6 +217,50 @@ export function UserForm({ mode, user }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {isEdit && user && (
             <input type="hidden" name="userId" value={user.id} />
+          )}
+          {isEdit && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">Profile image</span>
+                <label
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                    uploadingImage
+                      ? "cursor-not-allowed opacity-60 pointer-events-none"
+                      : "cursor-pointer hover:bg-(--form-muted)"
+                  )}
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploadingImage ? "Uploading…" : "Upload image"}
+                  <input
+                    type="file"
+                    accept={ALLOWED_IMAGE_TYPES.join(",")}
+                    className="sr-only"
+                    disabled={uploadingImage}
+                    onChange={handleImageChange}
+                  />
+                </label>
+                {uploadingImage && (
+                  <span className="text-sm text-muted-foreground">Uploading…</span>
+                )}
+              </div>
+              {(imageUrl || user?.image) && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={imageUrl || user?.image || ""}
+                    alt=""
+                    className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
+                  />
+                  <span className="text-muted-foreground text-xs">
+                    {imageUrl && imageUrl !== (user?.image ?? "") ? "New image will be saved" : "Current profile photo"}
+                  </span>
+                </div>
+              )}
+              {imageUploadError && (
+                <p className="text-destructive text-xs">{imageUploadError}</p>
+              )}
+              <input type="hidden" name="image" value={imageUrl ?? ""} />
+            </div>
           )}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -146,37 +313,81 @@ export function UserForm({ mode, user }: Props) {
               )}
             </div>
             {!isEdit && (
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    maxLength={100}
-                    placeholder="Min 6 characters"
-                    className={inputClass + " pr-10"}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-9 w-9 shrink-0"
-                    onClick={() => setShowPassword((p) => !p)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </Button>
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      maxLength={100}
+                      placeholder="Min 6 characters"
+                      className={inputClass + " pr-10"}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-9 w-9 shrink-0"
+                      onClick={() => setShowPassword((p) => !p)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">Profile image</span>
+                    <label
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                        uploadingImage
+                          ? "cursor-not-allowed opacity-60 pointer-events-none"
+                          : "cursor-pointer hover:bg-(--form-muted)"
+                      )}
+                    >
+                      <Upload className="h-4 w-4" />
+                      {uploadingImage ? "Uploading…" : "Upload image"}
+                      <input
+                        type="file"
+                        accept={ALLOWED_IMAGE_TYPES.join(",")}
+                        className="sr-only"
+                        disabled={uploadingImage}
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                    {uploadingImage && (
+                      <span className="text-sm text-muted-foreground">Uploading…</span>
+                    )}
+                  </div>
+                  {imageUrl && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        Image will be used as profile photo
+                      </span>
+                    </div>
+                  )}
+                  {imageUploadError && (
+                    <p className="text-destructive text-xs">{imageUploadError}</p>
+                  )}
+                  <input type="hidden" name="image" value={imageUrl ?? ""} />
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <label htmlFor="role" className="text-sm font-medium">
@@ -245,20 +456,6 @@ export function UserForm({ mode, user }: Props) {
               </>
             )}
             <div className="space-y-2">
-              <label htmlFor="nrc" className="text-sm font-medium">
-                Identification number
-              </label>
-              <input
-                id="nrc"
-                name="nrc"
-                type="text"
-                maxLength={100}
-                defaultValue={user?.nrc ?? ""}
-                placeholder="e.g. NRC number"
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-2">
               <label htmlFor="address" className="text-sm font-medium">
                 Address
               </label>
@@ -273,6 +470,29 @@ export function UserForm({ mode, user }: Props) {
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+                <label htmlFor="country" className="text-sm font-medium">
+                  Country
+                </label>
+                <select
+                  id="country"
+                  name="country"
+                  value={country ?? ""}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select country</option>
+                  {user?.country &&
+                    !COUNTRIES.includes(user.country) && (
+                      <option value={user.country}>{user.country}</option>
+                    )}
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-2">
                 <label htmlFor="city" className="text-sm font-medium">
                   City
@@ -298,30 +518,105 @@ export function UserForm({ mode, user }: Props) {
                   defaultValue={user?.state ?? ""}
                   className={inputClass}
                 />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="country" className="text-sm font-medium">
-                  Country
-                </label>
-                <select
-                  id="country"
-                  name="country"
-                  defaultValue={user?.country ?? ""}
-                  className={inputClass}
-                >
-                  <option value="">Select country</option>
-                  {user?.country &&
-                    !COUNTRIES.includes(user.country) && (
-                      <option value={user.country}>{user.country}</option>
-                    )}
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {user?.role === "user" && (
+              </div> 
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Identification number
+              </label>
+              {isMyanmar ? (
+                <>
+                  
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-state" className="text-xs text-muted-foreground">State / Region</label>
+                      <select
+                        id="nrc-state"
+                        value={nrcState ?? ""}
+                        onChange={(e) => {
+                          setNrcState(e.target.value);
+                          setNrcDistrict("");
+                        }}
+                        className={inputClass}
+                      >
+                        <option value="">Select state</option>
+                        {MYANMAR_NRC_STATES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-district" className="text-xs text-muted-foreground">District / Township</label>
+                      <select
+                        id="nrc-district"
+                        value={nrcDistrict ?? ""}
+                        onChange={(e) => setNrcDistrict(e.target.value)}
+                        className={inputClass}
+                        disabled={!nrcState}
+                      >
+                        <option value="">Select district</option>
+                        {(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).map((d) => (
+                          <option key={d.value} value={d.value}>
+                            {d.label}
+                          </option>
+                        ))}
+                        {nrcDistrict &&
+                          nrcState &&
+                          !(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).some((d) => d.value === nrcDistrict) && (
+                            <option value={nrcDistrict ?? ""}>{nrcDistrict}</option>
+                          )}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-type" className="text-xs text-muted-foreground">Type</label>
+                      <select
+                        id="nrc-type"
+                        value={nrcType ?? "N"}
+                        onChange={(e) => setNrcType(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="N">N</option>
+                        <option value="NAING">NAING</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="nrc-number" className="text-xs text-muted-foreground">Number (6 digits)</label>
+                      <input
+                        id="nrc-number"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={nrcNumber ?? ""}
+                        onChange={(e) => setNrcNumber(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        className={inputClass}
+                      />
+                    </div>
+                    <input type="hidden" name="nrc" value={myanmarNrcValue ?? ""} />
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Format: State/District(Type)Number — e.g. 12/ABC(N)123456
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    id="nrc"
+                    name="nrc"
+                    type="text"
+                    maxLength={100}
+                    defaultValue={user?.nrc ?? ""}
+                    placeholder="e.g. ID number"
+                    className={inputClass}
+                  />
+                </>
+              )}
+            </div>
+            
+            
+            {user?.role === "user" && (
                   <div className="flex items-center gap-2">
                     <input
                       id="verified"
@@ -335,7 +630,6 @@ export function UserForm({ mode, user }: Props) {
                     </label>
                   </div>
                 )}
-            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">

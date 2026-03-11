@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Gem } from "lucide-react"
 
 export function LoginForm() {
   const router = useRouter()
@@ -49,9 +50,12 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Admin Login</CardTitle>
+        <CardTitle className="flex items-center justify-center gap-3 text-xl">
+          <Gem className="h-8 w-8 text-primary" aria-hidden />
+          GemX Admin
+        </CardTitle>
         <CardDescription>
-          Sign in with your admin account
+          Sign in with your GemX admin account
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,9 +98,12 @@ export function LoginForm() {
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
+          <div className="space-y-1 text-center">   
+            <Button type="submit" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
+          </div>
+          
         </form>
       </CardContent>
     </Card>

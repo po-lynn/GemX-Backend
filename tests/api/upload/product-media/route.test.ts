@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { NextRequest } from "next/server"
 import { POST } from "@/app/api/upload/product-media/route"
 import { auth } from "@/lib/auth"
-import { getSupabaseAdmin, getSupabaseAdminErrorMessage } from "@/lib/supabase/server"
+import { getSupabaseAdmin } from "@/lib/supabase/server"
 
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -10,6 +10,8 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseAdmin: vi.fn(),
   getSupabaseAdminErrorMessage: vi.fn(() => "Supabase not configured."),
+  PRODUCT_IMAGES_BUCKET: "product-images",
+  PRODUCT_VIDEOS_BUCKET: "product-videos",
 }))
 
 describe("POST /api/upload/product-media", () => {

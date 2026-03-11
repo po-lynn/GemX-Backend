@@ -11,7 +11,7 @@ export function NewLaboratoryFormWrapper() {
 
   useEffect(() => {
     if (pathname === "/admin/laboratory/new") {
-      setFormKey((k) => k + 1);
+      queueMicrotask(() => setFormKey((k) => k + 1));
     }
   }, [pathname]);
 

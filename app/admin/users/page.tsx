@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getUsersPaginatedFromDb } from "@/features/users/db/users";
+import { getPushTokensByUserIds } from "@/features/push/db/push-tokens";
 import { UserFilters, UsersTable } from "@/features/users/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
@@ -32,6 +33,9 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     state: state || undefined,
     city: city || undefined,
   });
+  const pushTokensByUserId = users.length > 0
+    ? await getPushTokensByUserIds(users.map((u) => u.id))
+    : {};
   const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
   const filters = { country, state, city };
 
@@ -75,6 +79,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             totalPages={totalPages}
             total={total}
             filters={filters}
+            pushTokensByUserId={pushTokensByUserId}
           />
         </CardContent>
       </Card>

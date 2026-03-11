@@ -11,6 +11,7 @@ import {
 import {
   updateUserInDb,
   deleteUserInDb,
+  getUserByEmail,
 } from "@/features/users/db/users";
 import type { UpdateUserInput } from "@/features/users/db/users";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
@@ -33,6 +34,7 @@ export async function createUserAction(formData: FormData) {
     city: emptyToNull(formData.get("city")),
     state: emptyToNull(formData.get("state")),
     country: emptyToNull(formData.get("country")),
+    image: emptyToNull(formData.get("image")),
   });
   if (!parsed.success) {
     return {
@@ -47,12 +49,14 @@ export async function createUserAction(formData: FormData) {
   if (!email) {
     return { error: "Email is required to create a user." };
   }
+  const imageUrl = (parsed.data.image ?? "").trim() || undefined;
   const result = await auth.api.signUpEmail({
     body: {
       email,
       password: parsed.data.password,
       name: parsed.data.name,
       role: parsed.data.role,
+      image: imageUrl,
       phone: (parsed.data.phone ?? "").trim() || undefined,
       gender: (parsed.data.gender ?? "").trim() || undefined,
       dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
@@ -75,6 +79,13 @@ export async function createUserAction(formData: FormData) {
     return { error: msg };
   }
   await applyDefaultPointsToNewUser(email);
+  // Ensure profile image is saved (better-auth may not persist image on signup)
+  if (imageUrl) {
+    const newUser = await getUserByEmail(email);
+    if (newUser) {
+      await updateUserInDb(newUser.id, { image: imageUrl });
+    }
+  }
   return { success: true };
 }
 
@@ -101,6 +112,7 @@ export async function updateUserAction(formData: FormData) {
       return Number.isNaN(n) ? undefined : n;
     })(),
     verified: formData.get("verified") === "on",
+    image: emptyToNull(formData.get("image")),
   });
   if (!parsed.success) {
     return {
@@ -115,6 +127,9 @@ export async function updateUserAction(formData: FormData) {
   const data: UpdateUserInput = { ...rest };
   if (rest.role === "user") {
     data.verified = rest.verified === true;
+  }
+  if (rest.image !== undefined) {
+    data.image = rest.image ?? null;
   }
   await updateUserInDb(userId, data);
   return { success: true, userId };

@@ -213,18 +213,19 @@ function Calendar({
             onNextClick={onNextClick}
           />
         ),
-        CaptionLabel: (props) => (
+        CaptionLabel: ({ children, ...rest }) => (
           <CaptionLabel
             showYearSwitcher={showYearSwitcher}
             navView={navView}
             setNavView={setNavView}
             displayYears={displayYears}
-            {...props}
-          />
+            {...rest}
+          >
+            {children}
+          </CaptionLabel>
         ),
         MonthGrid: ({ className, children, ...props }) => (
           <MonthGrid
-            children={children}
             className={className}
             displayYears={displayYears}
             startMonth={startMonth}
@@ -232,7 +233,9 @@ function Calendar({
             navView={navView}
             setNavView={setNavView}
             {...props}
-          />
+          >
+            {children}
+          </MonthGrid>
         ),
         ...components,
       }}
@@ -320,7 +323,7 @@ function Nav({
     }
     goToMonth(previousMonth)
     onPrevClick?.(previousMonth)
-  }, [previousMonth, goToMonth])
+  }, [previousMonth, goToMonth, navView, setDisplayYears, displayYears.from, displayYears.to, onPrevClick])
 
   const handleNextClick = React.useCallback(() => {
     if (!nextMonth) return
@@ -340,7 +343,7 @@ function Nav({
     }
     goToMonth(nextMonth)
     onNextClick?.(nextMonth)
-  }, [goToMonth, nextMonth])
+  }, [goToMonth, nextMonth, navView, setDisplayYears, displayYears.from, displayYears.to, onNextClick])
   return (
     <nav className={cn("flex items-center", className)}>
       <Button

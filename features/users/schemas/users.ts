@@ -16,6 +16,14 @@ export const userCreateSchema = z.object({
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),
   country: z.string().max(100).optional().nullable(),
+  image: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" || v == null ? undefined : v))
+    .refine((v) => v === undefined || v === null || v.startsWith("http"), {
+      message: "Image must be a valid URL",
+    }),
 });
 
 export const userUpdateSchema = z.object({
@@ -37,6 +45,14 @@ export const userUpdateSchema = z.object({
   verified: z
     .preprocess((v) => v === "on" || v === true, z.boolean())
     .optional(),
+  image: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v === "" || v == null ? undefined : v))
+    .refine((v) => v === undefined || v === null || v.startsWith("http"), {
+      message: "Image must be a valid URL",
+    }),
 });
 
 export const userDeleteSchema = z.object({

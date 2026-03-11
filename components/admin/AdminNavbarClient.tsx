@@ -30,7 +30,7 @@ export default function AdminNavbarClient() {
           }}
           onSignOut={async () => {
             await authClient.signOut()
-            router.push("/") // optional redirect
+            router.push("/login")
           }}
         />
       ) : (

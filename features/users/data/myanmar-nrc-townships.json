@@ -1,0 +1,1730 @@
+{
+  "1": [
+    {
+      "value": "AhGaYa",
+      "label": "AhGaYa"
+    },
+    {
+      "value": "BaMaNa",
+      "label": "BaMaNa"
+    },
+    {
+      "value": "KhaPhaNa",
+      "label": "KhaPhaNa"
+    },
+    {
+      "value": "DaPhaYa",
+      "label": "DaPhaYa"
+    },
+    {
+      "value": "HaPaNa",
+      "label": "HaPaNa"
+    },
+    {
+      "value": "KaMaNa",
+      "label": "KaMaNa"
+    },
+    {
+      "value": "KhaLaPha",
+      "label": "KhaLaPha"
+    },
+    {
+      "value": "LaGaNa",
+      "label": "LaGaNa"
+    },
+    {
+      "value": "MaKhaBa",
+      "label": "MaKhaBa"
+    },
+    {
+      "value": "MaSaNa",
+      "label": "MaSaNa"
+    },
+    {
+      "value": "MaNyaNa",
+      "label": "MaNyaNa"
+    },
+    {
+      "value": "MaKaTa",
+      "label": "MaKaTa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "NaMaNa",
+      "label": "NaMaNa"
+    },
+    {
+      "value": "PhaKaNa",
+      "label": "PhaKaNa"
+    },
+    {
+      "value": "PaTaAh",
+      "label": "PaTaAh"
+    },
+    {
+      "value": "YaKaNa",
+      "label": "YaKaNa"
+    },
+    {
+      "value": "SaBaNa",
+      "label": "SaBaNa"
+    },
+    {
+      "value": "SaLaNa",
+      "label": "SaLaNa"
+    },
+    {
+      "value": "SaPaBa",
+      "label": "SaPaBa"
+    },
+    {
+      "value": "TaNaNa",
+      "label": "TaNaNa"
+    },
+    {
+      "value": "WaMaNa",
+      "label": "WaMaNa"
+    },
+    {
+      "value": "KaMaTa",
+      "label": "KaMaTa"
+    },
+    {
+      "value": "KaPaTa",
+      "label": "KaPaTa"
+    },
+    {
+      "value": "MaLaNa",
+      "label": "MaLaNa"
+    },
+    {
+      "value": "PaNaDa",
+      "label": "PaNaDa"
+    },
+    {
+      "value": "PaWaNa",
+      "label": "PaWaNa"
+    },
+    {
+      "value": "SaDaNa",
+      "label": "SaDaNa"
+    },
+    {
+      "value": "YaBaYa",
+      "label": "YaBaYa"
+    }
+  ],
+  "2": [
+    {
+      "value": "BaLaKha",
+      "label": "BaLaKha"
+    },
+    {
+      "value": "DaMaSa",
+      "label": "DaMaSa"
+    },
+    {
+      "value": "LaKaNa",
+      "label": "LaKaNa"
+    },
+    {
+      "value": "MaSaNa",
+      "label": "MaSaNa"
+    },
+    {
+      "value": "PhaSaNa",
+      "label": "PhaSaNa"
+    },
+    {
+      "value": "PhaYaSa",
+      "label": "PhaYaSa"
+    },
+    {
+      "value": "YaTaNa",
+      "label": "YaTaNa"
+    },
+    {
+      "value": "MaSaNa",
+      "label": "MaSaNa"
+    },
+    {
+      "value": "YaThaNa",
+      "label": "YaThaNa"
+    }
+  ],
+  "3": [
+    {
+      "value": "LaBaNa",
+      "label": "LaBaNa"
+    },
+    {
+      "value": "KaKaYa",
+      "label": "KaKaYa"
+    },
+    {
+      "value": "KaSaKa",
+      "label": "KaSaKa"
+    },
+    {
+      "value": "KaDaNa",
+      "label": "KaDaNa"
+    },
+    {
+      "value": "MaWaTa",
+      "label": "MaWaTa"
+    },
+    {
+      "value": "PhaAhNa",
+      "label": "PhaAhNa"
+    },
+    {
+      "value": "BaAhNa",
+      "label": "BaAhNa"
+    },
+    {
+      "value": "PhaPaNa",
+      "label": "PhaPaNa"
+    },
+    {
+      "value": "ThaTaNa",
+      "label": "ThaTaNa"
+    },
+    {
+      "value": "BaGaLa",
+      "label": "BaGaLa"
+    },
+    {
+      "value": "BaThaSa",
+      "label": "BaThaSa"
+    },
+    {
+      "value": "KaMaMa",
+      "label": "KaMaMa"
+    },
+    {
+      "value": "LaThaNa",
+      "label": "LaThaNa"
+    },
+    {
+      "value": "SaKaLa",
+      "label": "SaKaLa"
+    },
+    {
+      "value": "ThaTaKa",
+      "label": "ThaTaKa"
+    },
+    {
+      "value": "WaLaMa",
+      "label": "WaLaMa"
+    },
+    {
+      "value": "YaYaTha",
+      "label": "YaYaTha"
+    }
+  ],
+  "4": [
+    {
+      "value": "HaKhaNa",
+      "label": "HaKhaNa"
+    },
+    {
+      "value": "HtaTaLa",
+      "label": "HtaTaLa"
+    },
+    {
+      "value": "KaPaLa",
+      "label": "KaPaLa"
+    },
+    {
+      "value": "MaTaPa",
+      "label": "MaTaPa"
+    },
+    {
+      "value": "MaTaNa",
+      "label": "MaTaNa"
+    },
+    {
+      "value": "PhaLaNa",
+      "label": "PhaLaNa"
+    },
+    {
+      "value": "PaLaWa",
+      "label": "PaLaWa"
+    },
+    {
+      "value": "TaTaNa",
+      "label": "TaTaNa"
+    },
+    {
+      "value": "TaZaNa",
+      "label": "TaZaNa"
+    },
+    {
+      "value": "KaKhaNa",
+      "label": "KaKhaNa"
+    },
+    {
+      "value": "SaMaNa",
+      "label": "SaMaNa"
+    },
+    {
+      "value": "YaKhaDa",
+      "label": "YaKhaDa"
+    },
+    {
+      "value": "YaZaNa",
+      "label": "YaZaNa"
+    }
+  ],
+  "5": [
+    {
+      "value": "AhYaTa",
+      "label": "AhYaTa"
+    },
+    {
+      "value": "BaMaNa",
+      "label": "BaMaNa"
+    },
+    {
+      "value": "BaTaLa",
+      "label": "BaTaLa"
+    },
+    {
+      "value": "KhaOuNa",
+      "label": "KhaOuNa"
+    },
+    {
+      "value": "DaPaYa",
+      "label": "DaPaYa"
+    },
+    {
+      "value": "HaMaLa",
+      "label": "HaMaLa"
+    },
+    {
+      "value": "HtaKhaNa",
+      "label": "HtaKhaNa"
+    },
+    {
+      "value": "AhTaNa",
+      "label": "AhTaNa"
+    },
+    {
+      "value": "KaNaNa",
+      "label": "KaNaNa"
+    },
+    {
+      "value": "KaThaNa",
+      "label": "KaThaNa"
+    },
+    {
+      "value": "KaLaHta",
+      "label": "KaLaHta"
+    },
+    {
+      "value": "KaLaWa",
+      "label": "KaLaWa"
+    },
+    {
+      "value": "KaBaLa",
+      "label": "KaBaLa"
+    },
+    {
+      "value": "KaLaTa",
+      "label": "KaLaTa"
+    },
+    {
+      "value": "KhaTaNa",
+      "label": "KhaTaNa"
+    },
+    {
+      "value": "KhaOuTa",
+      "label": "KhaOuTa"
+    },
+    {
+      "value": "KaLaNa",
+      "label": "KaLaNa"
+    },
+    {
+      "value": "MaLaNa",
+      "label": "MaLaNa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "MaYaNa",
+      "label": "MaYaNa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "NaYaNa",
+      "label": "NaYaNa"
+    },
+    {
+      "value": "NgaZaNa",
+      "label": "NgaZaNa"
+    },
+    {
+      "value": "PaLaNa",
+      "label": "PaLaNa"
+    },
+    {
+      "value": "PhaPaNa",
+      "label": "PhaPaNa"
+    },
+    {
+      "value": "PaLanBa",
+      "label": "PaLanBa"
+    },
+    {
+      "value": "SaKaNa",
+      "label": "SaKaNa"
+    },
+    {
+      "value": "SaLaKa",
+      "label": "SaLaKa"
+    },
+    {
+      "value": "YaBaNa",
+      "label": "YaBaNa"
+    },
+    {
+      "value": "TaMaNa",
+      "label": "TaMaNa"
+    },
+    {
+      "value": "TaSaNa",
+      "label": "TaSaNa"
+    },
+    {
+      "value": "WaLaNa",
+      "label": "WaLaNa"
+    },
+    {
+      "value": "WaThaNa",
+      "label": "WaThaNa"
+    },
+    {
+      "value": "YaOuNa",
+      "label": "YaOuNa"
+    },
+    {
+      "value": "YaMaPa",
+      "label": "YaMaPa"
+    },
+    {
+      "value": "YaThaKa",
+      "label": "YaThaKa"
+    },
+    {
+      "value": "DaHaNa",
+      "label": "DaHaNa"
+    },
+    {
+      "value": "SaMaYa",
+      "label": "SaMaYa"
+    },
+    {
+      "value": "HtaPaKha",
+      "label": "HtaPaKha"
+    },
+    {
+      "value": "KaMaNa",
+      "label": "KaMaNa"
+    },
+    {
+      "value": "KhaPaNa",
+      "label": "KhaPaNa"
+    },
+    {
+      "value": "LaHaNa",
+      "label": "LaHaNa"
+    },
+    {
+      "value": "LaYaNa",
+      "label": "LaYaNa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "MaPaLa",
+      "label": "MaPaLa"
+    },
+    {
+      "value": "MaThaNa",
+      "label": "MaThaNa"
+    },
+    {
+      "value": "PaSaNa",
+      "label": "PaSaNa"
+    }
+  ],
+  "6": [
+    {
+      "value": "BaPaNa",
+      "label": "BaPaNa"
+    },
+    {
+      "value": "HtaWaNa",
+      "label": "HtaWaNa"
+    },
+    {
+      "value": "KaThaNa",
+      "label": "KaThaNa"
+    },
+    {
+      "value": "KaSaNa",
+      "label": "KaSaNa"
+    },
+    {
+      "value": "LaLaNa",
+      "label": "LaLaNa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "MaAhYa",
+      "label": "MaAhYa"
+    },
+    {
+      "value": "NgaYaKa",
+      "label": "NgaYaKa"
+    },
+    {
+      "value": "PaLaNa",
+      "label": "PaLaNa"
+    },
+    {
+      "value": "TaNaTha",
+      "label": "TaNaTha"
+    },
+    {
+      "value": "TaThaYa",
+      "label": "TaThaYa"
+    },
+    {
+      "value": "ThaYaKha",
+      "label": "ThaYaKha"
+    },
+    {
+      "value": "YaPhaNa",
+      "label": "YaPhaNa"
+    },
+    {
+      "value": "KhaMaKa",
+      "label": "KhaMaKa"
+    },
+    {
+      "value": "KaLaAh",
+      "label": "KaLaAh"
+    },
+    {
+      "value": "KaYaYa",
+      "label": "KaYaYa"
+    },
+    {
+      "value": "MaAhNa",
+      "label": "MaAhNa"
+    },
+    {
+      "value": "PaKaMa",
+      "label": "PaKaMa"
+    },
+    {
+      "value": "PaLaTa",
+      "label": "PaLaTa"
+    }
+  ],
+  "7": [
+    {
+      "value": "AhPhaNa",
+      "label": "AhPhaNa"
+    },
+    {
+      "value": "AhPhaNa",
+      "label": "AhPhaNa"
+    },
+    {
+      "value": "AhTaNa",
+      "label": "AhTaNa"
+    },
+    {
+      "value": "DaOuNa",
+      "label": "DaOuNa"
+    },
+    {
+      "value": "HtaTaPa",
+      "label": "HtaTaPa"
+    },
+    {
+      "value": "KaTaTa",
+      "label": "KaTaTa"
+    },
+    {
+      "value": "KaPaKa",
+      "label": "KaPaKa"
+    },
+    {
+      "value": "KaKaNa",
+      "label": "KaKaNa"
+    },
+    {
+      "value": "KaTaKha",
+      "label": "KaTaKha"
+    },
+    {
+      "value": "KaKaNa",
+      "label": "KaKaNa"
+    },
+    {
+      "value": "MaDaNa",
+      "label": "MaDaNa"
+    },
+    {
+      "value": "MaLaNa",
+      "label": "MaLaNa"
+    },
+    {
+      "value": "MaNyaNa",
+      "label": "MaNyaNa"
+    },
+    {
+      "value": "NaTaLa",
+      "label": "NaTaLa"
+    },
+    {
+      "value": "NyaLaPa",
+      "label": "NyaLaPa"
+    },
+    {
+      "value": "PaNaKa",
+      "label": "PaNaKa"
+    },
+    {
+      "value": "PaKhaNa",
+      "label": "PaKhaNa"
+    },
+    {
+      "value": "PaTaNa",
+      "label": "PaTaNa"
+    },
+    {
+      "value": "PaKhaTa",
+      "label": "PaKhaTa"
+    },
+    {
+      "value": "PaTaTa",
+      "label": "PaTaTa"
+    },
+    {
+      "value": "PhaMaNa",
+      "label": "PhaMaNa"
+    },
+    {
+      "value": "PaMaNa",
+      "label": "PaMaNa"
+    },
+    {
+      "value": "PaTaSa",
+      "label": "PaTaSa"
+    },
+    {
+      "value": "YaKaNa",
+      "label": "YaKaNa"
+    },
+    {
+      "value": "YaTaNa",
+      "label": "YaTaNa"
+    },
+    {
+      "value": "TaNgaNa",
+      "label": "TaNgaNa"
+    },
+    {
+      "value": "ThaNaPa",
+      "label": "ThaNaPa"
+    },
+    {
+      "value": "ThaKaNa",
+      "label": "ThaKaNa"
+    },
+    {
+      "value": "ThaWaTa",
+      "label": "ThaWaTa"
+    },
+    {
+      "value": "ThaSaNa",
+      "label": "ThaSaNa"
+    },
+    {
+      "value": "WaMaNa",
+      "label": "WaMaNa"
+    },
+    {
+      "value": "YaTaYa",
+      "label": "YaTaYa"
+    },
+    {
+      "value": "ZaKaNa",
+      "label": "ZaKaNa"
+    },
+    {
+      "value": "KaWaNa",
+      "label": "KaWaNa"
+    },
+    {
+      "value": "LaPATa",
+      "label": "LaPATa"
+    },
+    {
+      "value": "PaTaLa",
+      "label": "PaTaLa"
+    }
+  ],
+  "8": [
+    {
+      "value": "AhLaNa",
+      "label": "AhLaNa"
+    },
+    {
+      "value": "KhaMaNa",
+      "label": "KhaMaNa"
+    },
+    {
+      "value": "GaGaNa",
+      "label": "GaGaNa"
+    },
+    {
+      "value": "SaPhaNa",
+      "label": "SaPhaNa"
+    },
+    {
+      "value": "SaPaWa",
+      "label": "SaPaWa"
+    },
+    {
+      "value": "HtaLaNa",
+      "label": "HtaLaNa"
+    },
+    {
+      "value": "KaMaNa",
+      "label": "KaMaNa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "MaBaNa",
+      "label": "MaBaNa"
+    },
+    {
+      "value": "MaLaNa",
+      "label": "MaLaNa"
+    },
+    {
+      "value": "MaTaNa",
+      "label": "MaTaNa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "MaHtaNa",
+      "label": "MaHtaNa"
+    },
+    {
+      "value": "MaThaNa",
+      "label": "MaThaNa"
+    },
+    {
+      "value": "NaMaNa",
+      "label": "NaMaNa"
+    },
+    {
+      "value": "NgaPhaNa",
+      "label": "NgaPhaNa"
+    },
+    {
+      "value": "PaKhaKa",
+      "label": "PaKhaKa"
+    },
+    {
+      "value": "PaMaNa",
+      "label": "PaMaNa"
+    },
+    {
+      "value": "PaPhaNa",
+      "label": "PaPhaNa"
+    },
+    {
+      "value": "SaLaNa",
+      "label": "SaLaNa"
+    },
+    {
+      "value": "SaTaYa",
+      "label": "SaTaYa"
+    },
+    {
+      "value": "SaKaNa",
+      "label": "SaKaNa"
+    },
+    {
+      "value": "TaTaKa",
+      "label": "TaTaKa"
+    },
+    {
+      "value": "ThaYaNa",
+      "label": "ThaYaNa"
+    },
+    {
+      "value": "SaMaNa",
+      "label": "SaMaNa"
+    },
+    {
+      "value": "YaNaKha",
+      "label": "YaNaKha"
+    },
+    {
+      "value": "YaSaKa",
+      "label": "YaSaKa"
+    },
+    {
+      "value": "KaHtaNa",
+      "label": "KaHtaNa"
+    }
+  ],
+  "9": [
+    {
+      "value": "DaKhaTha",
+      "label": "DaKhaTha"
+    },
+    {
+      "value": "LaWaNa",
+      "label": "LaWaNa"
+    },
+    {
+      "value": "OuTaTha",
+      "label": "OuTaTha"
+    },
+    {
+      "value": "PaBaTha",
+      "label": "PaBaTha"
+    },
+    {
+      "value": "PaMaNa",
+      "label": "PaMaNa"
+    },
+    {
+      "value": "TaKaNa",
+      "label": "TaKaNa"
+    },
+    {
+      "value": "ZaBaTha",
+      "label": "ZaBaTha"
+    },
+    {
+      "value": "ZaYaTha",
+      "label": "ZaYaTha"
+    },
+    {
+      "value": "AhMaYa",
+      "label": "AhMaYa"
+    },
+    {
+      "value": "AhMaZa",
+      "label": "AhMaZa"
+    },
+    {
+      "value": "KhaAhZa",
+      "label": "KhaAhZa"
+    },
+    {
+      "value": "KhaMaSa",
+      "label": "KhaMaSa"
+    },
+    {
+      "value": "KaPaTa",
+      "label": "KaPaTa"
+    },
+    {
+      "value": "KaSaNa",
+      "label": "KaSaNa"
+    },
+    {
+      "value": "MaLaNa",
+      "label": "MaLaNa"
+    },
+    {
+      "value": "MaHaMa",
+      "label": "MaHaMa"
+    },
+    {
+      "value": "MaNaMa",
+      "label": "MaNaMa"
+    },
+    {
+      "value": "MaNaTa",
+      "label": "MaNaTa"
+    },
+    {
+      "value": "MaYaMa",
+      "label": "MaYaMa"
+    },
+    {
+      "value": "MaYaTa",
+      "label": "MaYaTa"
+    },
+    {
+      "value": "MaTaYa",
+      "label": "MaTaYa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "MaHtaLa",
+      "label": "MaHtaLa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "MaKhaNa",
+      "label": "MaKhaNa"
+    },
+    {
+      "value": "MaThaNa",
+      "label": "MaThaNa"
+    },
+    {
+      "value": "NaHtaKa",
+      "label": "NaHtaKa"
+    },
+    {
+      "value": "NgaTaYa",
+      "label": "NgaTaYa"
+    },
+    {
+      "value": "NyaOuNa",
+      "label": "NyaOuNa"
+    },
+    {
+      "value": "PaLaNa",
+      "label": "PaLaNa"
+    },
+    {
+      "value": "PaThaKa",
+      "label": "PaThaKa"
+    },
+    {
+      "value": "PaBaNa",
+      "label": "PaBaNa"
+    },
+    {
+      "value": "PaKaKha",
+      "label": "PaKaKha"
+    },
+    {
+      "value": "PaOuLa",
+      "label": "PaOuLa"
+    },
+    {
+      "value": "PaMaNa",
+      "label": "PaMaNa"
+    },
+    {
+      "value": "SaKaTa",
+      "label": "SaKaTa"
+    },
+    {
+      "value": "SaKaNa",
+      "label": "SaKaNa"
+    },
+    {
+      "value": "TaKaNa",
+      "label": "TaKaNa"
+    },
+    {
+      "value": "TaTaOu",
+      "label": "TaTaOu"
+    },
+    {
+      "value": "TaThaNa",
+      "label": "TaThaNa"
+    },
+    {
+      "value": "ThaPaKa",
+      "label": "ThaPaKa"
+    },
+    {
+      "value": "ThaSaNa",
+      "label": "ThaSaNa"
+    },
+    {
+      "value": "WaTaNa",
+      "label": "WaTaNa"
+    },
+    {
+      "value": "YaMaTha",
+      "label": "YaMaTha"
+    },
+    {
+      "value": "NgaZaNa",
+      "label": "NgaZaNa"
+    },
+    {
+      "value": "PaBaNa",
+      "label": "PaBaNa"
+    },
+    {
+      "value": "OoTaYa",
+      "label": "OoTaYa"
+    },
+    {
+      "value": "KhAaHsa",
+      "label": "KhAaHsa"
+    }
+  ],
+  "10": [
+    {
+      "value": "BaLaNa",
+      "label": "BaLaNa"
+    },
+    {
+      "value": "KhaSaNa",
+      "label": "KhaSaNa"
+    },
+    {
+      "value": "KaMaYa",
+      "label": "KaMaYa"
+    },
+    {
+      "value": "KaHtaNa",
+      "label": "KaHtaNa"
+    },
+    {
+      "value": "MaLaMa",
+      "label": "MaLaMa"
+    },
+    {
+      "value": "MaDaNa",
+      "label": "MaDaNa"
+    },
+    {
+      "value": "PaMaNa",
+      "label": "PaMaNa"
+    },
+    {
+      "value": "ThaPhaYa",
+      "label": "ThaPhaYa"
+    },
+    {
+      "value": "ThaHtaNa",
+      "label": "ThaHtaNa"
+    },
+    {
+      "value": "KhaZaNa",
+      "label": "KhaZaNa"
+    },
+    {
+      "value": "LaMaNa",
+      "label": "LaMaNa"
+    },
+    {
+      "value": "YaMaNa",
+      "label": "YaMaNa"
+    },
+    {
+      "value": "KaKhaMa",
+      "label": "KaKhaMa"
+    }
+  ],
+  "11": [
+    {
+      "value": "AaMaNa",
+      "label": "AaMaNa"
+    },
+    {
+      "value": "BaThaTa",
+      "label": "BaThaTa"
+    },
+    {
+      "value": "GaMaNa",
+      "label": "GaMaNa"
+    },
+    {
+      "value": "KaPhaNa",
+      "label": "KaPhaNa"
+    },
+    {
+      "value": "KaTaNa",
+      "label": "KaTaNa"
+    },
+    {
+      "value": "MaAhNa",
+      "label": "MaAhNa"
+    },
+    {
+      "value": "MaTaNa",
+      "label": "MaTaNa"
+    },
+    {
+      "value": "MaPaNa",
+      "label": "MaPaNa"
+    },
+    {
+      "value": "MaOuNa",
+      "label": "MaOuNa"
+    },
+    {
+      "value": "MaPaTa",
+      "label": "MaPaTa"
+    },
+    {
+      "value": "PaTaNa",
+      "label": "PaTaNa"
+    },
+    {
+      "value": "PaNaKa",
+      "label": "PaNaKa"
+    },
+    {
+      "value": "SaTaNa",
+      "label": "SaTaNa"
+    },
+    {
+      "value": "TaKaNa",
+      "label": "TaKaNa"
+    },
+    {
+      "value": "ThaTaNa",
+      "label": "ThaTaNa"
+    },
+    {
+      "value": "YaBaNa",
+      "label": "YaBaNa"
+    },
+    {
+      "value": "YaThaTa",
+      "label": "YaThaTa"
+    },
+    {
+      "value": "KaTaLa",
+      "label": "KaTaLa"
+    },
+    {
+      "value": "MaAhTa",
+      "label": "MaAhTa"
+    },
+    {
+      "value": "TaPaWa",
+      "label": "TaPaWa"
+    }
+  ],
+  "12": [
+    {
+      "value": "AaLaNa",
+      "label": "AaLaNa"
+    },
+    {
+      "value": "BaHaNa",
+      "label": "BaHaNa"
+    },
+    {
+      "value": "BaTaHta",
+      "label": "BaTaHta"
+    },
+    {
+      "value": "KaKaKa",
+      "label": "KaKaKa"
+    },
+    {
+      "value": "DaGaNa",
+      "label": "DaGaNa"
+    },
+    {
+      "value": "DaGaYa",
+      "label": "DaGaYa"
+    },
+    {
+      "value": "DaGaMa",
+      "label": "DaGaMa"
+    },
+    {
+      "value": "DaSaKa",
+      "label": "DaSaKa"
+    },
+    {
+      "value": "DaGaTa",
+      "label": "DaGaTa"
+    },
+    {
+      "value": "DaLaNa",
+      "label": "DaLaNa"
+    },
+    {
+      "value": "DaPaNa",
+      "label": "DaPaNa"
+    },
+    {
+      "value": "LaMaNa",
+      "label": "LaMaNa"
+    },
+    {
+      "value": "LaThaYa",
+      "label": "LaThaYa"
+    },
+    {
+      "value": "LaKaNa",
+      "label": "LaKaNa"
+    },
+    {
+      "value": "MaBaNa",
+      "label": "MaBaNa"
+    },
+    {
+      "value": "HtaTaPa",
+      "label": "HtaTaPa"
+    },
+    {
+      "value": "AhSaNa",
+      "label": "AhSaNa"
+    },
+    {
+      "value": "KaMaYa",
+      "label": "KaMaYa"
+    },
+    {
+      "value": "KaMaNa",
+      "label": "KaMaNa"
+    },
+    {
+      "value": "KhaYaNa",
+      "label": "KhaYaNa"
+    },
+    {
+      "value": "KaKhaKa",
+      "label": "KaKhaKa"
+    },
+    {
+      "value": "KaTaTa",
+      "label": "KaTaTa"
+    },
+    {
+      "value": "KaTaNa",
+      "label": "KaTaNa"
+    },
+    {
+      "value": "KaMaTa",
+      "label": "KaMaTa"
+    },
+    {
+      "value": "LaMata",
+      "label": "LaMata"
+    },
+    {
+      "value": "LaThaNa",
+      "label": "LaThaNa"
+    },
+    {
+      "value": "MaYaKa",
+      "label": "MaYaKa"
+    },
+    {
+      "value": "MaGaTa",
+      "label": "MaGaTa"
+    },
+    {
+      "value": "MaGaDa",
+      "label": "MaGaDa"
+    },
+    {
+      "value": "OuKaMa",
+      "label": "OuKaMa"
+    },
+    {
+      "value": "PaBaTa",
+      "label": "PaBaTa"
+    },
+    {
+      "value": "PaZaDa",
+      "label": "PaZaDa"
+    },
+    {
+      "value": "SaKhaNa",
+      "label": "SaKhaNa"
+    },
+    {
+      "value": "SaKakha",
+      "label": "SaKakha"
+    },
+    {
+      "value": "SaKaNa",
+      "label": "SaKaNa"
+    },
+    {
+      "value": "YaPaKa",
+      "label": "YaPaKa"
+    },
+    {
+      "value": "YaPaTha",
+      "label": "YaPaTha"
+    },
+    {
+      "value": "OuKaTa",
+      "label": "OuKaTa"
+    },
+    {
+      "value": "TaKaNa",
+      "label": "TaKaNa"
+    },
+    {
+      "value": "TaMaNa",
+      "label": "TaMaNa"
+    },
+    {
+      "value": "ThaKaTa",
+      "label": "ThaKaTa"
+    },
+    {
+      "value": "ThaLaNa",
+      "label": "ThaLaNa"
+    },
+    {
+      "value": "ThaGaKa",
+      "label": "ThaGaKa"
+    },
+    {
+      "value": "ThaKhaNa",
+      "label": "ThaKhaNa"
+    },
+    {
+      "value": "TaTaNa",
+      "label": "TaTaNa"
+    },
+    {
+      "value": "YaKaNa",
+      "label": "YaKaNa"
+    },
+    {
+      "value": "TaTaHta",
+      "label": "TaTaHta"
+    }
+  ],
+  "13": [
+    {
+      "value": "KhaYaHa",
+      "label": "KhaYaHa"
+    },
+    {
+      "value": "HaPaTa",
+      "label": "HaPaTa"
+    },
+    {
+      "value": "HaPaNa",
+      "label": "HaPaNa"
+    },
+    {
+      "value": "KaLaNa",
+      "label": "KaLaNa"
+    },
+    {
+      "value": "KaLaTa",
+      "label": "KaLaTa"
+    },
+    {
+      "value": "KaHaNa",
+      "label": "KaHaNa"
+    },
+    {
+      "value": "KaThaNa",
+      "label": "KaThaNa"
+    },
+    {
+      "value": "KaTaTa",
+      "label": "KaTaTa"
+    },
+    {
+      "value": "KaTaNa",
+      "label": "KaTaNa"
+    },
+    {
+      "value": "KaMaNa",
+      "label": "KaMaNa"
+    },
+    {
+      "value": "KaKhaNa",
+      "label": "KaKhaNa"
+    },
+    {
+      "value": "LaYaNa",
+      "label": "LaYaNa"
+    },
+    {
+      "value": "LaKaNa",
+      "label": "LaKaNa"
+    },
+    {
+      "value": "LaKhaTa",
+      "label": "LaKhaTa"
+    },
+    {
+      "value": "LaKhaNa",
+      "label": "LaKhaNa"
+    },
+    {
+      "value": "LaLaNa",
+      "label": "LaLaNa"
+    },
+    {
+      "value": "MaBaNa",
+      "label": "MaBaNa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "MaKhaNa",
+      "label": "MaKhaNa"
+    },
+    {
+      "value": "MaPHaNa",
+      "label": "MaPHaNa"
+    },
+    {
+      "value": "MaPaTa",
+      "label": "MaPaTa"
+    },
+    {
+      "value": "MaSaNa",
+      "label": "MaSaNa"
+    },
+    {
+      "value": "MaYaNa",
+      "label": "MaYaNa"
+    },
+    {
+      "value": "MaYaTa",
+      "label": "MaYaTa"
+    },
+    {
+      "value": "MaTaTa",
+      "label": "MaTaTa"
+    },
+    {
+      "value": "MaMaTa",
+      "label": "MaMaTa"
+    },
+    {
+      "value": "MaNaNa",
+      "label": "MaNaNa"
+    },
+    {
+      "value": "MaKaNa",
+      "label": "MaKaNa"
+    },
+    {
+      "value": "MaSaTa",
+      "label": "MaSaTa"
+    },
+    {
+      "value": "NaMaTa",
+      "label": "NaMaTa"
+    },
+    {
+      "value": "NaKhaNa",
+      "label": "NaKhaNa"
+    },
+    {
+      "value": "NaSaNa",
+      "label": "NaSaNa"
+    },
+    {
+      "value": "NaPaNa",
+      "label": "NaPaNa"
+    },
+    {
+      "value": "NaKhaTa",
+      "label": "NaKhaTa"
+    },
+    {
+      "value": "NyaYaNa",
+      "label": "NyaYaNa"
+    },
+    {
+      "value": "PhaKhaNa",
+      "label": "PhaKhaNa"
+    },
+    {
+      "value": "PaLaNa",
+      "label": "PaLaNa"
+    },
+    {
+      "value": "PaTaYa",
+      "label": "PaTaYa"
+    },
+    {
+      "value": "SaSaNa",
+      "label": "SaSaNa"
+    },
+    {
+      "value": "YaNyaNa",
+      "label": "YaNyaNa"
+    },
+    {
+      "value": "TaYaNa",
+      "label": "TaYaNa"
+    },
+    {
+      "value": "TaMaNya",
+      "label": "TaMaNya"
+    },
+    {
+      "value": "TaKhaLa",
+      "label": "TaKhaLa"
+    },
+    {
+      "value": "TaLaNa",
+      "label": "TaLaNa"
+    },
+    {
+      "value": "TaKaNa",
+      "label": "TaKaNa"
+    },
+    {
+      "value": "ThaNaNa",
+      "label": "ThaNaNa"
+    },
+    {
+      "value": "ThaPaNa",
+      "label": "ThaPaNa"
+    },
+    {
+      "value": "YaNgaNa",
+      "label": "YaNgaNa"
+    },
+    {
+      "value": "YaSaNa",
+      "label": "YaSaNa"
+    },
+    {
+      "value": "AhPaNa",
+      "label": "AhPaNa"
+    },
+    {
+      "value": "AhTaNa",
+      "label": "AhTaNa"
+    },
+    {
+      "value": "AhTaYa",
+      "label": "AhTaYa"
+    },
+    {
+      "value": "HaHaNa",
+      "label": "HaHaNa"
+    },
+    {
+      "value": "HaMaNa",
+      "label": "HaMaNa"
+    },
+    {
+      "value": "KaLaHta",
+      "label": "KaLaHta"
+    },
+    {
+      "value": "KaLaNa",
+      "label": "KaLaNa"
+    },
+    {
+      "value": "MaHtaNa",
+      "label": "MaHtaNa"
+    },
+    {
+      "value": "MaKhaTa",
+      "label": "MaKhaTa"
+    },
+    {
+      "value": "MaNgaNa",
+      "label": "MaNgaNa"
+    },
+    {
+      "value": "MaPhaHta",
+      "label": "MaPhaHta"
+    },
+    {
+      "value": "NaTaYa",
+      "label": "NaTaYa"
+    },
+    {
+      "value": "PaPaKa",
+      "label": "PaPaKa"
+    },
+    {
+      "value": "PaWaNa",
+      "label": "PaWaNa"
+    },
+    {
+      "value": "TaTaNa",
+      "label": "TaTaNa"
+    }
+  ],
+  "14": [
+    {
+      "value": "BaKaLa",
+      "label": "BaKaLa"
+    },
+    {
+      "value": "DaNaPha",
+      "label": "DaNaPha"
+    },
+    {
+      "value": "DaDaYa",
+      "label": "DaDaYa"
+    },
+    {
+      "value": "PaThaYa",
+      "label": "PaThaYa"
+    },
+    {
+      "value": "AhMaNa",
+      "label": "AhMaNa"
+    },
+    {
+      "value": "HaKaKa",
+      "label": "HaKaKa"
+    },
+    {
+      "value": "HaThaTa",
+      "label": "HaThaTa"
+    },
+    {
+      "value": "AhGaPa",
+      "label": "AhGaPa"
+    },
+    {
+      "value": "KaNaNa",
+      "label": "KaNaNa"
+    },
+    {
+      "value": "KaLaNa",
+      "label": "KaLaNa"
+    },
+    {
+      "value": "KaKhaNa",
+      "label": "KaKhaNa"
+    },
+    {
+      "value": "KaKaNa",
+      "label": "KaKaNa"
+    },
+    {
+      "value": "KaPaNa",
+      "label": "KaPaNa"
+    },
+    {
+      "value": "LaPaTa",
+      "label": "LaPaTa"
+    },
+    {
+      "value": "LaMaNa",
+      "label": "LaMaNa"
+    },
+    {
+      "value": "MaAhPa",
+      "label": "MaAhPa"
+    },
+    {
+      "value": "MaMaKa",
+      "label": "MaMaKa"
+    },
+    {
+      "value": "MaAhaNa",
+      "label": "MaAhaNa"
+    },
+    {
+      "value": "MaMaNa",
+      "label": "MaMaNa"
+    },
+    {
+      "value": "NgaPaTa",
+      "label": "NgaPaTa"
+    },
+    {
+      "value": "NgaThaKha",
+      "label": "NgaThaKha"
+    },
+    {
+      "value": "NyaTaNa",
+      "label": "NyaTaNa"
+    },
+    {
+      "value": "PaTaNa",
+      "label": "PaTaNa"
+    },
+    {
+      "value": "PhaPaNa",
+      "label": "PhaPaNa"
+    },
+    {
+      "value": "ThaPaNa",
+      "label": "ThaPaNa"
+    },
+    {
+      "value": "WaKhaMa",
+      "label": "WaKhaMa"
+    },
+    {
+      "value": "PaThaNa",
+      "label": "PaThaNa"
+    },
+    {
+      "value": "YaKaNa",
+      "label": "YaKaNa"
+    },
+    {
+      "value": "ZaLaNa",
+      "label": "ZaLaNa"
+    },
+    {
+      "value": "KaKaHta",
+      "label": "KaKaHta"
+    },
+    {
+      "value": "AhMaTa",
+      "label": "AhMaTa"
+    },
+    {
+      "value": "NgaYaKa",
+      "label": "NgaYaKa"
+    },
+    {
+      "value": "PaSaLa",
+      "label": "PaSaLa"
+    },
+    {
+      "value": "YaThaYa",
+      "label": "YaThaYa"
+    }
+  ]
+}

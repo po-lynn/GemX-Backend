@@ -60,6 +60,65 @@ function buildQueryString(page: number, filters: AdminProductFilters): string {
   return sp.toString()
 }
 
+const thSortableClass =
+  "h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+const thButtonClass =
+  "group inline-flex h-full w-full items-center gap-1.5 rounded text-left transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+
+function SortableHeader({
+  column,
+  label,
+  isActive,
+  sortOrder,
+  onSort,
+}: {
+  column: "title" | "price" | "status" | "createdAt"
+  label: string
+  isActive: boolean
+  sortOrder: string
+  onSort: (column: "title" | "price" | "status" | "createdAt") => void
+}) {
+  return (
+    <th className={thSortableClass}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onSort(column)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            onSort(column)
+          }
+        }}
+        className={thButtonClass}
+        aria-label={
+          isActive
+            ? `Sort by ${label} ${sortOrder === "asc" ? "ascending" : "descending"}, click to toggle`
+            : `Sort by ${label} ascending`
+        }
+      >
+        {label}
+        <span className="inline-flex shrink-0 items-center">
+          {isActive ? (
+            sortOrder === "asc" ? (
+              <ArrowUp className="size-3.5" aria-hidden />
+            ) : (
+              <ArrowDown className="size-3.5" aria-hidden />
+            )
+          ) : (
+            <ArrowUpDown
+              className="size-3.5 opacity-0 transition-opacity group-hover:opacity-70"
+              aria-hidden
+            />
+          )}
+        </span>
+      </button>
+    </th>
+  )
+}
+
 export function ProductsTable({
   products,
   page,
@@ -86,75 +145,21 @@ export function ProductsTable({
     router.push(`${base}?${buildQueryString(1, next)}`)
   }
 
-  const thSortableClass =
-    "h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-  const thButtonClass =
-    "group inline-flex h-full w-full items-center gap-1.5 rounded text-left transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-
-  const SortableHeader = ({
-    column,
-    label,
-  }: {
-    column: "title" | "price" | "status" | "createdAt"
-    label: string
-  }) => {
-    const isActive = currentSortBy === column
-    return (
-      <th className={thSortableClass}>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleHeaderSort(column)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              handleHeaderSort(column)
-            }
-          }}
-          className={thButtonClass}
-          aria-label={
-            isActive
-              ? `Sort by ${label} ${currentSortOrder === "asc" ? "ascending" : "descending"}, click to toggle`
-              : `Sort by ${label} ascending`
-          }
-        >
-          {label}
-          <span className="inline-flex shrink-0 items-center">
-            {isActive ? (
-              currentSortOrder === "asc" ? (
-                <ArrowUp className="size-3.5" aria-hidden />
-              ) : (
-                <ArrowDown className="size-3.5" aria-hidden />
-              )
-            ) : (
-              <ArrowUpDown
-                className="size-3.5 opacity-0 transition-opacity group-hover:opacity-70"
-                aria-hidden
-              />
-            )}
-          </span>
-        </button>
-      </th>
-    )
-  }
-
   return (
     <>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <SortableHeader column="title" label="Product" />
+              <SortableHeader column="title" label="Product" isActive={currentSortBy === "title"} sortOrder={currentSortOrder} onSort={handleHeaderSort} />
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-              <SortableHeader column="price" label="Price" />
-              <SortableHeader column="status" label="Status" />
+              <SortableHeader column="price" label="Price" isActive={currentSortBy === "price"} sortOrder={currentSortOrder} onSort={handleHeaderSort} />
+              <SortableHeader column="status" label="Status" isActive={currentSortBy === "status"} sortOrder={currentSortOrder} onSort={handleHeaderSort} />
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Moderation</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Collector</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Privilege Assist</th>
               <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Seller</th>
-              <SortableHeader column="createdAt" label="Created" />
+              <SortableHeader column="createdAt" label="Created" isActive={currentSortBy === "createdAt"} sortOrder={currentSortOrder} onSort={handleHeaderSort} />
               <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
             </tr>
           </thead>
