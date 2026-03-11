@@ -1,4 +1,4 @@
-# Infinity GemX — Feature Requirements
+# GemX — Feature Requirements
 
 Gemstone & jewellery marketplace. This document is the **single source of truth** for planned and built features across Mobile, Admin, and Additional areas.
 

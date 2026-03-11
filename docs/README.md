@@ -1,6 +1,6 @@
 # Documentation
 
-This project is a **gemstone & jewellery marketplace** (Infinity GemX). Code and product behaviour are documented in a few dedicated files. **When you change behaviour, update the right doc.**
+This project is a **gemstone & jewellery marketplace** (GemX). Code and product behaviour are documented in a few dedicated files. **When you change behaviour, update the right doc.**
 
 ## Where to update what
 

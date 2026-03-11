@@ -12,7 +12,7 @@ admin@gemx.com
 gemx@2026
 
 ---
-# Infinity GemX
+# GemX
 
 Gemstone & jewellery marketplace (Next.js, Drizzle, Better Auth, Supabase Storage).
 
