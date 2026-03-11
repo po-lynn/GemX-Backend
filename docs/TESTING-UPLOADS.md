@@ -88,4 +88,4 @@ Success: `{"url":"https://...supabase.../product-certificates/..."}`.
 npm run test:api
 ```
 
-Upload routes are covered in `tests/api/upload/`: 401 without auth, 400 without file or bad type, 503 when Supabase is not configured, and 200 when mocks succeed.
+Upload routes are covered in `tests/api/upload/`: 401 without auth, 400 without file or bad type, 503 when Supabase is not configured. The success path (200) is tested via browser or curl (FormData + File in Node/Vitest can be inconsistent).

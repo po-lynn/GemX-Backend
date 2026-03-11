@@ -91,3 +91,7 @@ Share listing – Deep link or share to social/WhatsApp so buyers can send the l
 Recently viewed – Per device or per user.
 “Similar” listings – Same category or same origin/lab on the product page.
 Notifications (push or email)
+
+
+Dimension Field for API
+API for public user of products
