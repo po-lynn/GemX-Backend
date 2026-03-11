@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Smartphone } from "lucide-react"
 
@@ -28,7 +29,7 @@ export function CTASection() {
                 className="gap-2 rounded-full bg-white text-primary hover:bg-white/90"
                 asChild
               >
-                <a href="/#app">Download mobile app</a>
+                <Link href="/#app">Download mobile app</Link>
               </Button>
             </div>
           </div>

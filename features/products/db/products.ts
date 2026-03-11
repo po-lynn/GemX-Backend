@@ -3,7 +3,7 @@ import { product, productImage, productVideo, productJewelleryGemstone } from "@
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { and, asc, eq, exists, gt, gte, ilike, inArray, lt, lte, or, sql, desc } from "drizzle-orm"
+import { and, asc, eq, exists, gte, ilike, inArray, lte, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,

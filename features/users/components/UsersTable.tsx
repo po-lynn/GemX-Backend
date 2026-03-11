@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,9 +59,11 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
   return (
     <div className="flex justify-center">
       {showImg ? (
-        <img
+        <Image
           src={imageUrl}
           alt=""
+          width={44}
+          height={44}
           className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
           onError={() => setLoadError(true)}
         />

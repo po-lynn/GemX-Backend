@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -190,13 +191,15 @@ export function UserForm({ mode, user }: Props) {
       <CardHeader>
         {isEdit && user && (
           <div className="mb-2 flex justify-center">
-            <div className="flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
+            <div className="relative flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
               {user.image ? (
-                <img
+                <Image
                   src={user.image}
                   alt=""
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
                   referrerPolicy="no-referrer"
+                  sizes="64px"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
@@ -246,11 +249,16 @@ export function UserForm({ mode, user }: Props) {
               </div>
               {(imageUrl || user?.image) && (
                 <div className="flex items-center gap-2">
-                  <img
-                    src={imageUrl || user?.image || ""}
-                    alt=""
-                    className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
-                  />
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
+                    <Image
+                      src={imageUrl || user?.image || ""}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      unoptimized={(imageUrl || user?.image || "").startsWith("blob:") || (imageUrl || user?.image || "").startsWith("data:")}
+                      sizes="48px"
+                    />
+                  </div>
                   <span className="text-muted-foreground text-xs">
                     {imageUrl && imageUrl !== (user?.image ?? "") ? "New image will be saved" : "Current profile photo"}
                   </span>
@@ -372,11 +380,16 @@ export function UserForm({ mode, user }: Props) {
                   </div>
                   {imageUrl && (
                     <div className="flex items-center gap-2">
-                      <img
-                        src={imageUrl}
-                        alt=""
-                        className="h-12 w-12 rounded-full object-cover ring-1 ring-border"
-                      />
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          unoptimized={imageUrl.startsWith("blob:") || imageUrl.startsWith("data:")}
+                          sizes="48px"
+                        />
+                      </div>
                       <span className="text-muted-foreground text-xs">
                         Image will be used as profile photo
                       </span>

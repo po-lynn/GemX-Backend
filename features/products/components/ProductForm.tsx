@@ -1,17 +1,10 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -118,11 +111,15 @@ function CertificateViewer({ url, onRemove }: { url: string; onRemove: () => voi
             className="w-full h-[400px] min-h-[360px] border-0"
           />
         ) : (
-          <img
-            src={url}
-            alt="Certificate"
-            className="max-w-full max-h-[420px] object-contain"
-          />
+          <div className="relative w-full min-h-[280px] max-h-[420px] flex-1">
+            <Image
+              src={url}
+              alt="Certificate"
+              fill
+              className="object-contain"
+              unoptimized={url.startsWith("blob:") || url.startsWith("data:")}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -1280,10 +1277,12 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       key={`${url}-${idx}`}
                       className="relative group rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)] overflow-hidden aspect-square"
                     >
-                      <img
+                      <Image
                         src={url}
                         alt={`Product ${idx + 1}`}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized={url.startsWith("blob:") || url.startsWith("data:")}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='12'%3EInvalid%3C/text%3E%3C/svg%3E"
                         }}

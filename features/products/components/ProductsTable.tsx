@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
@@ -191,9 +192,11 @@ export function ProductsTable({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {p.imageUrl ? (
-                        <img
+                        <Image
                           src={p.imageUrl}
                           alt=""
+                          width={44}
+                          height={44}
                           className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
                         />
                       ) : (

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 
@@ -28,10 +29,10 @@ export function HeroSection() {
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <Button size="lg" className="gap-2 rounded-full px-8 text-base" asChild>
-            <a href="/#app">Download mobile app</a>
+            <Link href="/#app">Download mobile app</Link>
           </Button>
           <Button size="lg" variant="outline" className="rounded-full px-8 text-base" asChild>
-            <a href="/#categories">Browse categories</a>
+            <Link href="/#categories">Browse categories</Link>
           </Button>
         </div>
       </div>
