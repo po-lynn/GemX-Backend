@@ -19,6 +19,7 @@ export const auth = betterAuth({
       gender: { type: "string", required: false, defaultValue: null },
       dateOfBirth: { type: "string", required: false, defaultValue: null },
       points: { type: "number", required: false, defaultValue: 0 },
+      archived: { type: "boolean", required: false, defaultValue: false },
     },
   },
   plugins: [username(), bearer()],

@@ -8,6 +8,8 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   /** Set by admin when user is verified */
   verified: boolean("verified").default(false).notNull(),
+  /** Set by admin to archive user (e.g. hide from active lists) */
+  archived: boolean("archived").default(false).notNull(),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

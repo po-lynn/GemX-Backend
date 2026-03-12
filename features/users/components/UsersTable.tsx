@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRow } from "@/features/users/db/users";
@@ -15,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "../../../components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -23,22 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDate } from "@/lib/formatters";
 import { Pencil, Trash2 } from "lucide-react";
 
 const ELLIPSIS_PREV = -1;
 const ELLIPSIS_NEXT = -2;
-
-export type UserTableFilters = { country?: string; state?: string; city?: string };
-
-function buildQueryString(page: number, filters: UserTableFilters): string {
-  const sp = new URLSearchParams();
-  sp.set("page", String(page));
-  if (filters.country?.trim()) sp.set("country", filters.country.trim());
-  if (filters.state?.trim()) sp.set("state", filters.state.trim());
-  if (filters.city?.trim()) sp.set("city", filters.city.trim());
-  return sp.toString();
-}
 
 function getPageNumbers(page: number, totalPages: number): number[] {
   if (totalPages <= 1) return [];
@@ -59,11 +47,9 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
   return (
     <div className="flex justify-center">
       {showImg ? (
-        <Image
+        <img
           src={imageUrl}
           alt=""
-          width={44}
-          height={44}
           className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
           onError={() => setLoadError(true)}
         />
@@ -80,24 +66,104 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
 }
 
 const TRUNCATE_TOKEN_LEN = 24;
+const SUGGEST_DEBOUNCE_MS = 300;
 
 type Props = {
   users: UserRow[];
   page: number;
   totalPages: number;
   total: number;
-  filters?: UserTableFilters;
+  /** Current search query from URL (for initial input and pagination links). */
+  searchQuery?: string;
   /** Push device tokens per user id (from getPushTokensByUserIds). */
   pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>;
 };
 
-export function UsersTable({ users, page, totalPages, total, filters = {}, pushTokensByUserId = {} }: Props) {
+export function UsersTable({
+  users,
+  page,
+  totalPages,
+  total,
+  searchQuery = "",
+  pushTokensByUserId = {},
+}: Props) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [inputValue, setInputValue] = useState(searchQuery);
+  const [suggestions, setSuggestions] = useState<UserRow[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const suggestAbortRef = useRef<AbortController | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setInputValue(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const q = inputValue.trim();
+    if (!q) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      suggestAbortRef.current?.abort();
+      suggestAbortRef.current = new AbortController();
+      setSuggestLoading(true);
+      fetch(`/api/admin/users/suggest?q=${encodeURIComponent(q)}`, {
+        signal: suggestAbortRef.current.signal,
+      })
+        .then((r) => r.json())
+        .then((data: { users?: UserRow[] }) => {
+          setSuggestions(data.users ?? []);
+          setShowSuggestions(true);
+        })
+        .catch(() => {
+          setSuggestions([]);
+        })
+        .finally(() => setSuggestLoading(false));
+    }, SUGGEST_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [inputValue]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const base = "/admin/users";
+  const pageLink = useCallback(
+    (p: number) => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set("search", searchQuery);
+      params.set("page", String(p));
+      return `${base}?${params.toString()}`;
+    },
+    [searchQuery]
+  );
+
+  function handleSearchSubmit() {
+    const q = inputValue.trim();
+    router.push(q ? `${base}?search=${encodeURIComponent(q)}&page=1` : base);
+    setShowSuggestions(false);
+  }
+
+  function handleSuggestionClick(u: UserRow) {
+    const q = [u.name, u.email, u.phone, u.country].filter(Boolean).join(" ").trim() || u.name;
+    setInputValue(q);
+    router.push(`${base}?search=${encodeURIComponent(q)}&page=1`);
+    setShowSuggestions(false);
+  }
 
   function openDeleteDialog(id: string, name: string) {
     setDeleteTarget({ id, name });
@@ -122,12 +188,63 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
     }
   }
 
-  const base = "/admin/users";
-  const query = (p: number) => buildQueryString(p, filters);
   const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
     <>
+      <div ref={searchWrapRef} className="relative mb-4 flex flex-wrap items-center gap-2">
+        <Input
+          type="search"
+          placeholder="Search by name, email, phone, country"
+          value={inputValue}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setInputValue(e.target.value)
+          }
+          onFocus={() =>
+            inputValue.trim() && setShowSuggestions(suggestions.length > 0)
+          }
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+            e.key === "Enter" && handleSearchSubmit()
+          }
+          className="max-w-sm"
+        />
+        <Button type="button" onClick={handleSearchSubmit}>
+          Search
+        </Button>
+        {showSuggestions && (suggestions.length > 0 || suggestLoading) && (
+          <ul
+            className="absolute left-0 top-full z-10 mt-1 max-h-60 w-full max-w-sm overflow-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md"
+            role="listbox"
+          >
+            {suggestLoading ? (
+              <li className="px-3 py-2 text-sm text-muted-foreground">Loading…</li>
+            ) : (
+              suggestions.map((u) => (
+                <li
+                  key={u.id}
+                  role="option"
+                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
+                  onMouseDown={(e: React.MouseEvent<HTMLLIElement>) => {
+                    e.preventDefault();
+                    handleSuggestionClick(u);
+                  }}
+                >
+                  <span className="font-medium">{u.name}</span>
+                  {u.email && (
+                    <span className="text-muted-foreground ml-2">{u.email}</span>
+                  )}
+                  {u.phone && (
+                    <span className="text-muted-foreground ml-2">{u.phone}</span>
+                  )}
+                  {u.country && (
+                    <span className="text-muted-foreground ml-2">{u.country}</span>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
       <div className="overflow-x-auto rounded-none border border-border">
         <Table>
           <TableHeader>
@@ -142,7 +259,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
                 Email
               </TableHead>
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Group
+                Role
               </TableHead>
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Phone
@@ -150,16 +267,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Country
               </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                State / Province
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Customer Since
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Confirmed email
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+              <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Push token
               </TableHead>
               <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
@@ -171,7 +279,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={11}
+                  colSpan={8}
                   className="text-muted-foreground py-8 text-center"
                 >
                   No users yet.
@@ -201,15 +309,6 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
                     {u.country ?? "—"}
                   </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.state ?? "—"}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm text-muted-foreground">
-                    {u.createdAt ? formatDate(u.createdAt) : "—"}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.emailVerified ? "Confirmed" : "Confirmation Not Required"}
-                  </TableCell>
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-mono text-muted-foreground">
                     {(() => {
                       const tokens = pushTokensByUserId[u.id];
@@ -229,16 +328,16 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
                     })()}
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" asChild>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
                         <Link href={`/admin/users/${u.id}/edit`}>
                           <Pencil className="size-4" />
                           <span className="sr-only">Edit</span>
                         </Link>
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={() => openDeleteDialog(u.id, u.name)}
                         className="text-destructive hover:text-destructive"
                       >
@@ -271,7 +370,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
               </Button>
             ) : (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`${base}?${query(page - 1)}`}>Previous</Link>
+                <Link href={pageLink(page - 1)}>Previous</Link>
               </Button>
             )}
             {pageNumbers.map((p) =>
@@ -286,7 +385,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
                   size="sm"
                   asChild
                 >
-                  <Link href={`${base}?${query(p)}`}>{p}</Link>
+                  <Link href={pageLink(p)}>{p}</Link>
                 </Button>
               )
             )}
@@ -296,7 +395,7 @@ export function UsersTable({ users, page, totalPages, total, filters = {}, pushT
               </Button>
             ) : (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`${base}?${query(page + 1)}`}>Next</Link>
+                <Link href={pageLink(page + 1)}>Next</Link>
               </Button>
             )}
           </div>

@@ -10,34 +10,34 @@ import {
 } from "@/components/ui/card";
 import { getUsersPaginatedFromDb } from "@/features/users/db/users";
 import { getPushTokensByUserIds } from "@/features/push/db/push-tokens";
-import { UserFilters, UsersTable } from "@/features/users/components";
+import { UsersTable } from "@/features/users/components";
 import { ChevronLeft, Plus } from "lucide-react";
 
 const USERS_PAGE_SIZE = 20;
 
 type Props = {
-  searchParams: Promise<{ page?: string; country?: string; state?: string; city?: string }>;
+  searchParams: Promise<{ page?: string; search?: string }>;
 };
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   await connection();
   const params = await searchParams;
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
-  const country = params.country ?? "";
-  const state = params.state ?? "";
-  const city = params.city ?? "";
+  const search = params.search?.trim() ?? "";
   const { users, total } = await getUsersPaginatedFromDb({
     page: rawPage,
     limit: USERS_PAGE_SIZE,
-    country: country || undefined,
-    state: state || undefined,
-    city: city || undefined,
+    search: search || undefined,
   });
-  const pushTokensByUserId = users.length > 0
-    ? await getPushTokensByUserIds(users.map((u) => u.id))
-    : {};
+  let pushTokensByUserId: Record<string, { token: string; platform: string | null }[]> = {};
+  if (users.length > 0) {
+    try {
+      pushTokensByUserId = await getPushTokensByUserIds(users.map((u) => u.id));
+    } catch (e) {
+      console.error("Failed to load push tokens (table may not exist; run npm run db:push or scripts/create-push-device-token-table.sql):", e);
+    }
+  }
   const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
-  const filters = { country, state, city };
 
   return (
     <div className="container my-6 space-y-6">
@@ -72,13 +72,12 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <UserFilters country={country} state={state} city={city} />
           <UsersTable
             users={users}
             page={rawPage}
             totalPages={totalPages}
             total={total}
-            filters={filters}
+            searchQuery={search}
             pushTokensByUserId={pushTokensByUserId}
           />
         </CardContent>

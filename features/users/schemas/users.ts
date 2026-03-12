@@ -24,6 +24,7 @@ export const userCreateSchema = z.object({
     .refine((v) => v === undefined || v === null || v.startsWith("http"), {
       message: "Image must be a valid URL",
     }),
+  archived: z.preprocess((v) => v === "on" || v === true, z.boolean()).optional(),
 });
 
 export const userUpdateSchema = z.object({
@@ -43,6 +44,9 @@ export const userUpdateSchema = z.object({
   dateOfBirth: z.string().max(20).optional().nullable(),
   points: z.coerce.number().int().min(0).optional(),
   verified: z
+    .preprocess((v) => v === "on" || v === true, z.boolean())
+    .optional(),
+  archived: z
     .preprocess((v) => v === "on" || v === true, z.boolean())
     .optional(),
   image: z

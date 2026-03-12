@@ -35,6 +35,7 @@ export async function createUserAction(formData: FormData) {
     state: emptyToNull(formData.get("state")),
     country: emptyToNull(formData.get("country")),
     image: emptyToNull(formData.get("image")),
+    archived: formData.get("archived") === "on",
   });
   if (!parsed.success) {
     return {
@@ -79,11 +80,15 @@ export async function createUserAction(formData: FormData) {
     return { error: msg };
   }
   await applyDefaultPointsToNewUser(email);
-  // Ensure profile image is saved (better-auth may not persist image on signup)
-  if (imageUrl) {
+  // Ensure profile image and archived are saved (better-auth may not persist on signup)
+  const needUpdate = imageUrl || parsed.data.archived === true;
+  if (needUpdate) {
     const newUser = await getUserByEmail(email);
     if (newUser) {
-      await updateUserInDb(newUser.id, { image: imageUrl });
+      const updates: { image?: string; archived?: boolean } = {};
+      if (imageUrl) updates.image = imageUrl;
+      if (parsed.data.archived === true) updates.archived = true;
+      await updateUserInDb(newUser.id, updates);
     }
   }
   return { success: true };
@@ -112,6 +117,7 @@ export async function updateUserAction(formData: FormData) {
       return Number.isNaN(n) ? undefined : n;
     })(),
     verified: formData.get("verified") === "on",
+    archived: formData.get("archived") === "on",
     image: emptyToNull(formData.get("image")),
   });
   if (!parsed.success) {
@@ -127,6 +133,9 @@ export async function updateUserAction(formData: FormData) {
   const data: UpdateUserInput = { ...rest };
   if (rest.role === "user") {
     data.verified = rest.verified === true;
+  }
+  if (rest.archived !== undefined) {
+    data.archived = rest.archived === true;
   }
   if (rest.image !== undefined) {
     data.image = rest.image ?? null;

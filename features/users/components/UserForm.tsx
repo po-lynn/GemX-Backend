@@ -629,20 +629,34 @@ export function UserForm({ mode, user }: Props) {
             </div>
             
             
-            {user?.role === "user" && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="verified"
-                      name="verified"
-                      type="checkbox"
-                      defaultChecked={user?.verified ?? false}
-                      className="h-4 w-4 rounded border-input"
-                    />
-                    <label htmlFor="verified" className="text-sm font-medium">
-                      Verified by admin
-                    </label>
-                  </div>
-                )}
+            <div className="flex flex-wrap items-center gap-6">
+              {((isEdit && user?.role === "user") || !isEdit) && (
+                <div className="flex items-center gap-2">
+                  <input
+                    id="verified"
+                    name="verified"
+                    type="checkbox"
+                    defaultChecked={user?.verified ?? false}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <label htmlFor="verified" className="text-sm font-medium">
+                    Verified by admin
+                  </label>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  id="archived"
+                  name="archived"
+                  type="checkbox"
+                  defaultChecked={user?.archived ?? false}
+                  className="h-4 w-4 rounded border-input"
+                />
+                <label htmlFor="archived" className="text-sm font-medium">
+                  Archive user
+                </label>
+              </div>
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">

@@ -13,6 +13,7 @@ export type UserRow = {
   points: number;
   emailVerified: boolean;
   verified: boolean;
+  archived: boolean;
   createdAt: Date;
   updatedAt: Date;
   image?: string | null;
@@ -56,6 +57,7 @@ export async function getAllUsersFromDb(opts?: {
       points: user.points,
       emailVerified: user.emailVerified,
       verified: user.verified,
+      archived: user.archived,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     })
@@ -81,7 +83,8 @@ export async function getUsersPaginatedFromDb(options: {
         ilike(user.name, `%${searchTrim}%`),
         ilike(user.email, `%${searchTrim}%`),
         ilike(user.phone ?? "", `%${searchTrim}%`),
-        ilike(user.role, `%${searchTrim}%`)
+        ilike(user.role, `%${searchTrim}%`),
+        ilike(user.country ?? "", `%${searchTrim}%`)
       )
     : undefined;
   const countryCondition = country?.trim() ? eq(user.country, country.trim()) : undefined;
@@ -105,6 +108,7 @@ export async function getUsersPaginatedFromDb(options: {
     points: user.points,
     emailVerified: user.emailVerified,
     verified: user.verified,
+    archived: user.archived,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
     image: user.image,
@@ -153,6 +157,7 @@ export async function getUserById(id: string): Promise<UserForEdit | null> {
       points: user.points,
       emailVerified: user.emailVerified,
       verified: user.verified,
+      archived: user.archived,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       image: user.image,
@@ -179,6 +184,7 @@ export type UpdateUserInput = {
   dateOfBirth?: string | null;
   points?: number;
   verified?: boolean;
+  archived?: boolean;
   image?: string | null;
   username?: string | null;
   displayUsername?: string | null;
