@@ -94,7 +94,45 @@ One row per product video URL; order by `sort_order`.
 
 Index: `product_video_productId_idx`.
 
-### 1.5 Table: `product_jewellery_gemstone`
+### 1.5 Product search (full-text and suggestions)
+
+**Full-text search:** List endpoints (`getAdminProductsFromDb`, used by GET /api/products and admin) use Postgres full-text search when a `search` param is present: `to_tsvector('english', title || ' ' || description)` and `plainto_tsquery('english', search)`, with ranking by `ts_rank`. Seller name/phone/email remain matched via ILIKE (with escaped `%`/`_`/`\`). To enable fast FTS, run **scripts/postgres-fulltext-search.sql** once (e.g. Supabase SQL Editor or psql). It creates a GIN index `product_title_description_fts_idx` on the tsvector expression.
+
+**Suggestions:** `getProductSearchSuggestions(q, limit)` returns distinct product titles for autocomplete (GET /api/products/suggestions). Only active products; ordered by title starts-with query, then contains, then newest. Input `q` is escaped for ILIKE.
+
+**Ranking rules:**
+- **Product list (with search):** When `search` is present and sort is public priority, order is: (1) `ts_rank` (FTS relevance) descending, (2) collector piece, (3) privilege assist, (4) featured, (5) `createdAt` descending. Without search, order is collector / privilege / featured / createdAt only.
+- **Suggestions:** (1) Title starts with query (DESC), (2) title contains query (DESC), (3) `createdAt` DESC. Duplicate titles are collapsed; first occurrence in this order is kept.
+
+**Caching:** GET /api/products uses default public cache (60s s-maxage, 300s stale-while-revalidate). GET /api/products/suggestions uses shorter cache (30s s-maxage, 60s stale-while-revalidate). Query params are part of the cache key. Rate limiting for search and suggestions is recommended (per-IP or per-user) to prevent abuse; see docs/SECURITY.md if present.
+
+#### 1.5.1 Code reference: search and suggestions
+
+**Beginner-friendly line-by-line guide:** [CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md) — tables and explanations for the route, list search, and `getProductSearchSuggestions`. Update that doc when you change this code.
+
+**Files:** `app/api/products/suggestions/route.ts`, `features/products/db/products.ts`.
+
+**Suggestions route (`app/api/products/suggestions/route.ts`):**
+- `connection()` — marks the route as dynamic (no static prerender).
+- `searchParams.get("q")?.trim() ?? ""` — read and normalize query; empty string if missing.
+- `limit` — parsed from query, clamped to 1–10; default 5.
+- If `q.length < 2`: return `{ suggestions: [] }` with cache headers (no DB call).
+- Otherwise: `getProductSearchSuggestions(q, limit)` then return `{ suggestions }` with `Cache-Control: public, s-maxage=30, stale-while-revalidate=60`.
+- Errors: 500 with `jsonError(...)` (no-store so errors are not cached).
+
+**`escapeLike(s)` (products.ts):** Escapes `\`, `%`, and `_` in user input so they are not treated as SQL LIKE wildcards (safe ILIKE patterns).
+
+**List search (`getAdminProductsFromDb`):**
+- `searchCondition`: when `search` is set, an OR of (1) full-text match: `to_tsvector('english', coalesce(title,'') || ' ' || coalesce(description,'')) @@ plainto_tsquery('english', search)`, (2) ILIKE on product title and seller name/phone/email using `escapeLike(search)`.
+- `orderByColumns`: when `sortByPublicPriority` and `search` are set, order by `ts_rank(...)` DESC first, then collector piece, privilege assist, featured, `createdAt` DESC.
+
+**`getProductSearchSuggestions(q, limit)` (products.ts):**
+- Normalize `q` (trim); return `[]` if length < 2.
+- Clamp `limit` to 1–10; build `patternContains` = `%${escapeLike(q)}%` and `patternStarts` = `${escapeLike(q)}%`.
+- Query: `product` table, `status = 'active'`, `title ILIKE patternContains`; select only `title`, `createdAt`; order by `(title ILIKE patternStarts) DESC`, `(title ILIKE patternContains) DESC`, `createdAt DESC`; limit 50.
+- In application code: iterate rows, skip duplicate titles (Set), push `{ label: row.title }` until result length reaches requested limit (cap), then return.
+
+### 1.6 Table: `product_jewellery_gemstone`
 
 Jewellery only: one row per gemstone type on the piece (e.g. Ruby 0.5ct).
 

@@ -18,6 +18,7 @@
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
+- **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
 
 ---
 
@@ -33,7 +34,8 @@
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked (title/description + seller). Cached 60s/300s. |
+| GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
@@ -48,7 +50,7 @@
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
 
 
-List responses (`GET /api/products`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached (e.g. 60s); filter and search query params are part of the cache key so each combination returns the correct result.
+List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate. **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
 
 ---
 
@@ -326,9 +328,23 @@ Use this `url` as `certReportUrl` when creating or updating the product.
 
 **Auth:** Not required.
 
+**Search & suggestions — instruction for mobile**
+
+| Step | Action | Endpoint / params |
+|------|--------|-------------------|
+| 1. **Autocomplete** | While the user types in the search bar, after debounce (200–300 ms) and only if query length ≥ 2 | **GET /api/products/suggestions?q=&lt;query&gt;** (optional: `limit`, default 5, max 10). Show the returned `suggestions` under the input. |
+| 2. **Run search** | When the user taps **Search** or taps a suggestion | **GET /api/products?search=&lt;query&gt;&page=1&limit=20** — send **only** `search`, `page`, and `limit` (no other filters). |
+| 3. **Pagination** | Load more results | Same **GET /api/products** with same `search` and `limit`, increment `page`. |
+| 4. **Errors** | Suggestions request fails | Hide suggestions; user can still tap Search to run full search. |
+| 5. **Errors** | Product list request fails | Show error + retry; do not leave list empty without feedback. |
+
+Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Code reference: [CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md).
+
+---
+
 **Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isCollectorPiece=true` to list only collector pieces (high-value items); use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
 
-**Sort order:** Results are ordered by **public priority**: (1) collector pieces first (`isCollectorPiece` true), (2) then privilege assist (`isPrivilegeAssist` true), (3) then featured (`isFeatured` true), (4) then by `createdAt` (newest first). This order applies to the public list and to search/filter results. The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
+**Sort order:** When **search** is present: (1) full-text **relevance** (ts_rank on title/description), (2) collector pieces, (3) privilege assist, (4) featured, (5) `createdAt` (newest first). When search is absent: (1) collector pieces, (2) privilege assist, (3) featured, (4) `createdAt`. The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
 
 **Query:**
 
@@ -350,6 +366,62 @@ Use this `url` as `certReportUrl` when creating or updating the product.
 
 
 **Success (200):** See response shape below.
+
+---
+
+#### 5.1.1 Product search suggestions (autocomplete)
+
+Use this endpoint to show autocomplete suggestions as the user types in the product search bar. When the user taps a suggestion or the "Search" button, call **GET /api/products** with `search=<query>&page=1&limit=20` (and no other filters) to show results in the product list.
+
+**GET** `/api/products/suggestions`
+
+**Auth:** Not required.
+
+**Query:**
+
+| Param   | Type   | Required | Description |
+| ------- | ------ | -------- | ----------- |
+| `q`     | string | Yes      | Search query. Minimum 2 characters. Suggestions are based on **product title** (active products only). |
+| `limit` | number | No       | Max number of suggestions to return. Default 5, max 10. |
+
+**Success (200):**
+
+```json
+{
+  "suggestions": [
+    { "label": "Sapphire" },
+    { "label": "Sapphire Ring" },
+    { "label": "Sapphire Necklace" }
+  ]
+}
+```
+
+**Ordering:** Titles that **start with** the query appear first, then titles that **contain** the query, then by newest product. Duplicate titles are collapsed (one suggestion per distinct title).
+
+**When `q` is empty or shorter than 2 characters:** Response is `{ "suggestions": [] }` (200).
+
+**Use in app:** Debounce input (e.g. 200–300 ms) and call this endpoint when `q.length >= 2`. On suggestion tap or "Search" submit, navigate to the product list and call `GET /api/products?search=<final_query>&page=1&limit=20` (do not send other filters).
+
+**Caching:** `Cache-Control: public, s-maxage=30, stale-while-revalidate=60`. Same `q` may be served from edge cache. Rate limiting on this endpoint is recommended for production.
+
+**Implementation reference:** For API contract and mobile UX, use this doc (5.1.1, 5.1.2). For line-by-line code and behaviour details: [CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md) and [TECHNICAL-PRODUCTS.md](./TECHNICAL-PRODUCTS.md) § 1.5.
+
+---
+
+#### 5.1.2 Mobile search UX: debouncing, flows, and errors
+
+**Quick guide:** See the instruction table in **5.1** above. Summary: debounce suggestions (200–300 ms), call suggestions only when `q.length >= 2`, on submit/suggestion tap call list with `search` only, then paginate with same endpoint.
+
+**Debouncing for suggestions:** On each change of the search input, start a debounce timer (recommended 200–300 ms). When the timer fires, if `q.length >= 2`, call **GET /api/products/suggestions?q=...**. Cancel any in-flight suggestions request when the user types again (new request replaces the previous one). Do not send a request on every keystroke.
+
+**Request flow:**
+1. **While typing:** Debounced calls to **GET /api/products/suggestions?q=...**; show the returned suggestions under the input.
+2. **On "Search" tap or suggestion tap:** Navigate to the product list screen and call **GET /api/products?search=&lt;final_query&gt;&page=1&limit=20** with no other query params (filters are cleared for this search).
+3. **Product list:** Use the same **GET /api/products** for pagination (increment `page`, keep `search` and `limit`).
+
+**Error handling:**
+- **Suggestions request fails (network or 5xx):** Hide or clear the suggestions list; do not block the user. They can still tap "Search" to run the full search.
+- **Product list request fails:** Show an error message (e.g. "Could not load results") and a retry action. Do not leave the list empty without feedback.
 
 ---
 
@@ -378,10 +450,10 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 
 **What is matched by `search`**
 
-- Product **title** (e.g. `"sapphire"` finds "Blue Sapphire 2ct")
-- Seller **name**
-- Seller **phone**
-- Seller **email**
+- Product **title** and **description** (full-text search; e.g. `"sapphire"` or `"sapphire ring"` finds relevant listings; prefix and multi-word supported)
+- Seller **name**, **phone**, and **email** (case-insensitive partial match)
+
+When `search` is present, results are ordered by **relevance** (full-text rank) first, then collector piece, privilege assist, featured, then newest.
 
 **Pagination**
 

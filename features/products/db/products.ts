@@ -10,6 +10,11 @@ import type {
 } from "@/features/products/schemas/products"
 import type { GemstoneSpec } from "@/features/products/schemas/gemstone-spec"
 
+/** Escape a string for safe use in ILIKE patterns (%, _, \). */
+function escapeLike(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
+}
+
 /** Same spec shape as loose stone; used for jewellery piece gemstones (with categoryId/categoryName). */
 export type JewelleryGemstoneRow = GemstoneSpec & {
   categoryId: string
@@ -73,12 +78,14 @@ export async function getAdminProductsFromDb(opts: {
   const offset = (page - 1) * limit
   const search = opts.search?.trim()
 
+  // Full-text search on title/description (uses product_title_description_fts_idx when scripts/postgres-fulltext-search.sql is run) plus ILIKE on seller
   const searchCondition = search
     ? or(
-        ilike(product.title, `%${search}%`),
-        ilike(user.name, `%${search}%`),
-        ilike(user.phone ?? "", `%${search}%`),
-        ilike(user.email, `%${search}%`)
+        sql`to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')) @@ plainto_tsquery('english', ${search})`,
+        ilike(product.title, `%${escapeLike(search)}%`),
+        ilike(user.name, `%${escapeLike(search)}%`),
+        ilike(user.phone ?? "", `%${escapeLike(search)}%`),
+        ilike(user.email, `%${escapeLike(search)}%`)
       )
     : undefined
 
@@ -127,12 +134,20 @@ export async function getAdminProductsFromDb(opts: {
     filterConditions.length > 0 ? and(...filterConditions) : undefined
 
   const orderByColumns = opts.sortByPublicPriority
-    ? [
-        desc(product.isCollectorPiece),
-        desc(product.isPrivilegeAssist),
-        desc(product.isFeatured),
-        desc(product.createdAt),
-      ]
+    ? search
+      ? [
+          desc(sql`ts_rank(to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')), plainto_tsquery('english', ${search}))`),
+          desc(product.isCollectorPiece),
+          desc(product.isPrivilegeAssist),
+          desc(product.isFeatured),
+          desc(product.createdAt),
+        ]
+      : [
+          desc(product.isCollectorPiece),
+          desc(product.isPrivilegeAssist),
+          desc(product.isFeatured),
+          desc(product.createdAt),
+        ]
     : (() => {
         const dir = opts.sortOrder === "asc" ? asc : desc
         switch (opts.sortBy) {
@@ -241,6 +256,53 @@ export async function getAdminProductsFromDb(opts: {
   return { products, total }
 }
 
+export type ProductSuggestionRow = { label: string }
+
+/**
+ * Returns distinct product title suggestions for autocomplete.
+ * Only active products; ordered by starts-with query, then contains, then newest first.
+ */
+export async function getProductSearchSuggestions(
+  q: string,
+  limit: number = 5
+): Promise<ProductSuggestionRow[]> {
+  const trimmed = q?.trim() ?? ""
+  if (trimmed.length < 2) return []
+  const cap = Math.min(Math.max(limit, 1), 10)
+  const escaped = escapeLike(trimmed)
+  const patternContains = `%${escaped}%`
+  const patternStarts = `${escaped}%`
+
+  const rows = await db
+    .select({
+      title: product.title,
+      createdAt: product.createdAt,
+    })
+    .from(product)
+    .where(
+      and(
+        eq(product.status, "active"),
+        sql`${product.title} ILIKE ${patternContains}`
+      )
+    )
+    .orderBy(
+      desc(sql`(${product.title} ILIKE ${patternStarts})`),
+      desc(sql`(${product.title} ILIKE ${patternContains})`),
+      desc(product.createdAt)
+    )
+    .limit(50)
+
+  const seen = new Set<string>()
+  const out: ProductSuggestionRow[] = []
+  for (const row of rows) {
+    if (seen.has(row.title)) continue
+    seen.add(row.title)
+    out.push({ label: row.title })
+    if (out.length >= cap) break
+  }
+  return out
+}
+
 export async function getProductsBySellerId(
   sellerId: string,
   opts: {
@@ -266,10 +328,10 @@ export async function getProductsBySellerId(
 
   const searchCondition = search
     ? or(
-        ilike(product.title, `%${search}%`),
-        ilike(user.name, `%${search}%`),
-        ilike(user.phone ?? "", `%${search}%`),
-        ilike(user.email, `%${search}%`)
+        ilike(product.title, `%${escapeLike(search)}%`),
+        ilike(user.name, `%${escapeLike(search)}%`),
+        ilike(user.phone ?? "", `%${escapeLike(search)}%`),
+        ilike(user.email, `%${escapeLike(search)}%`)
       )
     : undefined
 

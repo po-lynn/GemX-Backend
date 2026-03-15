@@ -9,9 +9,11 @@ This project is a **gemstone & jewellery marketplace** (GemX). Code and product 
 | **Add or change a unit test / test case** | [TDD.md](./TDD.md) — describe the new or updated test, where it lives, and what it covers. |
 | **Change any API** (mobile, public, or admin) | [MOBILE-API.md](./MOBILE-API.md) — update the "Recent changes" section and the affected route(s), request/response shapes, and examples. |
 | **Add or change logic, algorithms, or function-level behaviour** | [TECHNICAL-PRODUCTS.md](./TECHNICAL-PRODUCTS.md) — document the function, algorithm, validation rules, or domain logic (products and related features). For other domains (auth, subscriptions, reviews, etc.), add or reference the appropriate technical doc. |
+| **Change search or suggestions code** (route, DB query, ranking) | [CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md) — update the tables and explanations so the code stays easy to review and understand. |
 
 ## Other docs
 
+- **[CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md)** — Beginner-friendly code guide for product search and suggestions (route, list search, getProductSearchSuggestions). Update this doc when you change that code.
 - **[TESTING-UPLOADS.md](./TESTING-UPLOADS.md)** — How to test product-media and certificate upload APIs (browser, curl, Vitest).
 - **[REQUIREMENTS.md](./REQUIREMENTS.md)** — Full feature spec: Mobile (registration, profile, buyers, sellers, subscription, homepage, ratings), Admin (users, products, reviews, subscriptions), and Additional (i18n, premium media, dual currency, deal management, chat & reports). Use it as the single source of truth for what’s planned and built.
 - **[TERMINAL-SANDBOX-LINUX.md](./TERMINAL-SANDBOX-LINUX.md)** — Terminal/sandbox environment notes (e.g. Linux).
@@ -21,4 +23,5 @@ This project is a **gemstone & jewellery marketplace** (GemX). Code and product 
 - **Tests:** `docs/TDD.md`
 - **API contract:** `docs/MOBILE-API.md`
 - **Technical behaviour (products, logic, algorithms):** `docs/TECHNICAL-PRODUCTS.md`
+- **Search/suggestions code (beginner guide):** `docs/CODE-SEARCH-SUGGESTIONS.md`
 - **Product/feature requirements:** `docs/REQUIREMENTS.md`

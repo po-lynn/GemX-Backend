@@ -46,7 +46,7 @@ Full feature spec (Mobile, Admin, Additional): [docs/REQUIREMENTS.md](docs/REQUI
    - `npm run db:migrate` (or `db:push` for prototyping).
 4. If the Dashboard shows **"relation supabase_migrations.schema_migrations does not exist"**, run once in **Supabase → SQL Editor**: `scripts/supabase-migrations-schema.sql` (or `psql $DATABASE_URL -f scripts/supabase-migrations-schema.sql`).
 
-**Product file/video/certificate uploads (optional):** To enable uploads from the product form, set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Use the **legacy** key: in **Supabase → Project Settings → API**, open the **"Legacy anon, service_role API keys"** tab and copy the **service_role** (secret) value—not the new "Secret keys" (sh.secret.*) or the publishable key. In **Storage**, create three **public** buckets: `product-images`, `product-videos`, and `product-certificates` (lab report/certificate PDFs and images). If you get **"new row violates row-level security policy"** when uploading, run **Supabase → SQL Editor** with `scripts/supabase-storage-policies.sql`. Then run `npm run db:generate` and `npm run db:push` (or `db:migrate`) to add the `product_video` table if needed.
+**Product file/video/certificate uploads (optional):** To enable uploads from the product form, set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Use the **legacy** key: in **Supabase → Project Settings → API**, open the **"Legacy anon, service_role API keys"** tab and copy the **service_role** (secret) value—not the new "Secret keys" (sh.secret.*) or the publishable key. In **Storage**, create three **public** buckets: `product-images`, `product-videos`, and `product-certificates` (lab report/certificate PDFs and images). If you get **"new row violates row-level security policy"** when uploading, run **Supabase → SQL Editor** with `scripts/supabase-storage-policies.sql`. Then run `npm run db:generate` and `npm run db:push` (or `db:migrate`) to add the `product_video` table if needed. For faster product search (full-text), run **scripts/postgres-fulltext-search.sql** once against your Postgres.
 
 ### 2. Vercel (app)
 
@@ -97,3 +97,6 @@ Notifications (push or email)
 
 Dimension Field for API
 API for public user of products
+
+
+Randomly show product list
