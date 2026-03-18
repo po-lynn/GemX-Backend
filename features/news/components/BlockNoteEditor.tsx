@@ -7,6 +7,7 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import "@blocknote/core/fonts/inter.css";
 import type { PartialBlock } from "@blocknote/core";
+import { authClient } from "@/lib/auth-client";
 
 function parseInitialContent(content: string | null | undefined): PartialBlock[] | undefined {
   if (!content || !content.trim()) return undefined;
@@ -28,8 +29,50 @@ export function BlockNoteEditor({ name, initialContent }: Props) {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const initial = parseInitialContent(initialContent);
 
+  const { data: session } = authClient.useSession();
+  const token = (() => {
+    if (!session) return undefined;
+    const maybeToken = (session as unknown as { token?: string }).token;
+    if (typeof maybeToken === "string") return maybeToken;
+    const maybeNestedToken = (session as unknown as {
+      session?: { token?: string };
+    }).session?.token;
+    return typeof maybeNestedToken === "string" ? maybeNestedToken : undefined;
+  })();
+
   const editor = useCreateBlockNote({
     initialContent: initial,
+    uploadFile: async (file) => {
+      if (!token) {
+        throw new Error("Unauthorized. Please sign in and try again.");
+      }
+
+      const formData = new FormData();
+      formData.append("type", "image");
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload/product-media", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const jsonUnknown: unknown = await res.json().catch(() => undefined);
+      const data =
+        jsonUnknown && typeof jsonUnknown === "object"
+          ? (jsonUnknown as { urls?: string[]; url?: string; error?: string })
+          : {};
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Image upload failed");
+      }
+
+      const url = data?.urls?.[0] ?? data?.url;
+      if (!url) throw new Error("Upload succeeded but no URL returned.");
+
+      // BlockNote expects either a URL string or an object to set file block props.
+      return url;
+    },
   });
 
   const handleChange = useCallback(() => {
