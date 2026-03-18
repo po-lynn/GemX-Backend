@@ -29,6 +29,8 @@ export async function getAdminProducts(opts: {
   categoryId?: string | null
   status?: "active" | "archive" | "sold" | "hidden"
   stoneCut?: "Faceted" | "Cabochon"
+  metal?: "Gold" | "Silver" | "Other"
+  identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
@@ -57,6 +59,8 @@ export async function getCachedProductsBySellerId(
     categoryId?: string | null
     status?: "active" | "archive" | "sold" | "hidden"
     stoneCut?: "Faceted" | "Cabochon"
+    metal?: "Gold" | "Silver" | "Other"
+    identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null

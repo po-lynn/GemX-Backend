@@ -36,6 +36,7 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked (title/description + seller). Cached 60s/300s. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
 | GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
@@ -441,6 +442,8 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `categoryId`        | string  | -       | Filter by category (UUID from GET /api/categories).                                                                               |
 | `status`            | string  | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`.                                        |
 | `stoneCut`          | string  | -       | Filter by cut: `Faceted` or `Cabochon`.                                                                                           |
+| `metal`             | string  | -       | Filter by metal: `Gold`, `Silver`, `Other` (typically jewellery only).                                                             |
+| `identification`    | string  | -       | Filter by identification: `Natural`, `Heat Treated`, `Treatments`, `Others`.                                                       |
 | `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`.                                                                     |
 | `origin`            | string  | -       | Filter by origin name.                                                                                                            |
 | `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
@@ -506,7 +509,15 @@ GET /api/products/mine?stoneCut=Faceted&status=active
 Authorization: Bearer <session_token>
 ```
 
-**7. Collector pieces only (high-value items)**
+**7. Filter by metal or identification**
+
+```
+GET /api/products?metal=Gold
+GET /api/products?identification=Natural
+GET /api/products?metal=Gold&identification=Heat%20Treated&productType=jewellery
+```
+
+**8. Collector pieces only (high-value items)**
 
 ```
 GET /api/products?isCollectorPiece=true
@@ -514,7 +525,7 @@ GET /api/products/mine?isCollectorPiece=true
 Authorization: Bearer <session_token>
 ```
 
-**8. Privilege Assist only (products sold by us)**
+**9. Privilege Assist only (products sold by us)**
 
 ```
 GET /api/products?isPrivilegeAssist=true
@@ -530,10 +541,11 @@ Authorization: Bearer <session_token>
     {
       "id": "uuid",
       "sku": "PRD-XXX",
-      "title": "Blue Sapphire 2ct",
+      "title": "Red Necklace",
       "description": "...",
       "identification": "Natural",
       "price": "2500",
+      "dimensions": "8.2mm",
       "currency": "USD",
       "productType": "loose_stone",
       "categoryId": "uuid",

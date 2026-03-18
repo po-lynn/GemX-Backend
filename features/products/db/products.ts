@@ -57,6 +57,8 @@ export async function getAdminProductsFromDb(opts: {
   categoryId?: string | null
   status?: "active" | "archive" | "sold" | "hidden"
   stoneCut?: "Faceted" | "Cabochon"
+  metal?: "Gold" | "Silver" | "Other"
+  identification?: ProductIdentification
   shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
@@ -120,6 +122,8 @@ export async function getAdminProductsFromDb(opts: {
     categoryCondition,
     opts.status ? eq(product.status, opts.status) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
+    opts.metal ? eq(product.metal, opts.metal) : undefined,
+    opts.identification ? eq(product.identification, opts.identification) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
@@ -313,6 +317,8 @@ export async function getProductsBySellerId(
     categoryId?: string | null
     status?: "active" | "archive" | "sold" | "hidden"
     stoneCut?: "Faceted" | "Cabochon"
+    metal?: "Gold" | "Silver" | "Other"
+    identification?: ProductIdentification
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
@@ -360,6 +366,8 @@ export async function getProductsBySellerId(
     categoryConditionSeller,
     opts.status ? eq(product.status, opts.status) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
+    opts.metal ? eq(product.metal, opts.metal) : undefined,
+    opts.identification ? eq(product.identification, opts.identification) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,

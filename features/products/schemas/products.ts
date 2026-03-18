@@ -38,6 +38,8 @@ export const adminProductsSearchSchema = z.object({
   categoryId: optionalUuid,
   status: productStatusSchema.optional(),
   stoneCut: z.enum(["Faceted", "Cabochon"]).optional(),
+  metal: z.enum(["Gold", "Silver", "Other"]).optional(),
+  identification: productIdentificationSchema.optional(),
   shape: productShapeSchema.optional(),
   origin: z.string().max(200).optional(),
   laboratoryId: optionalUuid,
