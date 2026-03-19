@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 const ELLIPSIS_PREV = -1;
 const ELLIPSIS_NEXT = -2;
@@ -289,7 +289,18 @@ export function UsersTable({
               users.map((u, index) => (
                 <TableRow
                   key={u.id}
-                  className={`border-b border-border/50 ${index % 2 === 1 ? "bg-[#f5f5f5]" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`${base}/${u.id}/edit`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`${base}/${u.id}/edit`);
+                    }
+                  }}
+                  className={`cursor-pointer border-b border-border/50 transition-colors last:border-0 hover:bg-muted/50 ${
+                    index % 2 === 1 ? "bg-[#f5f5f5]" : ""
+                  }`}
                 >
                   <TableCell className="border-r border-border/40 px-3 py-2.5">
                     <UserPhotoCell imageUrl={u.image} />
@@ -329,16 +340,15 @@ export function UsersTable({
                   </TableCell>
                   <TableCell className="px-3 py-2.5">
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/users/${u.id}/edit`}>
-                          <Pencil className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Link>
-                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openDeleteDialog(u.id, u.name)}
+                        type="button"
+                        onClick={(e) => {
+                          // Prevent row navigation when clicking delete.
+                          e.stopPropagation();
+                          openDeleteDialog(u.id, u.name);
+                        }}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="size-4" />

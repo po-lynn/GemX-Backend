@@ -28,8 +28,6 @@ const inputClass =
 const ROLES = [
   { value: "", label: "Select role" },
   { value: "admin", label: "Admin" },
-  { value: "seller", label: "Seller" },
-  { value: "mobile", label: "Mobile" },
   { value: "user", label: "User" },
 ]
 const GENDERS = [
