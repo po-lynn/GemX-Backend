@@ -129,7 +129,9 @@ export async function getAdminProductsFromDb(opts: {
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
     createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
     createdToDate ? lte(product.createdAt, createdToDate) : undefined,
-    opts.isFeatured === true ? eq(product.isFeatured, true) : undefined,
+    opts.isFeatured !== undefined
+      ? eq(product.isFeatured, opts.isFeatured)
+      : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
   ].filter(Boolean)
@@ -322,6 +324,7 @@ export async function getProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
     sortByPublicPriority?: boolean
@@ -371,6 +374,9 @@ export async function getProductsBySellerId(
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+    opts.isFeatured !== undefined
+      ? eq(product.isFeatured, opts.isFeatured)
+      : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
   ].filter(Boolean)

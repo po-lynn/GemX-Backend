@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       shape: searchParams.get("shape") || undefined,
       origin: searchParams.get("origin") || undefined,
       laboratoryId: searchParams.get("laboratoryId") || undefined,
+      isFeatured: searchParams.get("isFeatured") || undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
     })
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
       shape,
       origin,
       laboratoryId,
+      isFeatured,
       isCollectorPiece,
       isPrivilegeAssist,
     } = data
@@ -60,6 +62,7 @@ export async function GET(request: NextRequest) {
       shape: shape ?? undefined,
       origin: origin ?? undefined,
       laboratoryId: laboratoryId ?? undefined,
+      isFeatured: isFeatured ?? undefined,
       isCollectorPiece: isCollectorPiece ?? undefined,
       isPrivilegeAssist: isPrivilegeAssist ?? undefined,
     })

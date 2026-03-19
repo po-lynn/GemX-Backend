@@ -64,6 +64,7 @@ export async function getCachedProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
   }
