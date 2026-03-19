@@ -33,6 +33,7 @@ type FilterKey =
   | "isFeatured"
   | "isCollectorPiece"
   | "isPrivilegeAssist"
+  | "isPromotion"
 
 type Props = {
   categories: Category[]
@@ -50,6 +51,7 @@ type Props = {
   isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  isPromotion?: boolean
 }
 
 const selectClass =
@@ -71,6 +73,7 @@ export function ProductFilters({
   isFeatured = false,
   isCollectorPiece = false,
   isPrivilegeAssist = false,
+  isPromotion = false,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -101,7 +104,8 @@ export function ProductFilters({
     !!createdTo ||
     !!isFeatured ||
     !!isCollectorPiece ||
-    !!isPrivilegeAssist
+    !!isPrivilegeAssist ||
+    !!isPromotion
 
   const clearFilters = useCallback(() => {
     router.push("/admin/products")
@@ -321,6 +325,18 @@ export function ProductFilters({
                   aria-label="Privilege Assist only"
                 />
                 Privilege Assist
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isPromotion}
+                  onChange={(e) =>
+                    updateFilter("isPromotion", e.target.checked ? "true" : "")
+                  }
+                  className="h-4 w-4 rounded border-border"
+                  aria-label="Promotion only"
+                />
+                Promotion
               </label>
             </div>
           </div>

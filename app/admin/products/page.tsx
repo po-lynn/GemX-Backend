@@ -42,6 +42,7 @@ type Props = {
     isFeatured?: string
     isCollectorPiece?: string
     isPrivilegeAssist?: string
+    isPromotion?: string
   }>
 }
 
@@ -65,6 +66,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     isFeatured: params.isFeatured,
     isCollectorPiece: params.isCollectorPiece,
     isPrivilegeAssist: params.isPrivilegeAssist,
+    isPromotion: params.isPromotion,
   })
   const {
     page,
@@ -83,6 +85,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     isFeatured,
     isCollectorPiece,
     isPrivilegeAssist,
+    isPromotion,
   } = parsed
 
   // With Transaction pooler (6543), avoid concurrent queries on the single connection to prevent hang.
@@ -109,6 +112,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     isFeatured: isFeatured ?? undefined,
     isCollectorPiece: isCollectorPiece ?? undefined,
     isPrivilegeAssist: isPrivilegeAssist ?? undefined,
+    isPromotion: isPromotion ?? undefined,
   })
 
   const totalPages = Math.ceil(total / limit)
@@ -128,6 +132,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     isFeatured: isFeatured === true ? "true" : "",
     isCollectorPiece: isCollectorPiece === true ? "true" : "",
     isPrivilegeAssist: isPrivilegeAssist === true ? "true" : "",
+    isPromotion: isPromotion === true ? "true" : "",
   }
 
   return (
@@ -178,6 +183,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
                 isFeatured={filters.isFeatured === "true"}
                 isCollectorPiece={filters.isCollectorPiece === "true"}
                 isPrivilegeAssist={filters.isPrivilegeAssist === "true"}
+                isPromotion={filters.isPromotion === "true"}
               />
             </Suspense>
           </div>

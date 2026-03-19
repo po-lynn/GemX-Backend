@@ -39,6 +39,7 @@ export async function getAdminProducts(opts: {
   isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  isPromotion?: boolean
   sortByPublicPriority?: boolean
   sortBy?: "createdAt" | "title" | "price" | "status"
   sortOrder?: "asc" | "desc"
@@ -67,6 +68,7 @@ export async function getCachedProductsBySellerId(
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
+    isPromotion?: boolean
   }
 ) {
   "use cache"

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       isFeatured: searchParams.get("isFeatured") || undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
+      isPromotion: searchParams.get("isPromotion") || undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
     const data: SearchParams = (parsed.success ? parsed.data : { page: 1 }) as SearchParams
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
       isFeatured,
       isCollectorPiece,
       isPrivilegeAssist,
+      isPromotion,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
     // Public list: only active products (callers can pass ?status= to override)
@@ -67,6 +69,7 @@ export async function GET(request: NextRequest) {
       laboratoryId: laboratoryId ?? undefined,
       isCollectorPiece: isCollectorPiece ?? undefined,
       isPrivilegeAssist: isPrivilegeAssist ?? undefined,
+      isPromotion: isPromotion ?? undefined,
       sortByPublicPriority: true,
     })
     return jsonCached({ products, total })

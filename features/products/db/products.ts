@@ -41,6 +41,9 @@ export type AdminProductRow = {
   isFeatured: boolean
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
+  isPromotion: boolean
+  /** List / “was” price when on promotion; used to compute savings vs `price` */
+  promotionComparePrice: string | null
   laboratoryId: string | null
   sellerId: string
   sellerName: string
@@ -68,6 +71,7 @@ export async function getAdminProductsFromDb(opts: {
   isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  isPromotion?: boolean
   /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
   sortByPublicPriority?: boolean
   /** Admin list sort column */
@@ -134,6 +138,7 @@ export async function getAdminProductsFromDb(opts: {
       : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
+    opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
   ].filter(Boolean)
 
   const whereClause =
@@ -146,12 +151,14 @@ export async function getAdminProductsFromDb(opts: {
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
           desc(product.isFeatured),
+          desc(product.isPromotion),
           desc(product.createdAt),
         ]
       : [
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
           desc(product.isFeatured),
+          desc(product.isPromotion),
           desc(product.createdAt),
         ]
     : (() => {
@@ -190,6 +197,8 @@ export async function getAdminProductsFromDb(opts: {
         isFeatured: product.isFeatured,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
+        isPromotion: product.isPromotion,
+        promotionComparePrice: product.promotionComparePrice,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -250,6 +259,9 @@ export async function getAdminProductsFromDb(opts: {
     isFeatured: p.isFeatured,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
+    isPromotion: p.isPromotion,
+    promotionComparePrice:
+      p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -327,6 +339,7 @@ export async function getProductsBySellerId(
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
+    isPromotion?: boolean
     sortByPublicPriority?: boolean
   }
 ): Promise<{ products: AdminProductRow[]; total: number }> {
@@ -379,6 +392,7 @@ export async function getProductsBySellerId(
       : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
+    opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
   ].filter(Boolean)
 
   const whereClause = and(...filterConditions)
@@ -388,6 +402,7 @@ export async function getProductsBySellerId(
         desc(product.isCollectorPiece),
         desc(product.isPrivilegeAssist),
         desc(product.isFeatured),
+        desc(product.isPromotion),
         desc(product.createdAt),
       ]
     : [desc(product.createdAt)]
@@ -413,6 +428,8 @@ export async function getProductsBySellerId(
         isFeatured: product.isFeatured,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
+        isPromotion: product.isPromotion,
+        promotionComparePrice: product.promotionComparePrice,
         sellerId: product.sellerId,
         sellerName: user.name,
         sellerPhone: user.phone,
@@ -473,6 +490,9 @@ export async function getProductsBySellerId(
     isFeatured: p.isFeatured,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
+    isPromotion: p.isPromotion,
+    promotionComparePrice:
+      p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -513,6 +533,8 @@ export type ProductForEdit = {
   isFeatured: boolean
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
+  isPromotion: boolean
+  promotionComparePrice: string | null
   sellerId: string
   imageUrls: string[]
   videoUrls: string[]
@@ -548,6 +570,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       isFeatured: product.isFeatured,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
+      isPromotion: product.isPromotion,
+      promotionComparePrice: product.promotionComparePrice,
       sellerId: product.sellerId,
     })
     .from(product)
@@ -629,6 +653,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     isFeatured: row.isFeatured,
     isCollectorPiece: row.isCollectorPiece,
     isPrivilegeAssist: row.isPrivilegeAssist,
+    isPromotion: row.isPromotion,
+    promotionComparePrice:
+      row.promotionComparePrice != null ? String(row.promotionComparePrice) : null,
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
     videoUrls: videos.map((v) => v.url),
@@ -684,6 +711,12 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     isFeatured: input.isFeatured ?? false,
     isCollectorPiece: input.isCollectorPiece ?? false,
     isPrivilegeAssist: input.isPrivilegeAssist ?? false,
+    isPromotion: input.isPromotion ?? false,
+    promotionComparePrice:
+      input.promotionComparePrice != null &&
+      String(input.promotionComparePrice).trim() !== ""
+        ? String(input.promotionComparePrice).trim()
+        : null,
     sellerId: input.sellerId,
   }
 
@@ -780,6 +813,8 @@ export type UpdateProductInput = {
   featured?: number
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
+  isPromotion?: boolean
+  promotionComparePrice?: string | null
   imageUrls?: string[]
   videoUrls?: string[]
 }
@@ -842,6 +877,14 @@ export async function updateProductInDb(
   if (rest.featured !== undefined) updates.featured = rest.featured
   if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
   if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist
+  if (rest.isPromotion !== undefined) updates.isPromotion = rest.isPromotion
+  if (rest.promotionComparePrice !== undefined) {
+    updates.promotionComparePrice =
+      rest.promotionComparePrice != null &&
+      String(rest.promotionComparePrice).trim() !== ""
+        ? String(rest.promotionComparePrice).trim()
+        : null
+  }
 
   if (Object.keys(updates).length > 0) {
     await db.update(product).set(updates).where(eq(product.id, id))

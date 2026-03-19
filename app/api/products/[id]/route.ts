@@ -94,6 +94,8 @@ export async function PATCH(
       isFeatured: data.isFeatured,
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
+      isPromotion: data.isPromotion,
+      promotionComparePrice: data.promotionComparePrice,
       imageUrls: data.imageUrls,
       videoUrls: data.videoUrls,
     })

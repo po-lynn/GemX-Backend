@@ -8,13 +8,13 @@
 
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params: `isCollectorPiece`, `isPrivilegeAssist`. Product items include `isCollectorPiece` and `isPrivilegeAssist` (boolean). **Sort order:** collector pieces first, then privilege assist, then featured (`isFeatured`), then by `createdAt` (newest first). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
-- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece` and `isPrivilegeAssist`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
-- **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`. No numeric `featured` field; use `isFeatured` (boolean).
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params: `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Product items include `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **Sort order:** collector pieces first, then privilege assist, then featured (`isFeatured`), then promotion (`isPromotion`), then by `createdAt` (newest first). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
+- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
+- **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean).
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
-- **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece` and `isPrivilegeAssist` (boolean).
+- **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean).
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
@@ -364,6 +364,7 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 | `laboratoryId`      | string  | -        | Filter by laboratory UUID (from GET /api/laboratories)                                   |
 | `isCollectorPiece`  | boolean | -        | When `true`, return only collector pieces (high-value items).                            |
 | `isPrivilegeAssist` | boolean | -        | When `true`, return only Privilege Assist products (sold by us).                         |
+| `isPromotion`       | boolean | -        | When `true`, return only promotion items.                                                |
 
 
 **Success (200):** See response shape below.
@@ -557,6 +558,7 @@ Authorization: Bearer <session_token>
       "isFeatured": false,
       "isCollectorPiece": false,
       "isPrivilegeAssist": false,
+      "isPromotion": false,
       "sellerId": "uuid",
       "sellerName": "John",
       "sellerPhone": null,
@@ -568,7 +570,7 @@ Authorization: Bearer <session_token>
 }
 ```
 
-Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatured` (all booleans). The API does not return a numeric `featured` field.
+Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, and `isFeatured` (all booleans). The API does not return a numeric `featured` field.
 
 ---
 
@@ -578,7 +580,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, and `isFeatu
 
 **Auth:** Not required.
 
-**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, etc.). The response includes a `**seller`** object (or `null` if seller not found) with:
+**Success (200):** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). The response includes a `**seller`** object (or `null` if seller not found) with:
 
 
 | Field             | Type          | Description                |

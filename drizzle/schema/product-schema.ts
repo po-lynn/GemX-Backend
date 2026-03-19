@@ -102,6 +102,10 @@ export const product = pgTable(
     isCollectorPiece: boolean("is_collector_piece").notNull().default(false),
     /** Privilege Assist: products sold by us (company); shown in dedicated listing/filters */
     isPrivilegeAssist: boolean("is_privilege_assist").notNull().default(false),
+    /** Promotion item: flagged for promotional listings / campaigns */
+    isPromotion: boolean("is_promotion").notNull().default(false),
+    /** Optional list / “was” price for promotions; savings = compare − sale `price` when greater */
+    promotionComparePrice: decimal("promotion_compare_price", { precision: 14, scale: 2 }),
     sellerId: text("seller_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -125,6 +129,7 @@ export const product = pgTable(
     index("product_isFeatured_idx").on(table.isFeatured),
     index("product_isCollectorPiece_idx").on(table.isCollectorPiece),
     index("product_isPrivilegeAssist_idx").on(table.isPrivilegeAssist),
+    index("product_isPromotion_idx").on(table.isPromotion),
     index("product_laboratoryId_idx").on(table.laboratoryId),
   ]
 );

@@ -27,6 +27,7 @@ export type AdminProductFilters = {
   isFeatured: string
   isCollectorPiece: string
   isPrivilegeAssist: string
+  isPromotion: string
 }
 
 type Props = {
@@ -56,9 +57,22 @@ function buildQueryString(page: number, filters: AdminProductFilters): string {
   if (filters.isFeatured === "true") sp.set("isFeatured", "true")
   if (filters.isCollectorPiece === "true") sp.set("isCollectorPiece", "true")
   if (filters.isPrivilegeAssist === "true") sp.set("isPrivilegeAssist", "true")
+  if (filters.isPromotion === "true") sp.set("isPromotion", "true")
   sp.set("sortBy", filters.sortBy?.trim() || "createdAt")
   sp.set("sortOrder", filters.sortOrder?.trim() || "desc")
   return sp.toString()
+}
+
+/** Positive savings when promotion compare price is above sale price */
+function promotionSavingsAmount(p: AdminProductRow): number | null {
+  if (!p.isPromotion || p.promotionComparePrice == null || p.promotionComparePrice === "") {
+    return null
+  }
+  const compare = Number(p.promotionComparePrice)
+  const sale = Number(p.price)
+  if (!Number.isFinite(compare) || !Number.isFinite(sale)) return null
+  const save = compare - sale
+  return save > 0 ? save : null
 }
 
 const thSortableClass =
@@ -216,7 +230,20 @@ export function ProductsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {formatPriceWithCurrency(Number(p.price), p.currency)}
+                    <div className="font-medium tabular-nums">
+                      {formatPriceWithCurrency(Number(p.price), p.currency)}
+                    </div>
+                    {(() => {
+                      const save = promotionSavingsAmount(p)
+                      if (save != null) {
+                        return (
+                          <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            Save {formatPriceWithCurrency(save, p.currency)}
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <Badge
@@ -248,6 +275,11 @@ export function ProductsTable({
                     {p.isFeatured && (
                       <Badge className="ml-1" variant="outline">
                         Featured
+                      </Badge>
+                    )}
+                    {p.isPromotion && (
+                      <Badge className="ml-1" variant="outline">
+                        Promotion
                       </Badge>
                     )}
                   </td>

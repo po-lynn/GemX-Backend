@@ -64,7 +64,7 @@ Stores the core product row. One product belongs to one category, one seller (us
 | `created_at` | timestamp | default now | Creation time. |
 | `updated_at` | timestamp | default now, on update now | Last update. |
 
-Indexes: `sellerId`, `productType`, `categoryId`, `status`, `moderationStatus`, `featured`, `currency`, `sku`, `weightCarat`, `shape`, `isFeatured`, `isCollectorPiece`, `isPrivilegeAssist`, `laboratoryId`.
+Indexes: `sellerId`, `productType`, `categoryId`, `status`, `moderationStatus`, `featured`, `currency`, `sku`, `weightCarat`, `shape`, `isFeatured`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `laboratoryId`.
 
 ### 1.3 Table: `product_image`
 
@@ -184,7 +184,8 @@ Location: `features/products/schemas/products.ts`.
 - **laboratoryId**: optional string → UUID or null.
 - **certReportNumber**, **certReportDate**, **certReportUrl**: optional strings.
 - **status**: optional product status enum.
-- **isFeatured**, **isCollectorPiece**, **isPrivilegeAssist**: optional booleans.
+- **isFeatured**, **isCollectorPiece**, **isPrivilegeAssist**, **isPromotion**: optional booleans.
+- **promotionComparePrice**: optional decimal (nullable). List / “was” price for promotions; savings = compare − **price** when compare &gt; sale (shown in admin products table).
 - **imageUrls**: optional string → split by newline or comma, trimmed, non‑empty → string[].
 - **videoUrls**: same transform as imageUrls → string[].
 

@@ -172,6 +172,11 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
     setCertReportUrl(product?.certReportUrl ?? "")
   }, [product?.certReportUrl])
 
+  const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
+  useEffect(() => {
+    setIsPromotion(product?.isPromotion ?? false)
+  }, [product?.id, product?.isPromotion])
+
   function handleUploadMedia(type: "image" | "video", files: FileList | null) {
     if (!files?.length) return
     setUploadError(null)
@@ -412,7 +417,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
       ]
 
   const recordTitle = isEdit ? (product?.title ?? "Product") : "New Product"
-  const [notesTab, setNotesTab] = useState<"notes" | "extra">("notes")
+  const [notesTab, setNotesTab] = useState<"notes" | "extra">("extra")
   const [sidebarTab, setSidebarTab] = useState<"message" | "note" | "activity">("activity")
 
   return (
@@ -470,35 +475,59 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             )}
             <input type="hidden" name="status" value={status} />
 
-            {/* Featured, Collector Piece, Privilege Assist (Odoo-style below product name) */}
-            <div className="-mt-2 flex flex-wrap items-center gap-6 rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-shadow)]">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  defaultChecked={product?.isFeatured ?? false}
-                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                />
-                <span className="text-sm font-medium text-[var(--form-foreground)]">Featured</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isCollectorPiece"
-                  defaultChecked={product?.isCollectorPiece ?? false}
-                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                />
-                <span className="text-sm font-medium text-[var(--form-foreground)]">Collector Piece</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isPrivilegeAssist"
-                  defaultChecked={product?.isPrivilegeAssist ?? false}
-                  className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                />
-                <span className="text-sm font-medium text-[var(--form-foreground)]">Privilege Assist</span>
-              </label>
+            {/* Featured, Collector Piece, Privilege Assist, Promotion */}
+            <div className="-mt-2 space-y-4 rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-shadow)]">
+              <div className="flex flex-wrap items-center gap-6">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isFeatured"
+                    defaultChecked={product?.isFeatured ?? false}
+                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--form-foreground)]">Featured</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isCollectorPiece"
+                    defaultChecked={product?.isCollectorPiece ?? false}
+                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--form-foreground)]">Collector Piece</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isPrivilegeAssist"
+                    defaultChecked={product?.isPrivilegeAssist ?? false}
+                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--form-foreground)]">Privilege Assist</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isPromotion"
+                    checked={isPromotion}
+                    onChange={(e) => setIsPromotion(e.target.checked)}
+                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
+                  />
+                  <span className="text-sm font-medium text-[var(--form-foreground)]">Promotion</span>
+                </label>
+              </div>
+              {isPromotion && (
+                <div
+                  role="status"
+                  className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--form-foreground)]"
+                >
+                  <p className="font-medium text-amber-900 dark:text-amber-100">For promotion</p>
+                  <p className="mt-1 text-[var(--form-muted-foreground)]">
+                    This listing is flagged as a promotion item. Use the title and description to highlight the offer;
+                    it can be surfaced in dedicated promotion views and filters.
+                  </p>
+                </div>
+              )}
             </div>
 
             <FormSection
@@ -595,6 +624,28 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 </label>
               </div>
             </div>
+            {isPromotion ? (
+              <div className="space-y-2 border-t border-[var(--form-section-border)] pt-4">
+                <label htmlFor="promotionComparePrice" className="text-sm font-medium">
+                  Original price before discount
+                </label>
+                <input
+                  id="promotionComparePrice"
+                  name="promotionComparePrice"
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={product?.promotionComparePrice ?? ""}
+                  placeholder="e.g. original price before discount"
+                  className={`${inputClass} max-w-xs`}
+                />
+                <p className="text-xs text-[var(--form-muted-foreground)]">
+                  Enter a price <span className="font-medium">above</span> the sale price. The admin products table shows{" "}
+                  <span className="font-medium">Save …</span> as the difference (compare at − sale).
+                </p>
+              </div>
+            ) : (
+              <input type="hidden" name="promotionComparePrice" value="" />
+            )}
           </FormSection>
 
           <FormSection
@@ -1135,8 +1186,8 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             title="Certification"
             description="Lab reports and authenticity documentation"
           >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
                 <label htmlFor="laboratoryId" className="text-sm font-medium">
                   Laboratory
                 </label>
@@ -1156,33 +1207,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="certReportNumber" className="text-sm font-medium">
-                  Report number
-                </label>
-                <input
-                  id="certReportNumber"
-                  name="certReportNumber"
-                  type="text"
-                  maxLength={100}
-                  defaultValue={product?.certReportNumber ?? ""}
-                  className={inputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="certReportDate" className="text-sm font-medium">
-                  Report date
-                </label>
-                <input
-                  id="certReportDate"
-                  name="certReportDate"
-                  type="text"
-                  maxLength={50}
-                  defaultValue={product?.certReportDate ?? ""}
-                  placeholder="e.g. 2024-09-17"
-                  className={inputClass}
-                />
               </div>
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1219,6 +1243,21 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     onRemove={() => setCertReportUrl("")}
                   />
                 ) : null}
+
+                <div className="space-y-2">
+                  <label htmlFor="certNotes" className="text-sm font-medium">
+                    Notes
+                  </label>
+                  <textarea
+                    id="certNotes"
+                    name="description"
+                    rows={4}
+                    maxLength={5000}
+                    defaultValue={product?.description ?? ""}
+                    placeholder="Add notes about this product / certificate..."
+                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
+                  />
+                </div>
               </div>
             </div>
           </FormSection>
@@ -1397,7 +1436,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                       : "-mb-px border-transparent text-[var(--form-muted-foreground)] hover:text-[var(--form-foreground)]"
                   )}
                 >
-                  Notes
+                  Description
                 </button>
                 <button
                   type="button"
@@ -1414,15 +1453,9 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
               </div>
               <div className="pt-4">
                 {notesTab === "notes" && (
-                  <textarea
-                    id="description"
-                    name="description"
-                    rows={4}
-                    maxLength={5000}
-                    defaultValue={product?.description ?? ""}
-                    placeholder="Add a description..."
-                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
-                  />
+                  <p className="text-sm text-[var(--form-muted-foreground)]">
+                    Notes are saved in the Certification section above.
+                  </p>
                 )}
                 {notesTab === "extra" && (
                   <p className="text-sm text-[var(--form-muted-foreground)]">Additional details can be added here.</p>

@@ -18,5 +18,8 @@ export function normalizeProductBody(body: unknown): Record<string, unknown> {
   if (typeof b.price === "number") {
     out.price = String(b.price)
   }
+  if (typeof b.promotionComparePrice === "number") {
+    out.promotionComparePrice = String(b.promotionComparePrice)
+  }
   return out
 }
