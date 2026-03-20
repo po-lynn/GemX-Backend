@@ -7,6 +7,7 @@ import {
   userCreateSchema,
   userUpdateSchema,
   userDeleteSchema,
+  userChangePasswordSchema,
 } from "@/features/users/schemas/users";
 import {
   updateUserInDb,
@@ -142,6 +143,45 @@ export async function updateUserAction(formData: FormData) {
   }
   await updateUserInDb(userId, data);
   return { success: true, userId };
+}
+
+export async function changeUserPasswordAction(formData: FormData) {
+  const parsed = userChangePasswordSchema.safeParse({
+    userId: formData.get("userId"),
+    newPassword: formData.get("newPassword"),
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+    };
+  }
+
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+
+  try {
+    const setUserPasswordFn = (auth.api as unknown as { setUserPassword?: unknown }).setUserPassword
+    if (typeof setUserPasswordFn !== "function") {
+      return {
+        error:
+          "Admin password reset is not enabled in auth config. Please ensure Better-Auth admin plugin is configured.",
+      }
+    }
+
+    await auth.api.setUserPassword({
+      body: {
+        userId: parsed.data.userId,
+        newPassword: parsed.data.newPassword,
+      },
+      headers: await headers(),
+    });
+    return { success: true, userId: parsed.data.userId };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Failed to change password";
+    return { error: msg };
+  }
 }
 
 export async function deleteUserAction(formData: FormData) {

@@ -15,12 +15,26 @@ import {
 import {
   createUserAction,
   updateUserAction,
+  changeUserPasswordAction,
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
 import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
 import { cn } from "@/lib/utils";
-import { Eye, EyeOff, Upload } from "lucide-react";
+import { Eye, EyeOff, Settings2, Upload } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
@@ -91,6 +105,12 @@ export function UserForm({ mode, user }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [changePasswordNew, setChangePasswordNew] = useState("");
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState("");
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string>(user?.image ?? "");
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -182,40 +202,152 @@ export function UserForm({ mode, user }: Props) {
     }
   }
 
+  function openChangePasswordModal() {
+    setChangePasswordError(null);
+    setChangePasswordNew("");
+    setChangePasswordConfirm("");
+    setShowChangePassword(false);
+    setChangePasswordOpen(true);
+  }
+
+  async function handleChangePasswordSubmit() {
+    if (!user?.id) return;
+    setChangePasswordLoading(true);
+    setChangePasswordError(null);
+
+    try {
+      if (changePasswordNew !== changePasswordConfirm) {
+        setChangePasswordError("Passwords do not match.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("userId", user.id);
+      formData.set("newPassword", changePasswordNew);
+
+      const result = await changeUserPasswordAction(formData);
+      if (result?.error) {
+        setChangePasswordError(result.error);
+        return;
+      }
+
+      setChangePasswordOpen(false);
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  }
+
   const displayName = user?.name ?? user?.email ?? "User";
 
   return (
     <Card>
-      <CardHeader>
-        {isEdit && user && (
-          <div className="mb-2 flex justify-center">
-            <div className="relative flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
-              {user.image ? (
-                <Image
-                  src={user.image}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  referrerPolicy="no-referrer"
-                  sizes="64px"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
-                  {displayName.charAt(0).toUpperCase()}
+      <CardHeader className="relative">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            {isEdit && user && (
+              <div className="mb-2 flex justify-center">
+                <div className="relative flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
+                  {user.image ? (
+                    <Image
+                      src={user.image}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      referrerPolicy="no-referrer"
+                      sizes="64px"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+            <CardTitle>{isEdit ? "Edit User" : "New User"}</CardTitle>
+            <CardDescription>
+              {isEdit
+                ? "Update user details"
+                : "Create a new user with email and password"}
+            </CardDescription>
           </div>
-        )}
-        <CardTitle>{isEdit ? "Edit User" : "New User"}</CardTitle>
-        <CardDescription>
-          {isEdit
-            ? "Update user details"
-            : "Create a new user with email and password"}
-        </CardDescription>
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
+                  aria-label="Settings"
+                >
+                  <Settings2 className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-2">
+                <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--form-muted-foreground)]">
+                  Quick settings
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById("verified")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    })
+                  }
+                  className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                >
+                  Verified
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById("archived")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    })
+                  }
+                  className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                >
+                  Archive
+                </button>
+                {isEdit && user ? (
+                  <button
+                    type="button"
+                    onClick={openChangePasswordModal}
+                    className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                  >
+                    Change password
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] opacity-60 cursor-not-allowed"
+                    aria-disabled="true"
+                  >
+                    Change password
+                  </button>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              type="submit"
+              form="user-form"
+              disabled={loading}
+              className="h-10 rounded-lg px-5 text-sm font-semibold shadow-sm"
+            >
+              {loading ? "Saving…" : isEdit ? "Update" : "Create"}
+            </Button>
+            <Button variant="outline" size="sm" type="button" asChild>
+              <Link href="/admin/users">Cancel</Link>
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form id="user-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
           {isEdit && user && (
             <input type="hidden" name="userId" value={user.id} />
           )}
@@ -657,16 +789,103 @@ export function UserForm({ mode, user }: Props) {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving…" : isEdit ? "Update" : "Create"}
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/admin/users">Cancel</Link>
-            </Button>
-          </div>
         </form>
       </CardContent>
+      <Dialog
+        open={changePasswordOpen}
+        onOpenChange={(open) => {
+          setChangePasswordOpen(open);
+          if (!open) {
+            setChangePasswordError(null);
+            setChangePasswordLoading(false);
+          }
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Change password</DialogTitle>
+            <DialogDescription>
+              Set a new password for this user.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="changePasswordNew" className="text-sm font-medium">
+                New password *
+              </label>
+              <div className="relative">
+                <input
+                  id="changePasswordNew"
+                  type={showChangePassword ? "text" : "password"}
+                  value={changePasswordNew}
+                  onChange={(e) => setChangePasswordNew(e.target.value)}
+                  placeholder="Enter new password"
+                  className={inputClass + " pr-10"}
+                  autoComplete="new-password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-9 w-9"
+                  onClick={() => setShowChangePassword((s) => !s)}
+                  aria-label={showChangePassword ? "Hide password" : "Show password"}
+                >
+                  {showChangePassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="changePasswordConfirm"
+                className="text-sm font-medium"
+              >
+                Confirm password *
+              </label>
+              <input
+                id="changePasswordConfirm"
+                type="password"
+                value={changePasswordConfirm}
+                onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                placeholder="Re-enter new password"
+                className={inputClass}
+                autoComplete="new-password"
+              />
+            </div>
+
+            {changePasswordError && (
+              <p className="text-sm text-destructive">{changePasswordError}</p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setChangePasswordOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleChangePasswordSubmit()}
+              disabled={
+                changePasswordLoading ||
+                !changePasswordNew.trim() ||
+                !changePasswordConfirm.trim()
+              }
+            >
+              {changePasswordLoading ? "Saving…" : "Change password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

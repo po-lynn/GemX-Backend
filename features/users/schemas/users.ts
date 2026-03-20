@@ -63,5 +63,10 @@ export const userDeleteSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
 });
 
+export const userChangePasswordSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters").max(100),
+});
+
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
