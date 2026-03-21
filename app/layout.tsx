@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { AppSpeedInsights } from "@/components/app-speed-insights";
+import { Analytics } from '@vercel/analytics/next';
 import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <AppSpeedInsights />
         </Suspense>
+        <Analytics />
       </body>
     </html>
   );
