@@ -1,6 +1,9 @@
 // app/api/mobile/register/route.ts
 import { auth } from "@/lib/auth";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
+import { db } from "@/drizzle/db";
+import { user as userTable } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 
 function normalizeMyanmarPhone(input: string) {
   let p = String(input || "").trim();
@@ -50,6 +53,8 @@ export async function POST(req: Request) {
     const email = internalEmailFromPhone(phone);
     // better-auth username plugin rejects "+" and other non-alphanumeric; use digits only
     const usernameForAuth = phone.replace(/\D/g, "");
+    // Admin plugin sets `role` with input: false — clients cannot set it on sign-up.
+    // Hook applies defaultRole ("user"); we then set "mobile" in the DB for this API.
     const signUpBody = {
       email,
       password,
@@ -57,7 +62,6 @@ export async function POST(req: Request) {
       username: usernameForAuth,
       displayUsername: name,
       phone,
-      role: "mobile",
       nrc,
       address,
       city,
@@ -67,9 +71,10 @@ export async function POST(req: Request) {
       dateOfBirth,
     };
 
+    // Types require `role` from additionalFields; admin plugin rejects it on sign-up (input: false).
     const result = await auth.api.signUpEmail({
       body: signUpBody,
-    });
+    } as Parameters<typeof auth.api.signUpEmail>[0]);
 
     if (result && "error" in result) {
       const msg = typeof result.error === "string" ? result.error : String((result as { error?: unknown }).error ?? "Registration failed");
@@ -77,10 +82,26 @@ export async function POST(req: Request) {
       return Response.json({ error: msg }, { status });
     }
 
-    if (result) {
+    let responseBody: unknown = result;
+    if (result && typeof result === "object" && "user" in result) {
+      const u = result.user as { id?: string };
+      if (u?.id) {
+        await db
+          .update(userTable)
+          .set({ role: "mobile", updatedAt: new Date() })
+          .where(eq(userTable.id, u.id));
+      }
       await applyDefaultPointsToNewUser(email);
+      // Sign-up payload still has defaultRole until refetched; expose correct role to clients.
+      responseBody = {
+        ...result,
+        user:
+          result.user && typeof result.user === "object"
+            ? { ...(result.user as Record<string, unknown>), role: "mobile" }
+            : result.user,
+      };
     }
-    return Response.json(result, { status: 201 });
+    return Response.json(responseBody, { status: 201 });
   } catch (err: unknown) {
     const e = err as { message?: string; cause?: { message?: string }; name?: string; stack?: string };
     const msg = String(e?.message ?? (e?.cause && typeof e.cause === "object" && "message" in e.cause ? (e.cause as { message?: string }).message : "") ?? "");

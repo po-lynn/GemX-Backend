@@ -10,6 +10,10 @@ export const user = pgTable("user", {
   verified: boolean("verified").default(false).notNull(),
   /** Set by admin to archive user (e.g. hide from active lists) */
   archived: boolean("archived").default(false).notNull(),
+  /** Better Auth admin plugin — ban user from signing in */
+  banned: boolean("banned").default(false).notNull(),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -42,6 +46,8 @@ export const session = pgTable(
       .notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
+    /** Better Auth admin plugin — admin user id when impersonating */
+    impersonatedBy: text("impersonated_by"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

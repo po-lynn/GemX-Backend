@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AppSpeedInsights } from "@/components/app-speed-insights";
 import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +36,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
       >
         <Suspense fallback={null}>{children}</Suspense>
-        <SpeedInsights />
+        <AppSpeedInsights />
       </body>
     </html>
   );
