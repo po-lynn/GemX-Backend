@@ -10,7 +10,7 @@ export default async function AdminCategoriesPage() {
   const categories = await getAllCategories()
 
   return (
-    <div className="container my-6 space-y-6">
+    <div className="gem-theme container my-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>

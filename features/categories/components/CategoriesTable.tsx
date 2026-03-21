@@ -5,14 +5,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { CategoryRow } from "@/features/categories/db/categories"
 import { deleteCategoryAction } from "@/features/categories/actions/categories"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -61,98 +53,111 @@ export function CategoriesTable({ categories }: Props) {
 
   return (
     <>
-      <div className="rounded-xl border bg-card">
-        <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Short Code</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="w-24">Order</TableHead>
-            <TableHead className="w-20" >Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loose.length === 0 && jewellery.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-muted-foreground text-center py-8">
-                No categories yet. Add one to use in products.
-              </TableCell>
-            </TableRow>
-          ) : (
-            <>
-              {loose.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {c.shortCode ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">Loose stone</Badge>
-                  </TableCell>
-                  <TableCell>{c.sortOrder}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/admin/categories/${c.id}/edit`}>
-                          <Pencil className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDeleteDialog(c.id, c.name)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {jewellery.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {c.shortCode ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      style={{ backgroundColor: "#EEEEEE" }}
+      <div className="gem-theme rounded-xl border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Name
+                </th>
+                <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Short Code
+                </th>
+                <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Type
+                </th>
+                <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground w-24">
+                  Order
+                </th>
+                <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground w-20">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loose.length === 0 && jewellery.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="h-28 px-4 text-center text-muted-foreground"
+                  >
+                    No categories yet. Add one to use in products.
+                  </td>
+                </tr>
+              ) : (
+                [...loose, ...jewellery].map((c) => (
+                  <tr
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/admin/categories/${c.id}/edit`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        router.push(`/admin/categories/${c.id}/edit`)
+                      }
+                    }}
+                    className="gem-table-row-hover cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/50"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-foreground">{c.name}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-muted-foreground font-mono text-xs">
+                        {c.shortCode ?? "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.type === "loose_stone" ? (
+                        <Badge variant="secondary">Loose stone</Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          style={{ backgroundColor: "#EEEEEE" }}
+                        >
+                          Jewellery
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="tabular-nums">{c.sortOrder}</span>
+                    </td>
+                    <td
+                      className="px-4 py-3 text-right"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      Jewellery
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{c.sortOrder}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/admin/categories/${c.id}/edit`}>
-                          <Pencil className="size-4" />
-                          <span className="sr-only">Edit</span>
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDeleteDialog(c.id, c.name)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            href={`/admin/categories/${c.id}/edit`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Pencil className="size-4" />
+                            <span className="sr-only">Edit</span>
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openDeleteDialog(c.id, c.name)
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && closeDeleteDialog()}>
         <DialogContent showCloseButton={!deleting}>
