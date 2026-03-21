@@ -1,5 +1,11 @@
 import { db } from "@/drizzle/db"
-import { product, productImage, productVideo, productJewelleryGemstone } from "@/drizzle/schema/product-schema"
+import {
+  product,
+  productAdminChangeLog,
+  productImage,
+  productJewelleryGemstone,
+  productVideo,
+} from "@/drizzle/schema/product-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
@@ -9,6 +15,13 @@ import type {
   ProductIdentification,
 } from "@/features/products/schemas/products"
 import type { GemstoneSpec } from "@/features/products/schemas/gemstone-spec"
+
+/** Stable line for comparing / storing price + currency in change log */
+function formatPriceLineForLog(currency: string, price: string): string {
+  const n = Number(price)
+  const dec = Number.isFinite(n) ? n.toFixed(2) : price.trim()
+  return `${currency} ${dec}`
+}
 
 /** Escape a string for safe use in ILIKE patterns (%, _, \). */
 function escapeLike(s: string): string {
@@ -504,6 +517,14 @@ export async function getProductsBySellerId(
   return { products, total }
 }
 
+export type ProductChangeLogEntry = {
+  id: string
+  createdAt: Date
+  changeType: "status" | "price"
+  oldValue: string
+  newValue: string
+}
+
 export type ProductForEdit = {
   id: string
   sku: string | null
@@ -538,6 +559,8 @@ export type ProductForEdit = {
   sellerId: string
   imageUrls: string[]
   videoUrls: string[]
+  /** Newest first; status & price changes from admin saves */
+  changeLog: ProductChangeLogEntry[]
 }
 
 export async function getProductById(id: string): Promise<ProductForEdit | null> {
@@ -624,6 +647,27 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     inclusions: g.inclusions ?? null,
   }))
 
+  const logRows = await db
+    .select({
+      id: productAdminChangeLog.id,
+      createdAt: productAdminChangeLog.createdAt,
+      changeType: productAdminChangeLog.changeType,
+      oldValue: productAdminChangeLog.oldValue,
+      newValue: productAdminChangeLog.newValue,
+    })
+    .from(productAdminChangeLog)
+    .where(eq(productAdminChangeLog.productId, id))
+    .orderBy(desc(productAdminChangeLog.createdAt))
+    .limit(200)
+
+  const changeLog: ProductChangeLogEntry[] = logRows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    changeType: r.changeType,
+    oldValue: r.oldValue,
+    newValue: r.newValue,
+  }))
+
   return {
     id: row.id,
     sku: row.sku,
@@ -659,6 +703,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     sellerId: row.sellerId,
     imageUrls: images.map((i) => i.url),
     videoUrls: videos.map((v) => v.url),
+    changeLog,
   }
 }
 
@@ -821,9 +866,20 @@ export type UpdateProductInput = {
 
 export async function updateProductInDb(
   id: string,
-  input: UpdateProductInput
+  input: UpdateProductInput,
+  opts?: { actorId?: string | null }
 ): Promise<void> {
   const { imageUrls, videoUrls, jewelleryGemstones, ...rest } = input
+  const actorId = opts?.actorId ?? null
+
+  const [currentRow] = await db
+    .select({
+      status: product.status,
+      price: product.price,
+      currency: product.currency,
+    })
+    .from(product)
+    .where(eq(product.id, id))
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
@@ -886,8 +942,52 @@ export async function updateProductInDb(
         : null
   }
 
-  if (Object.keys(updates).length > 0) {
-    await db.update(product).set(updates).where(eq(product.id, id))
+  const logValues: (typeof productAdminChangeLog.$inferInsert)[] = []
+  if (currentRow) {
+    if (rest.status !== undefined && rest.status !== currentRow.status) {
+      logValues.push({
+        productId: id,
+        changeType: "status",
+        oldValue: currentRow.status,
+        newValue: rest.status,
+        actorId,
+      })
+    }
+    const nextCurrency =
+      rest.currency !== undefined ? rest.currency : currentRow.currency
+    const nextPriceStr =
+      rest.price !== undefined
+        ? String(rest.price).trim()
+        : String(currentRow.price)
+    const priceTouched =
+      rest.price !== undefined || rest.currency !== undefined
+    if (priceTouched) {
+      const oldLine = formatPriceLineForLog(
+        currentRow.currency,
+        String(currentRow.price)
+      )
+      const newLine = formatPriceLineForLog(nextCurrency, nextPriceStr)
+      if (oldLine !== newLine) {
+        logValues.push({
+          productId: id,
+          changeType: "price",
+          oldValue: oldLine,
+          newValue: newLine,
+          actorId,
+        })
+      }
+    }
+  }
+
+  if (Object.keys(updates).length > 0 || logValues.length > 0) {
+    await db.transaction(async (tx) => {
+      if (Object.keys(updates).length > 0) {
+        await tx.update(product).set(updates).where(eq(product.id, id))
+      }
+      if (logValues.length > 0) {
+        await tx.insert(productAdminChangeLog).values(logValues)
+      }
+    })
   }
 
   if (jewelleryGemstones !== undefined) {

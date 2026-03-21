@@ -46,6 +46,28 @@ describe("GET /api/products/[id]", () => {
     expect(data.seller).toMatchObject({ id: "u1", name: "Seller" })
   })
 
+  it("omits admin changeLog from GET JSON (not exposed publicly)", async () => {
+    const product = {
+      id: "p1",
+      title: "Ruby",
+      sellerId: "u1",
+      changeLog: [
+        {
+          id: "log-1",
+          createdAt: new Date(),
+          changeType: "price" as const,
+          oldValue: "USD 1.00",
+          newValue: "USD 2.00",
+        },
+      ],
+    }
+    vi.mocked(getCachedProduct).mockResolvedValue(product as never)
+    const res = await GET({} as NextRequest, params("p1"))
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data).not.toHaveProperty("changeLog")
+  })
+
   it("returns 404 when product not found", async () => {
     vi.mocked(getCachedProduct).mockResolvedValue(null)
     const res = await GET({} as NextRequest, params("missing"))
@@ -138,7 +160,8 @@ describe("PATCH /api/products/[id]", () => {
     expect(data).toHaveProperty("productId", VALID_UUID)
     expect(updateProductInDb).toHaveBeenCalledWith(
       VALID_UUID,
-      expect.objectContaining({ title: "Updated Ruby" })
+      expect.objectContaining({ title: "Updated Ruby" }),
+      { actorId: "seller-1" }
     )
   })
 
@@ -157,7 +180,11 @@ describe("PATCH /api/products/[id]", () => {
     })
     const res = await PATCH(req as NextRequest, params(VALID_UUID))
     expect(res.status).toBe(200)
-    expect(updateProductInDb).toHaveBeenCalled()
+    expect(updateProductInDb).toHaveBeenCalledWith(
+      VALID_UUID,
+      expect.any(Object),
+      { actorId: "admin-1" }
+    )
   })
 })
 

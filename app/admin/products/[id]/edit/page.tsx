@@ -21,7 +21,7 @@ export default async function AdminProductsEditPage({ params }: Props) {
   if (!product) notFound()
 
   return (
-    <div className="gem-theme container my-6 space-y-6">
+    <div className="gem-theme product-form-page container my-4 w-full max-w-screen-2xl space-y-6 md:my-6">
       <ProductForm
         key={product.id}
         mode="edit"

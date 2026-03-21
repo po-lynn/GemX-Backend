@@ -17,8 +17,27 @@ import { createProductAction, updateProductAction } from "@/features/products/ac
 import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { FormActionBar } from "@/features/products/components/FormActionBar"
+import { formatDate } from "@/lib/formatters"
 import { cn } from "@/lib/utils"
-import { FileText, Eye, Pencil, Trash2, Upload, Video, X } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import {
+  Award,
+  BadgeDollarSign,
+  FileText,
+  Eye,
+  Gem,
+  History,
+  Image as ImageIcon,
+  Layers,
+  Package,
+  Pencil,
+  Sparkles,
+  StickyNote,
+  Trash2,
+  Upload,
+  Video,
+  X,
+} from "lucide-react"
 
 const inputClass =
   "flex h-10 w-full rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] transition-shadow placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0 focus:border-[var(--form-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-sm file:font-medium"
@@ -26,24 +45,43 @@ const inputClass =
 const MAX_PRODUCT_IMAGES = 10
 const MAX_PRODUCT_VIDEOS = 5
 
+/** Nested blocks inside the main form shell (reference: soft shadow cards) */
+const formNestedCardClass =
+  "rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-section-shadow)] md:p-7"
+/** Purple circle + white icon (Feature Settings–style section headers) */
+const formSectionIconClass =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--form-primary)] text-[var(--form-primary-foreground)] shadow-sm"
+
 function FormSection({
   title,
   description,
+  icon: Icon,
   children,
 }: {
   title: string
   description?: string
+  /** Optional section icon (Lucide), shown beside the title */
+  icon?: LucideIcon
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+    <section className={formNestedCardClass}>
       <div className="mb-5">
-        <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
-          {title}
-        </h2>
-        {description && (
-          <p className="mt-1 text-sm text-[var(--form-muted-foreground)]">{description}</p>
-        )}
+        <div className="flex items-start gap-3">
+          {Icon ? (
+            <div className={formSectionIconClass} aria-hidden>
+              <Icon className="h-5 w-5" strokeWidth={2} />
+            </div>
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
+              {title}
+            </h2>
+            {description && (
+              <p className="mt-1 text-sm text-[var(--form-muted-foreground)]">{description}</p>
+            )}
+          </div>
+        </div>
       </div>
       <div className="space-y-5">{children}</div>
     </section>
@@ -418,10 +456,9 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
 
   const recordTitle = isEdit ? (product?.title ?? "Product") : "New Product"
   const [notesTab, setNotesTab] = useState<"notes" | "extra">("extra")
-  const [sidebarTab, setSidebarTab] = useState<"message" | "note" | "activity">("activity")
 
   return (
-    <Card className="odoo-form rounded-2xl border-0 bg-[var(--form-bg-subtle)] shadow-[var(--form-shadow-md)]">
+    <Card className="odoo-form overflow-hidden rounded-3xl border border-[var(--form-shell-border)] bg-[var(--form-bg)] shadow-[var(--form-shadow-elevated)]">
       <FormActionBar
         breadcrumbs={breadcrumbs}
         currentStatus={status}
@@ -431,12 +468,12 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
         discardHref="/admin/products"
         formId="product-form"
       />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px]">
-        {/* Left pane: form content */}
-        <div className="min-w-0 border-r border-[var(--form-border)]">
-          <div className="p-8">
+      <div className="grid grid-cols-1 pt-6 md:pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:gap-x-8">
+        {/* Left pane: form content — top spacing below Save/Discard comes from grid pt-* */}
+        <div className="min-w-0">
+          <div className="px-8 pb-8 pt-3">
             {/* Hero: record title + key metrics in a soft card */}
-            <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+            <div className={formNestedCardClass}>
               <h1 className="text-2xl font-bold tracking-tight text-[var(--form-foreground)] sm:text-3xl">
                 {recordTitle}
               </h1>
@@ -465,7 +502,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             </div>
           </div>
 
-          <form id="product-form" onSubmit={handleSubmit} className="flex flex-col gap-6 px-8 pb-8">
+          <form id="product-form" onSubmit={handleSubmit} className="flex flex-col gap-8 px-8 pb-8">
             {isEdit && (
               <input
                 type="hidden"
@@ -476,7 +513,20 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             <input type="hidden" name="status" value={status} />
 
             {/* Featured, Collector Piece, Privilege Assist, Promotion */}
-            <div className="-mt-2 space-y-4 rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-shadow)]">
+            <div className="-mt-2 space-y-4 rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-section-shadow)]">
+              <div className="flex items-center gap-3 border-b border-[var(--form-section-border)] pb-4">
+                <div className={formSectionIconClass} aria-hidden>
+                  <Sparkles className="h-5 w-5" strokeWidth={2} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
+                    Visibility & promotion
+                  </h2>
+                  <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
+                    Featured listing, collector piece, privilege assist, and promotion flags
+                  </p>
+                </div>
+              </div>
               <div className="flex flex-wrap items-center gap-6">
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
@@ -532,6 +582,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
             <FormSection
             title="Basic Info"
             description="Core product identification and description"
+            icon={Package}
           >
             <div className="space-y-2">
               <label htmlFor="title" className="text-sm font-medium">
@@ -579,6 +630,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           <FormSection
             title="Pricing"
             description="Price, currency, and negotiation options"
+            icon={BadgeDollarSign}
           >
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
@@ -654,6 +706,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 ? "Category (e.g. Necklace, Necklace Set, Ring), metal, then add each gemstone type below with full specs."
                 : "Product type (loose stone or jewellery) and category"
             }
+            icon={Layers}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1035,6 +1088,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 ? "Total weight of the piece (gemstone specs are set per stone above)"
                 : "Physical attributes and gemology details"
             }
+            icon={Gem}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {productType === "jewellery" && (
@@ -1184,6 +1238,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           <FormSection
             title="Certification"
             description="Lab reports and authenticity documentation"
+            icon={Award}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
@@ -1264,6 +1319,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           <FormSection
             title="Images"
             description={`Product photos. Upload files (max ${MAX_PRODUCT_IMAGES}).`}
+            icon={ImageIcon}
           >
             <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
             <div className="space-y-2">
@@ -1345,6 +1401,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           <FormSection
             title="Videos"
             description={`Product videos. Upload files (max ${MAX_PRODUCT_VIDEOS}).`}
+            icon={Video}
           >
             <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
             <div className="space-y-2">
@@ -1423,7 +1480,20 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           </FormSection>
 
             {/* Notes / Extra Info tabs */}
-            <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-shadow)]">
+            <div className={formNestedCardClass}>
+              <div className="mb-4 flex items-center gap-3">
+                <div className={formSectionIconClass} aria-hidden>
+                  <StickyNote className="h-5 w-5" strokeWidth={2} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
+                    Notes &amp; extra info
+                  </h2>
+                  <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
+                    Description tab and placeholder for additional details
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-1 border-b border-[var(--form-border)]">
                 <button
                   type="button"
@@ -1470,66 +1540,64 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
           </form>
         </div>
 
-        {/* Right pane: Activity sidebar */}
-        <aside className="hidden lg:block lg:min-w-0 border-l border-[var(--form-border)] bg-[var(--form-sidebar-bg)]">
-          <div className="flex gap-1 border-b border-[var(--form-border)] p-2">
-            <button
-              type="button"
-              onClick={() => setSidebarTab("message")}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                sidebarTab === "message"
-                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
-                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
-              )}
-            >
-              Send message
-            </button>
-            <button
-              type="button"
-              onClick={() => setSidebarTab("note")}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                sidebarTab === "note"
-                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
-                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
-              )}
-            >
-              Log note
-            </button>
-            <button
-              type="button"
-              onClick={() => setSidebarTab("activity")}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                sidebarTab === "activity"
-                  ? "bg-[var(--form-primary)] text-[var(--form-primary-foreground)]"
-                  : "text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
-              )}
-            >
-              Activity
-            </button>
-          </div>
-          <div className="max-h-[60vh] overflow-y-auto p-4">
-            {sidebarTab === "activity" && (
-              <div className="space-y-4 text-sm">
-                <p className="text-[var(--form-muted-foreground)]">No activity yet.</p>
-                <div className="rounded-xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-4 shadow-[var(--form-shadow)]">
-                  <div className="flex gap-3">
-                    <div className="h-9 w-9 shrink-0 rounded-full bg-[var(--form-muted)]" />
-                    <div>
-                      <div className="font-medium text-[var(--form-foreground)]">Stage changed</div>
-                      <div className="mt-0.5 text-xs text-[var(--form-muted-foreground)]">New → Active</div>
-                    </div>
-                  </div>
-                </div>
+        {/* Right pane: auto change log (status & price on save) */}
+        <aside className="hidden lg:flex lg:min-w-0 lg:flex-col rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-sidebar-bg)] pb-8 pt-3 shadow-[var(--form-shadow)] mt-3">
+          <div className="shrink-0 border-b border-[var(--form-border)] px-4 pb-4 pt-5 md:px-5 md:pt-6">
+            <div className="flex items-start gap-3">
+              <div className={formSectionIconClass} aria-hidden>
+                <History className="h-5 w-5" strokeWidth={2} />
               </div>
-            )}
-            {sidebarTab === "message" && (
-              <p className="text-sm text-[var(--form-muted-foreground)]">Send a message to the seller or internal note.</p>
-            )}
-            {sidebarTab === "note" && (
-              <p className="text-sm text-[var(--form-muted-foreground)]">Log an internal note for this product.</p>
+              <div>
+                <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
+                  Change log
+                </h2>
+                <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
+                  Listing status and price changes are saved with the date when you click Save.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="max-h-[min(60vh,32rem)] flex-1 overflow-y-auto px-4 pb-2 pt-5 md:px-5">
+            {isEdit && product?.changeLog && product.changeLog.length > 0 ? (
+              <ul className="space-y-3">
+                {product.changeLog.map((entry) => {
+                  const at =
+                    typeof entry.createdAt === "string"
+                      ? new Date(entry.createdAt)
+                      : entry.createdAt
+                  return (
+                    <li
+                      key={entry.id}
+                      className="rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-3 shadow-[var(--form-section-shadow)]"
+                    >
+                      <time
+                        className="text-xs font-medium text-[var(--form-muted-foreground)]"
+                        dateTime={at.toISOString()}
+                      >
+                        {formatDate(at)}
+                      </time>
+                      <div className="mt-1.5 text-sm font-medium text-[var(--form-foreground)]">
+                        {entry.changeType === "status" ? "Listing status" : "Price"}
+                      </div>
+                      <div className="mt-0.5 break-words text-sm text-[var(--form-muted-foreground)]">
+                        <span>{entry.oldValue}</span>
+                        <span className="mx-1.5" aria-hidden>
+                          →
+                        </span>
+                        <span className="font-medium text-[var(--form-foreground)]">
+                          {entry.newValue}
+                        </span>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-[var(--form-muted-foreground)]">
+                {isEdit
+                  ? "No status or price changes recorded yet. Update status or price and save to add an entry."
+                  : "Change log appears after the product is created and you save status or price changes."}
+              </p>
             )}
           </div>
         </aside>

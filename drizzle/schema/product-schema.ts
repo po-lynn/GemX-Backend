@@ -51,6 +51,12 @@ export const productIdentificationEnum = pgEnum("product_identification", [
   "Others",
 ]);
 
+/** Admin form: persisted history when listing status or price changes */
+export const productAdminChangeTypeEnum = pgEnum("product_admin_change_type", [
+  "status",
+  "price",
+]);
+
 export { productTypeEnum } from "./category-schema";
 
 /**
@@ -163,6 +169,27 @@ export const productVideo = pgTable(
 );
 
 /** Jewellery only: gemstones on the piece with full specs (like loose stone): Ruby 0.5ct, dimensions, color, shape, etc. */
+export const productAdminChangeLog = pgTable(
+  "product_admin_change_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    changeType: productAdminChangeTypeEnum("change_type").notNull(),
+    oldValue: text("old_value").notNull(),
+    newValue: text("new_value").notNull(),
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+  },
+  (table) => [
+    index("product_admin_change_log_productId_idx").on(table.productId),
+    index("product_admin_change_log_createdAt_idx").on(table.createdAt),
+  ]
+);
+
 export const productJewelleryGemstone = pgTable(
   "product_jewellery_gemstone",
   {
@@ -200,7 +227,22 @@ export const productRelations = relations(product, ({ one, many }) => ({
   seller: one(user),
   images: many(productImage),
   jewelleryGemstones: many(productJewelleryGemstone),
+  adminChangeLogs: many(productAdminChangeLog),
 }));
+
+export const productAdminChangeLogRelations = relations(
+  productAdminChangeLog,
+  ({ one }) => ({
+    product: one(product, {
+      fields: [productAdminChangeLog.productId],
+      references: [product.id],
+    }),
+    actor: one(user, {
+      fields: [productAdminChangeLog.actorId],
+      references: [user.id],
+    }),
+  })
+);
 
 export const productImageRelations = relations(productImage, ({ one }) => ({
   product: one(product, {

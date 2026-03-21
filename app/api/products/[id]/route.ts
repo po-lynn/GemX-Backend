@@ -35,7 +35,8 @@ export async function GET(
           displayUsername: sellerUser.displayUsername ?? null,
         }
       : null
-    return jsonCached({ ...product, seller })
+    const { changeLog: _adminChangeLog, ...publicProduct } = product
+    return jsonCached({ ...publicProduct, seller })
   } catch (error) {
     console.error("GET /api/products/[id]:", error)
     return jsonError("Failed to fetch product", 500)
@@ -67,38 +68,42 @@ export async function PATCH(
       return jsonError(msg, 400)
     }
     const { productId, ...data } = parsed.data
-    await updateProductInDb(productId, {
-      title: data.title,
-      sku: data.sku,
-      description: data.description,
-      identification: data.identification,
-      price: data.price,
-      currency: data.currency,
-      isNegotiable: data.isNegotiable,
-      productType: data.productType,
-      categoryId: data.categoryId,
-      stoneCut: data.stoneCut,
-      metal: data.metal,
-      jewelleryGemstones: data.jewelleryGemstones,
-      totalWeightGrams: data.totalWeightGrams,
-      weightCarat: data.weightCarat,
-      dimensions: data.dimensions,
-      color: data.color,
-      shape: data.shape,
-      origin: data.origin,
-      laboratoryId: data.laboratoryId,
-      certReportNumber: data.certReportNumber,
-      certReportDate: data.certReportDate,
-      certReportUrl: data.certReportUrl,
-      status: data.status,
-      isFeatured: data.isFeatured,
-      isCollectorPiece: data.isCollectorPiece,
-      isPrivilegeAssist: data.isPrivilegeAssist,
-      isPromotion: data.isPromotion,
-      promotionComparePrice: data.promotionComparePrice,
-      imageUrls: data.imageUrls,
-      videoUrls: data.videoUrls,
-    })
+    await updateProductInDb(
+      productId,
+      {
+        title: data.title,
+        sku: data.sku,
+        description: data.description,
+        identification: data.identification,
+        price: data.price,
+        currency: data.currency,
+        isNegotiable: data.isNegotiable,
+        productType: data.productType,
+        categoryId: data.categoryId,
+        stoneCut: data.stoneCut,
+        metal: data.metal,
+        jewelleryGemstones: data.jewelleryGemstones,
+        totalWeightGrams: data.totalWeightGrams,
+        weightCarat: data.weightCarat,
+        dimensions: data.dimensions,
+        color: data.color,
+        shape: data.shape,
+        origin: data.origin,
+        laboratoryId: data.laboratoryId,
+        certReportNumber: data.certReportNumber,
+        certReportDate: data.certReportDate,
+        certReportUrl: data.certReportUrl,
+        status: data.status,
+        isFeatured: data.isFeatured,
+        isCollectorPiece: data.isCollectorPiece,
+        isPrivilegeAssist: data.isPrivilegeAssist,
+        isPromotion: data.isPromotion,
+        promotionComparePrice: data.promotionComparePrice,
+        imageUrls: data.imageUrls,
+        videoUrls: data.videoUrls,
+      },
+      { actorId: session.user.id }
+    )
     revalidateProductsCache(productId)
     return jsonUncached({ success: true, productId })
   } catch (error) {

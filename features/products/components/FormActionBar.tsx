@@ -42,7 +42,7 @@ export function FormActionBar({
 }: Props) {
   return (
     <div className="odoo-form odoo-header sticky top-14 z-20">
-      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2 px-6 pb-3 pt-2 sm:items-center md:gap-4">
         {/* Left: Breadcrumbs */}
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
           {breadcrumbs.map((item, i) => (

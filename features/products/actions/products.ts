@@ -18,7 +18,7 @@ import {
   deleteProductInDb,
 } from "@/features/products/db/products"
 import { db } from "@/drizzle/db"
-import { product } from "@/drizzle/schema/product-schema"
+import { product, productAdminChangeLog } from "@/drizzle/schema/product-schema"
 import { eq } from "drizzle-orm"
 
 export async function setProductModeration(formData: FormData) {
@@ -54,12 +54,29 @@ export async function setProductStatus(formData: FormData) {
     return { error: "Unauthorized" }
   }
 
-  await db
-    .update(product)
-    .set({ status: parsed.data.status })
-    .where(eq(product.id, parsed.data.productId))
+  const productId = parsed.data.productId
+  const [row] = await db
+    .select({ status: product.status })
+    .from(product)
+    .where(eq(product.id, productId))
 
-  revalidateProductsCache(parsed.data.productId)
+  await db.transaction(async (tx) => {
+    if (row && row.status !== parsed.data.status) {
+      await tx.insert(productAdminChangeLog).values({
+        productId,
+        changeType: "status",
+        oldValue: row.status,
+        newValue: parsed.data.status,
+        actorId: session.user.id,
+      })
+    }
+    await tx
+      .update(product)
+      .set({ status: parsed.data.status })
+      .where(eq(product.id, productId))
+  })
+
+  revalidateProductsCache(productId)
   return { success: true }
 }
 
@@ -238,38 +255,42 @@ export async function updateProductAction(formData: FormData) {
   }
 
   const { productId, ...data } = parsed.data
-  await updateProductInDb(productId, {
-    title: data.title,
-    sku: data.sku,
-    description: data.description,
-    identification: data.identification,
-    price: data.price,
-    currency: data.currency,
-    isNegotiable: data.isNegotiable,
-    productType: data.productType,
-    categoryId: data.categoryId,
-    stoneCut: data.stoneCut,
-    metal: data.metal,
-    jewelleryGemstones: data.jewelleryGemstones,
-    totalWeightGrams: data.totalWeightGrams,
-    weightCarat: data.weightCarat,
-    dimensions: data.dimensions,
-    color: data.color,
-    shape: data.shape,
-    origin: data.origin,
-    laboratoryId: data.laboratoryId,
-    certReportNumber: data.certReportNumber,
-    certReportDate: data.certReportDate,
-    certReportUrl: data.certReportUrl,
-    status: data.status,
-    isFeatured: data.isFeatured,
-    isCollectorPiece: data.isCollectorPiece,
-    isPrivilegeAssist: data.isPrivilegeAssist,
-    isPromotion: data.isPromotion,
-    promotionComparePrice: data.promotionComparePrice,
-    imageUrls: data.imageUrls,
-    videoUrls: data.videoUrls,
-  })
+  await updateProductInDb(
+    productId,
+    {
+      title: data.title,
+      sku: data.sku,
+      description: data.description,
+      identification: data.identification,
+      price: data.price,
+      currency: data.currency,
+      isNegotiable: data.isNegotiable,
+      productType: data.productType,
+      categoryId: data.categoryId,
+      stoneCut: data.stoneCut,
+      metal: data.metal,
+      jewelleryGemstones: data.jewelleryGemstones,
+      totalWeightGrams: data.totalWeightGrams,
+      weightCarat: data.weightCarat,
+      dimensions: data.dimensions,
+      color: data.color,
+      shape: data.shape,
+      origin: data.origin,
+      laboratoryId: data.laboratoryId,
+      certReportNumber: data.certReportNumber,
+      certReportDate: data.certReportDate,
+      certReportUrl: data.certReportUrl,
+      status: data.status,
+      isFeatured: data.isFeatured,
+      isCollectorPiece: data.isCollectorPiece,
+      isPrivilegeAssist: data.isPrivilegeAssist,
+      isPromotion: data.isPromotion,
+      promotionComparePrice: data.promotionComparePrice,
+      imageUrls: data.imageUrls,
+      videoUrls: data.videoUrls,
+    },
+    { actorId: session.user.id }
+  )
 
   revalidateProductsCache(productId)
   return { success: true, productId }

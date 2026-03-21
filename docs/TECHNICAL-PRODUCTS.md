@@ -265,16 +265,19 @@ Images and videos are stored only in the child tables; the product row does not 
 
 ### 4.3 Update product
 
-**Function:** `updateProductInDb(id: string, input: UpdateProductInput): Promise<void>`
+**Function:** `updateProductInDb(id: string, input: UpdateProductInput, opts?: { actorId?: string | null }): Promise<void>`
 
 **Algorithm:**
 
 1. Destructure `imageUrls`, `videoUrls`, `jewelleryGemstones` from `input`; rest go to product columns.
-2. Build `updates` for the product table from `rest` (only defined fields). If `sku` is not in updates and current row has no SKU, compute SKU from category (short code) and set `updates.sku`.
-3. If `updates` is non-empty: `UPDATE product SET ... WHERE id = id`.
-4. If `jewelleryGemstones !== undefined`: `DELETE FROM product_jewellery_gemstone WHERE product_id = id`; then if array length > 0, `INSERT` all gemstone rows for this product.
-5. If `imageUrls !== undefined`: `DELETE FROM product_image WHERE product_id = id`; then if array length > 0, `INSERT` all image rows (url, sortOrder 0,1,...).
-6. If `videoUrls !== undefined`: `DELETE FROM product_video WHERE product_id = id`; then if array length > 0, `INSERT` all video rows (url, sortOrder 0,1,...).
+2. Load current `status`, `price`, `currency` for change detection.
+3. Build `updates` for the product table from `rest` (only defined fields). If `sku` is not in updates and current row has no SKU, compute SKU from category (short code) and set `updates.sku`.
+4. If status in `rest` differs from current: append a row to `product_admin_change_log` (`change_type = status`, `old_value` / `new_value`, optional `actor_id`).
+5. If `price` or `currency` in `rest` changes the formatted price line (`USD 123.45` style): append a `price` log row.
+6. In one transaction: if `updates` non-empty, `UPDATE product SET ... WHERE id = id`; insert any log rows.
+7. If `jewelleryGemstones !== undefined`: `DELETE FROM product_jewellery_gemstone WHERE product_id = id`; then if array length > 0, `INSERT` all gemstone rows for this product.
+8. If `imageUrls !== undefined`: `DELETE FROM product_image WHERE product_id = id`; then if array length > 0, `INSERT` all image rows (url, sortOrder 0,1,...).
+9. If `videoUrls !== undefined`: `DELETE FROM product_video WHERE product_id = id`; then if array length > 0, `INSERT` all video rows (url, sortOrder 0,1,...).
 
 Update is “replace all” for images, videos, and jewellery gemstones when those keys are present.
 
@@ -288,8 +291,9 @@ Returns a single product with:
 - `imageUrls`: string[] from `product_image` ordered by `sort_order`.
 - `videoUrls`: string[] from `product_video` ordered by `sort_order`.
 - `jewelleryGemstones`: array of gemstone rows (with category name if joined).
+- `changeLog`: newest-first rows from `product_admin_change_log` (status/price changes for the admin form; not returned by public `GET /api/products/[id]`).
 
-Queries product, then product_image, then product_video, then product_jewellery_gemstone (with category), then assembles the result. Returns null if product not found.
+Queries product, then product_image, then product_video, then product_jewellery_gemstone (with category), then change log, then assembles the result. Returns null if product not found.
 
 ### 4.5 Delete product
 

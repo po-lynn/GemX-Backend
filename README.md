@@ -48,6 +48,8 @@ Full feature spec (Mobile, Admin, Additional): [docs/REQUIREMENTS.md](docs/REQUI
 
 **Product file/video/certificate uploads (optional):** To enable uploads from the product form, set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Use the **legacy** key: in **Supabase → Project Settings → API**, open the **"Legacy anon, service_role API keys"** tab and copy the **service_role** (secret) value—not the new "Secret keys" (sh.secret.*) or the publishable key. In **Storage**, create three **public** buckets: `product-images`, `product-videos`, and `product-certificates` (lab report/certificate PDFs and images). If you get **"new row violates row-level security policy"** when uploading, run **Supabase → SQL Editor** with `scripts/supabase-storage-policies.sql`. Then run `npm run db:generate` and `npm run db:push` (or `db:migrate`) to add the `product_video` table if needed. For faster product search (full-text), run **scripts/postgres-fulltext-search.sql** once against your Postgres.
 
+**Admin product change log (status/price history on save):** run **scripts/add-product-admin-change-log.sql** once in Supabase SQL Editor (or `psql`), then `npm run db:generate` / `db:push` if you sync Drizzle from schema.
+
 ### 2. Vercel (app)
 
 1. Push your repo and import the project in [vercel.com](https://vercel.com).

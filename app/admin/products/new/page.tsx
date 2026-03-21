@@ -11,7 +11,7 @@ export default async function AdminProductsNewPage() {
   const origins = await getAllOrigins()
 
   return (
-    <div className="gem-theme container my-6 space-y-6">
+    <div className="gem-theme product-form-page container my-4 w-full max-w-screen-2xl space-y-6 md:my-6">
       <ProductForm key="new" mode="create" categories={categories} laboratories={laboratories} origins={origins} />
     </div>
   )

@@ -231,6 +231,13 @@
   --form-radius-sm: 0.5rem;
   --form-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   --form-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  /* Main product form shell — floating card (Feature Settings–style) */
+  --form-shell-border: #e8ecf1;
+  --form-shadow-elevated:
+    0 10px 40px -10px rgb(15 23 42 / 0.12), 0 4px 16px -4px rgb(15 23 42 / 0.06),
+    0 0 0 1px rgb(15 23 42 / 0.03);
+  /* Nested section cards inside the shell */
+  --form-section-shadow: 0 4px 24px -4px rgb(15 23 42 / 0.08), 0 2px 8px -2px rgb(15 23 42 / 0.04);
 }
 .dark .odoo-form {
   --form-bg: #0f172a;
@@ -250,6 +257,11 @@
   --form-focus-ring: #a78bfa;
   --form-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
   --form-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+  --form-shell-border: rgba(255, 255, 255, 0.1);
+  --form-shadow-elevated:
+    0 12px 48px -8px rgb(0 0 0 / 0.55), 0 4px 20px -4px rgb(0 0 0 / 0.35),
+    0 0 0 1px rgb(255 255 255 / 0.05);
+  --form-section-shadow: 0 4px 24px -4px rgb(0 0 0 / 0.35), 0 2px 8px -2px rgb(0 0 0 / 0.2);
 }
 .odoo-form .odoo-header {
   background: var(--form-header-bg);
@@ -287,6 +299,20 @@
   border-color: var(--form-primary);
 }
 
+/* Product form page: muted canvas so the elevated form card reads clearly */
+.product-form-page {
+  background: rgb(241 245 249 / 0.85);
+  border-radius: 1.5rem;
+  padding: 1rem 0.75rem 1.5rem;
+}
+@media (min-width: 768px) {
+  .product-form-page {
+    padding: 1.25rem 1rem 2rem;
+  }
+}
+.dark .product-form-page {
+  background: rgb(15 23 42 / 0.65);
+}
 
 @layer base {
   * {
