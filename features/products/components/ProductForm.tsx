@@ -523,8 +523,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 >
                   <p className="font-medium text-amber-900 dark:text-amber-100">For promotion</p>
                   <p className="mt-1 text-[var(--form-muted-foreground)]">
-                    This listing is flagged as a promotion item. Use the title and description to highlight the offer;
-                    it can be surfaced in dedicated promotion views and filters.
+                    This listing is flagged as a promotion item. 
                   </p>
                 </div>
               )}

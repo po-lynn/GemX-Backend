@@ -132,7 +132,11 @@ export async function updateUserAction(formData: FormData) {
   }
   const { userId, ...rest } = parsed.data;
   const data: UpdateUserInput = { ...rest };
-  if (rest.role === "user") {
+  if (
+    rest.role === "user" ||
+    rest.role === "seller" ||
+    rest.role === "mobile"
+  ) {
     data.verified = rest.verified === true;
   }
   if (rest.archived !== undefined) {

@@ -12,4 +12,16 @@ export const user = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
+/** Same capabilities as `user` (e.g. seller dashboard / product ownership). */
+export const seller = ac.newRole({
+  ...userAc.statements,
+  user: [...userAc.statements.user, "list"],
+})
+
+/** App sign-ups via phone (see mobile register API). */
+export const mobile = ac.newRole({
+  ...userAc.statements,
+  user: [...userAc.statements.user, "list"],
+})
+
 export const admin = ac.newRole(adminAc.statements)

@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react"
-import { ac, admin, user } from "@/permissions/userRole"
+import { ac, admin, user, seller, mobile } from "@/permissions/userRole"
 
 import {
   adminClient,
@@ -13,6 +13,8 @@ export const authClient = createAuthClient({
       roles: {
         admin,
         user,
+        seller,
+        mobile,
       },
     }),
     organizationClient(),

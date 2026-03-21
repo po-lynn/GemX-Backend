@@ -43,6 +43,8 @@ const ROLES = [
   { value: "", label: "Select role" },
   { value: "admin", label: "Admin" },
   { value: "user", label: "User" },
+  { value: "seller", label: "Seller" },
+  { value: "mobile", label: "Mobile" },
 ]
 const GENDERS = [
   { value: "", label: "Select gender" },
@@ -760,7 +762,11 @@ export function UserForm({ mode, user }: Props) {
             
             
             <div className="flex flex-wrap items-center gap-6">
-              {((isEdit && user?.role === "user") || !isEdit) && (
+              {((isEdit &&
+                (user?.role === "user" ||
+                  user?.role === "seller" ||
+                  user?.role === "mobile")) ||
+                !isEdit) && (
                 <div className="flex items-center gap-2">
                   <input
                     id="verified"
