@@ -36,7 +36,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
       >
         <Suspense fallback={null}>{children}</Suspense>
-        <AppSpeedInsights />
+        {/* usePathname() is dynamic; must be inside Suspense for Cache Components / prerender */}
+        <Suspense fallback={null}>
+          <AppSpeedInsights />
+        </Suspense>
       </body>
     </html>
   );
