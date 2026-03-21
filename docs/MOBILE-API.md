@@ -14,7 +14,7 @@
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
-- **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean).
+- **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
@@ -720,6 +720,24 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 - `shape` – `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`
 - `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` (get URL by uploading via **POST /api/upload/certificate**; no manual URL field in admin form; certificate is shown in a viewer)
 
+**Dimensions** (optional, loose stone **product** `dimensions` and each **jewellery** `jewelleryGemstones[].dimensions`):
+
+The API stores a **single string**, matching the admin UI (three fields joined with ` × ` — Unicode multiply, spaces around).
+
+You may send any of:
+
+| Form | Example | Stored value |
+|------|---------|----------------|
+| String | `"8.2 × 6.5mm"` | unchanged (trimmed) |
+| Array of parts | `["8.2mm", "6.5mm", "4mm"]` | `"8.2mm × 6.5mm × 4mm"` |
+| Object L × W × D | `{ "length": "8.2", "width": "6.5", "depth": "4" }` | `"8.2 × 6.5 × 4"` |
+| Third axis as `height` | `{ "length": "8", "width": "6", "height": "4mm" }` | `"8 × 6 × 4mm"` |
+| Admin-style keys | `{ "part1": "8mm", "part2": "6mm", "part3": "4mm" }` | `"8mm × 6mm × 4mm"` |
+
+- Max **300** characters after normalization.  
+- Empty arrays / all-empty objects → `null`.  
+- **PATCH** uses the same normalization when you send `dimensions` or `jewelleryGemstones`.
+
 **Jewellery:**
 
 - `metal` – `"Gold"` | `"Silver"` | `"Other"`
@@ -756,10 +774,13 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
   "color": "Blue",
   "shape": "Oval",
   "origin": "Myanmar",
+  "dimensions": ["8.2mm", "6.5mm", "4.1mm"],
   "status": "active",
   "imageUrls": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
 }
 ```
+
+*(The `dimensions` array above is stored as `"8.2mm × 6.5mm × 4.1mm"`.)*
 
 **Jewellery with gemstones (seller create)**
 
@@ -775,7 +796,7 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 | `categoryId`   | Yes      | string (UUID)    | Category of the gem (e.g. Ruby, Diamond). From `/api/categories`. |
 | `weightCarat`  | Yes      | string           | Total weight in carats for this stone type (e.g. `"1.5"`).        |
 | `pieceCount`   | No       | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”).       |
-| `dimensions`   | No       | string           | e.g. `"5x3mm"`.                                                   |
+| `dimensions`   | No       | string, string[], or object | Same rules as product-level **Dimensions** above (stored as one string, e.g. `"5 × 3mm"`). |
 | `color`        | Yes      | string           | e.g. `"Red"`, `"White"`. Required for each jewellery gemstone.    |
 | `shape`        | No       | string           | `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`.        |
 | `origin`       | Yes      | string           | e.g. `"Myanmar"`. Required for each jewellery gemstone.           |

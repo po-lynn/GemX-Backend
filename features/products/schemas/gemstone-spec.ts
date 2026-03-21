@@ -28,7 +28,7 @@ const weightCaratSchema = z
 /** All gemstone specification fields (same as loose stone / report fields) */
 export const gemstoneSpecSchema = z.object({
   weightCarat: weightCaratSchema,
-  dimensions: z.string().max(100).optional().nullable(),
+  dimensions: z.string().max(300).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
   shape: productShapeSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),

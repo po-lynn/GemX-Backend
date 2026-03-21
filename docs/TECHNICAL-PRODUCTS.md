@@ -207,19 +207,22 @@ Constants: `MAX_PRODUCT_IMAGES = 10`, `MAX_PRODUCT_VIDEOS = 5`.
 ## 3. Normalize API body
 
 **Function:** `normalizeProductBody(body: unknown): Record<string, unknown>`  
-**File:** `features/products/api/normalize-product-body.ts`
+**File:** `features/products/api/normalize-product-body.ts`  
+**Dimensions helper:** `normalizeDimensionsField` in `features/products/api/normalize-dimensions.ts`
 
-**Purpose:** Convert JSON API payloads (e.g. from mobile) into the shape expected by the Zod schemas (which expect newline‑separated strings for URL lists and stringified JSON for jewellery gemstones).
+**Purpose:** Convert JSON API payloads (e.g. from mobile) into the shape expected by the Zod schemas (which expect newline‑separated strings for URL lists and stringified JSON for jewellery gemstones). Normalizes **`dimensions`** to the same stored format as the admin form (non-empty parts joined with ` × `).
 
 **Logic:**
 
 1. If `body` is not a non-null object, return `{}`.
 2. Shallow copy `body` to `out`.
-3. If `body.jewelleryGemstones` is an array → `out.jewelleryGemstones = JSON.stringify(body.jewelleryGemstones)`.
-4. If `body.imageUrls` is an array → `out.imageUrls = (body.imageUrls as string[]).join("\n")`.
-5. If `body.videoUrls` is an array → `out.videoUrls = (body.videoUrls as string[]).join("\n")`.
-6. If `body.price` is a number → `out.price = String(body.price)`.
-7. Return `out`.
+3. If `dimensions` is present on `out` → set `out.dimensions` to `normalizeDimensionsField(...)` (string, string array, or object with `length`/`width`/`depth` or `height`, or `part1`/`part2`/`part3`).
+4. If `body.jewelleryGemstones` is an array → normalize `dimensions` on each item the same way, then `out.jewelleryGemstones = JSON.stringify(mapped)`.
+5. If `body.imageUrls` is an array → `out.imageUrls = (body.imageUrls as string[]).join("\n")`.
+6. If `body.videoUrls` is an array → `out.videoUrls = (body.videoUrls as string[]).join("\n")`.
+7. If `body.price` is a number → `out.price = String(body.price)`.
+8. If `body.promotionComparePrice` is a number → string coercion (same as before).
+9. Return `out`.
 
 Used by: `POST /api/products`, `PATCH /api/products/:id` before parsing with `productCreateSchema` / `productUpdateSchema`.
 

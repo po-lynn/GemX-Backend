@@ -42,4 +42,36 @@ describe("normalizeProductBody", () => {
     expect(out.jewelleryGemstones).toBe("[]")
     expect(out.imageUrls).toBe("u1\nu2")
   })
+
+  it("normalizes product dimensions array to admin-style join", () => {
+    const out = normalizeProductBody({
+      dimensions: ["8.2mm", "6.5mm", "4mm"],
+    })
+    expect(out.dimensions).toBe("8.2mm × 6.5mm × 4mm")
+  })
+
+  it("normalizes product dimensions object length/width/depth", () => {
+    const out = normalizeProductBody({
+      dimensions: { length: "8", width: "6", depth: "4" },
+    })
+    expect(out.dimensions).toBe("8 × 6 × 4")
+  })
+
+  it("normalizes dimensions inside jewelleryGemstones before stringify", () => {
+    const out = normalizeProductBody({
+      jewelleryGemstones: [
+        {
+          categoryId: "00000000-0000-4000-8000-000000000001",
+          weightCarat: "1",
+          color: "Red",
+          origin: "Myanmar",
+          dimensions: ["6mm", "5mm"],
+        },
+      ],
+    })
+    const parsed = JSON.parse(String(out.jewelleryGemstones)) as {
+      dimensions: string
+    }[]
+    expect(parsed[0].dimensions).toBe("6mm × 5mm")
+  })
 })

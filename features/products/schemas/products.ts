@@ -134,7 +134,7 @@ const productCreateBaseSchema = z.object({
         !v || v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
       { message: "Weight must be a valid number" }
     ),
-  dimensions: z.string().max(100).optional().nullable(),
+  dimensions: z.string().max(300).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
   shape: productShapeSchema.optional().nullable(),
   origin: z.string().max(200).optional().nullable(),
