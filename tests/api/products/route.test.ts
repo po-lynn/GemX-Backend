@@ -54,7 +54,7 @@ describe("GET /api/products", () => {
     expect(data).toHaveProperty("total", 1)
     expect(data.products).toHaveLength(1)
     expect(getAdminProducts).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "active" })
+      expect.objectContaining({ status: "active", sortByPublicPriority: true })
     )
   })
 
@@ -69,6 +69,49 @@ describe("GET /api/products", () => {
         search: "ruby",
         productType: "loose_stone",
         status: "active",
+        sortByPublicPriority: true,
+      })
+    )
+  })
+
+  it("uses explicit createdAt sort when sortBy/sortOrder are in the query", async () => {
+    const req = new Request(
+      "http://localhost/api/products?sortBy=createdAt&sortOrder=desc&limit=6"
+    )
+    await GET(req as NextRequest)
+    expect(getAdminProducts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sortByPublicPriority: false,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+        limit: 6,
+      })
+    )
+  })
+
+  it("uses pure createdAt desc for new-products list when newest=true", async () => {
+    const req = new Request("http://localhost/api/products?newest=true&limit=10")
+    await GET(req as NextRequest)
+    expect(getAdminProducts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sortByPublicPriority: false,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+        limit: 10,
+      })
+    )
+  })
+
+  it("ignores newest=true when search is set (marketplace + relevance ordering)", async () => {
+    const req = new Request(
+      "http://localhost/api/products?search=ruby&newest=true&limit=10"
+    )
+    await GET(req as NextRequest)
+    expect(getAdminProducts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: "ruby",
+        sortByPublicPriority: true,
+        limit: 10,
       })
     )
   })

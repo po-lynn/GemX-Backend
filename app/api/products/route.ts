@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
       shape: searchParams.get("shape") || undefined,
       origin: searchParams.get("origin") || undefined,
       laboratoryId: searchParams.get("laboratoryId") || undefined,
+      createdFrom: searchParams.get("createdFrom") || undefined,
+      createdTo: searchParams.get("createdTo") || undefined,
+      sortBy: searchParams.get("sortBy") || undefined,
+      sortOrder: searchParams.get("sortOrder") || undefined,
       isFeatured: searchParams.get("isFeatured") || undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
@@ -46,12 +50,46 @@ export async function GET(request: NextRequest) {
       shape,
       origin,
       laboratoryId,
+      createdFrom,
+      createdTo,
+      sortBy,
+      sortOrder,
       isFeatured,
       isCollectorPiece,
       isPrivilegeAssist,
       isPromotion,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
+
+    const hasSearch = Boolean(search?.trim())
+    /** New-products / “recent” list: pure `createdAt` order (newest first). Ignored when `search` is set so search keeps marketplace + relevance ordering. */
+    const newest =
+      searchParams.get("newest") === "true" ||
+      searchParams.get("newest") === "1"
+    /** Admin-style column sort (same as passing sortBy/sortOrder to admin UI). */
+    const explicitSort =
+      searchParams.has("sortBy") || searchParams.has("sortOrder")
+
+    let sortByPublicPriority: boolean
+    let sortByArg: "createdAt" | "title" | "price" | "status" | undefined
+    let sortOrderArg: "asc" | "desc" | undefined
+
+    if (hasSearch) {
+      // Search + filters: collector → privilege → featured → promotion → createdAt (and relevance when searching)
+      sortByPublicPriority = true
+    } else if (explicitSort) {
+      sortByPublicPriority = false
+      sortByArg = sortBy ?? "createdAt"
+      sortOrderArg = sortOrder ?? "desc"
+    } else if (newest) {
+      sortByPublicPriority = false
+      sortByArg = "createdAt"
+      sortOrderArg = "desc"
+    } else {
+      // Browse with filters only (no search): same marketplace ordering as search
+      sortByPublicPriority = true
+    }
+
     // Public list: only active products (callers can pass ?status= to override)
     const { products, total } = await getAdminProducts({
       page,
@@ -67,10 +105,15 @@ export async function GET(request: NextRequest) {
       shape: shape ?? undefined,
       origin: origin ?? undefined,
       laboratoryId: laboratoryId ?? undefined,
+      createdFrom: createdFrom ?? undefined,
+      createdTo: createdTo ?? undefined,
       isCollectorPiece: isCollectorPiece ?? undefined,
       isPrivilegeAssist: isPrivilegeAssist ?? undefined,
       isPromotion: isPromotion ?? undefined,
-      sortByPublicPriority: true,
+      sortByPublicPriority,
+      ...(sortByPublicPriority
+        ? {}
+        : { sortBy: sortByArg!, sortOrder: sortOrderArg! }),
     })
     return jsonCached({ products, total })
   } catch (error) {

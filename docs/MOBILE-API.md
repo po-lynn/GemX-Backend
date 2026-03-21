@@ -8,7 +8,7 @@
 
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params: `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Product items include `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **Sort order:** collector pieces first, then privilege assist, then featured (`isFeatured`), then promotion (`isPromotion`), then by `createdAt` (newest first). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
 - **GET /api/products/:id** – Response includes a `seller` object (id, name, phone, username, displayUsername) and product fields `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean).
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
@@ -345,7 +345,12 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 
 **Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isCollectorPiece=true` to list only collector pieces (high-value items); use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
 
-**Sort order:** When **search** is present: (1) full-text **relevance** (ts_rank on title/description), (2) collector pieces, (3) privilege assist, (4) featured, (5) `createdAt` (newest first). When search is absent: (1) collector pieces, (2) privilege assist, (3) featured, (4) `createdAt`. The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
+**Sort order:**  
+- **With `search`:** (1) full-text **relevance**, (2) collector pieces, (3) privilege assist, (4) featured, (5) promotion, (6) `createdAt` (newest first). **`newest=true` is ignored** so search always uses this ordering.  
+- **No `search`, default browse / filters only:** (1) collector pieces, (2) privilege assist, (3) featured, (4) promotion, (5) `createdAt` (newest first).  
+- **No `search`, new-products list:** `newest=true` or `newest=1` → sort by **`createdAt` only** (newest first). You can combine with filters (e.g. `categoryId`, `productType`).  
+- **No `search`, explicit admin sort:** `sortBy` and/or `sortOrder` in the query → sort by that column only (same as admin).  
+The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
 
 **Query:**
 
@@ -365,6 +370,11 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 | `isCollectorPiece`  | boolean | -        | When `true`, return only collector pieces (high-value items).                            |
 | `isPrivilegeAssist` | boolean | -        | When `true`, return only Privilege Assist products (sold by us).                         |
 | `isPromotion`       | boolean | -        | When `true`, return only promotion items.                                                |
+| `newest`            | string  | -        | If `true` or `1` and **no** `search`: sort by **`createdAt` desc only** (new-products list). With `search`, ignored. |
+| `sortBy`            | string  | -        | Omit for default marketplace ordering. If set (or `sortOrder` is set) and **no** `search`: `createdAt`, `title`, `price`, or `status`. |
+| `sortOrder`         | string  | `desc`   | With explicit sort: `asc` or `desc`.                                                     |
+| `createdFrom`       | string  | -        | Inclusive start date `YYYY-MM-DD` (filter by `createdAt`).                               |
+| `createdTo`         | string  | -        | Inclusive end date `YYYY-MM-DD`.                                                         |
 
 
 **Success (200):** See response shape below.
