@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { UserRow } from "@/features/users/db/users";
@@ -47,9 +48,11 @@ function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
   return (
     <div className="flex justify-center">
       {showImg ? (
-        <img
+        <Image
           src={imageUrl}
           alt=""
+          width={44}
+          height={44}
           className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
           onError={() => setLoadError(true)}
         />
@@ -223,6 +226,7 @@ export function UsersTable({
                 <li
                   key={u.id}
                   role="option"
+                  aria-selected={false}
                   className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
                   onMouseDown={(e: React.MouseEvent<HTMLLIElement>) => {
                     e.preventDefault();
