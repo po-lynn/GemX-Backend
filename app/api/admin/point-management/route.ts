@@ -13,9 +13,9 @@ import {
 
 async function requireAdmin(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return { error: jsonError("Unauthorized", 401) as const };
+  if (!session) return { error: jsonError("Unauthorized", 401) };
   if (!canAdminManageUsers(session.user.role)) {
-    return { error: jsonError("Forbidden", 403) as const };
+    return { error: jsonError("Forbidden", 403) };
   }
   return { session };
 }
