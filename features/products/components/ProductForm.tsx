@@ -455,7 +455,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
       ]
 
   const recordTitle = isEdit ? (product?.title ?? "Product") : "New Product"
-  const [notesTab, setNotesTab] = useState<"notes" | "extra">("extra")
+  const [notesTab, setNotesTab] = useState<"notes" | "extra">("notes")
 
   return (
     <Card className="odoo-form overflow-hidden rounded-3xl border border-[var(--form-shell-border)] bg-[var(--form-bg)] shadow-[var(--form-shadow-elevated)]">
@@ -1297,21 +1297,23 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     onRemove={() => setCertReportUrl("")}
                   />
                 ) : null}
-
-                <div className="space-y-2">
-                  <label htmlFor="certNotes" className="text-sm font-medium">
-                    Notes
-                  </label>
-                  <textarea
-                    id="certNotes"
-                    name="description"
-                    rows={4}
-                    maxLength={5000}
-                    defaultValue={product?.description ?? ""}
-                    placeholder="Add notes about this product / certificate..."
-                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
-                  />
-                </div>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <label htmlFor="additionalMemos" className="text-sm font-medium">
+                  Additional Memos
+                </label>
+                <textarea
+                  id="additionalMemos"
+                  name="additionalMemos"
+                  rows={4}
+                  maxLength={5000}
+                  defaultValue={product?.additionalMemos ?? ""}
+                  placeholder="Internal notes, certificate clarifications, or reminders (optional)…"
+                  className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
+                />
+                <p className="text-xs text-[var(--form-muted-foreground)]">
+                  Not shown on the public listing description; stored with the product record.
+                </p>
               </div>
             </div>
           </FormSection>
@@ -1490,7 +1492,7 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                     Notes &amp; extra info
                   </h2>
                   <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
-                    Description tab and placeholder for additional details
+                    Listing description and optional extra details
                   </p>
                 </div>
               </div>
@@ -1521,13 +1523,29 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                 </button>
               </div>
               <div className="pt-4">
-                {notesTab === "notes" && (
-                  <p className="text-sm text-[var(--form-muted-foreground)]">
-                    Notes are saved in the Certification section above.
+                {/* Keep textarea in DOM on both tabs so Save from "Extra Info" still posts description */}
+                <div className={cn("space-y-2", notesTab !== "notes" && "hidden")}>
+                  <label htmlFor="productDescription" className="text-sm font-medium">
+                    Description
+                  </label>
+                  <textarea
+                    id="productDescription"
+                    name="description"
+                    rows={8}
+                    maxLength={5000}
+                    defaultValue={product?.description ?? ""}
+                    placeholder="Describe the product, condition, provenance, or anything buyers should know…"
+                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
+                  />
+                  <p className="text-xs text-[var(--form-muted-foreground)]">
+                    Shown on the listing. Max 5,000 characters.
                   </p>
-                )}
+                </div>
                 {notesTab === "extra" && (
-                  <p className="text-sm text-[var(--form-muted-foreground)]">Additional details can be added here.</p>
+                  <p className="text-sm text-[var(--form-muted-foreground)]">
+                    Additional structured fields can be added here later. Use the Description tab for
+                    listing text.
+                  </p>
                 )}
               </div>
             </div>

@@ -6,13 +6,18 @@ import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   getDefaultRegistrationPoints,
   getEarningPointsRates,
+  getFeatureSettings,
   getPointManagementSettings,
+  saveFeatureSettings,
   savePointManagementSettings,
   setDefaultRegistrationPoints,
   setEarningPointsRates,
   setUserPoints,
 } from "@/features/points/db/points";
-import type { PointManagementSettings } from "@/features/points/db/points";
+import type {
+  FeatureSettings,
+  PointManagementSettings,
+} from "@/features/points/db/points";
 
 export async function getDefaultRegistrationPointsAction(): Promise<number> {
   return getDefaultRegistrationPoints();
@@ -24,6 +29,44 @@ export async function getEarningPointsRatesAction() {
 
 export async function getPointManagementSettingsAction(): Promise<PointManagementSettings> {
   return getPointManagementSettings();
+}
+
+export async function getFeatureSettingsAction(): Promise<FeatureSettings> {
+  return getFeatureSettings();
+}
+
+export async function saveFeatureSettingsAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const rawTiers = formData.get("pricingTiersJson");
+  const rawLimit = formData.get("homeFeaturedLimit");
+  let pricingTiers: FeatureSettings["pricingTiers"];
+  try {
+    const parsed = JSON.parse(String(rawTiers ?? "[]")) as unknown;
+    if (!Array.isArray(parsed)) {
+      return { error: "Invalid pricing tiers." };
+    }
+    pricingTiers = parsed
+      .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+      .map((o) => ({
+        durationDays: Math.min(365, Math.max(1, Math.floor(Number(o.durationDays) || 1))),
+        points: Math.max(0, Math.floor(Number(o.points) || 0)),
+        badge:
+          typeof o.badge === "string" && o.badge.trim()
+            ? o.badge.trim().slice(0, 50)
+            : undefined,
+      }));
+  } catch {
+    return { error: "Invalid pricing tiers JSON." };
+  }
+  const homeFeaturedLimit = Math.min(
+    100,
+    Math.max(1, Math.floor(Number(rawLimit) || 5))
+  );
+  await saveFeatureSettings({ homeFeaturedLimit, pricingTiers });
+  return { success: true };
 }
 
 /** Legacy form: only default registration points + 3 earning rates (points per 1 unit). */

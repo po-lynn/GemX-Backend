@@ -549,6 +549,7 @@ export type ProductForEdit = {
   certReportNumber: string | null
   certReportDate: string | null
   certReportUrl: string | null
+  additionalMemos: string | null
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
@@ -588,6 +589,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       certReportNumber: product.certReportNumber,
       certReportDate: product.certReportDate,
       certReportUrl: product.certReportUrl,
+      additionalMemos: product.additionalMemos,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
@@ -692,6 +694,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     certReportNumber: row.certReportNumber,
     certReportDate: row.certReportDate ?? null,
     certReportUrl: row.certReportUrl,
+    additionalMemos: row.additionalMemos ?? null,
     status: row.status,
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
@@ -752,6 +755,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportNumber: input.certReportNumber ?? null,
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
+    additionalMemos: input.additionalMemos ?? null,
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
     isCollectorPiece: input.isCollectorPiece ?? false,
@@ -852,6 +856,7 @@ export type UpdateProductInput = {
   certReportNumber?: string | null
   certReportDate?: string | null
   certReportUrl?: string | null
+  additionalMemos?: string | null
   status?: "active" | "archive" | "sold" | "hidden"
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
@@ -926,6 +931,8 @@ export async function updateProductInDb(
     updates.certReportNumber = rest.certReportNumber
   if (rest.certReportDate !== undefined) updates.certReportDate = rest.certReportDate
   if (rest.certReportUrl !== undefined) updates.certReportUrl = rest.certReportUrl
+  if (rest.additionalMemos !== undefined)
+    updates.additionalMemos = rest.additionalMemos
   if (rest.status !== undefined) updates.status = rest.status
   if (rest.moderationStatus !== undefined)
     updates.moderationStatus = rest.moderationStatus

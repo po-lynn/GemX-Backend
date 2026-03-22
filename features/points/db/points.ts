@@ -19,6 +19,47 @@ const MINIMUM_SPEND_AMOUNT = "minimum_spend_amount";
 const MINIMUM_SPEND_CURRENCY = "minimum_spend_currency";
 const ROUNDING_METHOD = "rounding_method";
 const POINT_EXPIRY_DAYS = "point_expiry_days";
+const FEATURED_PRODUCT_HOME_LIMIT_KEY = "featured_product_home_limit";
+const FEATURE_PRICING_TIERS_JSON_KEY = "feature_pricing_tiers_json";
+
+export type FeaturePricingTier = {
+  durationDays: number;
+  points: number;
+  /** e.g. "Best Value" — shown next to points */
+  badge?: string;
+};
+
+export type FeatureSettings = {
+  homeFeaturedLimit: number;
+  pricingTiers: FeaturePricingTier[];
+};
+
+const DEFAULT_FEATURE_TIERS: FeaturePricingTier[] = [
+  { durationDays: 1, points: 100 },
+  { durationDays: 3, points: 270 },
+  { durationDays: 7, points: 500, badge: "Best Value" },
+];
+
+function parseFeatureTiersJson(raw: string): FeaturePricingTier[] {
+  if (!raw?.trim()) return DEFAULT_FEATURE_TIERS;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_FEATURE_TIERS;
+    const out: FeaturePricingTier[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const durationDays = Math.min(365, Math.max(1, Math.floor(Number(o.durationDays) || 1)));
+      const points = Math.max(0, Math.floor(Number(o.points) || 0));
+      const badge =
+        typeof o.badge === "string" && o.badge.trim() ? o.badge.trim().slice(0, 50) : undefined;
+      out.push({ durationDays, points, badge });
+    }
+    return out.length > 0 ? out : DEFAULT_FEATURE_TIERS;
+  } catch {
+    return DEFAULT_FEATURE_TIERS;
+  }
+}
 
 export type EarningPointsRates = { mmk: number; usd: number; krw: number };
 
@@ -140,6 +181,37 @@ const upsertInt = async (key: string, value: number) => {
 const upsertText = async (key: string, valueText: string) => {
   await db.insert(pointSetting).values({ key, value: 0, valueText }).onConflictDoUpdate({ target: pointSetting.key, set: { valueText } });
 };
+
+export async function getFeatureSettings(): Promise<FeatureSettings> {
+  const [limitRow, tiersRow] = await Promise.all([
+    db
+      .select({ value: pointSetting.value })
+      .from(pointSetting)
+      .where(eq(pointSetting.key, FEATURED_PRODUCT_HOME_LIMIT_KEY))
+      .limit(1),
+    db
+      .select({ valueText: pointSetting.valueText })
+      .from(pointSetting)
+      .where(eq(pointSetting.key, FEATURE_PRICING_TIERS_JSON_KEY))
+      .limit(1),
+  ]);
+  const rawLimit = limitRow[0]?.value;
+  const homeFeaturedLimit =
+    rawLimit != null && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 5;
+  const pricingTiers = parseFeatureTiersJson(tiersRow[0]?.valueText ?? "");
+  return { homeFeaturedLimit, pricingTiers };
+}
+
+export async function saveFeatureSettings(s: FeatureSettings): Promise<void> {
+  const limit = Math.min(100, Math.max(1, Math.floor(s.homeFeaturedLimit) || 5));
+  const tiers = (s.pricingTiers.length > 0 ? s.pricingTiers : DEFAULT_FEATURE_TIERS).map((t) => ({
+    durationDays: Math.min(365, Math.max(1, Math.floor(t.durationDays) || 1)),
+    points: Math.max(0, Math.floor(t.points) || 0),
+    ...(t.badge?.trim() ? { badge: t.badge.trim().slice(0, 50) } : {}),
+  }));
+  await upsertInt(FEATURED_PRODUCT_HOME_LIMIT_KEY, limit);
+  await upsertText(FEATURE_PRICING_TIERS_JSON_KEY, JSON.stringify(tiers));
+}
 
 export async function savePointManagementSettings(s: PointManagementSettings): Promise<void> {
   await upsertInt(DEFAULT_REGISTRATION_POINTS_KEY, s.defaultRegistrationPoints);

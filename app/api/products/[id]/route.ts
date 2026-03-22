@@ -93,6 +93,7 @@ export async function PATCH(
         certReportNumber: data.certReportNumber,
         certReportDate: data.certReportDate,
         certReportUrl: data.certReportUrl,
+        additionalMemos: data.additionalMemos,
         status: data.status,
         isFeatured: data.isFeatured,
         isCollectorPiece: data.isCollectorPiece,

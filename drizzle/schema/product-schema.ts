@@ -98,6 +98,8 @@ export const product = pgTable(
     certReportNumber: text("cert_report_number"),
     certReportDate: text("cert_report_date"),
     certReportUrl: text("cert_report_url"),
+    /** Internal / cert-related notes (admin form; optional on listings) */
+    additionalMemos: text("additional_memos"),
     status: productStatusEnum("status").notNull().default("active"),
     moderationStatus: productModerationEnum("moderation_status")
       .notNull()

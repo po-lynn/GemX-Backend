@@ -6,13 +6,26 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { LayoutDashboard, BookOpen, Package, FolderTree, Users, FlaskConical, Globe, Newspaper, FileText, Sparkles } from "lucide-react";
-
+import {
+  LayoutDashboard,
+  BookOpen,
+  Package,
+  FolderTree,
+  Users,
+  FlaskConical,
+  Globe,
+  Newspaper,
+  FileText,
+  Sparkles,
+  BadgeCheck,
+} from "lucide-react";
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ElementType;
+  /** When set, use instead of default prefix match (e.g. Credit vs Credit subpages). */
+  isActive?: (pathname: string) => boolean;
 };
 
 type NavGroup = {
@@ -22,7 +35,23 @@ type NavGroup = {
 
 const navGroups: (NavItem | NavGroup)[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/credit", label: "Credit", icon: BookOpen },
+  {
+    label: "Settings",
+    items: [
+      {
+        href: "/admin/credit",
+        label: "Point Management",
+        icon: BookOpen,
+        isActive: (p) => p === "/admin/credit" || p === "/admin/credit/",
+      },
+      {
+        href: "/admin/credit/feature-settings",
+        label: "Feature Settings",
+        icon: BadgeCheck,
+        isActive: (p) => p.startsWith("/admin/credit/feature-settings"),
+      },
+    ],
+  },
   {
     label: "Catalog",
     items: [
@@ -93,13 +122,14 @@ export function AdminSidebar({ className }: { className?: string }) {
 
         <nav className="space-y-0.5">
           {navGroups.map((item) => {
-            const isActive = (href: string) => {
+            const defaultIsActive = (href: string, custom?: (p: string) => boolean) => {
+              if (custom) return custom(pathname);
               if (href === "/admin") return pathname === "/admin";
               return pathname === href || pathname.startsWith(href + "/");
             };
 
             if ("href" in item) {
-              const active = isActive(item.href);
+              const active = defaultIsActive(item.href, item.isActive);
               const Icon = item.icon;
               return (
                 <Link
@@ -133,7 +163,7 @@ export function AdminSidebar({ className }: { className?: string }) {
                 </div>
                 <div className="mt-1 space-y-0.5">
                   {group.items.map((it) => {
-                    const active = isActive(it.href);
+                    const active = defaultIsActive(it.href, it.isActive);
                     const Icon = it.icon;
                     return (
                       <Link

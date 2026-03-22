@@ -151,6 +151,7 @@ const productCreateBaseSchema = z.object({
   certReportNumber: z.string().max(100).optional().nullable(),
   certReportDate: z.string().max(50).optional().nullable(),
   certReportUrl: z.string().max(500).optional().nullable(),
+  additionalMemos: z.string().max(5000).optional().nullable(),
   status: productStatusSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
   isCollectorPiece: z.coerce.boolean().optional(),
