@@ -20,6 +20,7 @@ import {
 import { db } from "@/drizzle/db"
 import { product, productAdminChangeLog } from "@/drizzle/schema/product-schema"
 import { eq } from "drizzle-orm"
+import { deductUserPoints } from "@/features/points/db/points"
 
 export async function setProductModeration(formData: FormData) {
   const parsed = productModerationActionSchema.safeParse({
@@ -114,6 +115,16 @@ function promotionComparePriceFromForm(fd: FormData): string | null | undefined 
   return s
 }
 
+function featuredPointsFromForm(fd: FormData): number | undefined {
+  const raw = fd.get("featured")
+  if (raw === null) return undefined
+  const s = String(raw).trim()
+  if (s === "") return undefined
+  const n = Number(s)
+  if (!Number.isFinite(n) || n < 0) return undefined
+  return Math.floor(n)
+}
+
 export async function createProductAction(formData: FormData) {
   const parsed = productCreateSchema.safeParse({
     title: formData.get("title"),
@@ -141,6 +152,7 @@ export async function createProductAction(formData: FormData) {
     additionalMemos: emptyToNull(formData.get("additionalMemos")),
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    featured: featuredPointsFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
@@ -162,6 +174,13 @@ export async function createProductAction(formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session || !canAdminManageProducts(session.user.role)) {
     return { error: "Unauthorized" }
+  }
+
+  if ((parsed.data.isFeatured ?? false) && (parsed.data.featured ?? 0) > 0) {
+    const deduction = await deductUserPoints(session.user.id, parsed.data.featured ?? 0)
+    if (!deduction.success) {
+      return { error: "Insufficient points balance" }
+    }
   }
 
   const productId = await createProductInDb({
@@ -190,6 +209,7 @@ export async function createProductAction(formData: FormData) {
     additionalMemos: parsed.data.additionalMemos,
     status: parsed.data.status,
     isFeatured: parsed.data.isFeatured,
+    featured: parsed.data.featured,
     isCollectorPiece: parsed.data.isCollectorPiece,
     isPrivilegeAssist: parsed.data.isPrivilegeAssist,
     isPromotion: parsed.data.isPromotion,
@@ -234,6 +254,7 @@ export async function updateProductAction(formData: FormData) {
     additionalMemos: emptyToNull(formData.get("additionalMemos")),
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
+    featured: featuredPointsFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
@@ -258,6 +279,27 @@ export async function updateProductAction(formData: FormData) {
   }
 
   const { productId, ...data } = parsed.data
+  const [currentRow] = await db
+    .select({
+      sellerId: product.sellerId,
+      isFeatured: product.isFeatured,
+      featured: product.featured,
+    })
+    .from(product)
+    .where(eq(product.id, productId))
+    .limit(1)
+  if (!currentRow) return { error: "Product not found" }
+
+  const previousPoints = currentRow.isFeatured ? currentRow.featured : 0
+  const nextPoints = data.isFeatured === true ? Math.max(0, data.featured ?? previousPoints) : 0
+  const additionalPointsNeeded = Math.max(0, nextPoints - previousPoints)
+  if (additionalPointsNeeded > 0) {
+    const deduction = await deductUserPoints(currentRow.sellerId, additionalPointsNeeded)
+    if (!deduction.success) {
+      return { error: "Insufficient points balance" }
+    }
+  }
+
   await updateProductInDb(
     productId,
     {
@@ -286,6 +328,7 @@ export async function updateProductAction(formData: FormData) {
       additionalMemos: data.additionalMemos,
       status: data.status,
       isFeatured: data.isFeatured,
+      featured: data.featured,
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
       isPromotion: data.isPromotion,

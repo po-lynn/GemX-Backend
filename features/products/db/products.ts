@@ -553,6 +553,7 @@ export type ProductForEdit = {
   status: "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
+  featured: number
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   isPromotion: boolean
@@ -593,6 +594,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
+      featured: product.featured,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
@@ -698,6 +700,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     status: row.status,
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
+    featured: row.featured,
     isCollectorPiece: row.isCollectorPiece,
     isPrivilegeAssist: row.isPrivilegeAssist,
     isPromotion: row.isPromotion,
@@ -758,6 +761,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     additionalMemos: input.additionalMemos ?? null,
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
+    featured: input.featured ?? 0,
     isCollectorPiece: input.isCollectorPiece ?? false,
     isPrivilegeAssist: input.isPrivilegeAssist ?? false,
     isPromotion: input.isPromotion ?? false,

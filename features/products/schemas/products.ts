@@ -154,6 +154,7 @@ const productCreateBaseSchema = z.object({
   additionalMemos: z.string().max(5000).optional().nullable(),
   status: productStatusSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
+  featured: z.coerce.number().int().min(0).optional(),
   isCollectorPiece: z.coerce.boolean().optional(),
   isPrivilegeAssist: z.coerce.boolean().optional(),
   isPromotion: z.coerce.boolean().optional(),

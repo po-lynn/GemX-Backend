@@ -1,0 +1,33 @@
+diff --git a/node_modules/drizzle-kit/api.js b/node_modules/drizzle-kit/api.js
+--- a/node_modules/drizzle-kit/api.js
++++ b/node_modules/drizzle-kit/api.js
+@@ -23268,6 +23268,7 @@
+             }
+             for (const checks of tableChecks) {
+               let checkValue = checks.constraint_definition;
++              if (typeof checkValue !== "string") continue;
+               const constraintName = checks.constraint_name;
+               checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
+               checkConstraints[constraintName] = {
+diff --git a/node_modules/drizzle-kit/api.mjs b/node_modules/drizzle-kit/api.mjs
+--- a/node_modules/drizzle-kit/api.mjs
++++ b/node_modules/drizzle-kit/api.mjs
+@@ -23285,6 +23285,7 @@
+             }
+             for (const checks of tableChecks) {
+               let checkValue = checks.constraint_definition;
++              if (typeof checkValue !== "string") continue;
+               const constraintName = checks.constraint_name;
+               checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
+               checkConstraints[constraintName] = {
+diff --git a/node_modules/drizzle-kit/bin.cjs b/node_modules/drizzle-kit/bin.cjs
+--- a/node_modules/drizzle-kit/bin.cjs
++++ b/node_modules/drizzle-kit/bin.cjs
+@@ -19574,6 +19574,7 @@
+             }
+             for (const checks of tableChecks) {
+               let checkValue = checks.constraint_definition;
++              if (typeof checkValue !== "string") continue;
+               const constraintName = checks.constraint_name;
+               checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
+               checkConstraints[constraintName] = {

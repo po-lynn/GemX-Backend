@@ -1,7 +1,7 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
 import { pointSetting } from "@/drizzle/schema/points-schema";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -247,6 +247,38 @@ export async function setEarningPointsRates(rates: Partial<EarningPointsRates>):
 export async function setUserPoints(userId: string, points: number): Promise<void> {
   const safe = Math.max(0, Math.floor(Number(points)) || 0);
   await db.update(user).set({ points: safe }).where(eq(user.id, userId));
+}
+
+/** Add points to user balance and return latest balance. */
+export async function creditUserPoints(
+  userId: string,
+  pointsToAdd: number
+): Promise<{ success: boolean; updatedPoints: number | null }> {
+  const safe = Math.max(0, Math.floor(Number(pointsToAdd)) || 0);
+  const [updated] = await db
+    .update(user)
+    .set({ points: sql`${user.points} + ${safe}` })
+    .where(eq(user.id, userId))
+    .returning({ points: user.points });
+
+  if (!updated) return { success: false, updatedPoints: null };
+  return { success: true, updatedPoints: updated.points };
+}
+
+/** Deduct points only when user has enough balance. Returns remaining points on success. */
+export async function deductUserPoints(
+  userId: string,
+  pointsToDeduct: number
+): Promise<{ success: boolean; remainingPoints: number | null }> {
+  const safe = Math.max(0, Math.floor(Number(pointsToDeduct)) || 0);
+  const [updated] = await db
+    .update(user)
+    .set({ points: sql`${user.points} - ${safe}` })
+    .where(and(eq(user.id, userId), gte(user.points, safe)))
+    .returning({ points: user.points });
+
+  if (!updated) return { success: false, remainingPoints: null };
+  return { success: true, remainingPoints: updated.points };
 }
 
 export async function getUserByEmail(email: string): Promise<{ id: string } | null> {

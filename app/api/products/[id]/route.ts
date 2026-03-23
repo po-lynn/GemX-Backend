@@ -13,6 +13,7 @@ import {
 import { getUserById } from "@/features/users/db/users"
 import { productUpdateSchema } from "@/features/products/schemas/products"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
+import { deductUserPoints } from "@/features/points/db/points"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -68,6 +69,21 @@ export async function PATCH(
       return jsonError(msg, 400)
     }
     const { productId, ...data } = parsed.data
+    const previousFeaturedPoints =
+      typeof (product as { featured?: unknown }).featured === "number"
+        ? ((product as { featured: number }).featured ?? 0)
+        : 0
+    const nextFeaturedPoints =
+      data.isFeatured === true ? Math.max(0, data.featured ?? previousFeaturedPoints) : 0
+    const additionalPointsNeeded = Math.max(0, nextFeaturedPoints - previousFeaturedPoints)
+
+    if (additionalPointsNeeded > 0) {
+      const deduction = await deductUserPoints(product.sellerId, additionalPointsNeeded)
+      if (!deduction.success) {
+        return jsonError("Insufficient points balance", 400)
+      }
+    }
+
     await updateProductInDb(
       productId,
       {
@@ -96,6 +112,7 @@ export async function PATCH(
         additionalMemos: data.additionalMemos,
         status: data.status,
         isFeatured: data.isFeatured,
+        featured: data.featured,
         isCollectorPiece: data.isCollectorPiece,
         isPrivilegeAssist: data.isPrivilegeAssist,
         isPromotion: data.isPromotion,

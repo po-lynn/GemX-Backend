@@ -5,6 +5,7 @@ import { getCachedProduct } from "@/features/products/db/cache/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
+import { getFeatureSettings } from "@/features/points/db/points"
 
 type Props = {
   params: Promise<{ id: string }>
@@ -17,6 +18,7 @@ export default async function AdminProductsEditPage({ params }: Props) {
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
   const origins = await getAllOrigins()
+  const featureSettings = await getFeatureSettings()
 
   if (!product) notFound()
 
@@ -29,6 +31,7 @@ export default async function AdminProductsEditPage({ params }: Props) {
         categories={categories}
         laboratories={laboratories}
         origins={origins}
+        featurePricingTiers={featureSettings.pricingTiers}
       />
     </div>
   )

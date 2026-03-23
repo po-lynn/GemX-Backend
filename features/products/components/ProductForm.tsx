@@ -99,12 +99,14 @@ type Props = {
 
 import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
 import type { OriginOption } from "@/features/origin/db/origin"
+import type { FeaturePricingTier } from "@/features/points/db/points"
 
 type LabProps = {
   mode: "create" | "edit"
   product?: ProductForEdit | null
   laboratories?: LaboratoryOption[] | null
   origins?: OriginOption[] | null
+  featurePricingTiers?: FeaturePricingTier[] | null
 }
 
 function parseDimensions(value: string | null | undefined): [string, string, string] {
@@ -164,7 +166,14 @@ function CertificateViewer({ url, onRemove }: { url: string; onRemove: () => voi
   )
 }
 
-export function ProductForm({ mode, product, categories, laboratories, origins }: Props & LabProps) {
+export function ProductForm({
+  mode,
+  product,
+  categories,
+  laboratories,
+  origins,
+  featurePricingTiers,
+}: Props & LabProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -211,9 +220,22 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
   }, [product?.certReportUrl])
 
   const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
+  const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false)
+  const featuredPointsDefault =
+    typeof (product as { featured?: unknown } | null | undefined)?.featured === "number"
+      ? (product as { featured: number }).featured
+      : 0
+  const pricingTiers = featurePricingTiers ?? []
+  const [selectedFeatureTier, setSelectedFeatureTier] = useState<string>(() => {
+    const byPoints = pricingTiers.find((t) => t.points === featuredPointsDefault)
+    return byPoints ? `${byPoints.durationDays}:${byPoints.points}` : ""
+  })
   useEffect(() => {
     setIsPromotion(product?.isPromotion ?? false)
   }, [product?.id, product?.isPromotion])
+  useEffect(() => {
+    setIsFeatured(product?.isFeatured ?? false)
+  }, [product?.id, product?.isFeatured])
 
   function handleUploadMedia(type: "image" | "video", files: FileList | null) {
     if (!files?.length) return
@@ -532,7 +554,8 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   <input
                     type="checkbox"
                     name="isFeatured"
-                    defaultChecked={product?.isFeatured ?? false}
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
                     className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
                   />
                   <span className="text-sm font-medium text-[var(--form-foreground)]">Featured</span>
@@ -566,6 +589,56 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   <span className="text-sm font-medium text-[var(--form-foreground)]">Promotion</span>
                 </label>
               </div>
+              {isFeatured && (
+                <div className="grid gap-3 sm:max-w-md">
+                  <label htmlFor="featuredTier" className="text-sm font-medium text-[var(--form-foreground)]">
+                    Feature duration and point cost
+                  </label>
+                  {pricingTiers.length > 0 ? (
+                    <>
+                      <select
+                        id="featuredTier"
+                        value={selectedFeatureTier}
+                        onChange={(e) => setSelectedFeatureTier(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select duration and points</option>
+                        {pricingTiers.map((tier, i) => (
+                          <option
+                            key={`${tier.durationDays}-${tier.points}-${i}`}
+                            value={`${tier.durationDays}:${tier.points}`}
+                          >
+                            {tier.durationDays} day{tier.durationDays > 1 ? "s" : ""} - {tier.points} points
+                            {tier.badge ? ` (${tier.badge})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="hidden"
+                        name="featureDurationDays"
+                        value={selectedFeatureTier ? Number(selectedFeatureTier.split(":")[0]) : 0}
+                      />
+                      <input
+                        type="hidden"
+                        name="featured"
+                        value={selectedFeatureTier ? Number(selectedFeatureTier.split(":")[1]) : featuredPointsDefault}
+                      />
+                    </>
+                  ) : (
+                    <input
+                      id="featured"
+                      name="featured"
+                      type="number"
+                      min={0}
+                      step={1}
+                      defaultValue={featuredPointsDefault}
+                      placeholder="e.g. 100"
+                      className={inputClass}
+                    />
+                  )}
+                </div>
+              )}
+              {!isFeatured && <input type="hidden" name="featured" value={0} />}
               {isPromotion && (
                 <div
                   role="status"
@@ -1311,9 +1384,6 @@ export function ProductForm({ mode, product, categories, laboratories, origins }
                   placeholder="Internal notes, certificate clarifications, or reminders (optional)…"
                   className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
                 />
-                <p className="text-xs text-[var(--form-muted-foreground)]">
-                  Not shown on the public listing description; stored with the product record.
-                </p>
               </div>
             </div>
           </FormSection>
