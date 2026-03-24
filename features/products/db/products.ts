@@ -563,6 +563,8 @@ export type ProductForEdit = {
   videoUrls: string[]
   /** Newest first; status & price changes from admin saves */
   changeLog: ProductChangeLogEntry[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 export async function getProductById(id: string): Promise<ProductForEdit | null> {
@@ -600,6 +602,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       isPromotion: product.isPromotion,
       promotionComparePrice: product.promotionComparePrice,
       sellerId: product.sellerId,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
     })
     .from(product)
     .where(eq(product.id, id))
@@ -710,6 +714,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     imageUrls: images.map((i) => i.url),
     videoUrls: videos.map((v) => v.url),
     changeLog,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }
 
