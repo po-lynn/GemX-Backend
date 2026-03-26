@@ -16,6 +16,7 @@
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
+- **POST /api/products** – Create now also accepts optional `isFeatured` (boolean) and `featured` (number, points/priority; integer >= 0). `isPromotion` can be sent as boolean or `"true"/"1"` string and is normalized server-side. `featured` can be sent as number (floored).
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
@@ -884,8 +885,11 @@ Use this endpoint when user buys points in the app. Backend converts purchase am
 - `videoUrls` – array of strings (video URLs). To get URLs: upload via **POST /api/upload/product-media** with `type=video`, then use the returned `urls` here. Max 5 videos per product.
 - `isNegotiable` (boolean)
 - `isFeatured` (boolean) – mark as featured
+- `featured` (number) – points/priority for featured listing (integer >= 0). If sent as number, backend floors it.
 - `isCollectorPiece` (boolean) – high-value collector piece (e.g. 1M+)
 - `isPrivilegeAssist` (boolean) – product sold by us
+- `isPromotion` (boolean) – mark as promotion item (also accepts `"true"` / `"1"` string)
+- `promotionComparePrice` (string or number) – optional original price for promotions
 
 **Loose stone:**
 

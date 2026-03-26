@@ -303,3 +303,17 @@ export async function applyDefaultPointsToNewUser(email: string): Promise<void> 
   const u = await getUserByEmail(email);
   if (u) await setUserPoints(u.id, defaultPoints);
 }
+
+/**
+ * Mobile register: credit the configured default registration points to a user.
+ * This does NOT depend on the registration bonus enabled flag — it is always applied when > 0.
+ */
+export async function creditDefaultRegistrationPointsToUser(
+  userId: string
+): Promise<{ pointsAdded: number }> {
+  const defaultPoints = await getInt(DEFAULT_REGISTRATION_POINTS_KEY)
+  const pointsAdded = Math.max(0, Math.floor(Number(defaultPoints)) || 0)
+  if (pointsAdded <= 0) return { pointsAdded: 0 }
+  await creditUserPoints(userId, pointsAdded)
+  return { pointsAdded }
+}
