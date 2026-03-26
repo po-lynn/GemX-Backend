@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
@@ -48,6 +49,7 @@
 | GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
+| GET    | `/api/profile/:id`     | No   | Get a public seller profile and their active products (optional query: page, limit, filters).                                                                                                            |
 | POST   | `/api/products`        | Yes  | Create product (JSON body)                                                                                                                                                                               |
 | PATCH  | `/api/products/:id`    | Yes  | Update product (owner or admin). JSON body.                                                                                                                                                              |
 | DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
@@ -750,6 +752,50 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 ---
 
+### 5.4a Get public seller profile (other user + their products)
+
+**GET** `/api/profile/:id`
+
+**Auth:** Not required.
+
+Use this endpoint when a user opens another seller’s profile page and needs that seller’s active listings.
+
+**Path params:**
+
+| Param | Type   | Description            |
+| ----- | ------ | ---------------------- |
+| `id`  | string | Seller user id (UUID). |
+
+**Query (optional):** Same filtering set as profile products: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Products are always restricted to `status=active`.
+
+**Success (200):**
+
+```json
+{
+  "profile": {
+    "id": "seller-uuid",
+    "name": "Seller Name",
+    "image": "https://.../avatar.jpg",
+    "username": "seller_username",
+    "displayUsername": "Seller Name",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  "products": {
+    "products": [ { "id": "...", "title": "...", "price": "...", ... } ],
+    "total": 12
+  }
+}
+```
+
+- **profile** – Public-facing seller fields only (`id`, `name`, `image`, `username`, `displayUsername`, `createdAt`).
+- **products** – Seller’s active listings with the same item shape as list endpoints.
+
+**Errors:**
+
+- **404** – `{ "error": "Profile not found" }`
+
+---
+
 ### 5.4.1 Feature a product using points (mobile)
 
 **POST** `/api/mobile/products/:id/feature`
@@ -1350,6 +1396,7 @@ Returns a single published article by ID. Draft items return **404**.
 3. **Browse**
   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
   - Detail: `GET /api/products/:id`.
+  - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
@@ -1401,6 +1448,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/products/:id`    | No   | Get one product                                                                                             |
 | GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all)                                   |
 | GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |
+| GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (optional query params)                                       |
 | POST   | `/api/products`        | Yes  | Create product                                                                                              |
 | PATCH  | `/api/products/:id`    | Yes  | Update (owner/admin)                                                                                        |
 | DELETE | `/api/products/:id`    | Yes  | Delete (owner/admin)                                                                                        |
