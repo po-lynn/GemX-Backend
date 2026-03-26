@@ -40,6 +40,9 @@ export function normalizeProductBody(body: unknown): Record<string, unknown> {
   if (typeof b.featured === "number") {
     out.featured = Math.max(0, Math.floor(b.featured))
   }
+  if (typeof b.featureDurationDays === "number") {
+    out.featureDurationDays = Math.min(365, Math.max(0, Math.floor(b.featureDurationDays)))
+  }
   if (typeof b.isFeatured === "string") {
     out.isFeatured = b.isFeatured === "true" || b.isFeatured === "1"
   }

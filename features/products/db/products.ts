@@ -557,6 +557,8 @@ export type ProductForEdit = {
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
+  featuredDurationDays: number
+  featuredExpiresAt: Date | null
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   isPromotion: boolean
@@ -600,6 +602,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       moderationStatus: product.moderationStatus,
       isFeatured: product.isFeatured,
       featured: product.featured,
+      featuredDurationDays: product.featuredDurationDays,
+      featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
@@ -708,6 +712,8 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     moderationStatus: row.moderationStatus,
     isFeatured: row.isFeatured,
     featured: row.featured,
+    featuredDurationDays: row.featuredDurationDays,
+    featuredExpiresAt: row.featuredExpiresAt,
     isCollectorPiece: row.isCollectorPiece,
     isPrivilegeAssist: row.isPrivilegeAssist,
     isPromotion: row.isPromotion,
@@ -771,6 +777,14 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     status: input.status ?? "active",
     isFeatured: input.isFeatured ?? false,
     featured: input.featured ?? 0,
+    featuredDurationDays:
+      (input.isFeatured ?? false) ? (input.featureDurationDays ?? 0) : 0,
+    featuredExpiresAt:
+      (input.isFeatured ?? false) && (input.featureDurationDays ?? 0) > 0
+        ? new Date(
+            Date.now() + (input.featureDurationDays ?? 0) * 24 * 60 * 60 * 1000
+          )
+        : null,
     isCollectorPiece: input.isCollectorPiece ?? false,
     isPrivilegeAssist: input.isPrivilegeAssist ?? false,
     isPromotion: input.isPromotion ?? false,
@@ -874,6 +888,7 @@ export type UpdateProductInput = {
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
   featured?: number
+  featureDurationDays?: number
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
@@ -951,6 +966,16 @@ export async function updateProductInDb(
     updates.moderationStatus = rest.moderationStatus
   if (rest.isFeatured !== undefined) updates.isFeatured = rest.isFeatured
   if (rest.featured !== undefined) updates.featured = rest.featured
+  if (rest.featureDurationDays !== undefined) {
+    const days = Math.min(365, Math.max(0, Math.floor(rest.featureDurationDays) || 0))
+    updates.featuredDurationDays = days
+    const isFeaturedNext =
+      rest.isFeatured ?? updates.isFeatured ?? false
+    updates.featuredExpiresAt =
+      isFeaturedNext && days > 0
+        ? new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+        : null
+  }
   if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
   if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist
   if (rest.isPromotion !== undefined) updates.isPromotion = rest.isPromotion

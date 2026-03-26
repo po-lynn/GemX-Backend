@@ -7,6 +7,7 @@
 ## Recent changes
 
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
+- **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
@@ -17,7 +18,7 @@
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
-- **POST /api/products** – Create now also accepts optional `isFeatured` (boolean) and `featured` (number, points/priority; integer >= 0). `isPromotion` can be sent as boolean or `"true"/"1"` string and is normalized server-side. `featured` can be sent as number (floored).
+- **POST /api/products** / **PATCH /api/products/:id** – Featured now supports duration via `featureDurationDays` (0–365). When featured with a duration > 0, backend stores an expiry timestamp (`featuredExpiresAt`). Create/update also accept `isFeatured` + `featured` (points/priority; integer >= 0). `isPromotion` can be sent as boolean or `"true"/"1"` string and is normalized server-side.
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
@@ -115,11 +116,15 @@ List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/
 
 **Success (201):** Response body is the auth result (user + session). Store the **session token** from the response for the `Authorization: Bearer` header.
 
+After successful register, backend also auto-adds the configured **default registration points** to the new user balance.
+
 **Errors:**
 
 - **400** – `{ "error": "Phone must start with 09 and password is required" }` or other validation message (e.g. `"Password is too short"` from the auth provider).
 - **409** – `{ "error": "This phone number is already registered" }` when the phone is already in use.
 - **4xx/5xx** – Response body includes an `error` string with the actual message (e.g. auth validation errors).
+
+**Note:** If default registration points are configured as `0`, no points are added.
 
 ---
 
@@ -932,6 +937,7 @@ Use this endpoint when user buys points in the app. Backend converts purchase am
 - `isNegotiable` (boolean)
 - `isFeatured` (boolean) – mark as featured
 - `featured` (number) – points/priority for featured listing (integer >= 0). If sent as number, backend floors it.
+- `featureDurationDays` (number) – featured duration in days (0–365). If `isFeatured=true` and `featureDurationDays > 0`, backend sets featured expiry time automatically.
 - `isCollectorPiece` (boolean) – high-value collector piece (e.g. 1M+)
 - `isPrivilegeAssist` (boolean) – product sold by us
 - `isPromotion` (boolean) – mark as promotion item (also accepts `"true"` / `"1"` string)
@@ -1124,7 +1130,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 **Auth:** Required. User can update **only their own** product (or admin can update any).
 
-**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change. Includes optional `isCollectorPiece` and `isPrivilegeAssist` (boolean). You can update **status** here (e.g. **mark as sold** with `{ "status": "sold" }`) — see **5.6.1 Status update (e.g. Mark as sold)**.
+**Request body (JSON):** Same fields as create; all optional. Send only fields you want to change. Includes optional featured fields (`isFeatured`, `featured`, `featureDurationDays`) and promotion fields (`isPromotion`, `promotionComparePrice`). You can update **status** here (e.g. **mark as sold** with `{ "status": "sold" }`) — see **5.6.1 Status update (e.g. Mark as sold)**.
 
 **Example:** Change title and price only.
 

@@ -155,6 +155,7 @@ const productCreateBaseSchema = z.object({
   status: productStatusSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
   featured: z.coerce.number().int().min(0).optional(),
+  featureDurationDays: z.coerce.number().int().min(0).max(365).optional(),
   isCollectorPiece: z.coerce.boolean().optional(),
   isPrivilegeAssist: z.coerce.boolean().optional(),
   isPromotion: z.coerce.boolean().optional(),
