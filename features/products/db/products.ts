@@ -164,6 +164,7 @@ export async function getAdminProductsFromDb(opts: {
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
           desc(product.isFeatured),
+          desc(product.featured),
           desc(product.isPromotion),
           desc(product.createdAt),
         ]
@@ -171,6 +172,7 @@ export async function getAdminProductsFromDb(opts: {
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
           desc(product.isFeatured),
+          desc(product.featured),
           desc(product.isPromotion),
           desc(product.createdAt),
         ]
@@ -415,6 +417,7 @@ export async function getProductsBySellerId(
         desc(product.isCollectorPiece),
         desc(product.isPrivilegeAssist),
         desc(product.isFeatured),
+        desc(product.featured),
         desc(product.isPromotion),
         desc(product.createdAt),
       ]

@@ -31,10 +31,16 @@ export async function GET(request: NextRequest) {
       createdTo: searchParams.get("createdTo") || undefined,
       sortBy: searchParams.get("sortBy") || undefined,
       sortOrder: searchParams.get("sortOrder") || undefined,
-      isFeatured: searchParams.get("isFeatured") || undefined,
+      isFeatured:
+        searchParams.get("isFeatured") ||
+        searchParams.get("featured") ||
+        undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
-      isPromotion: searchParams.get("isPromotion") || undefined,
+      isPromotion:
+        searchParams.get("isPromotion") ||
+        searchParams.get("promotion") ||
+        undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
     const data: SearchParams = (parsed.success ? parsed.data : { page: 1 }) as SearchParams

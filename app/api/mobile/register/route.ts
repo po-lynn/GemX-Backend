@@ -1,6 +1,6 @@
 // app/api/mobile/register/route.ts
 import { auth } from "@/lib/auth";
-import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
+import { creditDefaultRegistrationPointsToUser } from "@/features/points/db/points";
 import { db } from "@/drizzle/db";
 import { user as userTable } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -91,7 +91,9 @@ export async function POST(req: Request) {
           .set({ role: "mobile", updatedAt: new Date() })
           .where(eq(userTable.id, u.id));
       }
-      await applyDefaultPointsToNewUser(email);
+      if (u?.id) {
+        await creditDefaultRegistrationPointsToUser(u.id)
+      }
       // Sign-up payload still has defaultRole until refetched; expose correct role to clients.
       responseBody = {
         ...result,
