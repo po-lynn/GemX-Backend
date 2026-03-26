@@ -106,6 +106,10 @@ export const product = pgTable(
       .default("pending"),
     isFeatured: boolean("is_featured").notNull().default(false),
     featured: integer("featured").notNull().default(0), // 0 = not featured, higher = sort order
+    /** Feature duration (days) selected when featuring via points */
+    featuredDurationDays: integer("featured_duration_days").notNull().default(0),
+    /** When set, featured is active only until this timestamp (inclusive) */
+    featuredExpiresAt: timestamp("featured_expires_at"),
     /** Collector pieces: high-value items (e.g. 1M+); shown in dedicated listing/filters */
     isCollectorPiece: boolean("is_collector_piece").notNull().default(false),
     /** Privilege Assist: products sold by us (company); shown in dedicated listing/filters */

@@ -112,6 +112,7 @@ export async function PATCH(
         additionalMemos: data.additionalMemos,
         status: data.status,
         isFeatured: data.isFeatured,
+        featureDurationDays: data.featureDurationDays,
         featured: data.featured,
         isCollectorPiece: data.isCollectorPiece,
         isPrivilegeAssist: data.isPrivilegeAssist,

@@ -125,6 +125,16 @@ function featuredPointsFromForm(fd: FormData): number | undefined {
   return Math.floor(n)
 }
 
+function featureDurationDaysFromForm(fd: FormData): number | undefined {
+  const raw = fd.get("featureDurationDays")
+  if (raw === null) return undefined
+  const s = String(raw).trim()
+  if (s === "") return undefined
+  const n = Number(s)
+  if (!Number.isFinite(n) || n < 0) return undefined
+  return Math.min(365, Math.max(0, Math.floor(n)))
+}
+
 export async function createProductAction(formData: FormData) {
   const parsed = productCreateSchema.safeParse({
     title: formData.get("title"),
@@ -153,6 +163,7 @@ export async function createProductAction(formData: FormData) {
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
     featured: featuredPointsFromForm(formData),
+    featureDurationDays: featureDurationDaysFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
@@ -210,6 +221,7 @@ export async function createProductAction(formData: FormData) {
     status: parsed.data.status,
     isFeatured: parsed.data.isFeatured,
     featured: parsed.data.featured,
+    featureDurationDays: parsed.data.featureDurationDays,
     isCollectorPiece: parsed.data.isCollectorPiece,
     isPrivilegeAssist: parsed.data.isPrivilegeAssist,
     isPromotion: parsed.data.isPromotion,
@@ -255,6 +267,7 @@ export async function updateProductAction(formData: FormData) {
     status: formData.get("status") || undefined,
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
     featured: featuredPointsFromForm(formData),
+    featureDurationDays: featureDurationDaysFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
@@ -284,6 +297,8 @@ export async function updateProductAction(formData: FormData) {
       sellerId: product.sellerId,
       isFeatured: product.isFeatured,
       featured: product.featured,
+      featuredDurationDays: product.featuredDurationDays,
+      featuredExpiresAt: product.featuredExpiresAt,
     })
     .from(product)
     .where(eq(product.id, productId))
@@ -329,6 +344,7 @@ export async function updateProductAction(formData: FormData) {
       status: data.status,
       isFeatured: data.isFeatured,
       featured: data.featured,
+      featureDurationDays: data.featureDurationDays,
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
       isPromotion: data.isPromotion,
