@@ -64,6 +64,43 @@ curl -s -X POST "$BASE/api/upload/product-media" \
   -F "file=@/path/to/video.mp4"
 ```
 
+---
+## 2.1 Direct-to-Supabase (signed upload)
+
+If you hit Vercel `413 FUNCTION_PAYLOAD_TOO_LARGE` for large videos, upload **directly to Supabase Storage** instead:
+
+1. Call the signed-upload signer endpoint (auth required):
+
+```bash
+TOKEN="<paste-token-here>"
+BASE="http://localhost:3000"
+
+curl -s -X POST "$BASE/api/upload/product-media/sign" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "video",
+    "filename": "video.mp4",
+    "contentType": "video/mp4",
+    "size": 12345678
+  }'
+```
+
+2. The response includes a short-lived `token` and a `publicUrl`. Then upload the bytes using Supabase Storage SDK:
+
+```ts
+// Pseudocode (React Native / client)
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+await supabase.storage
+  .from(bucket) // product-videos or product-images
+  .uploadToSignedUrl(path, token, file, { contentType })
+```
+
+3. After upload completes, send `publicUrl` in your product payload as `videoUrls` (or `imageUrls`).
+
 ### Upload certificate (PDF or image)
 
 ```bash

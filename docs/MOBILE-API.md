@@ -18,6 +18,7 @@
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
+- **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
 - **Feature with points (mobile)** – Added **POST `/api/mobile/products/:id/feature`** (auth required). Request body: `{ "durationDays": number, "points": number }`. If the selected duration/points tier is valid and the user has enough points, backend deducts points from balance and marks the product as featured. If balance is insufficient, returns **400** with `{ "error": "Insufficient points balance" }`.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
@@ -38,6 +39,7 @@
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
+| POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                                                                                                        |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked (title/description + seller). Cached 60s/300s. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
@@ -239,6 +241,69 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 ### 4.4 Product media upload (images and videos)
 
 Use this endpoint to upload product images or videos before creating or updating a product. You get back public URLs to send in `imageUrls` or `videoUrls` in **POST /api/products** or **PATCH /api/products/:id**. Same endpoint as the admin product form; mobile uses it with `Authorization: Bearer <session_token>`.
+
+For production video uploads (large files), prefer **direct-to-Supabase** signed upload to avoid Vercel request-size limits:
+1. Call **POST** `/api/upload/product-media/sign` (auth required) to get `{ bucket, path, token, publicUrl }`.
+2. Upload the bytes directly to Supabase Storage using the returned `token` (e.g. `uploadToSignedUrl(path, token, file)`).
+3. Send the returned `publicUrl` in your product payload as `videoUrls` (or `imageUrls`).
+
+#### 4.4a Direct-to-Supabase signed upload (recommended for large videos)
+
+Use this flow for video uploads in production (avoids Vercel `413 FUNCTION_PAYLOAD_TOO_LARGE`).
+
+**Step 1 — Sign an upload (auth required)**
+
+**POST** `/api/upload/product-media/sign`
+
+**Headers:**
+- `Authorization: Bearer <session_token>`
+- `Content-Type: application/json`
+
+**Body:**
+
+```json
+{
+  "type": "video",
+  "filename": "my-video.mp4",
+  "contentType": "video/mp4",
+  "size": 12345678
+}
+```
+
+**Success (200):**
+
+```json
+{
+  "bucket": "product-videos",
+  "path": "<userId>/<uuid>.mp4",
+  "token": "<signed_upload_token>",
+  "publicUrl": "https://...supabase.co/storage/v1/object/public/product-videos/<userId>/<uuid>.mp4",
+  "contentType": "video/mp4"
+}
+```
+
+**Step 2 — Upload bytes directly to Supabase Storage**
+
+Use Supabase **anon** key (safe to ship in mobile) and upload using the signed token:
+
+```ts
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+await supabase.storage
+  .from(bucket)
+  .uploadToSignedUrl(path, token, fileBody, { contentType })
+```
+
+- `fileBody` is the binary content (Blob/ArrayBuffer) of the video.
+- Do **not** use the service role key in the app.
+
+**Step 3 — Create/update product with the returned URL**
+
+Put `publicUrl` into your product payload:
+- Create: `POST /api/products` with `"videoUrls": ["<publicUrl>"]`
+- Update: `PATCH /api/products/:id` with `"videoUrls": ["<publicUrl>", ...]`
 
 **POST** `/api/upload/product-media`
 
@@ -1286,7 +1351,13 @@ Returns a single published article by ID. Draft items return **404**.
 5. **Profile**
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
 6. **Sell**
-  - **Upload media first (optional):** For images: `POST /api/upload/product-media` with `type=image` and `file` or `files` (multipart/form-data, Bearer token). For videos: same with `type=video`. Response `{ "urls": ["...", ...] }`. Use these URLs as `imageUrls` / `videoUrls` when creating or updating the product (max 10 images, 5 videos per product). For lab report/certificate: `POST /api/upload/certificate` with `file` (multipart); response `{ "url": "..." }` → use as `certReportUrl`.
+  - **Upload media first (optional):**
+    - **Images (simple):** `POST /api/upload/product-media` with `type=image` and `file`/`files` (multipart/form-data, Bearer token) → `{ "urls": ["..."] }` → use as `imageUrls`.
+    - **Videos (recommended):** Use **direct-to-Supabase** signed upload:
+      - `POST /api/upload/product-media/sign` (JSON, Bearer token) → `{ bucket, path, token, publicUrl }`
+      - Upload to Supabase with `uploadToSignedUrl(path, token, ...)`
+      - Use `publicUrl` as `videoUrls`
+    - **Certificate:** `POST /api/upload/certificate` with `file` (multipart) → `{ "url": "..." }` → use as `certReportUrl`.
   - Create: `POST /api/products` with JSON body including `imageUrls` / `videoUrls` / `certReportUrl` if you uploaded files (with Bearer token).
   - Edit: `PATCH /api/products/:id` (with Bearer token).
   - Delete: `DELETE /api/products/:id` (with Bearer token).
@@ -1320,6 +1391,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
+| POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
 | GET    | `/api/products/:id`    | No   | Get one product                                                                                             |
