@@ -16,7 +16,7 @@ const ALLOWED_VIDEO_TYPES = [
   "video/quicktime", // .mov
 ]
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
-const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024 // 100 MB
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
 
 /** Only authenticated users can upload. Public (unauthenticated) users are rejected. */
 export async function POST(request: NextRequest) {

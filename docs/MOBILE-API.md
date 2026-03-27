@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
@@ -23,7 +24,6 @@
 - **Product media upload** – **POST /api/upload/product-media** is available for mobile: upload product images or videos (multipart/form-data), get back URLs, then send those URLs in **POST /api/products** or **PATCH /api/products/:id** as `imageUrls` / `videoUrls`. Same endpoint as admin product form. See **4.4 Product media upload**.
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
-- **Feature with points (mobile)** – Added **POST `/api/mobile/products/:id/feature`** (auth required). Request body: `{ "durationDays": number, "points": number }`. If the selected duration/points tier is valid and the user has enough points, backend deducts points from balance and marks the product as featured. If balance is insufficient, returns **400** with `{ "error": "Insufficient points balance" }`.
 - **Feature pricing tiers (mobile)** – Added **GET `/api/mobile/feature-pricing-tiers`** (no auth). Returns only `durationDays` + `points` options (from `feature_pricing_tiers_json`) for mobile selection UI.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
 - **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
@@ -38,7 +38,6 @@
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
-| POST   | `/api/mobile/products/:id/feature` | Yes  | Use points to feature a product for a selected duration tier. Deducts points on success; returns error when balance is insufficient.                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
@@ -336,7 +335,7 @@ Put `publicUrl` into your product payload:
 | type   | Allowed MIME types                          | Max size per file |
 | ------ | -------------------------------------------- | ----------------- |
 | `image` | `image/jpeg`, `image/png`, `image/webp`, `image/gif` | 10 MB              |
-| `video` | `video/mp4`, `video/webm`, `video/quicktime` (.mov)   | 100 MB             |
+| `video` | `video/mp4`, `video/webm`, `video/quicktime` (.mov)   | 50 MB              |
 
 **Example (React Native):** Build `FormData`, append `type` (`image` or `video`) and the file(s) under key `file` or `files`, then POST with Bearer token. Do not set `Content-Type` header (fetch will set `multipart/form-data` with boundary).
 
@@ -803,60 +802,7 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 
 ---
 
-### 5.4.1 Feature a product using points (mobile)
-
-**POST** `/api/mobile/products/:id/feature`
-
-**Auth:** Required. `Authorization: Bearer <session_token>`.
-
-Use this endpoint when a seller chooses a feature duration plan in mobile and pays with points.
-
-**Request body (JSON):**
-
-```json
-{
-  "durationDays": 7,
-  "points": 500
-}
-```
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `durationDays` | number | Yes | Feature duration in days. Must match one configured tier. |
-| `points` | number | Yes | Point cost. Must match the selected duration tier exactly. |
-
-**Business rules:**
-
-- Product must exist and belong to the logged-in user.
-- `durationDays` + `points` must match a configured feature tier from admin feature settings.
-- If user points are enough, backend deducts points from original balance and marks product as featured.
-- If points are not enough, backend returns an error and does not update product.
-
-**Success (200):**
-
-```json
-{
-  "success": true,
-  "productId": "product-uuid",
-  "durationDays": 7,
-  "pointsUsed": 500,
-  "remainingPoints": 1200
-}
-```
-
-**Errors:**
-
-- **400** – `{ "error": "Invalid input" }`
-- **400** – `{ "error": "Invalid duration or points tier" }`
-- **400** – `{ "error": "Insufficient points balance" }`
-- **401** – `{ "error": "Unauthorized" }`
-- **403** – `{ "error": "Forbidden" }` (product not owned by current user)
-- **404** – `{ "error": "Product not found" }`
-- **500** – `{ "error": "Failed to apply featured option" }`
-
----
-
-### 5.4.2 Get feature pricing tiers (mobile)
+### 5.4.1 Get feature pricing tiers (mobile)
 
 **GET** `/api/mobile/feature-pricing-tiers`
 
@@ -889,7 +835,7 @@ Use this endpoint to load feature options for a picker/dropdown in mobile. It re
 
 ---
 
-### 5.4.3 Purchase points (mobile)
+### 5.4.2 Purchase points (mobile)
 
 **POST** `/api/mobile/points/purchase`
 
@@ -1431,7 +1377,7 @@ Returns a single published article by ID. Draft items return **404**.
   - On every protected request, set header: `Authorization: Bearer <stored_token>`.
   - Load feature options: call `GET /api/mobile/feature-pricing-tiers` and let user select `durationDays` + `points`.
   - To buy points (top-up): call `POST /api/mobile/points/purchase` with `currency` and `amount`.
-  - To feature with points: call `POST /api/mobile/products/:id/feature` with selected `durationDays` and `points`.
+  - To feature a product: send `isFeatured`, `featured`, and `featureDurationDays` in `POST /api/products` or `PATCH /api/products/:id`.
 2. **Categories**
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
   - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
@@ -1479,7 +1425,6 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
-| POST   | `/api/mobile/products/:id/feature` | Yes  | Feature product using points (deducts balance if enough; 400 on insufficient balance).                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |

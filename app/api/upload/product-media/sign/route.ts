@@ -11,7 +11,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"]
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
-const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024 // 100 MB
+const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
 
 function mimeToExtension(mimeType: string, fallback: string) {
   const mt = (mimeType || "").toLowerCase()

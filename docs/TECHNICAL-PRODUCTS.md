@@ -337,7 +337,7 @@ Queries product, then product_image, then product_video, then product_jewellery_
 **Constants:**
 
 - Allowed image types: `image/jpeg`, `image/png`, `image/webp`, `image/gif`. Max size 10 MB.
-- Allowed video types: `video/mp4`, `video/webm`, `video/quicktime`. Max size 100 MB.
+- Allowed video types: `video/mp4`, `video/webm`, `video/quicktime`. Max size 50 MB.
 
 **Algorithm:**
 
