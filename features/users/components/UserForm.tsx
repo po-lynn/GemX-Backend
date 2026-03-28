@@ -38,6 +38,8 @@ import {
 
 const inputClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
+const selectClass =
+  `${inputClass} cursor-pointer bg-(--form-bg) text-(--form-foreground) [&>option]:bg-(--form-bg) [&>option]:text-(--form-foreground)`;
 
 const ROLES = [
   { value: "", label: "Select role" },
@@ -279,7 +281,7 @@ export function UserForm({ mode, user }: Props) {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
                   aria-label="Settings"
                 >
                   <Settings2 className="size-4" />
@@ -297,7 +299,7 @@ export function UserForm({ mode, user }: Props) {
                       block: "center",
                     })
                   }
-                  className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                  className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
                 >
                   Verified
                 </button>
@@ -309,7 +311,7 @@ export function UserForm({ mode, user }: Props) {
                       block: "center",
                     })
                   }
-                  className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                  className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
                 >
                   Archive
                 </button>
@@ -317,7 +319,7 @@ export function UserForm({ mode, user }: Props) {
                   <button
                     type="button"
                     onClick={openChangePasswordModal}
-                    className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
+                    className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
                   >
                     Change password
                   </button>
@@ -543,7 +545,7 @@ export function UserForm({ mode, user }: Props) {
                 name="role"
                 required
                 defaultValue={user?.role ?? ""}
-                className={inputClass}
+                className={selectClass}
               >
                 {ROLES.map((r) => (
                   <option key={r.value || "empty"} value={r.value}>
@@ -560,7 +562,7 @@ export function UserForm({ mode, user }: Props) {
                 id="gender"
                 name="gender"
                 defaultValue={user?.gender ?? ""}
-                className={inputClass}
+                className={selectClass}
               >
                 {GENDERS.map((g) => (
                   <option key={g.value || "empty"} value={g.value}>
@@ -624,7 +626,7 @@ export function UserForm({ mode, user }: Props) {
                   name="country"
                   value={country ?? ""}
                   onChange={(e) => setCountry(e.target.value)}
-                  className={inputClass}
+                  className={selectClass}
                 >
                   <option value="">Select country</option>
                   {user?.country &&
@@ -682,7 +684,7 @@ export function UserForm({ mode, user }: Props) {
                           setNrcState(e.target.value);
                           setNrcDistrict("");
                         }}
-                        className={inputClass}
+                        className={selectClass}
                       >
                         <option value="">Select state</option>
                         {MYANMAR_NRC_STATES.map((s) => (
@@ -698,7 +700,7 @@ export function UserForm({ mode, user }: Props) {
                         id="nrc-district"
                         value={nrcDistrict ?? ""}
                         onChange={(e) => setNrcDistrict(e.target.value)}
-                        className={inputClass}
+                        className={selectClass}
                         disabled={!nrcState}
                       >
                         <option value="">Select district</option>
@@ -720,7 +722,7 @@ export function UserForm({ mode, user }: Props) {
                         id="nrc-type"
                         value={nrcType ?? "N"}
                         onChange={(e) => setNrcType(e.target.value)}
-                        className={inputClass}
+                        className={selectClass}
                       >
                         <option value="N">N</option>
                         <option value="NAING">NAING</option>
