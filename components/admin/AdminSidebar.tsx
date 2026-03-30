@@ -18,6 +18,7 @@ import {
   FileText,
   Sparkles,
   BadgeCheck,
+  HandCoins,
 } from "lucide-react";
 
 type NavItem = {
@@ -48,7 +49,15 @@ const navGroups: (NavItem | NavGroup)[] = [
         href: "/admin/credit/feature-settings",
         label: "Feature Settings",
         icon: BadgeCheck,
-        isActive: (p) => p.startsWith("/admin/credit/feature-settings"),
+        isActive: (p) =>
+          p === "/admin/credit/feature-settings" ||
+          p === "/admin/credit/feature-settings/",
+      },
+      {
+        href: "/admin/credit/feature-settings/escrow",
+        label: "Escrow Service Settings",
+        icon: HandCoins,
+        isActive: (p) => p.startsWith("/admin/credit/feature-settings/escrow"),
       },
     ],
   },
@@ -162,18 +171,20 @@ export function AdminSidebar({ className }: { className?: string }) {
                   {group.label}
                 </div>
                 <div className="mt-1 space-y-0.5">
-                  {group.items.map((it) => {
-                    const active = defaultIsActive(it.href, it.isActive);
-                    const Icon = it.icon;
+                  {group.items.map((nav) => {
+                    const active = defaultIsActive(nav.href, nav.isActive);
+                    const Icon = nav.icon;
+                    const padLeft = active ? "pl-3" : "pl-4";
                     return (
                       <Link
-                        key={it.href}
-                        href={it.href}
+                        key={nav.href}
+                        href={nav.href}
                         className={cn(
-                          "group flex h-9 items-center gap-3 rounded-lg border-l-4 border-transparent pl-4 pr-3 text-sm transition-all duration-200",
+                          "group flex h-9 items-center gap-3 rounded-lg border-l-4 border-transparent pr-3 text-sm transition-all duration-200",
+                          padLeft,
                           "hover:bg-[var(--admin-sidebar-accent)] hover:text-[var(--admin-sidebar-text)]",
                           active
-                            ? "border-l-[var(--admin-sidebar-active)] bg-[var(--admin-sidebar-accent)] pl-3 text-[var(--admin-sidebar-active)]"
+                            ? "border-l-[var(--admin-sidebar-active)] bg-[var(--admin-sidebar-accent)] text-[var(--admin-sidebar-active)]"
                             : "text-[var(--admin-sidebar-muted)]"
                         )}
                       >
@@ -181,7 +192,7 @@ export function AdminSidebar({ className }: { className?: string }) {
                           className={cn("h-4 w-4 shrink-0", active ? "opacity-100" : "opacity-80 group-hover:opacity-100")}
                           style={{ color: active ? "var(--admin-sidebar-active)" : "inherit" }}
                         />
-                        <span className="font-medium">{it.label}</span>
+                        <span className="font-medium">{nav.label}</span>
                       </Link>
                     );
                   })}

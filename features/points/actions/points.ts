@@ -6,8 +6,10 @@ import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   getDefaultRegistrationPoints,
   getEarningPointsRates,
+  getEscrowServiceSettings,
   getFeatureSettings,
   getPointManagementSettings,
+  saveEscrowServiceSettings,
   saveFeatureSettings,
   savePointManagementSettings,
   setDefaultRegistrationPoints,
@@ -15,6 +17,7 @@ import {
   setUserPoints,
 } from "@/features/points/db/points";
 import type {
+  EscrowServiceSettings,
   FeatureSettings,
   PointManagementSettings,
 } from "@/features/points/db/points";
@@ -33,6 +36,37 @@ export async function getPointManagementSettingsAction(): Promise<PointManagemen
 
 export async function getFeatureSettingsAction(): Promise<FeatureSettings> {
   return getFeatureSettings();
+}
+
+export async function getEscrowServiceSettingsAction(): Promise<EscrowServiceSettings> {
+  return getEscrowServiceSettings();
+}
+
+export async function saveEscrowServiceSettingsAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const raw = formData.get("packagesJson");
+  let packages: EscrowServiceSettings["packages"];
+  try {
+    const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
+    if (!Array.isArray(parsed)) {
+      return { error: "Invalid packages data." };
+    }
+    packages = parsed
+      .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+      .map((o) => ({
+        name: String(o.name ?? "Package").trim().slice(0, 120) || "Package",
+        pointsRequired: Math.max(0, Math.floor(Number(o.pointsRequired) || 0)),
+        serviceFeePercent: Math.min(100, Math.max(0, Number(o.serviceFeePercent) || 0)),
+        transactionLimitUsd: Math.max(0, Math.floor(Number(o.transactionLimitUsd) || 0)),
+      }));
+  } catch {
+    return { error: "Invalid packages JSON." };
+  }
+  await saveEscrowServiceSettings({ packages });
+  return { success: true };
 }
 
 export async function saveFeatureSettingsAction(formData: FormData) {
