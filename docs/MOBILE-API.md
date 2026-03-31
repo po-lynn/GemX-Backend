@@ -25,7 +25,7 @@
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
 - **Feature pricing tiers (mobile)** – Added **GET `/api/mobile/feature-pricing-tiers`** (no auth). Returns only `durationDays` + `points` options (from `feature_pricing_tiers_json`) for mobile selection UI.
-- **Escrow service packages (mobile)** – Added **GET `/api/mobile/escrow-service-settings`** (no auth). Returns escrow package options (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`) for mobile escrow fee selection UI.
+- **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers-settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`) for mobile premium dealer fee selection UI.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
 - **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
 
@@ -39,7 +39,7 @@
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
-| GET    | `/api/mobile/escrow-service-settings` | No   | Get escrow service package options for mobile escrow fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
+| GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
@@ -837,19 +837,19 @@ Use this endpoint to load feature options for a picker/dropdown in mobile. It re
 
 ---
 
-### 5.4.3 Get escrow service settings (mobile)
+### 5.4.3 Get premium dealers settings (mobile)
 
-**GET** `/api/mobile/escrow-service-settings`
+**GET** `/api/mobile/premium-dealers-settings`
 
 **Auth:** Not required.
 
-Use this endpoint to load available escrow service packages in the mobile app. It returns the configured package options stored in `escrow_service_packages_json`.
+Use this endpoint to load available premium dealer packages in the mobile app. It returns the configured package options stored in `premium_dealers_packages_json`.
 
 **Success (200):**
 
 ```json
 {
-  "escrowServicePackages": [
+  "premiumDealerPackages": [
     {
       "name": "Basic Package",
       "pointsRequired": 100,
@@ -868,15 +868,15 @@ Use this endpoint to load available escrow service packages in the mobile app. I
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `escrowServicePackages` | array | Escrow service package options. |
+| `premiumDealerPackages` | array | Premium dealer package options. |
 | `name` | string | Package display name. |
-| `pointsRequired` | number | Points needed to choose this escrow package. |
+| `pointsRequired` | number | Points needed to choose this premium dealer package. |
 | `serviceFeePercent` | number | Service fee percent (e.g. `2` means 2%). |
 | `transactionLimitUsd` | number | Maximum transaction amount in USD (whole dollars) for this package. |
 
 **Errors:**
 
-- **500** – `{ "error": "Failed to load escrow service settings" }`
+- **500** – `{ "error": "Failed to load premium dealers settings" }`
 
 ---
 
@@ -1470,7 +1470,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
-| GET    | `/api/mobile/escrow-service-settings` | No   | Get escrow service package options for mobile escrow fee selection UI.                                      |
+| GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |

@@ -6,10 +6,10 @@ import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   getDefaultRegistrationPoints,
   getEarningPointsRates,
-  getEscrowServiceSettings,
+  getPremiumDealersSettings,
   getFeatureSettings,
   getPointManagementSettings,
-  saveEscrowServiceSettings,
+  savePremiumDealersSettings,
   saveFeatureSettings,
   savePointManagementSettings,
   setDefaultRegistrationPoints,
@@ -17,7 +17,7 @@ import {
   setUserPoints,
 } from "@/features/points/db/points";
 import type {
-  EscrowServiceSettings,
+  PremiumDealersSettings,
   FeatureSettings,
   PointManagementSettings,
 } from "@/features/points/db/points";
@@ -38,17 +38,17 @@ export async function getFeatureSettingsAction(): Promise<FeatureSettings> {
   return getFeatureSettings();
 }
 
-export async function getEscrowServiceSettingsAction(): Promise<EscrowServiceSettings> {
-  return getEscrowServiceSettings();
+export async function getPremiumDealersSettingsAction(): Promise<PremiumDealersSettings> {
+  return getPremiumDealersSettings();
 }
 
-export async function saveEscrowServiceSettingsAction(formData: FormData) {
+export async function savePremiumDealersSettingsAction(formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session || !canAdminManageUsers(session.user.role)) {
     return { error: "Unauthorized" };
   }
   const raw = formData.get("packagesJson");
-  let packages: EscrowServiceSettings["packages"];
+  let packages: PremiumDealersSettings["packages"];
   try {
     const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
     if (!Array.isArray(parsed)) {
@@ -65,7 +65,7 @@ export async function saveEscrowServiceSettingsAction(formData: FormData) {
   } catch {
     return { error: "Invalid packages JSON." };
   }
-  await saveEscrowServiceSettings({ packages });
+  await savePremiumDealersSettings({ packages });
   return { success: true };
 }
 

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { saveEscrowServiceSettingsAction } from "@/features/points/actions/points";
-import type { EscrowServicePackage } from "@/features/points/db/points";
+import { savePremiumDealersSettingsAction } from "@/features/points/actions/points";
+import type { PremiumDealerPackage } from "@/features/points/db/points";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,12 +23,12 @@ function formatUsd(n: number): string {
 }
 
 type Props = {
-  settings: { packages: EscrowServicePackage[] };
+  settings: { packages: PremiumDealerPackage[] };
 };
 
-export function EscrowServiceSettingsForm({ settings }: Props) {
+export function PremiumDealersSettingsForm({ settings }: Props) {
   const router = useRouter();
-  const [packages, setPackages] = useState<EscrowServicePackage[]>(() =>
+  const [packages, setPackages] = useState<PremiumDealerPackage[]>(() =>
     settings.packages.map((p) => ({ ...p }))
   );
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +40,13 @@ export function EscrowServiceSettingsForm({ settings }: Props) {
     setLoading(true);
     const fd = new FormData();
     fd.set("packagesJson", JSON.stringify(packages));
-    const result = await saveEscrowServiceSettingsAction(fd);
+    const result = await savePremiumDealersSettingsAction(fd);
     if (result?.error) setError(result.error);
     else router.refresh();
     setLoading(false);
   }
 
-  function updatePkg(i: number, patch: Partial<EscrowServicePackage>) {
+  function updatePkg(i: number, patch: Partial<PremiumDealerPackage>) {
     setPackages((prev) => prev.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   }
 
@@ -67,24 +67,24 @@ export function EscrowServiceSettingsForm({ settings }: Props) {
   }
 
   return (
-    <form id="escrow-settings-form" onSubmit={handleSubmit} className="space-y-4">
+    <form id="premium-dealers-settings-form" onSubmit={handleSubmit} className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Escrow Service Package Settings
+            Premium Dealers Package Settings
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Configure escrow service packages with points.
+            Configure premium dealers packages with points.
           </p>
         </div>
         <Button
           type="submit"
-          form="escrow-settings-form"
+          form="premium-dealers-settings-form"
           disabled={loading}
           className="rounded-lg px-5 font-medium text-white shadow-sm"
           style={{ backgroundColor: accent }}
         >
-          {loading ? "Saving…" : "Save Settings"}
+          {loading ? "Saving..." : "Save Settings"}
         </Button>
       </div>
 
@@ -202,13 +202,13 @@ export function EscrowServiceSettingsForm({ settings }: Props) {
       <div className="flex justify-center pt-1">
         <Button
           type="submit"
-          form="escrow-settings-form"
+          form="premium-dealers-settings-form"
           disabled={loading}
           size="lg"
           className="min-w-[200px] rounded-lg px-8 font-medium text-white"
           style={{ backgroundColor: accent }}
         >
-          {loading ? "Saving…" : "Save Settings"}
+          {loading ? "Saving..." : "Save Settings"}
         </Button>
       </div>
     </form>

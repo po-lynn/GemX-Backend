@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Button } from "@/components/ui/button";
-import { getEscrowServiceSettings } from "@/features/points/db/points";
-import { EscrowServiceSettingsForm } from "@/features/points/components/EscrowServiceSettingsForm";
+import { getPremiumDealersSettings } from "@/features/points/db/points";
+import { PremiumDealersSettingsForm } from "@/features/points/components/PremiumDealersSettingsForm";
 import { ChevronLeft } from "lucide-react";
 
-export default async function AdminEscrowServiceSettingsPage() {
+export default async function AdminPremiumDealersSettingsPage() {
   await connection();
-  const settings = await getEscrowServiceSettings();
+  const settings = await getPremiumDealersSettings();
 
   return (
     <div className="container my-6 max-w-3xl space-y-4">
@@ -19,7 +19,7 @@ export default async function AdminEscrowServiceSettingsPage() {
           </Link>
         </Button>
       </div>
-      <EscrowServiceSettingsForm settings={settings} />
+      <PremiumDealersSettingsForm settings={settings} />
     </div>
   );
 }

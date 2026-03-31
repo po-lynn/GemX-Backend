@@ -54,10 +54,10 @@ const navGroups: (NavItem | NavGroup)[] = [
           p === "/admin/credit/feature-settings/",
       },
       {
-        href: "/admin/credit/feature-settings/escrow",
-        label: "Escrow Service Settings",
+        href: "/admin/credit/feature-settings/premium-dealers",
+        label: "Premium Dealers Settings",
         icon: HandCoins,
-        isActive: (p) => p.startsWith("/admin/credit/feature-settings/escrow"),
+        isActive: (p) => p.startsWith("/admin/credit/feature-settings/premium-dealers"),
       },
     ],
   },

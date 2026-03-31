@@ -21,9 +21,10 @@ const ROUNDING_METHOD = "rounding_method";
 const POINT_EXPIRY_DAYS = "point_expiry_days";
 const FEATURED_PRODUCT_HOME_LIMIT_KEY = "featured_product_home_limit";
 const FEATURE_PRICING_TIERS_JSON_KEY = "feature_pricing_tiers_json";
-const ESCROW_SERVICE_PACKAGES_JSON_KEY = "escrow_service_packages_json";
+const PREMIUM_DEALERS_PACKAGES_JSON_KEY = "premium_dealers_packages_json";
+const LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY = "escrow_service_packages_json";
 
-export type EscrowServicePackage = {
+export type PremiumDealerPackage = {
   name: string;
   pointsRequired: number;
   /** Percentage, e.g. 2 for 2%, 1.5 for 1.5% */
@@ -32,24 +33,24 @@ export type EscrowServicePackage = {
   transactionLimitUsd: number;
 };
 
-export type EscrowServiceSettings = {
-  packages: EscrowServicePackage[];
+export type PremiumDealersSettings = {
+  packages: PremiumDealerPackage[];
 };
 
-const DEFAULT_ESCROW_PACKAGES: EscrowServicePackage[] = [
+const DEFAULT_PREMIUM_DEALER_PACKAGES: PremiumDealerPackage[] = [
   { name: "Basic Package", pointsRequired: 100, serviceFeePercent: 2, transactionLimitUsd: 1000 },
   { name: "Standard Package", pointsRequired: 250, serviceFeePercent: 1.5, transactionLimitUsd: 5000 },
   { name: "Premium Package", pointsRequired: 500, serviceFeePercent: 1, transactionLimitUsd: 10000 },
 ];
 
-function parseEscrowPackagesJson(raw: string): EscrowServicePackage[] {
-  if (!raw?.trim()) return DEFAULT_ESCROW_PACKAGES.map((p) => ({ ...p }));
+function parsePremiumDealerPackagesJson(raw: string): PremiumDealerPackage[] {
+  if (!raw?.trim()) return DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      return DEFAULT_ESCROW_PACKAGES.map((p) => ({ ...p }));
+      return DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
     }
-    const out: EscrowServicePackage[] = [];
+    const out: PremiumDealerPackage[] = [];
     for (const item of parsed) {
       if (!item || typeof item !== "object") continue;
       const o = item as Record<string, unknown>;
@@ -65,9 +66,9 @@ function parseEscrowPackagesJson(raw: string): EscrowServicePackage[] {
       const limit = Math.max(0, Math.floor(Number(o.transactionLimitUsd) || 0));
       out.push({ name, pointsRequired, serviceFeePercent, transactionLimitUsd: limit });
     }
-    return out.length > 0 ? out : DEFAULT_ESCROW_PACKAGES.map((p) => ({ ...p }));
+    return out.length > 0 ? out : DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
   } catch {
-    return DEFAULT_ESCROW_PACKAGES.map((p) => ({ ...p }));
+    return DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
   }
 }
 
@@ -262,23 +263,41 @@ export async function saveFeatureSettings(s: FeatureSettings): Promise<void> {
   await upsertText(FEATURE_PRICING_TIERS_JSON_KEY, JSON.stringify(tiers));
 }
 
-export async function getEscrowServiceSettings(): Promise<EscrowServiceSettings> {
-  const [row] = await db
-    .select({ valueText: pointSetting.valueText })
-    .from(pointSetting)
-    .where(eq(pointSetting.key, ESCROW_SERVICE_PACKAGES_JSON_KEY))
-    .limit(1);
-  return { packages: parseEscrowPackagesJson(row?.valueText ?? "") };
+export async function getPremiumDealersSettings(): Promise<PremiumDealersSettings> {
+  const [newRows, legacyRows] = await Promise.all([
+    db
+      .select({ valueText: pointSetting.valueText })
+      .from(pointSetting)
+      .where(eq(pointSetting.key, PREMIUM_DEALERS_PACKAGES_JSON_KEY))
+      .limit(1),
+    db
+      .select({ valueText: pointSetting.valueText })
+      .from(pointSetting)
+      .where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY))
+      .limit(1),
+  ]);
+
+  const newRow = newRows[0];
+  const legacyRow = legacyRows[0];
+  const raw = newRow?.valueText ?? legacyRow?.valueText ?? "";
+
+  // One-time migration path: if only legacy key exists, copy it to new key.
+  if (!newRow && legacyRow?.valueText) {
+    await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, legacyRow.valueText);
+  }
+
+  return { packages: parsePremiumDealerPackagesJson(raw) };
 }
 
-export async function saveEscrowServiceSettings(s: EscrowServiceSettings): Promise<void> {
-  const packages = (s.packages.length > 0 ? s.packages : DEFAULT_ESCROW_PACKAGES).map((p) => ({
+export async function savePremiumDealersSettings(s: PremiumDealersSettings): Promise<void> {
+  const packages = (s.packages.length > 0 ? s.packages : DEFAULT_PREMIUM_DEALER_PACKAGES).map((p) => ({
     name: p.name?.trim() ? p.name.trim().slice(0, 120) : "Package",
     pointsRequired: Math.max(0, Math.floor(p.pointsRequired) || 0),
     serviceFeePercent: Math.min(100, Math.max(0, Number(p.serviceFeePercent) || 0)),
     transactionLimitUsd: Math.max(0, Math.floor(p.transactionLimitUsd) || 0),
   }));
-  await upsertText(ESCROW_SERVICE_PACKAGES_JSON_KEY, JSON.stringify(packages));
+  await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, JSON.stringify(packages));
+  await db.delete(pointSetting).where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY));
 }
 
 export async function savePointManagementSettings(s: PointManagementSettings): Promise<void> {

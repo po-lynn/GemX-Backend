@@ -8,7 +8,7 @@ import { pgTable, text, integer } from "drizzle-orm/pg-core";
  * minimum_spend_amount, minimum_spend_currency (0=MMK,1=USD,2=KRW),
  * rounding_method (0=down,1=up,2=nearest), point_expiry_days,
  * featured_product_home_limit (value), feature_pricing_tiers_json (value_text JSON array),
- * escrow_service_packages_json (value_text JSON array of escrow packages).
+ * premium_dealers_packages_json (value_text JSON array of premium dealer packages).
  */
 export const pointSetting = pgTable("point_setting", {
   key: text("key").primaryKey(),
