@@ -54,7 +54,7 @@ Run the full suite: `npm run test` (required to pass before commit).
 ## What’s covered
 
 - **Unit:** `lib/formatters`, `lib/pagination` (getPageNumbers), product search schema, `normalizeProductBody` (incl. dimensions → ` × ` join)
-- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine`; uploads: POST `/api/upload/product-media`, POST `/api/upload/certificate` (all with mocked auth, DB, and cache/Supabase)
+- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine`; uploads: POST `/api/upload/product-media`, POST `/api/upload/certificate`; mobile: POST/GET `/api/mobile/escrow-service-requests` (all with mocked auth, DB, and cache/Supabase)
 
 ## Adding tests
 

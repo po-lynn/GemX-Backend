@@ -20,6 +20,7 @@ import {
   Sparkles,
   BadgeCheck,
   HandCoins,
+  ShieldCheck,
 } from "lucide-react";
 
 type NavItem = {
@@ -70,6 +71,11 @@ const navGroups: (NavItem | NavGroup)[] = [
         href: "/admin/collector-piece-show-requests",
         label: "Collector Requests",
         icon: Eye,
+      },
+      {
+        href: "/admin/escrow-service-requests",
+        label: "Escrow Requests",
+        icon: ShieldCheck,
       },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/users", label: "Users", icon: Users },

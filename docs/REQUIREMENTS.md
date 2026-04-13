@@ -60,6 +60,15 @@ Gemstone & jewellery marketplace. This document is the **single source of truth*
 
 ## Admin features
 
+### Escrow service requests
+
+- Admin can **view all escrow service requests** from buyers and sellers in a paginated table.
+- Filter by **status** (`pending`, `contacted`, `deal_made`, `rejected`) and **type** (`buyer`, `seller`).
+- Each row links to the **requester's user profile**, the **seller's user profile**, and the **product detail page** for quick context.
+- Admin can **update status** and add an **internal note** (never visible to mobile users) inline.
+- Workflow: `pending → contacted → deal_made` or `pending/contacted → rejected`.
+- **Business rule:** A seller cannot submit a buyer-side escrow request for their own product (self-escrow is blocked at the API level).
+
 ### User management
 
 - Admin can **view a list of users** and **suspend / verify KYC / reset password**.

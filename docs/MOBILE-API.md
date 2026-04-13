@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – Added **POST `/api/mobile/collector-piece-show-requests`** (auth required). Logged-in user submits `productId` (must be a collector piece), optional `message`, and `userInformation` (JSON object snapshot from the app, e.g. name/phone/email). Server stores `userId` from the session plus the payload for admin review (`status` defaults to `pending`). See **5.4.4**.
 - **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
@@ -43,6 +44,8 @@
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product. Body: `productId`, `userInformation` (object), optional `message`. Saves request for admin.                                                              |
+| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `message`. Server resolves product and seller from DB. See **5.4.5**. |
+| GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -946,6 +949,106 @@ Use when a logged-in user wants an admin to review or surface a **collector piec
 
 ---
 
+### 5.4.5 Escrow service requests (mobile)
+
+#### POST `/api/mobile/escrow-service-requests`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Submit an escrow service request to GemX admin. Admin will contact the requester to facilitate the deal. The server auto-resolves product and seller information from the database — no snapshot fields needed from the client.
+
+**Request body (JSON):**
+
+```json
+{
+  "type": "buyer",
+  "productId": "00000000-0000-4000-8000-000000000001",
+  "message": "I want escrow service for this product"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `type` | string | **Yes** | `"buyer"` — wants to verify product before purchase; `"seller"` — wants buyer commitment. |
+| `productId` | string (UUID) | No | Existing product in the catalog. Server validates it exists, then auto-stores the product's `sellerId`. Omit for off-platform items. |
+| `message` | string | No | Optional note for admin (trimmed, max 2000 characters). |
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "requestId": "660e8400-e29b-41d4-a716-446655440001",
+  "createdAt": "2026-04-13T10:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }` — missing or invalid session.
+- **400** — `{ "error": "Invalid input" }` — missing `type`, invalid enum value, or malformed UUID for `productId`.
+- **404** — `{ "error": "Product not found" }` — `productId` does not exist in the catalog.
+- **500** — `{ "error": "Failed to save request" }` or `{ "error": "Failed to submit escrow service request" }`.
+
+**Use cases:**
+
+| Scenario | type | productId | message |
+| -------- | ---- | --------- | ------- |
+| Buyer wants escrow for a listed product | `"buyer"` | Product UUID | Optional note |
+| Seller wants to find a committed buyer | `"seller"` | Product UUID (their own) | Optional note |
+| Request about an off-platform item | `"buyer"` or `"seller"` | omit | Describe in message |
+
+**Notes:**
+
+- `adminNote` is internal and never returned to mobile clients.
+- New requests start with `status: "pending"`.
+- The seller is resolved server-side from `product.sellerId` — never send it from the client.
+
+---
+
+#### GET `/api/mobile/escrow-service-requests`
+
+**Auth:** Required. Returns only the authenticated user's own requests.
+
+**Query params:**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `page` | number | `1` | Page number (min 1). |
+| `limit` | number | `10` | Items per page (min 1, max 50). |
+
+**Success (200):**
+
+```json
+{
+  "requests": [
+    {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "type": "buyer",
+      "productId": "00000000-0000-4000-8000-000000000001",
+      "packageName": null,
+      "message": "I want escrow service for this product",
+      "status": "pending",
+      "createdAt": "2026-04-13T10:00:00.000Z",
+      "updatedAt": "2026-04-13T10:00:00.000Z",
+      "product": { "title": "Burma Ruby 3ct" }
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1
+}
+```
+
+**Status values:** `pending` | `contacted` | `deal_made` | `rejected`
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }`.
+- **500** — `{ "error": "Failed to load escrow service requests" }`.
+
+---
+
 ### 5.4.2 Purchase points (mobile)
 
 **POST** `/api/mobile/points/purchase`
@@ -1540,6 +1643,8 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product (`productId`, `userInformation`, optional `message`).        |
+| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `message`). Server resolves seller from product. See 5.4.5. |
+| GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
