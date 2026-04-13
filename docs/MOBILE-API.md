@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Collector piece show request (mobile)** – Added **POST `/api/mobile/collector-piece-show-requests`** (auth required). Logged-in user submits `productId` (must be a collector piece), optional `message`, and `userInformation` (JSON object snapshot from the app, e.g. name/phone/email). Server stores `userId` from the session plus the payload for admin review (`status` defaults to `pending`). See **5.4.4**.
 - **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
@@ -41,6 +42,7 @@
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
+| POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product. Body: `productId`, `userInformation` (object), optional `message`. Saves request for admin.                                                              |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -880,6 +882,70 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
 
 ---
 
+### 5.4.4 Request collector piece show (mobile)
+
+**POST** `/api/mobile/collector-piece-show-requests`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Use when a logged-in user wants an admin to review or surface a **collector piece** listing. The server persists the **session user** as the requester, the **product** id, a JSON snapshot from the client (`userInformation`), and optional note text. Admin tooling can read rows from the `collector_piece_show_request` table (e.g. filter by `status`).
+
+**Request body (JSON):**
+
+```json
+{
+  "productId": "550e8400-e29b-41d4-a716-446655440000",
+  "userInformation": {
+    "name": "John Doe",
+    "phone": "+959123456789",
+    "email": "user@example.com",
+    "appVersion": "1.2.0"
+  },
+  "message": "Please consider featuring this piece in the collector showcase."
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `productId` | string (UUID) | Yes | Product to request. Must exist and have **`isCollectorPiece: true`**. |
+| `userInformation` | object | Yes | String-keyed JSON object from the app (contact/context for admin). Must be JSON-serializable. Stored as text; keep total serialized size reasonable (server rejects if too large, ~50k chars). |
+| `message` | string | No | Optional note (trimmed, max 2000 characters). |
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "requestId": "660e8400-e29b-41d4-a716-446655440001",
+  "productId": "550e8400-e29b-41d4-a716-446655440000",
+  "createdAt": "2026-04-12T10:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `success` | boolean | Always `true` on success. |
+| `requestId` | string | New row id in `collector_piece_show_request`. |
+| `productId` | string | Echo of submitted product id. |
+| `createdAt` | string | ISO 8601 creation time. |
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }` — missing or invalid session.
+- **400** – `{ "error": "Invalid input" }` — validation failed (e.g. bad UUID, missing `userInformation`, non-object fields).
+- **400** – `{ "error": "Product is not a collector piece" }` — product exists but is not flagged as collector piece.
+- **400** – `{ "error": "userInformation must be JSON-serializable" }` / `{ "error": "userInformation is too large" }`.
+- **404** – `{ "error": "Product not found" }`.
+- **500** – `{ "error": "Failed to save request" }` or `{ "error": "Failed to submit collector piece show request" }`.
+
+**Notes:**
+
+- The canonical **requester** is **`userId` from the session**, not fields inside `userInformation`. Use `userInformation` for whatever the mobile app should show admins (display copy, contact hints, device locale, etc.).
+- New rows use **`status: "pending"`** until an admin or job updates them.
+- When admin approves the request, backend sends a push notification to that user with data `{ "screen": "product", "productId": "...", "link": "/products/:id" }` so mobile can deep-link to product detail.
+
+---
+
 ### 5.4.2 Purchase points (mobile)
 
 **POST** `/api/mobile/points/purchase`
@@ -1430,6 +1496,7 @@ Returns a single published article by ID. Draft items return **404**.
   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
+  - Collector piece “ask admin”: on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId`, `userInformation` (object), optional `message` (Bearer token). Only for products with `isCollectorPiece: true`.
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
@@ -1472,6 +1539,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
+| POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product (`productId`, `userInformation`, optional `message`).        |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |

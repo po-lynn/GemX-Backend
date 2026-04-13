@@ -1,7 +1,7 @@
 "use server";
 
 import { env } from "@/data/env/server";
-import { getAllPushTokens } from "@/features/push/db/push-tokens";
+import { getAllPushTokens, getPushTokensByUserIds } from "@/features/push/db/push-tokens";
 
 let firebaseAdmin: typeof import("firebase-admin") | null = null;
 
@@ -40,13 +40,10 @@ export type PushPayload = {
   data?: Record<string, string>;
 };
 
-/**
- * Send push notification to all registered mobile app users (role "mobile").
- * No-op if FCM is not configured or there are no tokens.
- */
-export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sent: number; failed: number }> {
-  const tokens = await getAllPushTokens({ role: "mobile" });
-  const tokenStrings = tokens.map((t) => t.token).filter(Boolean);
+async function sendPushToTokens(
+  tokenStrings: string[],
+  payload: PushPayload
+): Promise<{ sent: number; failed: number }> {
   if (tokenStrings.length === 0) return { sent: 0, failed: 0 };
 
   const admin = await getFirebaseAdmin();
@@ -75,4 +72,29 @@ export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sen
     console.error("FCM send failed:", e);
     return { sent: 0, failed: tokenStrings.length };
   }
+}
+
+/**
+ * Send push notification to all registered mobile app users (role "mobile").
+ * No-op if FCM is not configured or there are no tokens.
+ */
+export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sent: number; failed: number }> {
+  const tokens = await getAllPushTokens({ role: "mobile" });
+  const tokenStrings = tokens.map((t) => t.token).filter(Boolean);
+  return sendPushToTokens(tokenStrings, payload);
+}
+
+/** Send push notification to specific users by user id (e.g. requester approval result). */
+export async function sendPushToUserIds(
+  userIds: string[],
+  payload: PushPayload
+): Promise<{ sent: number; failed: number }> {
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+  if (uniqueUserIds.length === 0) return { sent: 0, failed: 0 };
+  const tokensByUser = await getPushTokensByUserIds(uniqueUserIds);
+  const tokenStrings = Object.values(tokensByUser)
+    .flat()
+    .map((t) => t.token)
+    .filter(Boolean);
+  return sendPushToTokens(Array.from(new Set(tokenStrings)), payload);
 }

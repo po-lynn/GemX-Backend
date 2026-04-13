@@ -12,6 +12,7 @@ import {
   Package,
   FolderTree,
   Users,
+  Eye,
   FlaskConical,
   Globe,
   Newspaper,
@@ -65,6 +66,11 @@ const navGroups: (NavItem | NavGroup)[] = [
     label: "Catalog",
     items: [
       { href: "/admin/products", label: "Products", icon: Package },
+      {
+        href: "/admin/collector-piece-show-requests",
+        label: "Collector Requests",
+        icon: Eye,
+      },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/news", label: "News", icon: Newspaper },

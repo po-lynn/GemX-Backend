@@ -8,4 +8,4 @@ export * from "./schema/news-schema"
 export * from "./schema/articles-schema"
 export * from "./schema/push-schema"
 export * from "./schema/points-schema"
- 
+export * from "./schema/collector-piece-show-request-schema"
