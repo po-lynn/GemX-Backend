@@ -8,6 +8,13 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+-- Add 'pending' to product_status enum
+DO $$ BEGIN
+  ALTER TYPE "public"."product_status" ADD VALUE 'pending' BEFORE 'active';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Add is_featured column
 ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "is_featured" boolean DEFAULT false NOT NULL;
 

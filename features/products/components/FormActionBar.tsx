@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 export type BreadcrumbItem = { href: string; label: string }
 
 const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
   { value: "active", label: "Active" },
   { value: "archive", label: "Archive" },
   { value: "sold", label: "Sold" },

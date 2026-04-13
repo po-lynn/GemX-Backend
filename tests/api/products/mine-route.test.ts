@@ -54,6 +54,30 @@ describe("GET /api/products/mine", () => {
     )
   })
 
+  it("defaults to all statuses for owner when no status query", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-123", role: "user" },
+    } as never)
+    const req = new Request("http://localhost/api/products/mine")
+    await GET(req as NextRequest)
+    expect(getCachedProductsBySellerId).toHaveBeenCalledWith(
+      "user-123",
+      expect.objectContaining({ status: undefined })
+    )
+  })
+
+  it("allows explicit status filter for owner (including pending)", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-123", role: "user" },
+    } as never)
+    const req = new Request("http://localhost/api/products/mine?status=pending")
+    await GET(req as NextRequest)
+    expect(getCachedProductsBySellerId).toHaveBeenCalledWith(
+      "user-123",
+      expect.objectContaining({ status: "pending" })
+    )
+  })
+
   it("returns 500 when getCachedProductsBySellerId throws", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },

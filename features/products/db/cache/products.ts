@@ -27,7 +27,7 @@ export async function getAdminProducts(opts: {
   search?: string
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
-  status?: "active" | "archive" | "sold" | "hidden"
+  status?: "pending" | "active" | "archive" | "sold" | "hidden"
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
@@ -58,7 +58,7 @@ export async function getCachedProductsBySellerId(
     search?: string
     productType?: "loose_stone" | "jewellery"
     categoryId?: string | null
-    status?: "active" | "archive" | "sold" | "hidden"
+    status?: "pending" | "active" | "archive" | "sold" | "hidden"
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
     identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"

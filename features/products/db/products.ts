@@ -49,7 +49,7 @@ export type AdminProductRow = {
   categoryName: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
-  status: "active" | "archive" | "sold" | "hidden"
+  status: "pending" | "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   isCollectorPiece: boolean
@@ -71,7 +71,7 @@ export async function getAdminProductsFromDb(opts: {
   search?: string
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
-  status?: "active" | "archive" | "sold" | "hidden"
+  status?: "pending" | "active" | "archive" | "sold" | "hidden"
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: ProductIdentification
@@ -344,7 +344,7 @@ export async function getProductsBySellerId(
     search?: string
     productType?: "loose_stone" | "jewellery"
     categoryId?: string | null
-    status?: "active" | "archive" | "sold" | "hidden"
+    status?: "pending" | "active" | "archive" | "sold" | "hidden"
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
     identification?: ProductIdentification
@@ -553,7 +553,7 @@ export type ProductForEdit = {
   certReportDate: string | null
   certReportUrl: string | null
   additionalMemos: string | null
-  status: "active" | "archive" | "sold" | "hidden"
+  status: "pending" | "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
@@ -774,7 +774,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
     additionalMemos: input.additionalMemos ?? null,
-    status: input.status ?? "active",
+    status: input.isCollectorPiece === true ? "pending" : (input.status ?? "active"),
     isFeatured: input.isFeatured ?? false,
     featured: input.featured ?? 0,
     featuredDurationDays:
@@ -884,7 +884,7 @@ export type UpdateProductInput = {
   certReportDate?: string | null
   certReportUrl?: string | null
   additionalMemos?: string | null
-  status?: "active" | "archive" | "sold" | "hidden"
+  status?: "pending" | "active" | "archive" | "sold" | "hidden"
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
   featured?: number

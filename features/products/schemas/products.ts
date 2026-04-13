@@ -3,7 +3,7 @@ import { jewelleryGemstoneItemSchema, productShapeSchema } from "./gemstone-spec
 
 export { productShapeSchema }
 
-export const productStatusSchema = z.enum(["active", "archive", "sold", "hidden"])
+export const productStatusSchema = z.enum(["pending", "active", "archive", "sold", "hidden"])
 export const productModerationSchema = z.enum([
   "pending",
   "approved",

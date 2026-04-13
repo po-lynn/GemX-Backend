@@ -15,6 +15,7 @@ import { category, productTypeEnum } from "./category-schema";
 import { laboratory } from "./laboratory-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
+  "pending",  // Waiting admin verification (collector pieces)
   "active",   // In Stock
   "archive",  // Archived
   "sold",     // Sold

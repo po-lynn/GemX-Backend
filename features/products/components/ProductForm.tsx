@@ -200,8 +200,8 @@ export function ProductForm({
   }, [product?.dimensions])
   const categoryOptions = categories.filter((c) => c.type === productType)
   const stoneOptions = categories.filter((c) => c.type === "loose_stone")
-  const [status, setStatus] = useState<"active" | "archive" | "sold" | "hidden">(
-    (product?.status as "active" | "archive" | "sold" | "hidden") ?? "active"
+  const [status, setStatus] = useState<"pending" | "active" | "archive" | "sold" | "hidden">(
+    (product?.status as "pending" | "active" | "archive" | "sold" | "hidden") ?? "active"
   )
   const [imageUrlsList, setImageUrlsList] = useState<string[]>(product?.imageUrls ?? [])
   const [videoUrlsList, setVideoUrlsList] = useState<string[]>(product?.videoUrls ?? [])
