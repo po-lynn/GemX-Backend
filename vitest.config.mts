@@ -9,6 +9,10 @@ export default defineConfig({
     environment: "node",
     environmentMatchGlobs: [["tests/component/**", "jsdom"]],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    env: {
+      AUTH_SECRET: "test-auth-secret",
+      AUTH_URL: "http://localhost:3000",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
