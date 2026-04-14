@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **GET /api/products?isCollectorPiece=true** – **Auth required** (`Authorization: Bearer <session_token>`). Returns only collector-piece listings where **`collector_piece_show_request`** has **`status` = `approved`** and **`user_id`** = the current user (i.e. admin approved that user to see those products). **401** if the header is missing or invalid. Response uses **`Cache-Control: no-store`** (not CDN-cached). All other **`GET /api/products`** behaviour is unchanged.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – Added **POST `/api/mobile/collector-piece-show-requests`** (auth required). Logged-in user submits `productId` (must be a collector piece), optional `message`, and `userInformation` (JSON object snapshot from the app, e.g. name/phone/email). Server stores `userId` from the session plus the payload for admin review (`status` defaults to `pending`). See **5.4.4**.
 - **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
@@ -14,7 +15,7 @@
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (role `mobile`). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** requires **Bearer** auth and only returns products linked to an **approved** row in **`collector_piece_show_request`** for that user (see **5.1**). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
 - **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean).
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
@@ -52,9 +53,9 @@
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                                                                                                        |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked (title/description + seller). Cached 60s/300s. |
+| GET    | `/api/products`        | No†  | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked (title/description + seller). Cached 60s/300s. **†** `isCollectorPiece=true` requires **Yes** (Bearer); see **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist` |
+| GET    | `/api/products`        | No†  | Same as row above (full filter set includes `metal`, `identification`). **†** `isCollectorPiece=true` requires Bearer; see **5.1**. |
 | GET    | `/api/products/:id`    | No   | Get single product by ID                                                                                                                                                                                 |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
@@ -70,7 +71,7 @@
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
 
 
-List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate. **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
+List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate (except **`GET /api/products?isCollectorPiece=true`**, which is **`no-store`** because it is user-specific). **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
 
 ---
 
@@ -413,7 +414,7 @@ Use this `url` as `certReportUrl` when creating or updating the product.
 
 **GET** `/api/products`
 
-**Auth:** Not required.
+**Auth:** Not required for the default catalog. **Required** when **`isCollectorPiece=true`** — send `Authorization: Bearer <session_token>` (**401** if missing or invalid).
 
 **Search & suggestions — instruction for mobile**
 
@@ -429,7 +430,9 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 
 ---
 
-**Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isCollectorPiece=true` to list only collector pieces (high-value items); use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
+**Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
+
+**Collector pieces (`isCollectorPiece=true`):** **Authentication is required** — send `Authorization: Bearer <session_token>`. The API returns only products where **`isCollectorPiece`** is true **and** there is a row in **`collector_piece_show_request`** with **`user_id`** = the logged-in user and **`status`** = **`approved`** (admin approved the request to show that listing to this user). Without a valid session the API returns **401**. This response is **not** shared CDN cache (`no-store`).
 
 **Sort order:**  
 - **With `search`:** (1) full-text **relevance**, (2) collector pieces, (3) privilege assist, (4) featured, (5) promotion, (6) `createdAt` (newest first). **`newest=true` is ignored** so search always uses this ordering.  
@@ -453,7 +456,7 @@ The API does **not** return a numeric `featured` field—only `isFeatured` (bool
 | `shape`             | string  | -        | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`                             |
 | `origin`            | string  | -        | Filter by origin name (e.g. from GET /api/origins or your origins list)                  |
 | `laboratoryId`      | string  | -        | Filter by laboratory UUID (from GET /api/laboratories)                                   |
-| `isCollectorPiece`  | boolean | -        | When `true`, return only collector pieces (high-value items).                            |
+| `isCollectorPiece`  | boolean | -        | When `true`, **Bearer auth required**. Returns collector pieces only if **`collector_piece_show_request`** has **`status` = `approved`** and **`user_id`** = current user for that product. **401** without session. |
 | `isPrivilegeAssist` | boolean | -        | When `true`, return only Privilege Assist products (sold by us).                         |
 | `isPromotion`       | boolean | -        | When `true`, return only promotion items.                                                |
 | `newest`            | string  | -        | If `true` or `1` and **no** `search`: sort by **`createdAt` desc only** (new-products list). With `search`, ignored. |
@@ -462,6 +465,9 @@ The API does **not** return a numeric `featured` field—only `isFeatured` (bool
 | `createdFrom`       | string  | -        | Inclusive start date `YYYY-MM-DD` (filter by `createdAt`).                               |
 | `createdTo`         | string  | -        | Inclusive end date `YYYY-MM-DD`.                                                         |
 
+**Errors (when `isCollectorPiece=true`):**
+
+- **401** – Missing or invalid session — collector feed requires `Authorization: Bearer <session_token>`.
 
 **Success (200):** See response shape below.
 
@@ -544,7 +550,7 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`.                                                                     |
 | `origin`            | string  | -       | Filter by origin name.                                                                                                            |
 | `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
-| `isCollectorPiece`  | boolean | -       | When `true`, only collector pieces.                                                                                               |
+| `isCollectorPiece`  | boolean | -       | When `true` on **GET /api/products**, **Bearer required**; only products with an **approved** `collector_piece_show_request` for the user. On **GET /api/products/mine**, seller’s own listings only (unchanged). |
 | `isPrivilegeAssist` | boolean | -       | When `true`, only Privilege Assist (sold by us).                                                                                  |
 
 
@@ -614,10 +620,18 @@ GET /api/products?identification=Natural
 GET /api/products?metal=Gold&identification=Heat%20Treated&productType=jewellery
 ```
 
-**8. Collector pieces only (high-value items)**
+**8. Collector pieces — approved-for-user list (public catalog) vs my listings**
+
+Approved collector feed (only products admin approved for **this** user via `collector_piece_show_request`):
 
 ```
 GET /api/products?isCollectorPiece=true
+Authorization: Bearer <session_token>
+```
+
+Seller’s own collector-tagged products (all statuses by default on mine):
+
+```
 GET /api/products/mine?isCollectorPiece=true
 Authorization: Bearer <session_token>
 ```
@@ -1596,7 +1610,8 @@ Returns a single published article by ID. Draft items return **404**.
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
   - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 3. **Browse**
-  - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`). Public list defaults to active only.
+  - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isPrivilegeAssist`, etc.). Public list defaults to active only.
+  - **Collector feed:** `GET /api/products?isCollectorPiece=true` with **Bearer** — returns only listings where admin set **`collector_piece_show_request.status`** to **`approved`** for this user (after they used “ask admin”). **401** without auth.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
   - Collector piece “ask admin”: on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId`, `userInformation` (object), optional `message` (Bearer token). Only for products with `isCollectorPiece: true`.
@@ -1651,7 +1666,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
-| GET    | `/api/products`        | No   | List products (default active only; see 5.1 for query params including isCollectorPiece, isPrivilegeAssist) |
+| GET    | `/api/products`        | No†  | List products (default active only; see 5.1). **†** `isCollectorPiece=true` → Bearer required, approved `collector_piece_show_request` rows only. |
 | GET    | `/api/products/:id`    | No   | Get one product                                                                                             |
 | GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all)                                   |
 | GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |

@@ -38,6 +38,7 @@ export async function getAdminProducts(opts: {
   createdTo?: string
   isFeatured?: boolean
   isCollectorPiece?: boolean
+  collectorPieceApprovedForUserId?: string
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
   sortByPublicPriority?: boolean

@@ -1,7 +1,7 @@
 import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
-import { createProductInDb } from "@/features/products/db/products"
+import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import {
   getAdminProducts,
   revalidateProductsCache,
@@ -96,8 +96,7 @@ export async function GET(request: NextRequest) {
       sortByPublicPriority = true
     }
 
-    // Public list: only active products (callers can pass ?status= to override)
-    const { products, total } = await getAdminProducts({
+    const listOpts = {
       page,
       limit,
       search: search ?? undefined,
@@ -120,7 +119,26 @@ export async function GET(request: NextRequest) {
       ...(sortByPublicPriority
         ? {}
         : { sortBy: sortByArg!, sortOrder: sortOrderArg! }),
-    })
+    }
+
+    /** Collector-piece browse: only listings the admin approved for this user (`collector_piece_show_request`). */
+    const collectorPieceFilter = isCollectorPiece === true
+    if (collectorPieceFilter) {
+      const session = await auth.api.getSession({ headers: request.headers })
+      if (!session) {
+        return jsonError(
+          "Unauthorized — collector piece list requires Authorization: Bearer <session_token>",
+          401
+        )
+      }
+      const { products, total } = await getAdminProductsFromDb({
+        ...listOpts,
+        collectorPieceApprovedForUserId: session.user.id,
+      })
+      return jsonUncached({ products, total })
+    }
+
+    const { products, total } = await getAdminProducts(listOpts)
     return jsonCached({ products, total })
   } catch (error) {
     console.error("GET /api/products:", error)

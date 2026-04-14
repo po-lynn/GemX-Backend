@@ -9,6 +9,7 @@ import {
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
+import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { and, asc, eq, exists, gte, ilike, inArray, lte, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
@@ -83,6 +84,8 @@ export async function getAdminProductsFromDb(opts: {
   createdTo?: string
   isFeatured?: boolean
   isCollectorPiece?: boolean
+  /** When set with `isCollectorPiece: true`, only products with an approved `collector_piece_show_request` for this user are returned. */
+  collectorPieceApprovedForUserId?: string
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
   /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
@@ -150,6 +153,20 @@ export async function getAdminProductsFromDb(opts: {
       ? eq(product.isFeatured, opts.isFeatured)
       : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
+    opts.collectorPieceApprovedForUserId && opts.isCollectorPiece === true
+      ? exists(
+          db
+            .select()
+            .from(collectorPieceShowRequest)
+            .where(
+              and(
+                eq(collectorPieceShowRequest.productId, product.id),
+                eq(collectorPieceShowRequest.userId, opts.collectorPieceApprovedForUserId),
+                eq(collectorPieceShowRequest.status, "approved")
+              )
+            )
+        )
+      : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
     opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
   ].filter(Boolean)

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import { GET, POST } from "@/app/api/products/route"
 import { getAdminProducts } from "@/features/products/db/cache/products"
-import { createProductInDb } from "@/features/products/db/products"
+import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import { auth } from "@/lib/auth"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -18,6 +18,7 @@ vi.mock("@/features/products/db/cache/products", () => ({
 }))
 vi.mock("@/features/products/db/products", () => ({
   createProductInDb: vi.fn(),
+  getAdminProductsFromDb: vi.fn(),
 }))
 
 /** Valid category UUID for product create tests (categoryId is required). */
@@ -38,6 +39,8 @@ describe("GET /api/products", () => {
   beforeEach(() => {
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(getAdminProducts).mockResolvedValue({ products: [], total: 0 })
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({ products: [], total: 0 })
+    vi.mocked(auth.api.getSession).mockResolvedValue(null)
   })
 
   it("returns 200 and list with products and total", async () => {
@@ -123,6 +126,38 @@ describe("GET /api/products", () => {
     expect(res.status).toBe(500)
     const data = await res.json()
     expect(data).toHaveProperty("error", "Failed to fetch products")
+  })
+
+  it("returns 401 when isCollectorPiece=true without session", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null)
+    const req = new Request("http://localhost/api/products?isCollectorPiece=true")
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(401)
+    expect(getAdminProductsFromDb).not.toHaveBeenCalled()
+    expect(getAdminProducts).not.toHaveBeenCalled()
+  })
+
+  it("uses getAdminProductsFromDb with approved-request filter when isCollectorPiece=true and session present", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", role: "mobile" },
+    } as never)
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({ products: [], total: 0 })
+    const req = new Request("http://localhost/api/products?isCollectorPiece=true", {
+      headers: { Authorization: "Bearer token" },
+    })
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isCollectorPiece: true,
+        collectorPieceApprovedForUserId: "user-1",
+        status: "active",
+        sortByPublicPriority: true,
+      })
+    )
+    expect(getAdminProducts).not.toHaveBeenCalled()
+    const cc = res.headers.get("Cache-Control")
+    expect(cc).toContain("no-store")
   })
 })
 
