@@ -48,9 +48,6 @@ export function CollectorPieceShowRequestsTable({ requests }: Props) {
               Requester
             </TableHead>
             <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-              User Snapshot
-            </TableHead>
-            <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
               Message
             </TableHead>
             <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
@@ -67,7 +64,7 @@ export function CollectorPieceShowRequestsTable({ requests }: Props) {
         <TableBody>
           {requests.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
+              <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                 No collector piece show requests.
               </TableCell>
             </TableRow>
@@ -79,24 +76,24 @@ export function CollectorPieceShowRequestsTable({ requests }: Props) {
                   index % 2 === 1 ? "bg-[#f5f5f5]" : ""
                 }`}
               >
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                  <div className="font-medium">{r.product.title}</div>
-                  <div className="text-muted-foreground text-xs">
-                    ID: {r.productId}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    Product status: {r.product.status}
-                  </div>
+                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
+                  <Link
+                    href={`/admin/products/${r.productId}/edit`}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {r.product.title}
+                  </Link>
+                  <div className="text-muted-foreground text-xs">Listing status: {r.product.status}</div>
                 </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                  <div className="font-medium">{r.requester.name}</div>
+                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
+                  <Link
+                    href={`/admin/users/${r.userId}/edit`}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {r.requester.name}
+                  </Link>
                   <div className="text-muted-foreground text-xs">{r.requester.email}</div>
                   <div className="text-muted-foreground text-xs">{r.requester.phone ?? "—"}</div>
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-xs">
-                  <pre className="max-w-xs whitespace-pre-wrap wrap-break-word">
-                    {JSON.stringify(r.userInformation ?? {}, null, 2)}
-                  </pre>
                 </TableCell>
                 <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
                   {r.message ?? "—"}
@@ -108,18 +105,13 @@ export function CollectorPieceShowRequestsTable({ requests }: Props) {
                   {r.createdAt.toLocaleString()}
                 </TableCell>
                 <TableCell className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/admin/products/${r.productId}/edit`}>View Product</Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={isPending || r.status !== "pending"}
-                      onClick={() => approve(r.id)}
-                    >
-                      {r.status === "pending" ? "Approve" : "Approved"}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    disabled={isPending || r.status !== "pending"}
+                    onClick={() => approve(r.id)}
+                  >
+                    {r.status === "pending" ? "Approve" : "Approved"}
+                  </Button>
                 </TableCell>
               </TableRow>
             ))

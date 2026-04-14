@@ -11,7 +11,6 @@ export type CollectorPieceShowRequestRow = {
   message: string | null
   status: string
   createdAt: Date
-  userInformation: Record<string, unknown> | null
   requester: {
     name: string
     phone: string | null
@@ -37,7 +36,6 @@ export async function getCollectorPieceShowRequestsPaginated(options: {
         id: collectorPieceShowRequest.id,
         userId: collectorPieceShowRequest.userId,
         productId: collectorPieceShowRequest.productId,
-        userInfoJson: collectorPieceShowRequest.userInfoJson,
         message: collectorPieceShowRequest.message,
         status: collectorPieceShowRequest.status,
         createdAt: collectorPieceShowRequest.createdAt,
@@ -62,15 +60,6 @@ export async function getCollectorPieceShowRequestsPaginated(options: {
 
   return {
     requests: rows.map((r) => {
-      let userInformation: Record<string, unknown> | null = null
-      try {
-        const parsed = JSON.parse(r.userInfoJson)
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          userInformation = parsed as Record<string, unknown>
-        }
-      } catch {
-        userInformation = null
-      }
       return {
         id: r.id,
         userId: r.userId,
@@ -78,7 +67,6 @@ export async function getCollectorPieceShowRequestsPaginated(options: {
         message: r.message,
         status: r.status,
         createdAt: r.createdAt,
-        userInformation,
         requester: {
           name: r.requesterName,
           phone: r.requesterPhone,
