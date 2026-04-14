@@ -47,3 +47,14 @@ export function formatNumber(
   const formatter = new Intl.NumberFormat(undefined, options)
   return formatter.format(number)
 }
+
+/**
+ * Masks a price string — keeps the first digit of the integer part,
+ * replaces the rest with 'x'. Strips decimals before masking.
+ * e.g. "100000" → "1xxxxx", "100000.00" → "1xxxxx", "9" → "9"
+ */
+export function maskPrice(price: string): string {
+  const intPart = price.split(".")[0]
+  if (!intPart) return price
+  return intPart[0] + "x".repeat(intPart.length - 1)
+}

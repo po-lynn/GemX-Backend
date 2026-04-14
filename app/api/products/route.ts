@@ -1,7 +1,7 @@
 import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
-import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
+import { createProductInDb } from "@/features/products/db/products"
 import {
   getAdminProducts,
   revalidateProductsCache,
@@ -10,6 +10,24 @@ import { productCreateSchema } from "@/features/products/schemas/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
+import { maskPrice } from "@/lib/formatters"
+import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+
+function maskCollectorPiece(p: { id: string; price: string; currency: string; status: string; imageUrl: string | null; [key: string]: unknown }) {
+  return {
+    id: p.id,
+    sku: null, title: null, description: null, identification: null,
+    price: null, maskedPrice: maskPrice(p.price), currency: p.currency,
+    productType: null, categoryId: null, categoryName: null,
+    stoneCut: null, metal: null,
+    status: p.status, moderationStatus: null,
+    isFeatured: false, isCollectorPiece: true,
+    isPrivilegeAssist: false, isPromotion: false,
+    promotionComparePrice: null,
+    sellerId: null, sellerName: null, sellerPhone: null,
+    imageUrl: p.imageUrl, createdAt: null,
+  }
+}
 
 export async function GET(request: NextRequest) {
   await connection()
@@ -121,25 +139,21 @@ export async function GET(request: NextRequest) {
         : { sortBy: sortByArg!, sortOrder: sortOrderArg! }),
     }
 
-    /** Collector-piece browse: only listings the admin approved for this user (`collector_piece_show_request`). */
+    /** Collector-piece browse: public = all masked; authenticated = approved products show full data, others masked. */
     const collectorPieceFilter = isCollectorPiece === true
     if (collectorPieceFilter) {
       const session = await auth.api.getSession({ headers: request.headers })
-      if (!session) {
-        return jsonError(
-          "Unauthorized — collector piece list requires Authorization: Bearer <session_token>",
-          401
-        )
+      const { products, total } = await getAdminProducts(listOpts)
+      if (session) {
+        const approvedIds = await getApprovedCollectorPieceProductIds(session.user.id)
+        const result = products.map((p) => approvedIds.has(p.id) ? p : maskCollectorPiece(p))
+        return jsonUncached({ products: result, total })
       }
-      const { products, total } = await getAdminProductsFromDb({
-        ...listOpts,
-        collectorPieceApprovedForUserId: session.user.id,
-      })
-      return jsonUncached({ products, total })
+      return jsonCached({ products: products.map(maskCollectorPiece), total })
     }
 
     const { products, total } = await getAdminProducts(listOpts)
-    return jsonCached({ products, total })
+    return jsonCached({ products: products.map((p) => p.isCollectorPiece ? maskCollectorPiece(p) : p), total })
   } catch (error) {
     console.error("GET /api/products:", error)
     return jsonError("Failed to fetch products", 500)

@@ -14,11 +14,13 @@ import { getUserById } from "@/features/users/db/users"
 import { productUpdateSchema } from "@/features/products/schemas/products"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
 import { deductUserPoints } from "@/features/points/db/points"
+import { getCollectorPieceShowRequestForUser } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+import { maskPrice } from "@/lib/formatters"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: RouteParams
 ) {
   await connection()
@@ -26,6 +28,28 @@ export async function GET(
     const { id } = await params
     const product = await getCachedProduct(id)
     if (!product) return jsonError("Product not found", 404)
+
+    if (product.isCollectorPiece) {
+      const session = await auth.api.getSession({ headers: request.headers })
+      const userRequest = session
+        ? await getCollectorPieceShowRequestForUser(session.user.id, id)
+        : null
+      if (userRequest?.status !== "approved") {
+        return jsonUncached({
+          id: product.id,
+          isCollectorPiece: true,
+          status: product.status,
+          currency: product.currency,
+          imageUrls: product.imageUrls,
+          maskedPrice: maskPrice(product.price),
+          requestStatus: userRequest
+            ? { id: userRequest.id, status: userRequest.status, createdAt: userRequest.createdAt }
+            : null,
+        })
+      }
+      // Approved: fall through to full data response below
+    }
+
     const sellerUser = await getUserById(product.sellerId)
     const seller = sellerUser
       ? {

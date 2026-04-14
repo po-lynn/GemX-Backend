@@ -148,3 +148,46 @@ export async function approveCollectorPieceShowRequestInDb(id: string): Promise<
     productTitle: existing.productTitle,
   }
 }
+
+/**
+ * Returns the set of productIds that the given user has an approved
+ * collector_piece_show_request for. Used to selectively unmask products in lists.
+ */
+export async function getApprovedCollectorPieceProductIds(userId: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ productId: collectorPieceShowRequest.productId })
+    .from(collectorPieceShowRequest)
+    .where(
+      and(
+        eq(collectorPieceShowRequest.userId, userId),
+        eq(collectorPieceShowRequest.status, "approved"),
+      ),
+    )
+  return new Set(rows.map((r) => r.productId))
+}
+
+/**
+ * Returns the most recent collector_piece_show_request for a given
+ * (userId, productId) pair, or null if none exists.
+ */
+export async function getCollectorPieceShowRequestForUser(
+  userId: string,
+  productId: string,
+): Promise<{ id: string; status: string; createdAt: Date } | null> {
+  const [row] = await db
+    .select({
+      id: collectorPieceShowRequest.id,
+      status: collectorPieceShowRequest.status,
+      createdAt: collectorPieceShowRequest.createdAt,
+    })
+    .from(collectorPieceShowRequest)
+    .where(
+      and(
+        eq(collectorPieceShowRequest.userId, userId),
+        eq(collectorPieceShowRequest.productId, productId),
+      ),
+    )
+    .orderBy(desc(collectorPieceShowRequest.createdAt))
+    .limit(1)
+  return row ?? null
+}
