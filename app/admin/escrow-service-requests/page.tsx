@@ -10,7 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { EscrowServiceRequestsTable } from "@/features/escrow-service-requests/components/EscrowServiceRequestsTable"
-import { getEscrowServiceRequestsPaginated } from "@/features/escrow-service-requests/db/escrow-service-requests"
+import {
+  getEscrowServiceRequestsPaginated,
+  SORT_COLUMNS,
+  type SortColumn,
+  type SortOrder,
+} from "@/features/escrow-service-requests/db/escrow-service-requests"
 
 const PAGE_SIZE = 20
 
@@ -18,14 +23,18 @@ const STATUS_FILTERS = ["all", "pending", "contacted", "deal_made", "rejected"] 
 const TYPE_FILTERS = ["all", "buyer", "seller"] as const
 
 type Props = {
-  searchParams: Promise<{ page?: string; status?: string; type?: string }>
+  searchParams: Promise<{ page?: string; status?: string; type?: string; sort?: string; order?: string }>
 }
 
-function buildPageLink(page: number, status: string, type: string) {
+function buildPageLink(page: number, status: string, type: string, sort: SortColumn, order: SortOrder) {
   const p = new URLSearchParams()
   p.set("page", String(page))
   if (status !== "all") p.set("status", status)
   if (type !== "all") p.set("type", type)
+  if (sort !== "created" || order !== "desc") {
+    p.set("sort", sort)
+    p.set("order", order)
+  }
   return `/admin/escrow-service-requests?${p.toString()}`
 }
 
@@ -39,12 +48,18 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
   const type = (TYPE_FILTERS as readonly string[]).includes(params.type ?? "")
     ? (params.type as string)
     : "all"
+  const sort: SortColumn = (SORT_COLUMNS as readonly string[]).includes(params.sort ?? "")
+    ? (params.sort as SortColumn)
+    : "created"
+  const order: SortOrder = params.order === "asc" ? "asc" : "desc"
 
   const { requests, total } = await getEscrowServiceRequestsPaginated({
     page,
     limit: PAGE_SIZE,
     status: status === "all" ? undefined : status,
     type: type === "all" ? undefined : type,
+    sortBy: sort,
+    order,
   })
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -86,7 +101,7 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
                   size="sm"
                   variant={status === s ? "default" : "outline"}
                 >
-                  <Link href={buildPageLink(1, s, type)}>
+                  <Link href={buildPageLink(1, s, type, sort, order)}>
                     {s === "all" ? "All" : s[0]?.toUpperCase() + s.slice(1).replace("_", " ")}
                   </Link>
                 </Button>
@@ -101,7 +116,7 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
                   size="sm"
                   variant={type === t ? "default" : "outline"}
                 >
-                  <Link href={buildPageLink(1, status, t)}>
+                  <Link href={buildPageLink(1, status, t, sort, order)}>
                     {t === "all" ? "All" : t[0]?.toUpperCase() + t.slice(1)}
                   </Link>
                 </Button>
@@ -110,7 +125,7 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <EscrowServiceRequestsTable requests={requests} />
+          <EscrowServiceRequestsTable requests={requests} sort={sort} order={order} />
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <p className="text-muted-foreground text-sm">
               Page {page} of {totalPages}
@@ -122,7 +137,7 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={buildPageLink(page - 1, status, type)}>Previous</Link>
+                  <Link href={buildPageLink(page - 1, status, type, sort, order)}>Previous</Link>
                 </Button>
               )}
               {page >= totalPages ? (
@@ -131,7 +146,7 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={buildPageLink(page + 1, status, type)}>Next</Link>
+                  <Link href={buildPageLink(page + 1, status, type, sort, order)}>Next</Link>
                 </Button>
               )}
             </div>

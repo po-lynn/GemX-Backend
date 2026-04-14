@@ -26,11 +26,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  if (session.user.role !== "admin") {
-    return NextResponse.redirect(new URL("/", request.url))
+  const role = session.user.role
+
+  if (role === "admin") {
+    return NextResponse.next()
   }
 
-  return NextResponse.next()
+  // Escrow role: access limited to escrow service requests section only
+  if (
+    role === "escrow" &&
+    pathname.startsWith("/admin/escrow-service-requests")
+  ) {
+    return NextResponse.next()
+  }
+
+  return NextResponse.redirect(new URL("/", request.url))
 }
 
 export const config = {

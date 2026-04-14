@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // better-auth username plugin rejects "+" and other non-alphanumeric; use digits only
     const usernameForAuth = phone.replace(/\D/g, "");
     // Admin plugin sets `role` with input: false — clients cannot set it on sign-up.
-    // Hook applies defaultRole ("user"); we then set "mobile" in the DB for this API.
+    // Hook applies defaultRole ("user"); role is kept as "user" for mobile registrations.
     const signUpBody = {
       email,
       password,
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       if (u?.id) {
         await db
           .update(userTable)
-          .set({ role: "mobile", updatedAt: new Date() })
+          .set({ role: "user", updatedAt: new Date() })
           .where(eq(userTable.id, u.id));
       }
       if (u?.id) {
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
         ...result,
         user:
           result.user && typeof result.user === "object"
-            ? { ...(result.user as Record<string, unknown>), role: "mobile" }
+            ? { ...(result.user as Record<string, unknown>), role: "user" }
             : result.user,
       };
     }

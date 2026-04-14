@@ -7,6 +7,7 @@
 ## Recent changes
 
 - **GET /api/products?isCollectorPiece=true** – **Auth required** (`Authorization: Bearer <session_token>`). Returns only collector-piece listings where **`collector_piece_show_request`** has **`status` = `approved`** and **`user_id`** = the current user (i.e. admin approved that user to see those products). **401** if the header is missing or invalid. Response uses **`Cache-Control: no-store`** (not CDN-cached). All other **`GET /api/products`** behaviour is unchanged.
+- **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers-settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers-settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – Added **POST `/api/mobile/collector-piece-show-requests`** (auth required). Logged-in user submits `productId` (must be a collector piece), optional `message`, and `userInformation` (JSON object snapshot from the app, e.g. name/phone/email). Server stores `userId` from the session plus the payload for admin review (`status` defaults to `pending`). See **5.4.4**.
 - **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
@@ -45,7 +46,7 @@
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product. Body: `productId`, `userInformation` (object), optional `message`. Saves request for admin.                                                              |
-| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `message`. Server resolves product and seller from DB. See **5.4.5**. |
+| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
@@ -971,12 +972,18 @@ Use when a logged-in user wants an admin to review or surface a **collector piec
 
 Submit an escrow service request to GemX admin. Admin will contact the requester to facilitate the deal. The server auto-resolves product and seller information from the database — no snapshot fields needed from the client.
 
+**Recommended flow:**
+1. Call `GET /api/mobile/premium-dealers-settings` to retrieve available packages and display their `serviceFeePercent` to the user.
+2. User reviews the fee and selects a package.
+3. Submit this endpoint with the chosen `packageName`.
+
 **Request body (JSON):**
 
 ```json
 {
   "type": "buyer",
   "productId": "00000000-0000-4000-8000-000000000001",
+  "packageName": "Basic Package",
   "message": "I want escrow service for this product"
 }
 ```
@@ -985,6 +992,7 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 | ----- | ---- | -------- | ----------- |
 | `type` | string | **Yes** | `"buyer"` — wants to verify product before purchase; `"seller"` — wants buyer commitment. |
 | `productId` | string (UUID) | No | Existing product in the catalog. Server validates it exists, then auto-stores the product's `sellerId`. Omit for off-platform items. |
+| `packageName` | string | No | Name of the selected premium dealer package (e.g. `"Basic Package"`). Must exactly match a name returned by `GET /api/mobile/premium-dealers-settings`. Max 120 characters. |
 | `message` | string | No | Optional note for admin (trimmed, max 2000 characters). |
 
 **Success (200):**
@@ -1001,19 +1009,21 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 
 - **401** — `{ "error": "Unauthorized" }` — missing or invalid session.
 - **400** — `{ "error": "Invalid input" }` — missing `type`, invalid enum value, or malformed UUID for `productId`.
+- **400** — `{ "error": "Invalid package name" }` — `packageName` does not match any configured package.
 - **404** — `{ "error": "Product not found" }` — `productId` does not exist in the catalog.
 - **500** — `{ "error": "Failed to save request" }` or `{ "error": "Failed to submit escrow service request" }`.
 
 **Use cases:**
 
-| Scenario | type | productId | message |
-| -------- | ---- | --------- | ------- |
-| Buyer wants escrow for a listed product | `"buyer"` | Product UUID | Optional note |
-| Seller wants to find a committed buyer | `"seller"` | Product UUID (their own) | Optional note |
-| Request about an off-platform item | `"buyer"` or `"seller"` | omit | Describe in message |
+| Scenario | type | productId | packageName | message |
+| -------- | ---- | --------- | ----------- | ------- |
+| Buyer wants escrow for a listed product | `"buyer"` | Product UUID | Selected package | Optional note |
+| Seller wants to find a committed buyer | `"seller"` | Product UUID (their own) | Selected package | Optional note |
+| Request about an off-platform item | `"buyer"` or `"seller"` | omit | Selected package | Describe in message |
 
 **Notes:**
 
+- `packageName` must exactly match a package name from `GET /api/mobile/premium-dealers-settings` — the server validates it against the live list.
 - `adminNote` is internal and never returned to mobile clients.
 - New requests start with `status: "pending"`.
 - The seller is resolved server-side from `product.sellerId` — never send it from the client.
@@ -1040,7 +1050,7 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "type": "buyer",
       "productId": "00000000-0000-4000-8000-000000000001",
-      "packageName": null,
+      "packageName": "Basic Package",
       "message": "I want escrow service for this product",
       "status": "pending",
       "createdAt": "2026-04-13T10:00:00.000Z",
@@ -1658,7 +1668,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Ask admin to surface a collector-piece product (`productId`, `userInformation`, optional `message`).        |
-| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `message`). Server resolves seller from product. See 5.4.5. |
+| POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |

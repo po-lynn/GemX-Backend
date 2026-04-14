@@ -12,14 +12,8 @@ export const user = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
-/** Same capabilities as `user` (e.g. seller dashboard / product ownership). */
-export const seller = ac.newRole({
-  ...userAc.statements,
-  user: [...userAc.statements.user, "list"],
-})
-
-/** App sign-ups via phone (see mobile register API). */
-export const mobile = ac.newRole({
+/** Staff with access limited to escrow service request management only. */
+export const escrow = ac.newRole({
   ...userAc.statements,
   user: [...userAc.statements.user, "list"],
 })

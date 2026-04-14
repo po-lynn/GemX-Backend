@@ -5,6 +5,8 @@ export const mobileSubmitEscrowSchema = z.object({
   type: z.enum(["buyer", "seller"]),
   /** Reference to an existing product in the catalog */
   productId: z.string().uuid().optional(),
+  /** Name of the premium dealer package the user selected (e.g. "Basic Package") */
+  packageName: z.string().trim().min(1).max(120).optional(),
   message: z.string().trim().max(2000).optional(),
 })
 

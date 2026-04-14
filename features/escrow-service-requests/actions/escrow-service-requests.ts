@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
-import { canAdminManageUsers } from "@/features/users/permissions/users"
+import { canManageEscrowRequests } from "@/features/escrow-service-requests/permissions/escrow-service-requests"
 import { adminUpdateEscrowStatusSchema } from "@/features/escrow-service-requests/schemas/escrow-service-requests"
 import { updateEscrowServiceRequestStatusInDb } from "@/features/escrow-service-requests/db/escrow-service-requests"
 
@@ -14,7 +14,7 @@ export async function updateEscrowServiceRequestStatusAction(
   adminNote?: string,
 ) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  if (!session || !canManageEscrowRequests(session.user.role)) {
     return { error: "Unauthorized" }
   }
 

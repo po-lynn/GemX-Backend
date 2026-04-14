@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, asc, desc, eq, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
@@ -34,13 +34,19 @@ export type EscrowServiceRequestRow = {
   } | null
 }
 
+export const SORT_COLUMNS = ["created", "status", "type"] as const
+export type SortColumn = (typeof SORT_COLUMNS)[number]
+export type SortOrder = "asc" | "desc"
+
 export async function getEscrowServiceRequestsPaginated(options: {
   page: number
   limit: number
   status?: string
   type?: string
+  sortBy?: SortColumn
+  order?: SortOrder
 }): Promise<{ requests: EscrowServiceRequestRow[]; total: number }> {
-  const { page, limit, status, type } = options
+  const { page, limit, status, type, sortBy = "created", order = "desc" } = options
 
   const whereClause = and(
     status ? eq(escrowServiceRequest.status, status) : undefined,
@@ -74,7 +80,17 @@ export async function getEscrowServiceRequestsPaginated(options: {
       .leftJoin(sellerUser, eq(sellerUser.id, escrowServiceRequest.sellerId))
       .leftJoin(product, eq(product.id, escrowServiceRequest.productId))
       .where(whereClause)
-      .orderBy(desc(escrowServiceRequest.createdAt))
+      .orderBy(
+        (() => {
+          const col =
+            sortBy === "status"
+              ? escrowServiceRequest.status
+              : sortBy === "type"
+                ? escrowServiceRequest.type
+                : escrowServiceRequest.createdAt
+          return order === "asc" ? asc(col) : desc(col)
+        })(),
+      )
       .limit(limit)
       .offset((page - 1) * limit),
     db

@@ -5,6 +5,7 @@ import { db } from "@/drizzle/db"
 import { escrowServiceRequest } from "@/drizzle/schema/escrow-service-request-schema"
 import { product } from "@/drizzle/schema/product-schema"
 import { jsonError, jsonUncached, parseQuery } from "@/lib/api"
+import { getPremiumDealersSettings } from "@/features/points/db/points"
 import {
   mobileSubmitEscrowSchema,
   mobileEscrowListQuerySchema,
@@ -25,7 +26,16 @@ export async function POST(request: NextRequest) {
     const parsed = mobileSubmitEscrowSchema.safeParse(body)
     if (!parsed.success) return jsonError("Invalid input", 400)
 
-    const { type, productId, message } = parsed.data
+    const { type, productId, packageName, message } = parsed.data
+
+    // Validate packageName against configured packages if provided
+    if (packageName) {
+      const { packages } = await getPremiumDealersSettings()
+      const validNames = packages.map((p) => p.name)
+      if (!validNames.includes(packageName)) {
+        return jsonError("Invalid package name", 400)
+      }
+    }
 
     // Verify product exists and fetch sellerId if productId provided
     let sellerId: string | null = null
@@ -50,7 +60,7 @@ export async function POST(request: NextRequest) {
         type,
         productId: productId ?? null,
         sellerId,
-        packageName: null,
+        packageName: packageName ?? null,
         message: message?.length ? message : null,
         status: "pending",
       })

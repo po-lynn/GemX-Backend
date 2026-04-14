@@ -75,11 +75,11 @@ async function sendPushToTokens(
 }
 
 /**
- * Send push notification to all registered mobile app users (role "mobile").
+ * Send push notification to all mobile app users (anyone with a registered push token).
  * No-op if FCM is not configured or there are no tokens.
  */
 export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sent: number; failed: number }> {
-  const tokens = await getAllPushTokens({ role: "mobile" });
+  const tokens = await getAllPushTokens();
   const tokenStrings = tokens.map((t) => t.token).filter(Boolean);
   return sendPushToTokens(tokenStrings, payload);
 }
