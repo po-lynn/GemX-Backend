@@ -153,7 +153,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { products, total } = await getAdminProducts(listOpts)
-    return jsonCached({ products: products.map((p) => p.isCollectorPiece ? maskCollectorPiece(p) : p), total })
+    // Only mask collector pieces in the general browse; skip masking when explicitly filtering for another type
+    const maskInBrowse = !isPrivilegeAssist && !isPromotion && !isFeatured
+    return jsonCached({ products: products.map((p) => (maskInBrowse && p.isCollectorPiece) ? maskCollectorPiece(p) : p), total })
   } catch (error) {
     console.error("GET /api/products:", error)
     return jsonError("Failed to fetch products", 500)
