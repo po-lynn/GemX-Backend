@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Seller ratings (mobile)** – Added **POST `/api/mobile/seller-ratings`** (auth) so one user can rate another user (seller) with **`score`** (1–5); same endpoint updates an existing rating. **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus a paginated list of ratings received by that seller. See **5.4b**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers-settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers-settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -53,6 +54,9 @@
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark one product by `productId` (UUID). Idempotent for duplicates. See **5.4.6**. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List current user's favourite products (paginated). Query: `page`, `limit`. See **5.4.6**. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove one favourite by `productId` (UUID) in JSON body. See **5.4.6**. |
+| POST   | `/api/mobile/seller-ratings` | Yes  | Rate another user (seller): body `sellerId` (user id), `score` (1–5), optional `comment`. Create/update. See **5.4b**. |
+| GET    | `/api/mobile/seller-ratings` | Yes  | List ratings you submitted to sellers (paginated). Query: `page`, `limit`, optional `sellerId`. See **5.4b**. |
+| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller. Query: `page`, `limit`. See **5.4b**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -860,6 +864,159 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 **Errors:**
 
 - **404** – `{ "error": "Profile not found" }`
+
+---
+
+### 5.4b Seller ratings (mobile)
+
+Authenticated users can rate **other** users as sellers (one rating per rater–seller pair; resubmitting updates the same row). To show how a seller is rated publicly, use the seller-scoped GET (no auth).
+
+#### POST `/api/mobile/seller-ratings`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Request body (JSON):**
+
+```json
+{
+  "sellerId": "seller-user-id",
+  "score": 5,
+  "comment": "Fast shipping, item as described."
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `sellerId` | string | Yes | Target seller’s user id (same as `GET /api/profile/:id` path `id`). |
+| `score` | number | Yes | Integer from **1** to **5**. |
+| `comment` | string | No | Optional note (trimmed, max 1000 characters). |
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "rating": {
+    "id": "770e8400-e29b-41d4-a716-446655440001",
+    "sellerId": "seller-user-id",
+    "score": 5,
+    "comment": "Fast shipping, item as described.",
+    "createdAt": "2026-04-16T12:00:00.000Z",
+    "updatedAt": "2026-04-16T12:00:00.000Z"
+  }
+}
+```
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`.
+- **400** – `{ "error": "Invalid input" }` (e.g. score not 1–5).
+- **400** – `{ "error": "Cannot rate yourself" }`.
+- **404** – `{ "error": "Seller not found" }` (unknown or archived seller).
+- **500** – `{ "error": "Failed to submit seller rating" }` or `{ "error": "Failed to save rating" }`.
+
+---
+
+#### GET `/api/mobile/seller-ratings`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns ratings **you** have submitted to sellers (newest `updatedAt` first).
+
+**Query params:**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `page` | number | `1` | Page number (min 1). |
+| `limit` | number | `10` | Items per page (min 1, max 50). |
+| `sellerId` | string | - | Optional: only ratings you gave to this seller. |
+
+**Success (200):**
+
+```json
+{
+  "ratings": [
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440001",
+      "sellerId": "seller-user-id",
+      "score": 5,
+      "comment": null,
+      "createdAt": "2026-04-16T12:00:00.000Z",
+      "updatedAt": "2026-04-16T12:00:00.000Z",
+      "seller": {
+        "id": "seller-user-id",
+        "name": "Seller Name",
+        "image": "https://.../avatar.jpg",
+        "username": "seller_username",
+        "displayUsername": "Seller Name"
+      }
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1
+}
+```
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`.
+- **500** – `{ "error": "Failed to load seller ratings" }`.
+
+---
+
+#### GET `/api/mobile/seller-ratings/:sellerId`
+
+**Auth:** Not required.
+
+Returns aggregate stats and a paginated list of ratings **received** by the seller identified by `sellerId` (same id as public profile). Rater identity is limited to `name` and `image` for privacy.
+
+**Path params:**
+
+| Param | Type | Description |
+| ----- | ---- | ----------- |
+| `sellerId` | string | Seller user id. |
+
+**Query params:**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `page` | number | `1` | Page number (min 1). |
+| `limit` | number | `10` | Items per page (min 1, max 50). |
+
+**Success (200):**
+
+```json
+{
+  "sellerId": "seller-user-id",
+  "averageScore": 4.5,
+  "totalRatings": 12,
+  "ratings": [
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440001",
+      "score": 5,
+      "comment": "Great experience",
+      "createdAt": "2026-04-16T12:00:00.000Z",
+      "updatedAt": "2026-04-16T12:00:00.000Z",
+      "rater": {
+        "name": "Buyer Name",
+        "image": null
+      }
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 12
+}
+```
+
+- **`averageScore`:** Rounded to 2 decimal places; `0` when there are no ratings yet.
+- **`totalRatings`:** Total count of ratings for this seller (same as `total` when listing all pages).
+
+**Errors:**
+
+- **404** – `{ "error": "Seller not found" }`.
+- **500** – `{ "error": "Failed to load seller ratings" }`.
 
 ---
 
@@ -1832,6 +1989,7 @@ Returns a single published article by ID. Draft items return **404**.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
+  - **Seller ratings:** After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional" }`. List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20`.
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
@@ -1881,6 +2039,9 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark a product by `productId` (idempotent). See 5.4.6. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List own favourite products (paginated: `page`, `limit`). See 5.4.6. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove saved product by `productId`. See 5.4.6. |
+| POST   | `/api/mobile/seller-ratings` | Yes  | Rate a seller user (`sellerId`, `score` 1–5, optional `comment`). See 5.4b. |
+| GET    | `/api/mobile/seller-ratings` | Yes  | List own submitted seller ratings (paginated; optional `sellerId`). See 5.4b. |
+| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public seller rating summary + paginated received ratings. See 5.4b. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
