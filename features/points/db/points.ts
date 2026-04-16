@@ -1,7 +1,7 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { pointSetting } from "@/drizzle/schema/points-schema";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { pointPurchaseRequest, pointSetting } from "@/drizzle/schema/points-schema";
+import { and, desc, eq, gt, gte, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -23,24 +23,52 @@ const FEATURED_PRODUCT_HOME_LIMIT_KEY = "featured_product_home_limit";
 const FEATURE_PRICING_TIERS_JSON_KEY = "feature_pricing_tiers_json";
 const PREMIUM_DEALERS_PACKAGES_JSON_KEY = "premium_dealers_packages_json";
 const LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY = "escrow_service_packages_json";
+const POINT_PURCHASE_PACKAGES_JSON_KEY = "point_purchase_packages_json";
+const PAYMENT_METHODS_JSON_KEY = "payment_methods_json";
+/** @deprecated use PAYMENT_METHODS_JSON_KEY */
+const LEGACY_KBZ_PAY_PHONE_KEY = "kbz_pay_phone";
 
 export type PremiumDealerPackage = {
   name: string;
   pointsRequired: number;
-  /** Percentage, e.g. 2 for 2%, 1.5 for 1.5% */
-  serviceFeePercent: number;
-  /** Maximum transaction amount in USD (whole dollars), e.g. 1000 for $1,000 */
-  transactionLimitUsd: number;
+  /** How many days the premium dealer status stays active after activation */
+  durationDays: number;
 };
 
 export type PremiumDealersSettings = {
   packages: PremiumDealerPackage[];
 };
 
+/** Credit point package available for purchase. Prices are per-currency and optional. */
+export type PointPurchasePackage = {
+  name: string;
+  points: number;
+  priceMmk?: number | null;
+  priceUsd?: number | null;
+  priceKrw?: number | null;
+  description?: string;
+};
+
+export type PointPurchasePackagesSettings = {
+  packages: PointPurchasePackage[];
+};
+
+/** A payment method customers can use to pay for credit point packages. */
+export type PaymentMethod = {
+  name: string;          // e.g. "KBZ Pay", "AYA Pay", "Wave Money"
+  accountName: string;   // name on the receiving account
+  phoneNumber: string;   // account phone number
+  instructions?: string; // optional extra info (e.g. reference format)
+};
+
+export type PaymentMethodsSettings = {
+  methods: PaymentMethod[];
+};
+
 const DEFAULT_PREMIUM_DEALER_PACKAGES: PremiumDealerPackage[] = [
-  { name: "Basic Package", pointsRequired: 100, serviceFeePercent: 2, transactionLimitUsd: 1000 },
-  { name: "Standard Package", pointsRequired: 250, serviceFeePercent: 1.5, transactionLimitUsd: 5000 },
-  { name: "Premium Package", pointsRequired: 500, serviceFeePercent: 1, transactionLimitUsd: 10000 },
+  { name: "Basic Package", pointsRequired: 100, durationDays: 30 },
+  { name: "Standard Package", pointsRequired: 250, durationDays: 30 },
+  { name: "Premium Package", pointsRequired: 500, durationDays: 30 },
 ];
 
 function parsePremiumDealerPackagesJson(raw: string): PremiumDealerPackage[] {
@@ -59,16 +87,79 @@ function parsePremiumDealerPackagesJson(raw: string): PremiumDealerPackage[] {
           ? o.name.trim().slice(0, 120)
           : "Package";
       const pointsRequired = Math.max(0, Math.floor(Number(o.pointsRequired) || 0));
-      const fee = Number(o.serviceFeePercent);
-      const serviceFeePercent = Number.isFinite(fee)
-        ? Math.min(100, Math.max(0, fee))
-        : 0;
-      const limit = Math.max(0, Math.floor(Number(o.transactionLimitUsd) || 0));
-      out.push({ name, pointsRequired, serviceFeePercent, transactionLimitUsd: limit });
+      const durationDays = Math.min(3650, Math.max(1, Math.floor(Number(o.durationDays) || 30)));
+      out.push({ name, pointsRequired, durationDays });
     }
     return out.length > 0 ? out : DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
   } catch {
     return DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
+  }
+}
+
+function parseOptionalPrice(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function parsePointPurchasePackagesJson(raw: string): PointPurchasePackage[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: PointPurchasePackage[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const name =
+        typeof o.name === "string" && o.name.trim()
+          ? o.name.trim().slice(0, 200)
+          : "Package";
+      const points = Math.max(1, Math.floor(Number(o.points) || 1));
+      const priceMmk = parseOptionalPrice(o.priceMmk);
+      const priceUsd = parseOptionalPrice(o.priceUsd);
+      const priceKrw = parseOptionalPrice(o.priceKrw);
+      const description =
+        typeof o.description === "string" && o.description.trim()
+          ? o.description.trim().slice(0, 500)
+          : undefined;
+      out.push({
+        name,
+        points,
+        ...(priceMmk != null ? { priceMmk } : {}),
+        ...(priceUsd != null ? { priceUsd } : {}),
+        ...(priceKrw != null ? { priceKrw } : {}),
+        ...(description ? { description } : {}),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function parsePaymentMethodsJson(raw: string): PaymentMethod[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: PaymentMethod[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const name = typeof o.name === "string" && o.name.trim() ? o.name.trim().slice(0, 100) : "";
+      const accountName = typeof o.accountName === "string" ? o.accountName.trim().slice(0, 200) : "";
+      const phoneNumber = typeof o.phoneNumber === "string" ? o.phoneNumber.trim().slice(0, 50) : "";
+      const instructions =
+        typeof o.instructions === "string" && o.instructions.trim()
+          ? o.instructions.trim().slice(0, 500)
+          : undefined;
+      if (!name) continue;
+      out.push({ name, accountName, phoneNumber, ...(instructions ? { instructions } : {}) });
+    }
+    return out;
+  } catch {
+    return [];
   }
 }
 
@@ -123,6 +214,7 @@ export type PointManagementSettings = {
   minimumSpendCurrency: "mmk" | "usd" | "krw";
   roundingMethod: "down" | "up" | "nearest";
   pointExpiryDays: number;
+  paymentMethods: PaymentMethod[];
 };
 
 export async function getDefaultRegistrationPoints(): Promise<number> {
@@ -196,6 +288,7 @@ export async function getPointManagementSettings(): Promise<PointManagementSetti
     defaultPoints, bonusEnabled, bonusDesc,
     mmkA, mmkP, usdA, usdP, krwA, krwP,
     minAmount, minCurrency, rounding, expiry,
+    paymentMethodsRaw,
   ] = await Promise.all([
     getInt(DEFAULT_REGISTRATION_POINTS_KEY),
     getInt(REGISTRATION_BONUS_ENABLED_KEY),
@@ -205,6 +298,7 @@ export async function getPointManagementSettings(): Promise<PointManagementSetti
     getInt(EARNING_KRW_AMOUNT), getInt(EARNING_KRW_POINTS),
     getInt(MINIMUM_SPEND_AMOUNT), getInt(MINIMUM_SPEND_CURRENCY),
     getInt(ROUNDING_METHOD), getInt(POINT_EXPIRY_DAYS),
+    getText(PAYMENT_METHODS_JSON_KEY),
   ]);
   const currencyMap: ("mmk" | "usd" | "krw")[] = ["mmk", "usd", "krw"];
   return {
@@ -220,6 +314,7 @@ export async function getPointManagementSettings(): Promise<PointManagementSetti
     minimumSpendCurrency: currencyMap[minCurrency] ?? "mmk",
     roundingMethod: (["down", "up", "nearest"] as const)[rounding] ?? "down",
     pointExpiryDays: expiry || 365,
+    paymentMethods: parsePaymentMethodsJson(paymentMethodsRaw),
   };
 }
 
@@ -293,11 +388,131 @@ export async function savePremiumDealersSettings(s: PremiumDealersSettings): Pro
   const packages = (s.packages.length > 0 ? s.packages : DEFAULT_PREMIUM_DEALER_PACKAGES).map((p) => ({
     name: p.name?.trim() ? p.name.trim().slice(0, 120) : "Package",
     pointsRequired: Math.max(0, Math.floor(p.pointsRequired) || 0),
-    serviceFeePercent: Math.min(100, Math.max(0, Number(p.serviceFeePercent) || 0)),
-    transactionLimitUsd: Math.max(0, Math.floor(p.transactionLimitUsd) || 0),
+    durationDays: Math.min(3650, Math.max(1, Math.floor(Number(p.durationDays) || 30))),
   }));
   await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, JSON.stringify(packages));
   await db.delete(pointSetting).where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY));
+}
+
+export async function getPointPurchasePackagesSettings(): Promise<PointPurchasePackagesSettings> {
+  const [row] = await db
+    .select({ valueText: pointSetting.valueText })
+    .from(pointSetting)
+    .where(eq(pointSetting.key, POINT_PURCHASE_PACKAGES_JSON_KEY))
+    .limit(1);
+  return { packages: parsePointPurchasePackagesJson(row?.valueText ?? "") };
+}
+
+export async function savePointPurchasePackagesSettings(s: PointPurchasePackagesSettings): Promise<void> {
+  const packages = s.packages.map((p) => ({
+    name: p.name?.trim() ? p.name.trim().slice(0, 200) : "Package",
+    points: Math.max(1, Math.floor(Number(p.points) || 1)),
+    ...(p.priceMmk != null ? { priceMmk: Math.max(0, Math.floor(Number(p.priceMmk))) } : {}),
+    ...(p.priceUsd != null ? { priceUsd: Math.max(0, Math.floor(Number(p.priceUsd))) } : {}),
+    ...(p.priceKrw != null ? { priceKrw: Math.max(0, Math.floor(Number(p.priceKrw))) } : {}),
+    ...(p.description?.trim() ? { description: p.description.trim().slice(0, 500) } : {}),
+  }));
+  await upsertText(POINT_PURCHASE_PACKAGES_JSON_KEY, JSON.stringify(packages));
+}
+
+/** Get the configured payment methods for credit point purchases. */
+export async function getPaymentMethods(): Promise<PaymentMethod[]> {
+  const raw = await getText(PAYMENT_METHODS_JSON_KEY);
+  // One-time migration: if legacy kbz_pay_phone exists and no payment methods saved yet
+  if (!raw?.trim()) {
+    const legacyPhone = await getText(LEGACY_KBZ_PAY_PHONE_KEY);
+    if (legacyPhone?.trim()) {
+      return [{ name: "KBZ Pay", accountName: "", phoneNumber: legacyPhone.trim() }];
+    }
+    return [];
+  }
+  return parsePaymentMethodsJson(raw);
+}
+
+/**
+ * Activate premium dealer status for a user by spending points.
+ * Runs atomically: deducts points then sets the premium dealer fields.
+ * Returns null if the user has insufficient points.
+ */
+export async function activatePremiumDealer(
+  userId: string,
+  pkg: PremiumDealerPackage
+): Promise<{ remainingPoints: number; expiresAt: Date } | null> {
+  const cost = Math.max(0, Math.floor(pkg.pointsRequired));
+  const expiresAt = new Date(Date.now() + pkg.durationDays * 24 * 60 * 60 * 1000);
+
+  const result = await db.transaction(async (tx) => {
+    const [updatedUser] = await tx
+      .update(user)
+      .set({ points: sql`${user.points} - ${cost}` })
+      .where(and(eq(user.id, userId), gte(user.points, cost)))
+      .returning({ points: user.points });
+
+    if (!updatedUser) return null;
+
+    await tx
+      .update(user)
+      .set({
+        premiumDealerPackageName: pkg.name,
+        premiumDealerExpiresAt: expiresAt,
+      })
+      .where(eq(user.id, userId));
+
+    return { remainingPoints: updatedUser.points, expiresAt };
+  });
+
+  return result;
+}
+
+/**
+ * Get the active premium dealer status for a user.
+ * Returns null if the user has no active package or if it has expired.
+ */
+export async function getUserPremiumDealerStatus(
+  userId: string
+): Promise<{ packageName: string; expiresAt: Date } | null> {
+  const [row] = await db
+    .select({
+      premiumDealerPackageName: user.premiumDealerPackageName,
+      premiumDealerExpiresAt: user.premiumDealerExpiresAt,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+
+  if (!row?.premiumDealerPackageName || !row.premiumDealerExpiresAt) return null;
+  if (row.premiumDealerExpiresAt <= new Date()) return null;
+  return { packageName: row.premiumDealerPackageName, expiresAt: row.premiumDealerExpiresAt };
+}
+
+/** Return all users with a currently active (non-expired) premium dealer status. */
+export async function getActivePremiumDealers(): Promise<
+  { userId: string; name: string; username: string | null; packageName: string; expiresAt: Date }[]
+> {
+  const rows = await db
+    .select({
+      userId: user.id,
+      name: user.name,
+      username: user.username,
+      packageName: user.premiumDealerPackageName,
+      expiresAt: user.premiumDealerExpiresAt,
+    })
+    .from(user)
+    .where(
+      and(
+        isNotNull(user.premiumDealerPackageName),
+        isNotNull(user.premiumDealerExpiresAt),
+        gt(user.premiumDealerExpiresAt, sql`now()`)
+      )
+    );
+
+  return rows.map((r) => ({
+    userId: r.userId,
+    name: r.name,
+    username: r.username,
+    packageName: r.packageName!,
+    expiresAt: r.expiresAt!,
+  }));
 }
 
 export async function savePointManagementSettings(s: PointManagementSettings): Promise<void> {
@@ -314,6 +529,7 @@ export async function savePointManagementSettings(s: PointManagementSettings): P
   await upsertInt(MINIMUM_SPEND_CURRENCY, ["mmk", "usd", "krw"].indexOf(s.minimumSpendCurrency));
   await upsertInt(ROUNDING_METHOD, ["down", "up", "nearest"].indexOf(s.roundingMethod));
   await upsertInt(POINT_EXPIRY_DAYS, s.pointExpiryDays);
+  await upsertText(PAYMENT_METHODS_JSON_KEY, JSON.stringify(s.paymentMethods ?? []));
   // Keep legacy rate keys for backward compat (points per 1 unit)
   const conv = s.currencyConversion;
   await upsertInt(EARNING_RATE_MMK, conv.mmk.amount > 0 ? Math.floor(conv.mmk.points / conv.mmk.amount) : 0);
@@ -403,4 +619,114 @@ export async function creditDefaultRegistrationPointsToUser(
   if (pointsAdded <= 0) return { pointsAdded: 0 }
   await creditUserPoints(userId, pointsAdded)
   return { pointsAdded }
+}
+
+export type PointPurchaseRequestRow = {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  packageName: string;
+  points: number;
+  price: number;
+  currency: string;
+  status: string;
+  transferredAmount: number | null;
+  transferredName: string | null;
+  transactionReference: string | null;
+  transferNote: string | null;
+  adminNote: string | null;
+  reviewedByAdminId: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+};
+
+export async function approvePointPurchaseRequest(
+  requestId: string,
+  adminId: string,
+  adminNote?: string | null
+): Promise<{ success: false; reason: "not_found" | "not_pending" } | { success: true; pointsAdded: number; updatedPoints: number | null }> {
+  const [existing] = await db
+    .select({ id: pointPurchaseRequest.id, userId: pointPurchaseRequest.userId, points: pointPurchaseRequest.points, status: pointPurchaseRequest.status })
+    .from(pointPurchaseRequest)
+    .where(eq(pointPurchaseRequest.id, requestId))
+    .limit(1);
+  if (!existing) return { success: false, reason: "not_found" };
+  if (existing.status !== "pending") return { success: false, reason: "not_pending" };
+
+  await db
+    .update(pointPurchaseRequest)
+    .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+    .where(eq(pointPurchaseRequest.id, requestId));
+
+  const credited = await creditUserPoints(existing.userId, existing.points);
+  return { success: true, pointsAdded: existing.points, updatedPoints: credited.updatedPoints };
+}
+
+export async function rejectPointPurchaseRequest(
+  requestId: string,
+  adminId: string,
+  adminNote?: string | null
+): Promise<{ success: false; reason: "not_found" | "not_pending" } | { success: true }> {
+  const [existing] = await db
+    .select({ id: pointPurchaseRequest.id, status: pointPurchaseRequest.status })
+    .from(pointPurchaseRequest)
+    .where(eq(pointPurchaseRequest.id, requestId))
+    .limit(1);
+  if (!existing) return { success: false, reason: "not_found" };
+  if (existing.status !== "pending") return { success: false, reason: "not_pending" };
+
+  await db
+    .update(pointPurchaseRequest)
+    .set({ status: "rejected", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+    .where(eq(pointPurchaseRequest.id, requestId));
+
+  return { success: true };
+}
+
+export async function getPointPurchaseRequestsPaginated(opts: {
+  page: number;
+  limit: number;
+  status?: string;
+}): Promise<{ requests: PointPurchaseRequestRow[]; total: number }> {
+  const offset = (opts.page - 1) * opts.limit;
+  const whereClause =
+    opts.status && opts.status !== "all"
+      ? eq(pointPurchaseRequest.status, opts.status)
+      : undefined;
+
+  const [rows, countRows] = await Promise.all([
+    db
+      .select({
+        id: pointPurchaseRequest.id,
+        userId: pointPurchaseRequest.userId,
+        userName: user.name,
+        userEmail: user.email,
+        packageName: pointPurchaseRequest.packageName,
+        points: pointPurchaseRequest.points,
+        price: pointPurchaseRequest.price,
+        currency: pointPurchaseRequest.currency,
+        status: pointPurchaseRequest.status,
+        transferredAmount: pointPurchaseRequest.transferredAmount,
+        transferredName: pointPurchaseRequest.transferredName,
+        transactionReference: pointPurchaseRequest.transactionReference,
+        transferNote: pointPurchaseRequest.transferNote,
+        adminNote: pointPurchaseRequest.adminNote,
+        reviewedByAdminId: pointPurchaseRequest.reviewedByAdminId,
+        reviewedAt: pointPurchaseRequest.reviewedAt,
+        createdAt: pointPurchaseRequest.createdAt,
+      })
+      .from(pointPurchaseRequest)
+      .leftJoin(user, eq(pointPurchaseRequest.userId, user.id))
+      .where(whereClause)
+      .orderBy(desc(pointPurchaseRequest.createdAt))
+      .limit(opts.limit)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pointPurchaseRequest)
+      .where(whereClause),
+  ]);
+
+  return { requests: rows, total: countRows[0]?.count ?? 0 };
 }

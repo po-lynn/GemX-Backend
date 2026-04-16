@@ -12,14 +12,18 @@ import {
   savePremiumDealersSettings,
   saveFeatureSettings,
   savePointManagementSettings,
+  savePointPurchasePackagesSettings,
   setDefaultRegistrationPoints,
   setEarningPointsRates,
   setUserPoints,
+  approvePointPurchaseRequest,
+  rejectPointPurchaseRequest,
 } from "@/features/points/db/points";
 import type {
   PremiumDealersSettings,
   FeatureSettings,
   PointManagementSettings,
+  PointPurchasePackagesSettings,
 } from "@/features/points/db/points";
 
 export async function getDefaultRegistrationPointsAction(): Promise<number> {
@@ -59,8 +63,7 @@ export async function savePremiumDealersSettingsAction(formData: FormData) {
       .map((o) => ({
         name: String(o.name ?? "Package").trim().slice(0, 120) || "Package",
         pointsRequired: Math.max(0, Math.floor(Number(o.pointsRequired) || 0)),
-        serviceFeePercent: Math.min(100, Math.max(0, Number(o.serviceFeePercent) || 0)),
-        transactionLimitUsd: Math.max(0, Math.floor(Number(o.transactionLimitUsd) || 0)),
+        durationDays: Math.min(3650, Math.max(1, Math.floor(Number(o.durationDays) || 30))),
       }));
   } catch {
     return { error: "Invalid packages JSON." };
@@ -153,11 +156,152 @@ export async function savePointManagementSettingsAction(formData: FormData) {
     minimumSpendCurrency: (formData.get("minimumSpendCurrency") as "mmk" | "usd" | "krw") || "mmk",
     roundingMethod: (formData.get("roundingMethod") as "down" | "up" | "nearest") || "down",
     pointExpiryDays: parseIntForm(formData.get("pointExpiryDays"), 365),
+    paymentMethods: (() => {
+      try {
+        const raw = formData.get("paymentMethodsJson");
+        const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+          .map((o) => ({
+            name: String(o.name ?? "").trim().slice(0, 100),
+            accountName: String(o.accountName ?? "").trim().slice(0, 200),
+            phoneNumber: String(o.phoneNumber ?? "").trim().slice(0, 50),
+            ...(typeof o.instructions === "string" && o.instructions.trim()
+              ? { instructions: o.instructions.trim().slice(0, 500) }
+              : {}),
+          }))
+          .filter((m) => m.name);
+      } catch { return []; }
+    })(),
   };
   if (settings.currencyConversion.mmk.amount === 0) settings.currencyConversion.mmk.amount = 1;
   if (settings.currencyConversion.usd.amount === 0) settings.currencyConversion.usd.amount = 1;
   if (settings.currencyConversion.krw.amount === 0) settings.currencyConversion.krw.amount = 1;
   await savePointManagementSettings(settings);
+  return { success: true };
+}
+
+export async function saveCreditSettingsAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+
+  const defaultRegistrationPoints = parseIntForm(formData.get("defaultRegistrationPoints"), 0);
+
+  const paymentMethods = (() => {
+    try {
+      const raw = formData.get("paymentMethodsJson");
+      const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+        .map((o) => ({
+          name: String(o.name ?? "").trim().slice(0, 100),
+          accountName: String(o.accountName ?? "").trim().slice(0, 200),
+          phoneNumber: String(o.phoneNumber ?? "").trim().slice(0, 50),
+          ...(typeof o.instructions === "string" && o.instructions.trim()
+            ? { instructions: o.instructions.trim().slice(0, 500) }
+            : {}),
+        }))
+        .filter((m) => m.name);
+    } catch { return []; }
+  })();
+
+  // Preserve all other point management settings — only update registration points + payment methods
+  const existing = await getPointManagementSettings();
+  await savePointManagementSettings({ ...existing, defaultRegistrationPoints, paymentMethods });
+
+  // Save packages
+  const raw = formData.get("packagesJson");
+  let packages: PointPurchasePackagesSettings["packages"];
+  try {
+    const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
+    if (!Array.isArray(parsed)) return { error: "Invalid packages data." };
+    packages = parsed
+      .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+      .map((o) => {
+        const optPrice = (v: unknown) => {
+          if (v == null || v === "") return undefined;
+          const n = Math.floor(Number(v));
+          return Number.isFinite(n) && n >= 0 ? n : undefined;
+        };
+        return {
+          name: String(o.name ?? "Package").trim().slice(0, 200) || "Package",
+          points: Math.max(1, Math.floor(Number(o.points) || 1)),
+          ...(optPrice(o.priceMmk) != null ? { priceMmk: optPrice(o.priceMmk) } : {}),
+          ...(optPrice(o.priceUsd) != null ? { priceUsd: optPrice(o.priceUsd) } : {}),
+          ...(optPrice(o.priceKrw) != null ? { priceKrw: optPrice(o.priceKrw) } : {}),
+          ...(typeof o.description === "string" && o.description.trim()
+            ? { description: o.description.trim().slice(0, 500) }
+            : {}),
+        };
+      });
+  } catch {
+    return { error: "Invalid packages JSON." };
+  }
+  await savePointPurchasePackagesSettings({ packages });
+  return { success: true };
+}
+
+export async function savePointPurchasePackagesSettingsAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const raw = formData.get("packagesJson");
+  let settings: PointPurchasePackagesSettings;
+  try {
+    const parsed = JSON.parse(String(raw ?? "[]")) as unknown;
+    if (!Array.isArray(parsed)) return { error: "Invalid packages data." };
+    settings = {
+      packages: parsed
+        .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+        .map((o) => {
+          const optPrice = (v: unknown) => {
+            if (v == null || v === "") return undefined;
+            const n = Math.floor(Number(v));
+            return Number.isFinite(n) && n >= 0 ? n : undefined;
+          };
+          return {
+            name: String(o.name ?? "Package").trim().slice(0, 200) || "Package",
+            points: Math.max(1, Math.floor(Number(o.points) || 1)),
+            ...(optPrice(o.priceMmk) != null ? { priceMmk: optPrice(o.priceMmk) } : {}),
+            ...(optPrice(o.priceUsd) != null ? { priceUsd: optPrice(o.priceUsd) } : {}),
+            ...(optPrice(o.priceKrw) != null ? { priceKrw: optPrice(o.priceKrw) } : {}),
+            ...(typeof o.description === "string" && o.description.trim()
+              ? { description: o.description.trim().slice(0, 500) }
+              : {}),
+          };
+        }),
+    };
+  } catch {
+    return { error: "Invalid packages JSON." };
+  }
+  await savePointPurchasePackagesSettings(settings);
+  return { success: true };
+}
+
+export async function approvePointPurchaseRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
+  if (!requestId) return { error: "Request ID is required." };
+
+  const result = await approvePointPurchaseRequest(requestId, session.user.id, adminNote);
+  if (!result.success) return { error: result.reason === "not_found" ? "Request not found." : "Request is not pending." };
+  return { success: true };
+}
+
+export async function rejectPointPurchaseRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
+  if (!requestId) return { error: "Request ID is required." };
+
+  const result = await rejectPointPurchaseRequest(requestId, session.user.id, adminNote);
+  if (!result.success) return { error: result.reason === "not_found" ? "Request not found." : "Request is not pending." };
   return { success: true };
 }
 

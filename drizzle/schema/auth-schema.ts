@@ -32,6 +32,10 @@ export const user = pgTable("user", {
   gender: text("gender"),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
   points: integer("points").notNull().default(0),
+  /** Name of the active premium dealer package, or null if not a premium dealer */
+  premiumDealerPackageName: text("premium_dealer_package_name"),
+  /** When the premium dealer status expires; null means no active status */
+  premiumDealerExpiresAt: timestamp("premium_dealer_expires_at"),
 });
 
 export const session = pgTable(

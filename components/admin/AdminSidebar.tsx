@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 import {
   LayoutDashboard,
-  BookOpen,
   Package,
   FolderTree,
   Users,
@@ -21,6 +20,8 @@ import {
   BadgeCheck,
   HandCoins,
   ShieldCheck,
+  ShoppingBag,
+  ClipboardList,
 } from "lucide-react";
 
 type NavItem = {
@@ -43,9 +44,15 @@ const navGroups: (NavItem | NavGroup)[] = [
     items: [
       {
         href: "/admin/credit",
-        label: "Point Management",
-        icon: BookOpen,
+        label: "Point Packages",
+        icon: ShoppingBag,
         isActive: (p) => p === "/admin/credit" || p === "/admin/credit/",
+      },
+      {
+        href: "/admin/credit/purchase-requests",
+        label: "Purchase Requests",
+        icon: ClipboardList,
+        isActive: (p) => p.startsWith("/admin/credit/purchase-requests"),
       },
       {
         href: "/admin/credit/feature-settings",
@@ -57,7 +64,7 @@ const navGroups: (NavItem | NavGroup)[] = [
       },
       {
         href: "/admin/credit/feature-settings/premium-dealers",
-        label: "Premium Dealers Settings",
+        label: "Premium Dealers",
         icon: HandCoins,
         isActive: (p) => p.startsWith("/admin/credit/feature-settings/premium-dealers"),
       },

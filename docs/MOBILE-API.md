@@ -7,7 +7,7 @@
 ## Recent changes
 
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
-- **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers-settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers-settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
+- **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – **POST `/api/mobile/collector-piece-show-requests`** (auth required): user submits `productId` and optional `message`; user info (name, email, phone) is taken from the session automatically. **GET `/api/mobile/collector-piece-show-requests`** (auth required): paginated list of the current user's own requests with status. See **5.4.4**.
 - **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
@@ -29,7 +29,7 @@
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
 - **Feature pricing tiers (mobile)** – Added **GET `/api/mobile/feature-pricing-tiers`** (no auth). Returns only `durationDays` + `points` options (from `feature_pricing_tiers_json`) for mobile selection UI.
-- **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers-settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`) for mobile premium dealer fee selection UI.
+- **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers/settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`) for mobile premium dealer fee selection UI.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
 - **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
 
@@ -43,7 +43,7 @@
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
-| GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit a show-request for a collector-piece product. Body: `productId`, optional `message`. User info taken from session. See **5.4.4**.                                                              |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
@@ -894,7 +894,7 @@ Use this endpoint to load feature options for a picker/dropdown in mobile. It re
 
 ### 5.4.3 Get premium dealers settings (mobile)
 
-**GET** `/api/mobile/premium-dealers-settings`
+**GET** `/api/mobile/premium-dealers/settings`
 
 **Auth:** Not required.
 
@@ -1049,7 +1049,7 @@ Returns a paginated list of the current user's own collector-piece show requests
 Submit an escrow service request to GemX admin. Admin will contact the requester to facilitate the deal. The server auto-resolves product and seller information from the database — no snapshot fields needed from the client.
 
 **Recommended flow:**
-1. Call `GET /api/mobile/premium-dealers-settings` to retrieve available packages and display their `serviceFeePercent` to the user.
+1. Call `GET /api/mobile/premium-dealers/settings` to retrieve available packages and display their `serviceFeePercent` to the user.
 2. User reviews the fee and selects a package.
 3. Submit this endpoint with the chosen `packageName`.
 
@@ -1068,7 +1068,7 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 | ----- | ---- | -------- | ----------- |
 | `type` | string | **Yes** | `"buyer"` — wants to verify product before purchase; `"seller"` — wants buyer commitment. |
 | `productId` | string (UUID) | No | Existing product in the catalog. Server validates it exists, then auto-stores the product's `sellerId`. Omit for off-platform items. |
-| `packageName` | string | No | Name of the selected premium dealer package (e.g. `"Basic Package"`). Must exactly match a name returned by `GET /api/mobile/premium-dealers-settings`. Max 120 characters. |
+| `packageName` | string | No | Name of the selected premium dealer package (e.g. `"Basic Package"`). Must exactly match a name returned by `GET /api/mobile/premium-dealers/settings`. Max 120 characters. |
 | `message` | string | No | Optional note for admin (trimmed, max 2000 characters). |
 
 **Success (200):**
@@ -1099,7 +1099,7 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 
 **Notes:**
 
-- `packageName` must exactly match a package name from `GET /api/mobile/premium-dealers-settings` — the server validates it against the live list.
+- `packageName` must exactly match a package name from `GET /api/mobile/premium-dealers/settings` — the server validates it against the live list.
 - `adminNote` is internal and never returned to mobile clients.
 - New requests start with `status: "pending"`.
 - The seller is resolved server-side from `product.sellerId` — never send it from the client.
@@ -1742,7 +1742,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
-| GET    | `/api/mobile/premium-dealers-settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit show-request for a collector piece (`productId`, optional `message`). User info auto-captured from session. See 5.4.4. |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`). See 5.4.4.                                            |

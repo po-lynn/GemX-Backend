@@ -13,15 +13,6 @@ const accent = "#9B5CFF";
 const inputClass =
   "h-9 w-full rounded-md border border-slate-200 bg-white px-2.5 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B5CFF]/40";
 
-function formatUsd(n: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
 type Props = {
   settings: { packages: PremiumDealerPackage[] };
 };
@@ -60,8 +51,7 @@ export function PremiumDealersSettingsForm({ settings }: Props) {
       {
         name: "New Package",
         pointsRequired: 0,
-        serviceFeePercent: 0,
-        transactionLimitUsd: 0,
+        durationDays: 30,
       },
     ]);
   }
@@ -111,7 +101,7 @@ export function PremiumDealersSettingsForm({ settings }: Props) {
               />
             </h2>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block min-w-0">
                   <span className="mb-1 block text-xs font-medium text-slate-500">Points Required</span>
                   <input
@@ -127,53 +117,19 @@ export function PremiumDealersSettingsForm({ settings }: Props) {
                   />
                 </label>
                 <label className="block min-w-0">
-                  <span className="mb-1 block text-xs font-medium text-slate-500">Service Fee</span>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.1"
-                      className={cn(inputClass, "pr-8 tabular-nums")}
-                      value={pkg.serviceFeePercent}
-                      onChange={(e) =>
-                        updatePkg(i, {
-                          serviceFeePercent: Math.min(
-                            100,
-                            Math.max(0, Number(e.target.value) || 0)
-                          ),
-                        })
-                      }
-                    />
-                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                      %
-                    </span>
-                  </div>
-                </label>
-                <label className="block min-w-0">
-                  <span className="mb-1 block text-xs font-medium text-slate-500">Transaction limit</span>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      className={cn(inputClass, "pl-7 tabular-nums")}
-                      value={pkg.transactionLimitUsd}
-                      onChange={(e) =>
-                        updatePkg(i, {
-                          transactionLimitUsd: Math.max(
-                            0,
-                            Math.floor(Number(e.target.value) || 0)
-                          ),
-                        })
-                      }
-                    />
-                  </div>
-                  <span className="mt-0.5 block text-xs text-slate-400">
-                    {formatUsd(pkg.transactionLimitUsd)}
-                  </span>
+                  <span className="mb-1 block text-xs font-medium text-slate-500">Duration (Days)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    className={cn(inputClass, "tabular-nums")}
+                    value={pkg.durationDays}
+                    onChange={(e) =>
+                      updatePkg(i, {
+                        durationDays: Math.min(3650, Math.max(1, Math.floor(Number(e.target.value) || 30))),
+                      })
+                    }
+                  />
                 </label>
               </div>
               <button

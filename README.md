@@ -103,3 +103,9 @@ API for public user of products
 
 
 Randomly show product list
+
+
+Premium delare list
+become delare 
+point purchase process
+my escrow list

@@ -10,7 +10,7 @@ import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
-import { and, asc, eq, exists, gte, ilike, inArray, lte, or, sql, desc } from "drizzle-orm"
+import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -149,9 +149,14 @@ export async function getAdminProductsFromDb(opts: {
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
     createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
     createdToDate ? lte(product.createdAt, createdToDate) : undefined,
-    opts.isFeatured !== undefined
-      ? eq(product.isFeatured, opts.isFeatured)
-      : undefined,
+    opts.isFeatured === true
+      ? and(
+          eq(product.isFeatured, true),
+          or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+        )
+      : opts.isFeatured === false
+        ? eq(product.isFeatured, false)
+        : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.collectorPieceApprovedForUserId && opts.isCollectorPiece === true
       ? exists(
@@ -180,7 +185,7 @@ export async function getAdminProductsFromDb(opts: {
           desc(sql`ts_rank(to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')), plainto_tsquery('english', ${search}))`),
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
-          desc(product.isFeatured),
+          desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
           desc(product.featured),
           desc(product.isPromotion),
           desc(product.createdAt),
@@ -188,7 +193,7 @@ export async function getAdminProductsFromDb(opts: {
       : [
           desc(product.isCollectorPiece),
           desc(product.isPrivilegeAssist),
-          desc(product.isFeatured),
+          desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
           desc(product.featured),
           desc(product.isPromotion),
           desc(product.createdAt),
@@ -226,7 +231,7 @@ export async function getAdminProductsFromDb(opts: {
         laboratoryId: product.laboratoryId,
         status: product.status,
         moderationStatus: product.moderationStatus,
-        isFeatured: product.isFeatured,
+        isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
         isPromotion: product.isPromotion,
@@ -419,9 +424,14 @@ export async function getProductsBySellerId(
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
-    opts.isFeatured !== undefined
-      ? eq(product.isFeatured, opts.isFeatured)
-      : undefined,
+    opts.isFeatured === true
+      ? and(
+          eq(product.isFeatured, true),
+          or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+        )
+      : opts.isFeatured === false
+        ? eq(product.isFeatured, false)
+        : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
     opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
@@ -433,7 +443,7 @@ export async function getProductsBySellerId(
     ? [
         desc(product.isCollectorPiece),
         desc(product.isPrivilegeAssist),
-        desc(product.isFeatured),
+        desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
         desc(product.featured),
         desc(product.isPromotion),
         desc(product.createdAt),
@@ -458,7 +468,7 @@ export async function getProductsBySellerId(
         laboratoryId: product.laboratoryId,
         status: product.status,
         moderationStatus: product.moderationStatus,
-        isFeatured: product.isFeatured,
+        isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
         isCollectorPiece: product.isCollectorPiece,
         isPrivilegeAssist: product.isPrivilegeAssist,
         isPromotion: product.isPromotion,

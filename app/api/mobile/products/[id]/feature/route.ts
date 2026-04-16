@@ -1,6 +1,6 @@
 import { NextRequest, connection } from "next/server"
 import { z } from "zod"
-import { and, eq, gte, sql } from "drizzle-orm"
+import { and, eq, gt, gte, isNull, or, sql } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
@@ -63,6 +63,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Invalid duration or points tier", 400)
     }
 
+    // Enforce homepage featured product limit
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(product)
+      .where(
+        and(
+          eq(product.isFeatured, true),
+          or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+        )
+      )
+    const activeFeaturedCount = countRow?.count ?? 0
+    if (activeFeaturedCount >= settings.homeFeaturedLimit) {
+      return jsonError(
+        `Homepage featured limit reached (${settings.homeFeaturedLimit}). Wait for an existing featured product to expire.`,
+        400
+      )
+    }
+
     const [row] = await db
       .select({
         id: product.id,
@@ -96,6 +114,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           isFeatured: true,
           // Reuse existing integer field to store points spent for featuring.
           featured: selectedTier.points,
+          featuredDurationDays: selectedTier.durationDays,
+          featuredExpiresAt: new Date(Date.now() + selectedTier.durationDays * 24 * 60 * 60 * 1000),
         })
         .where(eq(product.id, id))
 
