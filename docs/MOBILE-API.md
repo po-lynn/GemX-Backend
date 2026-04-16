@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers-settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers-settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
@@ -49,6 +50,9 @@
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
+| POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark one product by `productId` (UUID). Idempotent for duplicates. See **5.4.6**. |
+| GET    | `/api/mobile/favourite-products` | Yes  | List current user's favourite products (paginated). Query: `page`, `limit`. See **5.4.6**. |
+| DELETE | `/api/mobile/favourite-products` | Yes  | Remove one favourite by `productId` (UUID) in JSON body. See **5.4.6**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -1149,6 +1153,131 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 
 ---
 
+### 5.4.6 Favourite products (mobile)
+
+Use these endpoints for the mobile "Saved/Favourites" feature.
+
+#### POST `/api/mobile/favourite-products`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Save a product into the current user's favourites list.
+
+**Request body (JSON):**
+
+```json
+{
+  "productId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "productId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Notes:**
+
+- Idempotent: if the same product is already favourited by this user, response is still success.
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }`.
+- **400** — `{ "error": "Invalid input" }`.
+- **404** — `{ "error": "Product not found" }`.
+- **500** — `{ "error": "Failed to save favourite product" }`.
+
+---
+
+#### GET `/api/mobile/favourite-products`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns paginated favourites for the authenticated user (newest first).
+
+**Query params:**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `page` | number | `1` | Page number (min 1). |
+| `limit` | number | `10` | Items per page (min 1, max 50). |
+
+**Success (200):**
+
+```json
+{
+  "favourites": [
+    {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "productId": "550e8400-e29b-41d4-a716-446655440000",
+      "createdAt": "2026-04-16T10:00:00.000Z",
+      "product": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "title": "Burma Ruby Ring",
+        "price": "2500.00",
+        "currency": "USD",
+        "status": "active",
+        "isCollectorPiece": false,
+        "isPrivilegeAssist": false,
+        "isPromotion": false,
+        "isFeatured": false,
+        "sellerId": "user-uuid",
+        "sellerName": "John Doe",
+        "imageUrl": "https://..."
+      }
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1
+}
+```
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }`.
+- **500** — `{ "error": "Failed to load favourite products" }`.
+
+---
+
+#### DELETE `/api/mobile/favourite-products`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Remove one product from the current user's favourites list.
+
+**Request body (JSON):**
+
+```json
+{
+  "productId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "productId": "550e8400-e29b-41d4-a716-446655440000",
+  "removed": true
+}
+```
+
+`removed` is `false` when that product was not favourited by this user.
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }`.
+- **400** — `{ "error": "Invalid input" }`.
+- **500** — `{ "error": "Failed to remove favourite product" }`.
+
+---
+
 ### 5.4.2 Purchase points (mobile)
 
 **POST** `/api/mobile/points/purchase`
@@ -1697,6 +1826,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 3. **Browse**
   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isPrivilegeAssist`, etc.). Public list defaults to active only.
+  - **Save/Unsave favourites:** `POST /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to save; `DELETE /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to unsave; `GET /api/mobile/favourite-products?page=1&limit=20` to show saved items.
   - **Collector piece browse (public):** `GET /api/products?isCollectorPiece=true` — no auth needed. Returns image + masked price only for all active collector pieces.
   - **Collector piece detail:** `GET /api/products/:id` — returns limited shape (image + masked price + `requestStatus`) for unapproved collector pieces, full data once approved.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
@@ -1748,6 +1878,9 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
+| POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark a product by `productId` (idempotent). See 5.4.6. |
+| GET    | `/api/mobile/favourite-products` | Yes  | List own favourite products (paginated: `page`, `limit`). See 5.4.6. |
+| DELETE | `/api/mobile/favourite-products` | Yes  | Remove saved product by `productId`. See 5.4.6. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
