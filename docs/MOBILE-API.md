@@ -6,13 +6,16 @@
 
 ## Recent changes
 
+- **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
+- **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
+- **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
 - **Seller ratings (mobile)** – Added **POST `/api/mobile/seller-ratings`** (auth) so one user can rate another user (seller) with **`score`** (1–5); same endpoint updates an existing rating. **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus a paginated list of ratings received by that seller. See **5.4b**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – **POST `/api/mobile/collector-piece-show-requests`** (auth required): user submits `productId` and optional `message`; user info (name, email, phone) is taken from the session automatically. **GET `/api/mobile/collector-piece-show-requests`** (auth required): paginated list of the current user's own requests with status. See **5.4.4**.
-- **Removed mobile direct feature endpoint** – `POST /api/mobile/products/:id/feature` is removed to avoid inconsistent featured-duration behavior. Mobile should set featured using product create/update fields (`isFeatured`, `featured`, `featureDurationDays`).
+- *(Superseded — see above)* `POST /api/mobile/products/:id/feature` was briefly removed; it is now re-added with a points-and-tier model. The old direct `isFeatured`/`featured`/`featureDurationDays` fields on product create/update still work for admin use.
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
@@ -31,7 +34,7 @@
 - **Direct-to-Supabase signed uploads** – Added **POST `/api/upload/product-media/sign`** (auth required) to generate short-lived signed upload tokens for direct uploads to Supabase Storage. Use `publicUrl` in your product payload; avoids Vercel upload-size limits for large videos.
 - **Certificate upload** – **POST /api/upload/certificate** uploads a single lab report / certificate file (PDF or image). Returns `{ "url": "..." }` to use as `certReportUrl` in product create/update. See **4.5 Certificate upload**.
 - **Feature pricing tiers (mobile)** – Added **GET `/api/mobile/feature-pricing-tiers`** (no auth). Returns only `durationDays` + `points` options (from `feature_pricing_tiers_json`) for mobile selection UI.
-- **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers/settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`) for mobile premium dealer fee selection UI.
+- **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers/settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `durationDays`) for the premium dealer activation UI. See **5.4.3**.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
 - **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
 
@@ -45,8 +48,14 @@
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
-| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options for mobile premium dealer fee selection (`name`, `pointsRequired`, `serviceFeePercent`, `transactionLimitUsd`).                                                                 |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
+| POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. See **5.4.3a**.                                                                                                                          |
+| GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
+| POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
+| GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
+| POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit a credit point purchase request after transferring payment. Creates a pending request for admin approval. See **5.4.2**.                                                                       |
+| GET    | `/api/mobile/points/purchase-requests` | Yes  | List current user's own credit point purchase request history. See **5.4.2**.                                                                                                                        |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit a show-request for a collector-piece product. Body: `productId`, optional `message`. User info taken from session. See **5.4.4**.                                                              |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
@@ -1053,6 +1062,61 @@ Use this endpoint to load feature options for a picker/dropdown in mobile. It re
 
 ---
 
+### 5.4.1a Feature a product with points (mobile)
+
+**POST** `/api/mobile/products/:id/feature`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Spend points to feature the seller's own product on the homepage for a selected duration. Call `GET /api/mobile/feature-pricing-tiers` first to load available tiers and let the user pick one.
+
+**Request body (JSON):**
+
+```json
+{
+  "durationDays": 7,
+  "points": 500
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `durationDays` | number (int) | Yes | Duration in days. Must exactly match a tier from `GET /api/mobile/feature-pricing-tiers`. |
+| `points` | number (int) | Yes | Points to spend. Must exactly match the same tier. |
+
+**Business rules:**
+
+- Both `durationDays` and `points` must together match one configured tier exactly. If the pair doesn't match any tier, the request is rejected.
+- User must own the product; 403 if not.
+- Points are atomically deducted — if balance is insufficient the request is rejected without partial changes.
+- The admin-configured homepage featured limit is enforced. If the limit is already full, the request is rejected until an existing featured product expires.
+- On success, the product is marked `isFeatured = true` with a `featuredExpiresAt` set to now + `durationDays`.
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "productId": "uuid-here",
+  "durationDays": 7,
+  "pointsUsed": 500,
+  "remainingPoints": 850
+}
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid input" }`
+- **400** – `{ "error": "Invalid duration or points tier" }` — pair doesn't match any configured tier.
+- **400** – `{ "error": "Insufficient points balance" }`
+- **400** – `{ "error": "Homepage featured limit reached (N). Wait for an existing featured product to expire." }`
+- **401** – `{ "error": "Unauthorized" }`
+- **403** – `{ "error": "Forbidden" }` — product belongs to another user.
+- **404** – `{ "error": "Product not found" }`
+- **500** – `{ "error": "Failed to apply featured option" }`
+
+---
+
 ### 5.4.3 Get premium dealers settings (mobile)
 
 **GET** `/api/mobile/premium-dealers/settings`
@@ -1069,14 +1133,12 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
     {
       "name": "Basic Package",
       "pointsRequired": 100,
-      "serviceFeePercent": 2,
-      "transactionLimitUsd": 1000
+      "durationDays": 30
     },
     {
       "name": "Standard Package",
       "pointsRequired": 250,
-      "serviceFeePercent": 1.5,
-      "transactionLimitUsd": 5000
+      "durationDays": 30
     }
   ]
 }
@@ -1085,14 +1147,98 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `premiumDealerPackages` | array | Premium dealer package options. |
-| `name` | string | Package display name. |
-| `pointsRequired` | number | Points needed to choose this premium dealer package. |
-| `serviceFeePercent` | number | Service fee percent (e.g. `2` means 2%). |
-| `transactionLimitUsd` | number | Maximum transaction amount in USD (whole dollars) for this package. |
+| `name` | string | Package display name. Pass this to `POST /api/mobile/premium-dealers/activate`. |
+| `pointsRequired` | number | Points deducted from the user's balance to activate this package. |
+| `durationDays` | number | How many days the premium dealer status stays active after activation. |
 
 **Errors:**
 
 - **500** – `{ "error": "Failed to load premium dealers settings" }`
+
+---
+
+### 5.4.3a Activate premium dealer status (mobile)
+
+**POST** `/api/mobile/premium-dealers/activate`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Spend points to activate the user's premium dealer status for the selected package. Call `GET /api/mobile/premium-dealers/settings` first to load available packages.
+
+**Request body (JSON):**
+
+```json
+{
+  "packageName": "Basic Package"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `packageName` | string | Yes | Exact package name from `GET /api/mobile/premium-dealers/settings`. Max 120 chars. |
+
+**Business rules:**
+
+- `packageName` must exactly match a configured package name.
+- `pointsRequired` for the selected package is atomically deducted from the user's balance. Returns `400` if balance is insufficient.
+- Sets the premium dealer status active for `durationDays` from the moment of activation, overwriting any previous status.
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "packageName": "Basic Package",
+  "pointsUsed": 100,
+  "remainingPoints": 750,
+  "expiresAt": "2026-05-16T10:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid input" }`
+- **400** – `{ "error": "Package not found" }` — `packageName` doesn't match any configured package.
+- **400** – `{ "error": "Insufficient points balance" }`
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to activate premium dealer status" }`
+
+---
+
+### 5.4.3b Get premium dealer status (mobile)
+
+**GET** `/api/mobile/premium-dealers/status`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the current user's active premium dealer status. Use this on app load or on the premium dealer screen to show the user whether they have an active package and when it expires.
+
+**Success (200) — no active status:**
+
+```json
+{ "active": false }
+```
+
+**Success (200) — active:**
+
+```json
+{
+  "active": true,
+  "packageName": "Basic Package",
+  "expiresAt": "2026-05-16T10:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `active` | boolean | `true` if the user has a non-expired premium dealer status. |
+| `packageName` | string \| undefined | Name of the active package. Present only when `active: true`. |
+| `expiresAt` | string \| undefined | ISO 8601 expiry timestamp. Present only when `active: true`. |
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to load premium dealer status" }`
 
 ---
 
@@ -1435,13 +1581,195 @@ Remove one product from the current user's favourites list.
 
 ---
 
-### 5.4.2 Purchase points (mobile)
+### 5.4.2 Credit point packages & purchase requests (mobile)
+
+The recommended top-up flow is:
+
+1. Call **GET `/api/mobile/points/packages`** to load available packages and payment methods.
+2. User selects a package, picks a payment method, and transfers the payment externally.
+3. User submits **POST `/api/mobile/points/purchase-requests`** with the transfer details.
+4. Admin verifies the transfer and approves at `/admin/credit/purchase-requests`.
+5. Points are credited to the user's balance automatically on approval.
+6. User can track request status with **GET `/api/mobile/points/purchase-requests`**.
+
+---
+
+#### GET `/api/mobile/points/packages`
+
+**Auth:** None.
+
+Returns the available credit point packages and the configured payment methods (e.g. KBZ Pay, AYA Pay) for display in the top-up UI.
+
+**Success (200):**
+
+```json
+{
+  "pointPackages": [
+    {
+      "name": "Starter Pack",
+      "points": 100,
+      "priceMmk": 5000,
+      "priceUsd": 3,
+      "description": "Good for first-time buyers"
+    },
+    {
+      "name": "Value Pack",
+      "points": 500,
+      "priceMmk": 20000
+    }
+  ],
+  "paymentMethods": [
+    {
+      "name": "KBZ Pay",
+      "accountName": "GemX Co., Ltd.",
+      "phoneNumber": "09123456789",
+      "instructions": "Include your registered phone number in the transfer note."
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `pointPackages` | array | Available packages. Empty array if none configured. |
+| `pointPackages[].name` | string | Package display name. |
+| `pointPackages[].points` | number | Points the user receives on approval. |
+| `pointPackages[].priceMmk` | number \| undefined | Price in MMK (omitted if not set for this package). |
+| `pointPackages[].priceUsd` | number \| undefined | Price in USD (omitted if not set). |
+| `pointPackages[].priceKrw` | number \| undefined | Price in KRW (omitted if not set). |
+| `pointPackages[].description` | string \| undefined | Optional description shown under the package. |
+| `paymentMethods` | array | Configured payment accounts. |
+| `paymentMethods[].name` | string | Payment method name (e.g. `"KBZ Pay"`). |
+| `paymentMethods[].accountName` | string | Name on the receiving account. |
+| `paymentMethods[].phoneNumber` | string | Account phone number. |
+| `paymentMethods[].instructions` | string \| undefined | Optional extra instructions. |
+
+**Errors:**
+
+- **500** – `{ "error": "Failed to load point packages" }`
+
+---
+
+#### POST `/api/mobile/points/purchase-requests`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Submit a credit point purchase request after the user has transferred payment to one of the configured payment methods. The request is created with status `"pending"` — points are **not** credited immediately. An admin must approve the request before points are added to the user's balance.
+
+**Request body (JSON):**
+
+```json
+{
+  "packageName": "Starter Pack",
+  "currency": "mmk",
+  "transferredAmount": 5000,
+  "transferredName": "Ko Aung",
+  "transactionReference": "TXN-20240415-001",
+  "transferNote": "Bought Starter Pack"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `packageName` | string | Yes | Exact name of the package from `GET /api/mobile/points/packages`. Max 200 chars. |
+| `currency` | string | Yes | Currency used for payment: `"mmk"`, `"usd"`, or `"krw"`. The package must have a price set for this currency. |
+| `transferredAmount` | number (int) | Yes | Amount the user transferred (in the selected currency). Must be >= 0. |
+| `transferredName` | string | Yes | Name the user used on the transfer. Max 200 chars. |
+| `transactionReference` | string | Yes | Transaction reference or receipt number. Max 200 chars. |
+| `transferNote` | string | No | Optional extra note. Max 500 chars. |
+
+**Business rules:**
+
+- `packageName` must match a package returned by `GET /api/mobile/points/packages`.
+- `currency` must match one of the prices configured on that package (e.g. if only `priceMmk` is set, only `"mmk"` is accepted).
+- Points are **not** credited on submission — only after admin approval.
+- Multiple requests can be pending simultaneously.
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "requestId": "uuid-here",
+  "packageName": "Starter Pack",
+  "points": 100,
+  "price": 5000,
+  "currency": "mmk",
+  "status": "pending",
+  "createdAt": "2024-04-15T10:30:00.000Z"
+}
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid input" }`
+- **400** – `{ "error": "Package not found" }` — `packageName` does not match any configured package.
+- **400** – `{ "error": "Package does not have a price set for MMK" }` — package has no price for the chosen currency.
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to submit purchase request" }`
+
+---
+
+#### GET `/api/mobile/points/purchase-requests`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the current user's own credit point purchase request history, newest first.
+
+**Success (200):**
+
+```json
+{
+  "requests": [
+    {
+      "id": "uuid-here",
+      "packageName": "Starter Pack",
+      "points": 100,
+      "price": 5000,
+      "currency": "mmk",
+      "status": "pending",
+      "transferredAmount": 5000,
+      "transferredName": "Ko Aung",
+      "transactionReference": "TXN-20240415-001",
+      "transferNote": null,
+      "adminNote": null,
+      "createdAt": "2024-04-15T10:30:00.000Z",
+      "reviewedAt": null
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | string | Request UUID. |
+| `packageName` | string | Name of the package requested. |
+| `points` | number | Points to be credited on approval. |
+| `price` | number | Package price in the selected currency. |
+| `currency` | string | Payment currency (`"mmk"`, `"usd"`, or `"krw"`). |
+| `status` | string | `"pending"`, `"approved"`, or `"rejected"`. |
+| `transferredAmount` | number | Amount the user reported transferring. |
+| `transferredName` | string | Name on the transfer. |
+| `transactionReference` | string | Receipt / reference number submitted by the user. |
+| `transferNote` | string \| null | Optional note from the user. |
+| `adminNote` | string \| null | Note from admin on approval or rejection. |
+| `createdAt` | string | ISO 8601 timestamp — when the request was submitted. |
+| `reviewedAt` | string \| null | ISO 8601 timestamp — when admin approved/rejected; `null` if still pending. |
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to load purchase requests" }`
+
+---
+
+#### POST `/api/mobile/points/purchase` *(legacy)*
 
 **POST** `/api/mobile/points/purchase`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-Use this endpoint when user buys points in the app. Backend converts purchase amount to points using current point settings and adds points to the user balance.
+Legacy endpoint — credits points immediately based on a payment amount and currency, without admin approval. Use the package + purchase-request flow above for new integrations.
 
 **Request body (JSON):**
 
@@ -1462,7 +1790,7 @@ Use this endpoint when user buys points in the app. Backend converts purchase am
 - Conversion uses admin-configured point settings (`point-management` currency conversion).
 - Calculated points are floored to integer.
 - If calculated points <= 0, request is rejected.
-- On success, points are added to original user balance.
+- On success, points are added immediately to user balance.
 
 **Success (200):**
 
@@ -1976,7 +2304,7 @@ Returns a single published article by ID. Draft items return **404**.
   - From the response, read and store the session token (exact key depends on better-auth response; often `session.token` or similar).
   - On every protected request, set header: `Authorization: Bearer <stored_token>`.
   - Load feature options: call `GET /api/mobile/feature-pricing-tiers` and let user select `durationDays` + `points`.
-  - To buy points (top-up): call `POST /api/mobile/points/purchase` with `currency` and `amount`.
+  - To buy points (top-up): call `GET /api/mobile/points/packages` to load packages and payment methods → user selects a package and transfers payment → submit `POST /api/mobile/points/purchase-requests` with transfer details → admin approves → points are credited. Track status with `GET /api/mobile/points/purchase-requests`. See **5.4.2**.
   - To feature a product: send `isFeatured`, `featured`, and `featureDurationDays` in `POST /api/products` or `PATCH /api/products/:id`.
 2. **Categories**
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
@@ -2030,8 +2358,14 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
-| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options for mobile premium dealer fee selection UI.                                      |
-| POST   | `/api/mobile/points/purchase` | Yes  | Purchase points and add to user balance based on configured conversion.                                      |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
+| POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
+| GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
+| POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
+| GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
+| POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |
+| GET    | `/api/mobile/points/purchase-requests` | Yes  | List own credit point purchase request history. See 5.4.2.                                                   |
+| POST   | `/api/mobile/points/purchase` | Yes  | *(Legacy)* Purchase points and add to user balance based on configured conversion. See 5.4.2.                 |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit show-request for a collector piece (`productId`, optional `message`). User info auto-captured from session. See 5.4.4. |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
