@@ -10,11 +10,9 @@ import {
 } from "@/features/news/schemas/news";
 import {
   createNewsInDb,
-  createNewsTranslationsInDb,
   updateNewsInDb,
   deleteNewsInDb,
 } from "@/features/news/db/news";
-import { buildNewsTranslations } from "@/features/news/services/translator";
 
 function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
@@ -23,7 +21,6 @@ function emptyToNull<T>(v: T): T | null | undefined {
 export async function createNewsAction(formData: FormData) {
   const parsed = newsCreateSchema.safeParse({
     title: formData.get("title"),
-    language: formData.get("language") || "English",
     content: formData.get("content") ?? "[]",
     status: formData.get("status") || "draft",
     publish: emptyToNull(formData.get("publish")),
@@ -41,35 +38,12 @@ export async function createNewsAction(formData: FormData) {
     parsed.data.publish && String(parsed.data.publish).trim()
       ? new Date(parsed.data.publish)
       : null;
-  let translations: Awaited<ReturnType<typeof buildNewsTranslations>>;
-  try {
-    translations = await buildNewsTranslations({
-      sourceLanguage: parsed.data.language,
-      title: parsed.data.title,
-      content: parsed.data.content,
-    });
-  } catch (e) {
-    const msg =
-      e instanceof Error && e.message
-        ? e.message
-        : "Failed to translate news to target languages";
-    return { error: msg };
-  }
   const newsId = await createNewsInDb({
     title: parsed.data.title,
-    language: parsed.data.language,
     content: parsed.data.content,
     status: parsed.data.status,
     publish: publishDate,
   });
-  await createNewsTranslationsInDb(
-    translations.map((item) => ({
-      newsId,
-      language: item.language,
-      title: item.title,
-      content: item.content,
-    }))
-  );
   return { success: true, newsId };
 }
 
@@ -77,7 +51,6 @@ export async function updateNewsAction(formData: FormData) {
   const parsed = newsUpdateSchema.safeParse({
     newsId: formData.get("newsId"),
     title: emptyToNull(formData.get("title")),
-    language: emptyToNull(formData.get("language")),
     content: emptyToNull(formData.get("content")),
     status: emptyToNull(formData.get("status")),
     publish: emptyToNull(formData.get("publish")),

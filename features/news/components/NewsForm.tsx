@@ -33,13 +33,6 @@ const STATUSES = [
   { value: "published", label: "Published" },
 ];
 
-const LANGUAGES = [
-  { value: "Myanmar", label: "Myanmar" },
-  { value: "English", label: "English" },
-  { value: "Thai", label: "Thai" },
-  { value: "Korean", label: "Korean" },
-];
-
 type Props = {
   mode: "create" | "edit";
   news?: NewsRow | null;
@@ -121,23 +114,6 @@ export function NewsForm({ mode, news }: Props) {
               {STATUSES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="language" className="text-sm font-medium">
-              Language
-            </label>
-            <select
-              id="language"
-              name="language"
-              defaultValue={news?.language ?? "English"}
-              className={inputClass}
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.value} value={lang.value}>
-                  {lang.label}
                 </option>
               ))}
             </select>

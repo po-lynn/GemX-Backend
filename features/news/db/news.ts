@@ -1,12 +1,10 @@
 import { db } from "@/drizzle/db";
 import { news } from "@/drizzle/schema/news-schema";
-import { newsTranslation } from "@/drizzle/schema/news-translation-schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 export type NewsRow = {
   id: string;
   title: string;
-  language: "Myanmar" | "English" | "Thai" | "Korean";
   content: string;
   status: string;
   publish: Date | null;
@@ -49,7 +47,6 @@ export async function getNewsPaginatedFromDb(options: {
 
 export async function createNewsInDb(input: {
   title: string;
-  language: "Myanmar" | "English" | "Thai" | "Korean";
   content: string;
   status: string;
   publish?: Date | null;
@@ -58,7 +55,6 @@ export async function createNewsInDb(input: {
     .insert(news)
     .values({
       title: input.title,
-      language: input.language,
       content: input.content,
       status: input.status,
       publish: input.publish ?? null,
@@ -71,7 +67,6 @@ export async function updateNewsInDb(
   id: string,
   input: {
     title?: string;
-    language?: "Myanmar" | "English" | "Thai" | "Korean";
     content?: string;
     status?: string;
     publish?: Date | null;
@@ -91,33 +86,4 @@ export async function deleteNewsInDb(id: string): Promise<boolean> {
     .where(eq(news.id, id))
     .returning({ id: news.id });
   return deleted.length > 0;
-}
-
-export async function createNewsTranslationsInDb(
-  items: Array<{
-    newsId: string;
-    language: "Myanmar" | "English" | "Thai" | "Korean";
-    title: string;
-    content: string;
-  }>
-): Promise<void> {
-  if (items.length === 0) return;
-  await db
-    .insert(newsTranslation)
-    .values(
-      items.map((item) => ({
-        newsId: item.newsId,
-        language: item.language,
-        title: item.title,
-        content: item.content,
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [newsTranslation.newsId, newsTranslation.language],
-      set: {
-        title: sql`excluded.title`,
-        content: sql`excluded.content`,
-        updatedAt: new Date(),
-      },
-    });
 }
