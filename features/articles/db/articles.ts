@@ -44,18 +44,16 @@ export async function getArticlesPaginatedFromDb(options: {
 }): Promise<{ items: ArticleRow[]; total: number }> {
   const { page, limit, status } = options;
   const where = status === undefined ? undefined : eq(articles.status, status);
-  const [items, countResult] = await Promise.all([
-    db
-      .select()
-      .from(articles)
-      .where(where)
-      .orderBy(desc(articles.publishDate ?? articles.updatedAt))
-      .limit(limit)
-      .offset((page - 1) * limit),
-    where
-      ? db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
-      : db.select({ count: sql<number>`count(*)::int` }).from(articles),
-  ]);
+  const items = await db
+    .select()
+    .from(articles)
+    .where(where)
+    .orderBy(desc(articles.publishDate ?? articles.updatedAt))
+    .limit(limit)
+    .offset((page - 1) * limit)
+  const countResult = where
+    ? await db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
+    : await db.select({ count: sql<number>`count(*)::int` }).from(articles)
   const total = countResult[0]?.count ?? 0;
   return { items, total };
 }

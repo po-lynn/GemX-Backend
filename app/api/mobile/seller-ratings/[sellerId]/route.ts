@@ -38,35 +38,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const sellerFilter = eq(sellerRating.sellerUserId, seller.id)
 
-    const [[agg], rows, countRows] = await Promise.all([
-      db
-        .select({
-          avgScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
-          totalRatings: sql<number>`count(*)::int`,
-        })
-        .from(sellerRating)
-        .where(sellerFilter),
-      db
-        .select({
-          id: sellerRating.id,
-          score: sellerRating.score,
-          comment: sellerRating.comment,
-          createdAt: sellerRating.createdAt,
-          updatedAt: sellerRating.updatedAt,
-          raterName: rater.name,
-          raterImage: rater.image,
-        })
-        .from(sellerRating)
-        .innerJoin(rater, eq(rater.id, sellerRating.raterUserId))
-        .where(sellerFilter)
-        .orderBy(desc(sellerRating.updatedAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(sellerRating)
-        .where(sellerFilter),
-    ])
+    const [agg] = await db
+      .select({
+        avgScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
+        totalRatings: sql<number>`count(*)::int`,
+      })
+      .from(sellerRating)
+      .where(sellerFilter)
+
+    const rows = await db
+      .select({
+        id: sellerRating.id,
+        score: sellerRating.score,
+        comment: sellerRating.comment,
+        createdAt: sellerRating.createdAt,
+        updatedAt: sellerRating.updatedAt,
+        raterName: rater.name,
+        raterImage: rater.image,
+      })
+      .from(sellerRating)
+      .innerJoin(rater, eq(rater.id, sellerRating.raterUserId))
+      .where(sellerFilter)
+      .orderBy(desc(sellerRating.updatedAt))
+      .limit(limit)
+      .offset(offset)
 
     const averageScore = Number(agg?.avgScore ?? 0)
     const totalRatings = agg?.totalRatings ?? 0
@@ -88,7 +83,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })),
       page,
       limit,
-      total: countRows[0]?.count ?? 0,
+      total: agg?.totalRatings ?? 0,
     })
   } catch (e) {
     console.error("GET /api/mobile/seller-ratings/[sellerId]:", e)

@@ -213,48 +213,47 @@ export async function getAdminProductsFromDb(opts: {
         }
       })()
 
-  const [productsData, countResult] = await Promise.all([
-    db
-      .select({
-        id: product.id,
-        sku: product.sku,
-        title: product.title,
-        description: product.description,
-        identification: product.identification,
-        price: product.price,
-        currency: product.currency,
-        productType: product.productType,
-        categoryId: product.categoryId,
-        categoryName: category.name,
-        stoneCut: product.stoneCut,
-        metal: product.metal,
-        laboratoryId: product.laboratoryId,
-        status: product.status,
-        moderationStatus: product.moderationStatus,
-        isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
-        isCollectorPiece: product.isCollectorPiece,
-        isPrivilegeAssist: product.isPrivilegeAssist,
-        isPromotion: product.isPromotion,
-        promotionComparePrice: product.promotionComparePrice,
-        sellerId: product.sellerId,
-        sellerName: user.name,
-        sellerPhone: user.phone,
-        createdAt: product.createdAt,
-      })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .leftJoin(category, eq(product.categoryId, category.id))
-      .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
-      .where(whereClause)
-      .orderBy(...orderByColumns)
-      .limit(limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .where(whereClause),
-  ])
+  const productsData = await db
+    .select({
+      id: product.id,
+      sku: product.sku,
+      title: product.title,
+      description: product.description,
+      identification: product.identification,
+      price: product.price,
+      currency: product.currency,
+      productType: product.productType,
+      categoryId: product.categoryId,
+      categoryName: category.name,
+      stoneCut: product.stoneCut,
+      metal: product.metal,
+      laboratoryId: product.laboratoryId,
+      status: product.status,
+      moderationStatus: product.moderationStatus,
+      isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
+      isCollectorPiece: product.isCollectorPiece,
+      isPrivilegeAssist: product.isPrivilegeAssist,
+      isPromotion: product.isPromotion,
+      promotionComparePrice: product.promotionComparePrice,
+      sellerId: product.sellerId,
+      sellerName: user.name,
+      sellerPhone: user.phone,
+      createdAt: product.createdAt,
+    })
+    .from(product)
+    .innerJoin(user, eq(product.sellerId, user.id))
+    .leftJoin(category, eq(product.categoryId, category.id))
+    .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
+    .where(whereClause)
+    .orderBy(...orderByColumns)
+    .limit(limit)
+    .offset(offset)
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(product)
+    .innerJoin(user, eq(product.sellerId, user.id))
+    .where(whereClause)
 
   const productIds = productsData.map((p) => p.id)
   const images =
@@ -450,48 +449,47 @@ export async function getProductsBySellerId(
       ]
     : [desc(product.createdAt)]
 
-  const [productsData, countResult] = await Promise.all([
-    db
-      .select({
-        id: product.id,
-        sku: product.sku,
-        title: product.title,
-        description: product.description,
-        identification: product.identification,
-        price: product.price,
-        currency: product.currency,
-        productType: product.productType,
-        categoryId: product.categoryId,
-        categoryName: category.name,
-        stoneCut: product.stoneCut,
-        metal: product.metal,
-        laboratoryId: product.laboratoryId,
-        status: product.status,
-        moderationStatus: product.moderationStatus,
-        isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
-        isCollectorPiece: product.isCollectorPiece,
-        isPrivilegeAssist: product.isPrivilegeAssist,
-        isPromotion: product.isPromotion,
-        promotionComparePrice: product.promotionComparePrice,
-        sellerId: product.sellerId,
-        sellerName: user.name,
-        sellerPhone: user.phone,
-        createdAt: product.createdAt,
-      })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .leftJoin(category, eq(product.categoryId, category.id))
-      .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
-      .where(whereClause)
-      .orderBy(...orderByColumnsSeller)
-      .limit(limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .where(whereClause),
-  ])
+  const productsData = await db
+    .select({
+      id: product.id,
+      sku: product.sku,
+      title: product.title,
+      description: product.description,
+      identification: product.identification,
+      price: product.price,
+      currency: product.currency,
+      productType: product.productType,
+      categoryId: product.categoryId,
+      categoryName: category.name,
+      stoneCut: product.stoneCut,
+      metal: product.metal,
+      laboratoryId: product.laboratoryId,
+      status: product.status,
+      moderationStatus: product.moderationStatus,
+      isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
+      isCollectorPiece: product.isCollectorPiece,
+      isPrivilegeAssist: product.isPrivilegeAssist,
+      isPromotion: product.isPromotion,
+      promotionComparePrice: product.promotionComparePrice,
+      sellerId: product.sellerId,
+      sellerName: user.name,
+      sellerPhone: user.phone,
+      createdAt: product.createdAt,
+    })
+    .from(product)
+    .innerJoin(user, eq(product.sellerId, user.id))
+    .leftJoin(category, eq(product.categoryId, category.id))
+    .leftJoin(laboratory, eq(product.laboratoryId, laboratory.id))
+    .where(whereClause)
+    .orderBy(...orderByColumnsSeller)
+    .limit(limit)
+    .offset(offset)
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(product)
+    .innerJoin(user, eq(product.sellerId, user.id))
+    .where(whereClause)
 
   const productIds = productsData.map((p) => p.id)
   const images =

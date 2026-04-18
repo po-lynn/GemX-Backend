@@ -1,7 +1,7 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
 import { pointPurchaseRequest, pointSetting } from "@/drizzle/schema/points-schema";
-import { and, desc, eq, gt, gte, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -266,55 +266,63 @@ async function getText(key: string): Promise<string> {
   return row?.valueText ?? "";
 }
 
+async function getSettingsBatch(keys: string[]): Promise<Map<string, { value: number; valueText: string | null }>> {
+  if (keys.length === 0) return new Map();
+  const rows = await db
+    .select({ key: pointSetting.key, value: pointSetting.value, valueText: pointSetting.valueText })
+    .from(pointSetting)
+    .where(inArray(pointSetting.key, keys));
+  const map = new Map<string, { value: number; valueText: string | null }>();
+  for (const row of rows) map.set(row.key, { value: row.value, valueText: row.valueText });
+  return map;
+}
+
 export async function getCurrencyConversion(): Promise<{
   mmk: CurrencyConversion;
   usd: CurrencyConversion;
   krw: CurrencyConversion;
 }> {
-  const [mmkA, mmkP, usdA, usdP, krwA, krwP] = await Promise.all([
-    getInt(EARNING_MMK_AMOUNT), getInt(EARNING_MMK_POINTS),
-    getInt(EARNING_USD_AMOUNT), getInt(EARNING_USD_POINTS),
-    getInt(EARNING_KRW_AMOUNT), getInt(EARNING_KRW_POINTS),
+  const map = await getSettingsBatch([
+    EARNING_MMK_AMOUNT, EARNING_MMK_POINTS,
+    EARNING_USD_AMOUNT, EARNING_USD_POINTS,
+    EARNING_KRW_AMOUNT, EARNING_KRW_POINTS,
   ]);
+  const gi = (k: string) => map.get(k)?.value ?? 0;
   return {
-    mmk: { amount: mmkA || 1, points: mmkP },
-    usd: { amount: usdA || 1, points: usdP },
-    krw: { amount: krwA || 1, points: krwP },
+    mmk: { amount: gi(EARNING_MMK_AMOUNT) || 1, points: gi(EARNING_MMK_POINTS) },
+    usd: { amount: gi(EARNING_USD_AMOUNT) || 1, points: gi(EARNING_USD_POINTS) },
+    krw: { amount: gi(EARNING_KRW_AMOUNT) || 1, points: gi(EARNING_KRW_POINTS) },
   };
 }
 
 export async function getPointManagementSettings(): Promise<PointManagementSettings> {
-  const [
-    defaultPoints, bonusEnabled, bonusDesc,
-    mmkA, mmkP, usdA, usdP, krwA, krwP,
-    minAmount, minCurrency, rounding, expiry,
-    paymentMethodsRaw,
-  ] = await Promise.all([
-    getInt(DEFAULT_REGISTRATION_POINTS_KEY),
-    getInt(REGISTRATION_BONUS_ENABLED_KEY),
-    getText(REGISTRATION_BONUS_DESCRIPTION_KEY),
-    getInt(EARNING_MMK_AMOUNT), getInt(EARNING_MMK_POINTS),
-    getInt(EARNING_USD_AMOUNT), getInt(EARNING_USD_POINTS),
-    getInt(EARNING_KRW_AMOUNT), getInt(EARNING_KRW_POINTS),
-    getInt(MINIMUM_SPEND_AMOUNT), getInt(MINIMUM_SPEND_CURRENCY),
-    getInt(ROUNDING_METHOD), getInt(POINT_EXPIRY_DAYS),
-    getText(PAYMENT_METHODS_JSON_KEY),
+  const map = await getSettingsBatch([
+    DEFAULT_REGISTRATION_POINTS_KEY, REGISTRATION_BONUS_ENABLED_KEY,
+    REGISTRATION_BONUS_DESCRIPTION_KEY,
+    EARNING_MMK_AMOUNT, EARNING_MMK_POINTS,
+    EARNING_USD_AMOUNT, EARNING_USD_POINTS,
+    EARNING_KRW_AMOUNT, EARNING_KRW_POINTS,
+    MINIMUM_SPEND_AMOUNT, MINIMUM_SPEND_CURRENCY,
+    ROUNDING_METHOD, POINT_EXPIRY_DAYS,
+    PAYMENT_METHODS_JSON_KEY,
   ]);
+  const gi = (k: string) => map.get(k)?.value ?? 0;
+  const gt2 = (k: string) => map.get(k)?.valueText ?? "";
   const currencyMap: ("mmk" | "usd" | "krw")[] = ["mmk", "usd", "krw"];
   return {
-    defaultRegistrationPoints: defaultPoints,
-    registrationBonusEnabled: bonusEnabled !== 0,
-    registrationBonusDescription: bonusDesc || "Welcome bonus",
+    defaultRegistrationPoints: gi(DEFAULT_REGISTRATION_POINTS_KEY),
+    registrationBonusEnabled: gi(REGISTRATION_BONUS_ENABLED_KEY) !== 0,
+    registrationBonusDescription: gt2(REGISTRATION_BONUS_DESCRIPTION_KEY) || "Welcome bonus",
     currencyConversion: {
-      mmk: { amount: mmkA || 1000, points: mmkP || 1 },
-      usd: { amount: usdA || 1, points: usdP || 10 },
-      krw: { amount: krwA || 1000, points: krwP || 8 },
+      mmk: { amount: gi(EARNING_MMK_AMOUNT) || 1000, points: gi(EARNING_MMK_POINTS) || 1 },
+      usd: { amount: gi(EARNING_USD_AMOUNT) || 1, points: gi(EARNING_USD_POINTS) || 10 },
+      krw: { amount: gi(EARNING_KRW_AMOUNT) || 1000, points: gi(EARNING_KRW_POINTS) || 8 },
     },
-    minimumSpendAmount: minAmount || 500,
-    minimumSpendCurrency: currencyMap[minCurrency] ?? "mmk",
-    roundingMethod: (["down", "up", "nearest"] as const)[rounding] ?? "down",
-    pointExpiryDays: expiry || 365,
-    paymentMethods: parsePaymentMethodsJson(paymentMethodsRaw),
+    minimumSpendAmount: gi(MINIMUM_SPEND_AMOUNT) || 500,
+    minimumSpendCurrency: currencyMap[gi(MINIMUM_SPEND_CURRENCY)] ?? "mmk",
+    roundingMethod: (["down", "up", "nearest"] as const)[gi(ROUNDING_METHOD)] ?? "down",
+    pointExpiryDays: gi(POINT_EXPIRY_DAYS) || 365,
+    paymentMethods: parsePaymentMethodsJson(gt2(PAYMENT_METHODS_JSON_KEY)),
   };
 }
 
@@ -328,22 +336,13 @@ const upsertText = async (key: string, valueText: string) => {
 };
 
 export async function getFeatureSettings(): Promise<FeatureSettings> {
-  const [limitRow, tiersRow] = await Promise.all([
-    db
-      .select({ value: pointSetting.value })
-      .from(pointSetting)
-      .where(eq(pointSetting.key, FEATURED_PRODUCT_HOME_LIMIT_KEY))
-      .limit(1),
-    db
-      .select({ valueText: pointSetting.valueText })
-      .from(pointSetting)
-      .where(eq(pointSetting.key, FEATURE_PRICING_TIERS_JSON_KEY))
-      .limit(1),
-  ]);
-  const rawLimit = limitRow[0]?.value;
+  const map = await getSettingsBatch([FEATURED_PRODUCT_HOME_LIMIT_KEY, FEATURE_PRICING_TIERS_JSON_KEY]);
+  const limitRow = map.get(FEATURED_PRODUCT_HOME_LIMIT_KEY);
+  const tiersRow = map.get(FEATURE_PRICING_TIERS_JSON_KEY);
+  const rawLimit = limitRow?.value;
   const homeFeaturedLimit =
     rawLimit != null && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 5;
-  const pricingTiers = parseFeatureTiersJson(tiersRow[0]?.valueText ?? "");
+  const pricingTiers = parseFeatureTiersJson(tiersRow?.valueText ?? "");
   return { homeFeaturedLimit, pricingTiers };
 }
 
@@ -359,21 +358,12 @@ export async function saveFeatureSettings(s: FeatureSettings): Promise<void> {
 }
 
 export async function getPremiumDealersSettings(): Promise<PremiumDealersSettings> {
-  const [newRows, legacyRows] = await Promise.all([
-    db
-      .select({ valueText: pointSetting.valueText })
-      .from(pointSetting)
-      .where(eq(pointSetting.key, PREMIUM_DEALERS_PACKAGES_JSON_KEY))
-      .limit(1),
-    db
-      .select({ valueText: pointSetting.valueText })
-      .from(pointSetting)
-      .where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY))
-      .limit(1),
+  const map = await getSettingsBatch([
+    PREMIUM_DEALERS_PACKAGES_JSON_KEY,
+    LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY,
   ]);
-
-  const newRow = newRows[0];
-  const legacyRow = legacyRows[0];
+  const newRow = map.get(PREMIUM_DEALERS_PACKAGES_JSON_KEY);
+  const legacyRow = map.get(LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY);
   const raw = newRow?.valueText ?? legacyRow?.valueText ?? "";
 
   // One-time migration path: if only legacy key exists, copy it to new key.
@@ -598,10 +588,8 @@ export async function getUserByEmail(email: string): Promise<{ id: string } | nu
  * Respects registration bonus enabled setting.
  */
 export async function applyDefaultPointsToNewUser(email: string): Promise<void> {
-  const [defaultPoints, enabledRow] = await Promise.all([
-    getInt(DEFAULT_REGISTRATION_POINTS_KEY),
-    getInt(REGISTRATION_BONUS_ENABLED_KEY),
-  ]);
+  const defaultPoints = await getInt(DEFAULT_REGISTRATION_POINTS_KEY);
+  const enabledRow = await getInt(REGISTRATION_BONUS_ENABLED_KEY);
   if (enabledRow === 0 || defaultPoints <= 0) return;
   const u = await getUserByEmail(email);
   if (u) await setUserPoints(u.id, defaultPoints);
@@ -695,38 +683,37 @@ export async function getPointPurchaseRequestsPaginated(opts: {
       ? eq(pointPurchaseRequest.status, opts.status)
       : undefined;
 
-  const [rows, countRows] = await Promise.all([
-    db
-      .select({
-        id: pointPurchaseRequest.id,
-        userId: pointPurchaseRequest.userId,
-        userName: user.name,
-        userEmail: user.email,
-        packageName: pointPurchaseRequest.packageName,
-        points: pointPurchaseRequest.points,
-        price: pointPurchaseRequest.price,
-        currency: pointPurchaseRequest.currency,
-        status: pointPurchaseRequest.status,
-        transferredAmount: pointPurchaseRequest.transferredAmount,
-        transferredName: pointPurchaseRequest.transferredName,
-        transactionReference: pointPurchaseRequest.transactionReference,
-        transferNote: pointPurchaseRequest.transferNote,
-        adminNote: pointPurchaseRequest.adminNote,
-        reviewedByAdminId: pointPurchaseRequest.reviewedByAdminId,
-        reviewedAt: pointPurchaseRequest.reviewedAt,
-        createdAt: pointPurchaseRequest.createdAt,
-      })
-      .from(pointPurchaseRequest)
-      .leftJoin(user, eq(pointPurchaseRequest.userId, user.id))
-      .where(whereClause)
-      .orderBy(desc(pointPurchaseRequest.createdAt))
-      .limit(opts.limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(pointPurchaseRequest)
-      .where(whereClause),
-  ]);
+  const rows = await db
+    .select({
+      id: pointPurchaseRequest.id,
+      userId: pointPurchaseRequest.userId,
+      userName: user.name,
+      userEmail: user.email,
+      packageName: pointPurchaseRequest.packageName,
+      points: pointPurchaseRequest.points,
+      price: pointPurchaseRequest.price,
+      currency: pointPurchaseRequest.currency,
+      status: pointPurchaseRequest.status,
+      transferredAmount: pointPurchaseRequest.transferredAmount,
+      transferredName: pointPurchaseRequest.transferredName,
+      transactionReference: pointPurchaseRequest.transactionReference,
+      transferNote: pointPurchaseRequest.transferNote,
+      adminNote: pointPurchaseRequest.adminNote,
+      reviewedByAdminId: pointPurchaseRequest.reviewedByAdminId,
+      reviewedAt: pointPurchaseRequest.reviewedAt,
+      createdAt: pointPurchaseRequest.createdAt,
+    })
+    .from(pointPurchaseRequest)
+    .leftJoin(user, eq(pointPurchaseRequest.userId, user.id))
+    .where(whereClause)
+    .orderBy(desc(pointPurchaseRequest.createdAt))
+    .limit(opts.limit)
+    .offset(offset)
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(pointPurchaseRequest)
+    .where(whereClause)
 
   return { requests: rows, total: countRows[0]?.count ?? 0 };
 }

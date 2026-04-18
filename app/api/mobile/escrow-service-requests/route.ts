@@ -99,30 +99,29 @@ export async function GET(request: NextRequest) {
     )
     const offset = (page - 1) * limit
 
-    const [rows, countRows] = await Promise.all([
-      db
-        .select({
-          id: escrowServiceRequest.id,
-          type: escrowServiceRequest.type,
-          productId: escrowServiceRequest.productId,
-          packageName: escrowServiceRequest.packageName,
-          message: escrowServiceRequest.message,
-          status: escrowServiceRequest.status,
-          createdAt: escrowServiceRequest.createdAt,
-          updatedAt: escrowServiceRequest.updatedAt,
-          productTitle: product.title,
-        })
-        .from(escrowServiceRequest)
-        .leftJoin(product, eq(product.id, escrowServiceRequest.productId))
-        .where(eq(escrowServiceRequest.userId, session.user.id))
-        .orderBy(desc(escrowServiceRequest.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(escrowServiceRequest)
-        .where(eq(escrowServiceRequest.userId, session.user.id)),
-    ])
+    const rows = await db
+      .select({
+        id: escrowServiceRequest.id,
+        type: escrowServiceRequest.type,
+        productId: escrowServiceRequest.productId,
+        packageName: escrowServiceRequest.packageName,
+        message: escrowServiceRequest.message,
+        status: escrowServiceRequest.status,
+        createdAt: escrowServiceRequest.createdAt,
+        updatedAt: escrowServiceRequest.updatedAt,
+        productTitle: product.title,
+      })
+      .from(escrowServiceRequest)
+      .leftJoin(product, eq(product.id, escrowServiceRequest.productId))
+      .where(eq(escrowServiceRequest.userId, session.user.id))
+      .orderBy(desc(escrowServiceRequest.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(escrowServiceRequest)
+      .where(eq(escrowServiceRequest.userId, session.user.id))
 
     return jsonUncached({
       requests: rows.map((r) => ({

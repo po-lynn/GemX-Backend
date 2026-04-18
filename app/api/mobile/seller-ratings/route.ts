@@ -104,31 +104,30 @@ export async function GET(request: NextRequest) {
       filterSellerId ? eq(sellerRating.sellerUserId, filterSellerId) : undefined
     )
 
-    const [rows, countRows] = await Promise.all([
-      db
-        .select({
-          id: sellerRating.id,
-          sellerUserId: sellerRating.sellerUserId,
-          score: sellerRating.score,
-          comment: sellerRating.comment,
-          createdAt: sellerRating.createdAt,
-          updatedAt: sellerRating.updatedAt,
-          sellerName: user.name,
-          sellerImage: user.image,
-          sellerUsername: user.username,
-          sellerDisplayUsername: user.displayUsername,
-        })
-        .from(sellerRating)
-        .innerJoin(user, eq(user.id, sellerRating.sellerUserId))
-        .where(whereClause)
-        .orderBy(desc(sellerRating.updatedAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(sellerRating)
-        .where(whereClause),
-    ])
+    const rows = await db
+      .select({
+        id: sellerRating.id,
+        sellerUserId: sellerRating.sellerUserId,
+        score: sellerRating.score,
+        comment: sellerRating.comment,
+        createdAt: sellerRating.createdAt,
+        updatedAt: sellerRating.updatedAt,
+        sellerName: user.name,
+        sellerImage: user.image,
+        sellerUsername: user.username,
+        sellerDisplayUsername: user.displayUsername,
+      })
+      .from(sellerRating)
+      .innerJoin(user, eq(user.id, sellerRating.sellerUserId))
+      .where(whereClause)
+      .orderBy(desc(sellerRating.updatedAt))
+      .limit(limit)
+      .offset(offset)
+
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(sellerRating)
+      .where(whereClause)
 
     return jsonUncached({
       ratings: rows.map((r) => ({

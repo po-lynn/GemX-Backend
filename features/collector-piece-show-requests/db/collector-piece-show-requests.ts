@@ -30,33 +30,32 @@ export async function getCollectorPieceShowRequestsPaginated(options: {
   const { page, limit, status } = options
   const whereClause = status ? and(eq(collectorPieceShowRequest.status, status)) : undefined
 
-  const [rows, countRows] = await Promise.all([
-    db
-      .select({
-        id: collectorPieceShowRequest.id,
-        userId: collectorPieceShowRequest.userId,
-        productId: collectorPieceShowRequest.productId,
-        message: collectorPieceShowRequest.message,
-        status: collectorPieceShowRequest.status,
-        createdAt: collectorPieceShowRequest.createdAt,
-        requesterName: user.name,
-        requesterPhone: user.phone,
-        requesterEmail: user.email,
-        productTitle: product.title,
-        productStatus: product.status,
-      })
-      .from(collectorPieceShowRequest)
-      .innerJoin(user, eq(user.id, collectorPieceShowRequest.userId))
-      .innerJoin(product, eq(product.id, collectorPieceShowRequest.productId))
-      .where(whereClause)
-      .orderBy(desc(collectorPieceShowRequest.createdAt))
-      .limit(limit)
-      .offset((page - 1) * limit),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(collectorPieceShowRequest)
-      .where(whereClause),
-  ])
+  const rows = await db
+    .select({
+      id: collectorPieceShowRequest.id,
+      userId: collectorPieceShowRequest.userId,
+      productId: collectorPieceShowRequest.productId,
+      message: collectorPieceShowRequest.message,
+      status: collectorPieceShowRequest.status,
+      createdAt: collectorPieceShowRequest.createdAt,
+      requesterName: user.name,
+      requesterPhone: user.phone,
+      requesterEmail: user.email,
+      productTitle: product.title,
+      productStatus: product.status,
+    })
+    .from(collectorPieceShowRequest)
+    .innerJoin(user, eq(user.id, collectorPieceShowRequest.userId))
+    .innerJoin(product, eq(product.id, collectorPieceShowRequest.productId))
+    .where(whereClause)
+    .orderBy(desc(collectorPieceShowRequest.createdAt))
+    .limit(limit)
+    .offset((page - 1) * limit)
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(collectorPieceShowRequest)
+    .where(whereClause)
 
   return {
     requests: rows.map((r) => {

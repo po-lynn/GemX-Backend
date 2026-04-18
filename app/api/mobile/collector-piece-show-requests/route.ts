@@ -93,25 +93,24 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 10)))
     const offset = (page - 1) * limit
 
-    const [rows, countRows] = await Promise.all([
-      db
-        .select({
-          id: collectorPieceShowRequest.id,
-          productId: collectorPieceShowRequest.productId,
-          status: collectorPieceShowRequest.status,
-          message: collectorPieceShowRequest.message,
-          createdAt: collectorPieceShowRequest.createdAt,
-        })
-        .from(collectorPieceShowRequest)
-        .where(eq(collectorPieceShowRequest.userId, session.user.id))
-        .orderBy(desc(collectorPieceShowRequest.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(collectorPieceShowRequest)
-        .where(eq(collectorPieceShowRequest.userId, session.user.id)),
-    ])
+    const rows = await db
+      .select({
+        id: collectorPieceShowRequest.id,
+        productId: collectorPieceShowRequest.productId,
+        status: collectorPieceShowRequest.status,
+        message: collectorPieceShowRequest.message,
+        createdAt: collectorPieceShowRequest.createdAt,
+      })
+      .from(collectorPieceShowRequest)
+      .where(eq(collectorPieceShowRequest.userId, session.user.id))
+      .orderBy(desc(collectorPieceShowRequest.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(collectorPieceShowRequest)
+      .where(eq(collectorPieceShowRequest.userId, session.user.id))
 
     return jsonUncached({
       requests: rows,

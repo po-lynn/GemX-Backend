@@ -10,10 +10,8 @@ import { getPaymentMethods, getPointPurchasePackagesSettings } from "@/features/
 export async function GET(_request: NextRequest) {
   await connection()
   try {
-    const [settings, paymentMethods] = await Promise.all([
-      getPointPurchasePackagesSettings(),
-      getPaymentMethods(),
-    ])
+    const settings = await getPointPurchasePackagesSettings()
+    const paymentMethods = await getPaymentMethods()
     return jsonCached({
       pointPackages: settings.packages,
       paymentMethods,

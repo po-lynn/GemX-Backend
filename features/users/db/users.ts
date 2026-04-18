@@ -116,21 +116,16 @@ export async function getUsersPaginatedFromDb(options: {
     state: user.state,
     country: user.country,
   };
-  const [users, countResult] = await Promise.all([
-    db
-      .select(selectFields)
-      .from(user)
-      .where(condition)
-      .orderBy(asc(user.name))
-      .limit(limit)
-      .offset((page - 1) * limit),
-    condition
-      ? db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(user)
-          .where(condition)
-      : db.select({ count: sql<number>`count(*)::int` }).from(user),
-  ]);
+  const users = await db
+    .select(selectFields)
+    .from(user)
+    .where(condition)
+    .orderBy(asc(user.name))
+    .limit(limit)
+    .offset((page - 1) * limit)
+  const countResult = condition
+    ? await db.select({ count: sql<number>`count(*)::int` }).from(user).where(condition)
+    : await db.select({ count: sql<number>`count(*)::int` }).from(user)
   const total = countResult[0]?.count ?? 0;
   return { users, total };
 }

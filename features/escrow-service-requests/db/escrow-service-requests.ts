@@ -53,51 +53,50 @@ export async function getEscrowServiceRequestsPaginated(options: {
     type ? eq(escrowServiceRequest.type, type) : undefined,
   )
 
-  const [rows, countRows] = await Promise.all([
-    db
-      .select({
-        id: escrowServiceRequest.id,
-        userId: escrowServiceRequest.userId,
-        type: escrowServiceRequest.type,
-        productId: escrowServiceRequest.productId,
-        sellerId: escrowServiceRequest.sellerId,
-        packageName: escrowServiceRequest.packageName,
-        message: escrowServiceRequest.message,
-        status: escrowServiceRequest.status,
-        adminNote: escrowServiceRequest.adminNote,
-        createdAt: escrowServiceRequest.createdAt,
-        updatedAt: escrowServiceRequest.updatedAt,
-        requesterName: user.name,
-        requesterEmail: user.email,
-        requesterPhone: user.phone,
-        sellerName: sellerUser.name,
-        sellerEmail: sellerUser.email,
-        sellerPhone: sellerUser.phone,
-        productTitle: product.title,
-      })
-      .from(escrowServiceRequest)
-      .innerJoin(user, eq(user.id, escrowServiceRequest.userId))
-      .leftJoin(sellerUser, eq(sellerUser.id, escrowServiceRequest.sellerId))
-      .leftJoin(product, eq(product.id, escrowServiceRequest.productId))
-      .where(whereClause)
-      .orderBy(
-        (() => {
-          const col =
-            sortBy === "status"
-              ? escrowServiceRequest.status
-              : sortBy === "type"
-                ? escrowServiceRequest.type
-                : escrowServiceRequest.createdAt
-          return order === "asc" ? asc(col) : desc(col)
-        })(),
-      )
-      .limit(limit)
-      .offset((page - 1) * limit),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(escrowServiceRequest)
-      .where(whereClause),
-  ])
+  const rows = await db
+    .select({
+      id: escrowServiceRequest.id,
+      userId: escrowServiceRequest.userId,
+      type: escrowServiceRequest.type,
+      productId: escrowServiceRequest.productId,
+      sellerId: escrowServiceRequest.sellerId,
+      packageName: escrowServiceRequest.packageName,
+      message: escrowServiceRequest.message,
+      status: escrowServiceRequest.status,
+      adminNote: escrowServiceRequest.adminNote,
+      createdAt: escrowServiceRequest.createdAt,
+      updatedAt: escrowServiceRequest.updatedAt,
+      requesterName: user.name,
+      requesterEmail: user.email,
+      requesterPhone: user.phone,
+      sellerName: sellerUser.name,
+      sellerEmail: sellerUser.email,
+      sellerPhone: sellerUser.phone,
+      productTitle: product.title,
+    })
+    .from(escrowServiceRequest)
+    .innerJoin(user, eq(user.id, escrowServiceRequest.userId))
+    .leftJoin(sellerUser, eq(sellerUser.id, escrowServiceRequest.sellerId))
+    .leftJoin(product, eq(product.id, escrowServiceRequest.productId))
+    .where(whereClause)
+    .orderBy(
+      (() => {
+        const col =
+          sortBy === "status"
+            ? escrowServiceRequest.status
+            : sortBy === "type"
+              ? escrowServiceRequest.type
+              : escrowServiceRequest.createdAt
+        return order === "asc" ? asc(col) : desc(col)
+      })(),
+    )
+    .limit(limit)
+    .offset((page - 1) * limit)
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(escrowServiceRequest)
+    .where(whereClause)
 
   return {
     requests: rows.map((r) => ({

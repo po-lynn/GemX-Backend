@@ -4,11 +4,10 @@ import { CreditSettingsForm } from "@/features/points/components/CreditSettingsF
 
 export default async function AdminCreditPage() {
   await connection();
-  const [management, packages] = await Promise.all([
-    getPointManagementSettings(),
-    getPointPurchasePackagesSettings(),
-  ]);
+  const management = await getPointManagementSettings();
+  const packages = await getPointPurchasePackagesSettings();
 
+  
   return (
     <div className="container my-6 max-w-3xl space-y-6">
       <div>

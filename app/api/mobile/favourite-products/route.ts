@@ -69,35 +69,34 @@ export async function GET(request: NextRequest) {
     )
     const offset = (page - 1) * limit
 
-    const [rows, countRows] = await Promise.all([
-      db
-        .select({
-          favouriteId: userFavouriteProduct.id,
-          productId: product.id,
-          title: product.title,
-          price: product.price,
-          currency: product.currency,
-          status: product.status,
-          isCollectorPiece: product.isCollectorPiece,
-          isPrivilegeAssist: product.isPrivilegeAssist,
-          isPromotion: product.isPromotion,
-          isFeatured: product.isFeatured,
-          sellerId: product.sellerId,
-          sellerName: user.name,
-          createdAt: userFavouriteProduct.createdAt,
-        })
-        .from(userFavouriteProduct)
-        .innerJoin(product, eq(product.id, userFavouriteProduct.productId))
-        .innerJoin(user, eq(user.id, product.sellerId))
-        .where(eq(userFavouriteProduct.userId, session.user.id))
-        .orderBy(desc(userFavouriteProduct.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(userFavouriteProduct)
-        .where(eq(userFavouriteProduct.userId, session.user.id)),
-    ])
+    const rows = await db
+      .select({
+        favouriteId: userFavouriteProduct.id,
+        productId: product.id,
+        title: product.title,
+        price: product.price,
+        currency: product.currency,
+        status: product.status,
+        isCollectorPiece: product.isCollectorPiece,
+        isPrivilegeAssist: product.isPrivilegeAssist,
+        isPromotion: product.isPromotion,
+        isFeatured: product.isFeatured,
+        sellerId: product.sellerId,
+        sellerName: user.name,
+        createdAt: userFavouriteProduct.createdAt,
+      })
+      .from(userFavouriteProduct)
+      .innerJoin(product, eq(product.id, userFavouriteProduct.productId))
+      .innerJoin(user, eq(user.id, product.sellerId))
+      .where(eq(userFavouriteProduct.userId, session.user.id))
+      .orderBy(desc(userFavouriteProduct.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    const countRows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userFavouriteProduct)
+      .where(eq(userFavouriteProduct.userId, session.user.id))
 
     const productIds = rows.map((r) => r.productId)
     const images =
