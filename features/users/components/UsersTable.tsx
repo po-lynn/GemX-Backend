@@ -271,6 +271,9 @@ export function UsersTable({
               <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Country
               </TableHead>
+              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
+                Products
+              </TableHead>
               <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
                 Push token
               </TableHead>
@@ -283,7 +286,7 @@ export function UsersTable({
             {users.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   className="text-muted-foreground py-8 text-center"
                 >
                   No users yet.
@@ -323,6 +326,17 @@ export function UsersTable({
                   </TableCell>
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
                     {u.country ?? "—"}
+                  </TableCell>
+                  <TableCell
+                    className="border-r border-border/40 px-3 py-2.5 text-center text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Link
+                      href={`/admin/users/${u.id}/products`}
+                      className="font-medium text-primary underline underline-offset-2 hover:text-primary/90"
+                    >
+                      View products
+                    </Link>
                   </TableCell>
                   <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-mono text-muted-foreground">
                     {(() => {

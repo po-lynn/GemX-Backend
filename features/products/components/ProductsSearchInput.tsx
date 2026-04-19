@@ -6,9 +6,11 @@ import { Search } from "lucide-react"
 
 type Props = {
   defaultValue?: string
+  /** Path for search submit (query appended). Default `/admin/products`. */
+  listPath?: string
 }
 
-export function ProductsSearchInput({ defaultValue = "" }: Props) {
+export function ProductsSearchInput({ defaultValue = "", listPath = "/admin/products" }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [value, setValue] = useState(defaultValue)
@@ -24,9 +26,10 @@ export function ProductsSearchInput({ defaultValue = "" }: Props) {
         params.delete("search")
         params.delete("page")
       }
-      router.push(`/admin/products?${params.toString()}`)
+      const base = listPath.replace(/\/$/, "")
+      router.push(`${base}?${params.toString()}`)
     },
-    [value, router, searchParams]
+    [value, router, searchParams, listPath]
   )
 
   return (

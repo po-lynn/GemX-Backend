@@ -372,11 +372,17 @@ export async function getProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    /** Filter by created date (YYYY-MM-DD), inclusive range */
+    createdFrom?: string
+    createdTo?: string
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
     isPromotion?: boolean
     sortByPublicPriority?: boolean
+    /** Admin-style column sort (when not using sortByPublicPriority) */
+    sortBy?: "createdAt" | "title" | "price" | "status"
+    sortOrder?: "asc" | "desc"
   }
 ): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
@@ -411,6 +417,13 @@ export async function getProductsBySellerId(
         )
       : undefined
 
+  const createdFromDate = opts.createdFrom
+    ? new Date(opts.createdFrom + "T00:00:00.000Z")
+    : undefined
+  const createdToDate = opts.createdTo
+    ? new Date(opts.createdTo + "T23:59:59.999Z")
+    : undefined
+
   const filterConditions = [
     eq(product.sellerId, sellerId),
     searchCondition,
@@ -423,6 +436,8 @@ export async function getProductsBySellerId(
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+    createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
+    createdToDate ? lte(product.createdAt, createdToDate) : undefined,
     opts.isFeatured === true
       ? and(
           eq(product.isFeatured, true),
@@ -447,7 +462,20 @@ export async function getProductsBySellerId(
         desc(product.isPromotion),
         desc(product.createdAt),
       ]
-    : [desc(product.createdAt)]
+    : (() => {
+        const dir = opts.sortOrder === "asc" ? asc : desc
+        switch (opts.sortBy) {
+          case "title":
+            return [dir(product.title), desc(product.createdAt)]
+          case "price":
+            return [dir(product.price), desc(product.createdAt)]
+          case "status":
+            return [dir(product.status), desc(product.createdAt)]
+          case "createdAt":
+          default:
+            return [dir(product.createdAt)]
+        }
+      })()
 
   const productsData = await db
     .select({

@@ -66,10 +66,15 @@ export async function getCachedProductsBySellerId(
     shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
+    createdFrom?: string
+    createdTo?: string
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
     isPromotion?: boolean
+    sortByPublicPriority?: boolean
+    sortBy?: "createdAt" | "title" | "price" | "status"
+    sortOrder?: "asc" | "desc"
   }
 ) {
   "use cache"

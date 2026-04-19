@@ -52,6 +52,8 @@ type Props = {
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
+  /** Path when applying or clearing filters. Default `/admin/products`. */
+  listPath?: string
 }
 
 const selectClass =
@@ -74,9 +76,11 @@ export function ProductFilters({
   isCollectorPiece = false,
   isPrivilegeAssist = false,
   isPromotion = false,
+  listPath = "/admin/products",
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const listBase = listPath.replace(/\/$/, "")
 
   const updateFilter = useCallback(
     (key: FilterKey, value: string) => {
@@ -87,9 +91,9 @@ export function ProductFilters({
         params.delete(key)
       }
       params.delete("page")
-      router.push(`/admin/products?${params.toString()}`)
+      router.push(`${listBase}?${params.toString()}`)
     },
-    [router, searchParams]
+    [router, searchParams, listBase]
   )
 
   const hasActiveFilters =
@@ -108,8 +112,8 @@ export function ProductFilters({
     !!isPromotion
 
   const clearFilters = useCallback(() => {
-    router.push("/admin/products")
-  }, [router])
+    router.push(listBase)
+  }, [router, listBase])
 
   return (
     <Dialog>

@@ -36,6 +36,10 @@ type Props = {
   totalPages: number
   total: number
   filters: AdminProductFilters
+  /** URL base for list + pagination (query string appended). Default `/admin/products`. */
+  listPath?: string
+  /** URL base for opening product edit. Default `/admin/products`. */
+  editBasePath?: string
 }
 
 function buildQueryString(page: number, filters: AdminProductFilters): string {
@@ -140,9 +144,12 @@ export function ProductsTable({
   totalPages,
   total,
   filters,
+  listPath = "/admin/products",
+  editBasePath = "/admin/products",
 }: Props) {
   const router = useRouter()
-  const base = "/admin/products"
+  const listBase = listPath.replace(/\/$/, "")
+  const editBase = editBasePath.replace(/\/$/, "")
   const query = (p: number) => buildQueryString(p, filters)
   const pageNumbers = getPageNumbers(page, totalPages)
 
@@ -157,7 +164,7 @@ export function ProductsTable({
           : "asc"
         : "asc"
     const next = { ...filters, sortBy: column, sortOrder: nextOrder }
-    router.push(`${base}?${buildQueryString(1, next)}`)
+    router.push(`${listBase}?${buildQueryString(1, next)}`)
   }
 
   return (
@@ -194,11 +201,11 @@ export function ProductsTable({
                   key={p.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => router.push(`${base}/${p.id}/edit`)}
+                  onClick={() => router.push(`${editBase}/${p.id}/edit`)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault()
-                      router.push(`${base}/${p.id}/edit`)
+                      router.push(`${editBase}/${p.id}/edit`)
                     }
                   }}
                   className="gem-table-row-hover cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/50"
@@ -337,7 +344,7 @@ export function ProductsTable({
               </Button>
             ) : (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`${base}?${query(page - 1)}`}>Previous</Link>
+                <Link href={`${listBase}?${query(page - 1)}`}>Previous</Link>
               </Button>
             )}
             {pageNumbers.map((p) =>
@@ -352,7 +359,7 @@ export function ProductsTable({
                   size="sm"
                   asChild
                 >
-                  <Link href={`${base}?${query(p)}`}>{p}</Link>
+                  <Link href={`${listBase}?${query(p)}`}>{p}</Link>
                 </Button>
               )
             )}
@@ -362,7 +369,7 @@ export function ProductsTable({
               </Button>
             ) : (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`${base}?${query(page + 1)}`}>Next</Link>
+                <Link href={`${listBase}?${query(page + 1)}`}>Next</Link>
               </Button>
             )}
           </div>
