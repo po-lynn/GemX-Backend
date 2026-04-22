@@ -10,6 +10,7 @@
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
 - **Seller ratings (mobile)** – Added **POST `/api/mobile/seller-ratings`** (auth) so one user can rate another user (seller) with **`score`** (1–5); same endpoint updates an existing rating. **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus a paginated list of ratings received by that seller. See **5.4b**.
+- **Edit profile (mobile)** – Added **POST `/api/mobile/profile`** (auth) to update profile fields `name`, `address`, `image` (URL). Added **POST `/api/mobile/profile/image`** (auth, multipart/form-data) to upload one profile image and get back `{ "url": "..." }`, similar to product image upload flow. Use the returned `url` in `/api/mobile/profile`. See **5.4c**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -66,6 +67,8 @@
 | POST   | `/api/mobile/seller-ratings` | Yes  | Rate another user (seller): body `sellerId` (user id), `score` (1–5), optional `comment`. Create/update. See **5.4b**. |
 | GET    | `/api/mobile/seller-ratings` | Yes  | List ratings you submitted to sellers (paginated). Query: `page`, `limit`, optional `sellerId`. See **5.4b**. |
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller. Query: `page`, `limit`. See **5.4b**. |
+| POST   | `/api/mobile/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in profile update. See **5.4c**. |
+| POST   | `/api/mobile/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). Send image URL from `/api/mobile/profile/image`. See **5.4c**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -96,7 +99,7 @@ List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/
 ## 2. Base URL and headers
 
 - **Base URL:** `https://gem-x-backend.vercel.app` (e.g. `http://localhost:3000` in dev)
-- **Content-Type:** `application/json` for JSON request bodies. For **POST /api/upload/product-media** and **POST /api/upload/certificate** use `multipart/form-data` (do not set Content-Type manually; let the client set it with the boundary).
+- **Content-Type:** `application/json` for JSON request bodies. For **POST /api/upload/product-media**, **POST /api/mobile/profile/image**, and **POST /api/upload/certificate** use `multipart/form-data` (do not set Content-Type manually; let the client set it with the boundary).
 - **Auth:** For protected routes, send the session token:
   - **Header:** `Authorization: Bearer <session_token>`
   - Get the token from the **Login** or **Register** response and store it (e.g. SecureStore). Use it on every request that requires auth.
@@ -873,6 +876,90 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 **Errors:**
 
 - **404** – `{ "error": "Profile not found" }`
+
+---
+
+### 5.4c Edit current user profile (mobile)
+
+Use this 2-step flow for profile image updates (same pattern as product image updates):
+
+1) Upload image file to get a URL  
+2) Save that URL in profile via profile edit API
+
+#### POST `/api/mobile/profile/image`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Content-Type:** `multipart/form-data`
+
+**Form fields:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `file` | file | Yes | One image file (`image/jpeg`, `image/png`, `image/webp`, `image/gif`), max 5 MB. |
+
+**Success (200):**
+
+```json
+{
+  "url": "https://<project>.supabase.co/storage/v1/object/public/user-images/<userId>/<file>.jpg"
+}
+```
+
+**Errors:**
+
+- **400** – `{ "error": "No file provided." }` / invalid type / size.
+- **401** – `{ "error": "Unauthorized. Sign in to upload files." }`.
+- **503** – Supabase storage admin key/config missing.
+- **500** – `{ "error": "Upload failed" }` or storage error.
+
+---
+
+#### POST `/api/mobile/profile`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Update one or more current-user profile fields.
+
+**Request body (JSON):**
+
+```json
+{
+  "name": "John Doe",
+  "address": "No. 12, Main Road, Yangon",
+  "image": "https://<project>.supabase.co/storage/v1/object/public/user-images/<userId>/<file>.jpg"
+}
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | string | No | Display name (trimmed, min 1, max 120). |
+| `address` | string \| null | No | Address (trimmed, max 500). Send `null` or `""` to clear. |
+| `image` | string \| null | No | Profile image URL/path (trimmed, max 2000). Send `null` or `""` to clear. |
+
+At least one of `name`, `address`, `image` is required.
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "profile": {
+    "id": "user-uuid",
+    "name": "John Doe",
+    "address": "No. 12, Main Road, Yangon",
+    "image": "https://<project>.supabase.co/storage/v1/object/public/user-images/<userId>/<file>.jpg",
+    "updatedAt": "2026-04-22T08:00:00.000Z"
+  }
+}
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid input" }`.
+- **401** – `{ "error": "Unauthorized" }`.
+- **404** – `{ "error": "Profile not found" }`.
+- **500** – `{ "error": "Failed to update profile" }`.
 
 ---
 
@@ -2322,6 +2409,8 @@ Returns a single published article by ID. Draft items return **404**.
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
+  - Update profile image (upload first): `POST /api/mobile/profile/image` with multipart `file` → receive `{ "url": "..." }`.
+  - Edit profile fields: `POST /api/mobile/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
 6. **Sell**
   - **Upload media first (optional):**
     - **Images (simple):** `POST /api/upload/product-media` with `type=image` and `file`/`files` (multipart/form-data, Bearer token) → `{ "urls": ["..."] }` → use as `imageUrls`.
@@ -2376,6 +2465,8 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/seller-ratings` | Yes  | Rate a seller user (`sellerId`, `score` 1–5, optional `comment`). See 5.4b. |
 | GET    | `/api/mobile/seller-ratings` | Yes  | List own submitted seller ratings (paginated; optional `sellerId`). See 5.4b. |
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public seller rating summary + paginated received ratings. See 5.4b. |
+| POST   | `/api/mobile/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
+| POST   | `/api/mobile/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
