@@ -1197,6 +1197,7 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 ```json
 {
   "success": true,
+  "requestedCount": 2,
   "updatedCount": 2,
   "messageIds": [
     "770e8400-e29b-41d4-a716-446655440001",
@@ -1208,7 +1209,7 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 **API tests (read status):**
 
 1. **Happy path**  
-   Request: valid `messageIds` where current user is recipient  
+   Request: valid `messageIds` where current user is sender or recipient  
    Expect: `200`, `updatedCount` equals updated rows.
 2. **Unauthorized**  
    Request: same body without token  
@@ -1217,7 +1218,7 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
    Request: `{ "messageIds": [] }` or non-UUID IDs  
    Expect: `400` with `{ "error": "Invalid input" }`.
 4. **Ownership guard**  
-   Request: include IDs not addressed to current user  
+   Request: include IDs not belonging to current user conversation (neither sender nor recipient)  
    Expect: `200`, those IDs are not updated (lower `updatedCount`).
 
 ---
@@ -2663,7 +2664,8 @@ Returns a single published article by ID. Draft items return **404**.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
-  - **Seller ratings:** After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional" }`. List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20`.
+  - **Seller ratings:** After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional" }`. List ratings you have given: `GET /api/mobile/seller-rating
+  s?page=1&limit=20`.
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
