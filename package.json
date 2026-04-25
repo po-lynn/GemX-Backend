@@ -19,6 +19,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
+    "chat:socket": "node realtime/socket-server.mjs",
     "seed:admin": "tsx data/seed-admin.ts",
     "fetch-myanmar-nrc": "node scripts/fetch-myanmar-nrc.js"
   },
@@ -47,6 +48,7 @@
     "react": "19.2.3",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.2.3",
+    "socket.io": "^4.8.3",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

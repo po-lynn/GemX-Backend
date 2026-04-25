@@ -43,3 +43,6 @@ export const PRODUCT_CERTIFICATES_BUCKET = "product-certificates"
 
 /** Bucket for user profile images (avatars). Create in Supabase Dashboard > Storage (public for direct links). */
 export const USER_IMAGES_BUCKET = "user-images"
+
+/** Bucket for user chat media (images, audio, files). */
+export const CHAT_MEDIA_BUCKET = "chat-media"

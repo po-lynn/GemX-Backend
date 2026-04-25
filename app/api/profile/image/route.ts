@@ -10,7 +10,7 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 /**
- * POST /api/mobile/profile/image
+ * POST /api/profile/image
  * Upload one profile image and return a public URL.
  */
 export async function POST(request: NextRequest) {
@@ -72,15 +72,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (uploadResult.error) {
-      console.error("Supabase storage mobile profile upload error:", uploadResult.error);
+      console.error("Supabase storage profile image upload error:", uploadResult.error);
       return Response.json({ error: uploadResult.error.message || "Upload failed" }, { status: 500 });
     }
 
     const { data: urlData } = supabase.storage.from(USER_IMAGES_BUCKET).getPublicUrl(path);
     return Response.json({ url: urlData.publicUrl });
   } catch (error) {
-    console.error("POST /api/mobile/profile/image:", error);
+    console.error("POST /api/profile/image:", error);
     return Response.json({ error: "Upload failed" }, { status: 500 });
   }
 }
-

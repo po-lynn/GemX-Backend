@@ -10,7 +10,8 @@
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
 - **Seller ratings (mobile)** – Added **POST `/api/mobile/seller-ratings`** (auth) so one user can rate another user (seller) with **`score`** (1–5); same endpoint updates an existing rating. **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus a paginated list of ratings received by that seller. See **5.4b**.
-- **Edit profile (mobile)** – Added **POST `/api/mobile/profile`** (auth) to update profile fields `name`, `address`, `image` (URL). Added **POST `/api/mobile/profile/image`** (auth, multipart/form-data) to upload one profile image and get back `{ "url": "..." }`, similar to product image upload flow. Use the returned `url` in `/api/mobile/profile`. See **5.4c**.
+- **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
+- **User chat APIs (mobile)** – Added chat REST APIs: **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -67,8 +68,10 @@
 | POST   | `/api/mobile/seller-ratings` | Yes  | Rate another user (seller): body `sellerId` (user id), `score` (1–5), optional `comment`. Create/update. See **5.4b**. |
 | GET    | `/api/mobile/seller-ratings` | Yes  | List ratings you submitted to sellers (paginated). Query: `page`, `limit`, optional `sellerId`. See **5.4b**. |
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller. Query: `page`, `limit`. See **5.4b**. |
-| POST   | `/api/mobile/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in profile update. See **5.4c**. |
-| POST   | `/api/mobile/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). Send image URL from `/api/mobile/profile/image`. See **5.4c**. |
+| POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
+| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`). See **5.4d**. |
+| POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
+| PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
@@ -80,6 +83,7 @@
 | GET    | `/api/products/:id`    | No†  | Get single product. **†** Collector pieces: returns limited shape (image + masked price + `requestStatus`) unless the user has an approved show-request; with approval returns full data. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
+| POST   | `/api/profile`         | Yes  | Update current user profile fields (`name`, `address`, `image`). See **5.4c**. |
 | GET    | `/api/profile/:id`     | No   | Get a public seller profile and their active products (optional query: page, limit, filters).                                                                                                            |
 | POST   | `/api/products`        | Yes  | Create product (JSON body)                                                                                                                                                                               |
 | PATCH  | `/api/products/:id`    | Yes  | Update product (owner or admin). JSON body.                                                                                                                                                              |
@@ -99,7 +103,7 @@ List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/
 ## 2. Base URL and headers
 
 - **Base URL:** `https://gem-x-backend.vercel.app` (e.g. `http://localhost:3000` in dev)
-- **Content-Type:** `application/json` for JSON request bodies. For **POST /api/upload/product-media**, **POST /api/mobile/profile/image**, and **POST /api/upload/certificate** use `multipart/form-data` (do not set Content-Type manually; let the client set it with the boundary).
+- **Content-Type:** `application/json` for JSON request bodies. For **POST /api/upload/product-media**, **POST /api/profile/image**, **POST /api/chat/media**, and **POST /api/upload/certificate** use `multipart/form-data` (do not set Content-Type manually; let the client set it with the boundary).
 - **Auth:** For protected routes, send the session token:
   - **Header:** `Authorization: Bearer <session_token>`
   - Get the token from the **Login** or **Register** response and store it (e.g. SecureStore). Use it on every request that requires auth.
@@ -886,7 +890,7 @@ Use this 2-step flow for profile image updates (same pattern as product image up
 1) Upload image file to get a URL  
 2) Save that URL in profile via profile edit API
 
-#### POST `/api/mobile/profile/image`
+#### POST `/api/profile/image`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
@@ -915,7 +919,7 @@ Use this 2-step flow for profile image updates (same pattern as product image up
 
 ---
 
-#### POST `/api/mobile/profile`
+#### POST `/api/profile`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
@@ -960,6 +964,143 @@ At least one of `name`, `address`, `image` is required.
 - **401** – `{ "error": "Unauthorized" }`.
 - **404** – `{ "error": "Profile not found" }`.
 - **500** – `{ "error": "Failed to update profile" }`.
+
+---
+
+### 5.4d Chat APIs (mobile) + API tests
+
+These routes support chat history, media upload before sending, and read-status updates.
+
+#### GET `/api/chat/history`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Query params:**
+
+| Param | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `userId` | string | Yes | Other participant user id. |
+| `page` | number | No | Default `1`, min `1`. |
+| `limit` | number | No | Default `30`, min `1`, max `100`. |
+
+**Success (200):**
+
+```json
+{
+  "messages": [
+    {
+      "id": "uuid",
+      "senderId": "user-a",
+      "recipientId": "user-b",
+      "content": "Hello",
+      "fileUrl": null,
+      "messageType": "text",
+      "isRead": false,
+      "createdAt": "2026-04-22T10:00:00.000Z"
+    }
+  ],
+  "page": 1,
+  "limit": 30,
+  "total": 1
+}
+```
+
+**API tests (history):**
+
+1. **Happy path**  
+   Request: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` with Bearer token  
+   Expect: `200`, response includes `messages[]`, `page`, `limit`, `total`.
+2. **Unauthorized**  
+   Request: same without token  
+   Expect: `401` with `{ "error": "Unauthorized" }`.
+3. **Missing userId**  
+   Request: `GET /api/chat/history?page=1`  
+   Expect: `400`/validation failure behavior.
+4. **Isolation**  
+   Seed chats for different user pairs, fetch one conversation  
+   Expect: only messages between current user and `userId`.
+
+---
+
+#### POST `/api/chat/media`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Content-Type:** `multipart/form-data`
+
+**Form fields:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `file` | file | Yes | One chat file (image/audio/document). |
+
+**Success (200):**
+
+```json
+{
+  "url": "https://<project>.supabase.co/storage/v1/object/public/chat-media/<userId>/<file>"
+}
+```
+
+**API tests (media upload):**
+
+1. **Happy path upload**  
+   Request: multipart with valid image/audio/file + Bearer token  
+   Expect: `200`, response has non-empty `url`.
+2. **Missing file**  
+   Request: multipart without `file`  
+   Expect: `400` with `{ "error": "No file provided." }`.
+3. **Invalid type**  
+   Request: upload unsupported MIME type  
+   Expect: `400` with invalid type message.
+4. **Unauthorized**  
+   Request: valid multipart without token  
+   Expect: `401` with `{ "error": "Unauthorized" }`.
+
+---
+
+#### PATCH `/api/chat/read-status`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Request body (JSON):**
+
+```json
+{
+  "messageIds": [
+    "770e8400-e29b-41d4-a716-446655440001",
+    "770e8400-e29b-41d4-a716-446655440002"
+  ]
+}
+```
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "updatedCount": 2,
+  "messageIds": [
+    "770e8400-e29b-41d4-a716-446655440001",
+    "770e8400-e29b-41d4-a716-446655440002"
+  ]
+}
+```
+
+**API tests (read status):**
+
+1. **Happy path**  
+   Request: valid `messageIds` where current user is recipient  
+   Expect: `200`, `updatedCount` equals updated rows.
+2. **Unauthorized**  
+   Request: same body without token  
+   Expect: `401` with `{ "error": "Unauthorized" }`.
+3. **Invalid body**  
+   Request: `{ "messageIds": [] }` or non-UUID IDs  
+   Expect: `400` with `{ "error": "Invalid input" }`.
+4. **Ownership guard**  
+   Request: include IDs not addressed to current user  
+   Expect: `200`, those IDs are not updated (lower `updatedCount`).
 
 ---
 
@@ -2409,8 +2550,11 @@ Returns a single published article by ID. Draft items return **404**.
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
-  - Update profile image (upload first): `POST /api/mobile/profile/image` with multipart `file` → receive `{ "url": "..." }`.
-  - Edit profile fields: `POST /api/mobile/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
+  - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
+  - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
+  - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30`.
+  - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
+  - Mark messages as seen: `PATCH /api/chat/read-status` with `{ "messageIds": ["<uuid>", ...] }`.
 6. **Sell**
   - **Upload media first (optional):**
     - **Images (simple):** `POST /api/upload/product-media` with `type=image` and `file`/`files` (multipart/form-data, Bearer token) → `{ "urls": ["..."] }` → use as `imageUrls`.
@@ -2465,8 +2609,11 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/seller-ratings` | Yes  | Rate a seller user (`sellerId`, `score` 1–5, optional `comment`). See 5.4b. |
 | GET    | `/api/mobile/seller-ratings` | Yes  | List own submitted seller ratings (paginated; optional `sellerId`). See 5.4b. |
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public seller rating summary + paginated received ratings. See 5.4b. |
-| POST   | `/api/mobile/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
-| POST   | `/api/mobile/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
+| POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
+| POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
+| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`). See 5.4d. |
+| POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
+| PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
