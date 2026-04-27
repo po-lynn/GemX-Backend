@@ -29,10 +29,15 @@ export async function GET(
     const product = await getCachedProduct(id)
     if (!product) return jsonError("Product not found", 404)
 
+    let requestStatus: { id: string; status: string; createdAt: Date } | null = null
+
     if (product.isCollectorPiece) {
       const session = await auth.api.getSession({ headers: request.headers })
       const userRequest = session
         ? await getCollectorPieceShowRequestForUser(session.user.id, id)
+        : null
+      requestStatus = userRequest
+        ? { id: userRequest.id, status: userRequest.status, createdAt: userRequest.createdAt }
         : null
       if (userRequest?.status !== "approved") {
         return jsonUncached({
@@ -42,9 +47,7 @@ export async function GET(
           currency: product.currency,
           imageUrls: product.imageUrls,
           maskedPrice: maskPrice(product.price),
-          requestStatus: userRequest
-            ? { id: userRequest.id, status: userRequest.status, createdAt: userRequest.createdAt }
-            : null,
+          requestStatus,
         })
       }
       // Approved: fall through to full data response below
@@ -61,7 +64,7 @@ export async function GET(
         }
       : null
     const { changeLog: _adminChangeLog, ...publicProduct } = product
-    return jsonCached({ ...publicProduct, seller })
+    return jsonCached({ ...publicProduct, seller, requestStatus })
   } catch (error) {
     console.error("GET /api/products/[id]:", error)
     return jsonError("Failed to fetch product", 500)

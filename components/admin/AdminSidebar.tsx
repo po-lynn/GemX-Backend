@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 
 type NavItem = {
@@ -85,6 +86,7 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: ShieldCheck,
       },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
+      { href: "/admin/messages", label: "Messages", icon: MessageSquare },
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/news", label: "News", icon: Newspaper },
       { href: "/admin/articles", label: "Articles", icon: FileText },

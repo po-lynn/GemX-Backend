@@ -25,7 +25,7 @@
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
 - **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
-- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). **Collector pieces**: returns a limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an approved show-request — see collector-piece masking entry above.
+- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: returns a limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an approved show-request — see collector-piece masking entry above.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
@@ -731,7 +731,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 | Not a collector piece | Full product data (existing behaviour) |
 | Collector piece, no auth or no request submitted | Limited shape — `imageUrls`, `maskedPrice`, `currency`, `status`, `isCollectorPiece: true`, `requestStatus: null` |
 | Collector piece, request submitted but not yet approved | Limited shape — same as above but `requestStatus: { id, status: "pending" \| "dismissed", createdAt }` |
-| Collector piece, request approved | Full product data (same as non-collector) |
+| Collector piece, request approved | Full product data **plus** `requestStatus` |
 
 **Limited response shape (collector piece, no approval):**
 
@@ -751,7 +751,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`** (see **5.4.4**).
 
-**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). The response includes a `seller` object (or `null` if seller not found) with:
+**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
 
 
 | Field             | Type          | Description                |
