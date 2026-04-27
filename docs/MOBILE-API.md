@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
 - **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset). See **5.4.3c**.
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
@@ -72,7 +73,7 @@
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller. Query: `page`, `limit`. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
 | POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery is via Supabase Realtime on `messages`. See **5.4d**. |
-| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`). See **5.4d**. |
+| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
 | GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
@@ -1119,17 +1120,26 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
       "createdAt": "2026-04-22T10:00:00.000Z"
     }
   ],
+  "participantImage": "https://…/profile.jpg",
   "page": 1,
   "limit": 30,
   "total": 1
 }
 ```
 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `messages` | array | Message rows for this thread only (oldest first in the array; server reverses the newest-first DB page). |
+| `participantImage` | string \| null | The **other** user’s profile image (query param `userId`); same as **`user.image`** / **POST `/api/profile`**. `null` if they have no image or the user id is not found. |
+| `page` | number | Page number echoed from query. |
+| `limit` | number | Page size echoed from query. |
+| `total` | number | Total messages in the conversation (both directions), for pagination. |
+
 **API tests (history):**
 
 1. **Happy path**  
    Request: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` with Bearer token  
-   Expect: `200`, response includes `messages[]`, `page`, `limit`, `total`.
+   Expect: `200`, response includes `messages[]`, `participantImage` (string or `null`), `page`, `limit`, `total`.
 2. **Unauthorized**  
    Request: same without token  
    Expect: `401` with `{ "error": "Unauthorized" }`.
@@ -2716,7 +2726,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
   - Chat realtime: subscribe to `messages` table via Supabase Realtime for incoming rows.
-  - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30`.
+  - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` — includes `participantImage` for the peer’s avatar.
   - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
   - Mark messages as seen: `PATCH /api/chat/read-status` with `{ "messageIds": ["<uuid>", ...] }`.
 6. **Sell**
@@ -2777,7 +2787,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase Realtime on `messages`. See 5.4d. |
-| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`). See 5.4d. |
+| GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
 | GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
