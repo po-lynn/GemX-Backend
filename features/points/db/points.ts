@@ -477,13 +477,21 @@ export async function getUserPremiumDealerStatus(
 
 /** Return all users with a currently active (non-expired) premium dealer status. */
 export async function getActivePremiumDealers(): Promise<
-  { userId: string; name: string; username: string | null; packageName: string; expiresAt: Date }[]
+  {
+    userId: string
+    name: string
+    username: string | null
+    image: string | null
+    packageName: string
+    expiresAt: Date
+  }[]
 > {
   const rows = await db
     .select({
       userId: user.id,
       name: user.name,
       username: user.username,
+      image: user.image,
       packageName: user.premiumDealerPackageName,
       expiresAt: user.premiumDealerExpiresAt,
     })
@@ -500,6 +508,7 @@ export async function getActivePremiumDealers(): Promise<
     userId: r.userId,
     name: r.name,
     username: r.username,
+    image: r.image,
     packageName: r.packageName!,
     expiresAt: r.expiresAt!,
   }));

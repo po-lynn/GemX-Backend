@@ -15,6 +15,7 @@ export async function GET(_request: NextRequest) {
         userId: d.userId,
         name: d.name,
         username: d.username,
+        image: d.image,
         packageName: d.packageName,
         expiresAt: d.expiresAt.toISOString(),
       })),
