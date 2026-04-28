@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
-    // Mine: all statuses (seller sees their full list; optional ?status= to filter)
+    // Mine: seller-scoped by session.user.id, so owner sees full rows (including collector-piece listings)
+    // Optional ?status= narrows from the default "all statuses".
     const { products, total } = await getCachedProductsBySellerId(session.user.id, {
       page,
       limit,

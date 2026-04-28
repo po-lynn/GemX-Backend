@@ -30,16 +30,17 @@ export async function GET(
     if (!product) return jsonError("Product not found", 404)
 
     let requestStatus: { id: string; status: string; createdAt: Date } | null = null
+    const session = await auth.api.getSession({ headers: request.headers })
 
     if (product.isCollectorPiece) {
-      const session = await auth.api.getSession({ headers: request.headers })
+      const isOwner = session?.user?.id === product.sellerId
       const userRequest = session
         ? await getCollectorPieceShowRequestForUser(session.user.id, id)
         : null
       requestStatus = userRequest
         ? { id: userRequest.id, status: userRequest.status, createdAt: userRequest.createdAt }
         : null
-      if (userRequest?.status !== "approved") {
+      if (!isOwner && userRequest?.status !== "approved") {
         return jsonUncached({
           id: product.id,
           isCollectorPiece: true,

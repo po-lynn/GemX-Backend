@@ -7,6 +7,7 @@
 ## Recent changes
 
 - **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
+- **My products collector-piece owner visibility** – **GET `/api/products/mine`** always returns the logged-in seller’s own collector-piece listings (full owner list shape, same as other mine products), because results are restricted by `sellerId = session.user.id`. See **5.3**.
 - **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset). See **5.4.3c**.
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
@@ -15,7 +16,7 @@
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
 - **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
-- **Collector-piece product masking** – `GET /api/products?isCollectorPiece=true` is now **public** (no auth required). It returns all active collector pieces but only exposes `imageUrl` and `maskedPrice` (e.g. `100000` → `"1xxxxx"`); all other fields (`title`, `price`, `seller`, specs) are `null`. Full details are gated per-product: `GET /api/products/:id` on a collector piece returns the limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an **approved** `collector_piece_show_request` for that specific product, in which case full data is returned. This also applies to collector pieces that appear in the default general list (`GET /api/products` without `isCollectorPiece=true`). Added **GET `/api/mobile/collector-piece-show-requests`** (auth required) so mobile can track the status of submitted requests (`pending`, `approved`, `dismissed`). See **5.4.4**.
+- **Collector-piece owner visibility** – `GET /api/products/:id` now returns **full collector-piece details for the owner** when `sellerId === logged-in user id` (Bearer token), even without a show-request. Non-owners still receive limited shape until their `collector_piece_show_request` is approved. See **5.2**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
 - **Collector piece show request (mobile)** – **POST `/api/mobile/collector-piece-show-requests`** (auth required): user submits `productId` and optional `message`; user info (name, email, phone) is taken from the session automatically. **GET `/api/mobile/collector-piece-show-requests`** (auth required): paginated list of the current user's own requests with status. See **5.4.4**.
@@ -26,8 +27,8 @@
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (any user with a registered push token). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
 - **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
-- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Same sort order as public list when filters apply.
-- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: returns a limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the user has an approved show-request — see collector-piece masking entry above.
+- **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Collector-piece rows are shown as owner data (no public masking), since this endpoint is seller-scoped. Same sort order as public list when filters apply.
+- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: owner (seller) gets full data when authenticated; non-owner gets limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the show-request is approved — see **5.2**.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
@@ -84,8 +85,8 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
-| GET    | `/api/products/:id`    | No†  | Get single product. **†** Collector pieces: returns limited shape (image + masked price + `requestStatus`) unless the user has an approved show-request; with approval returns full data. See **5.2**. |
-| GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Same query params as list all.                                                                                                                    |
+| GET    | `/api/products/:id`    | No†  | Get single product. **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
+| GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Seller-scoped: collector-piece rows are returned for owner (no public masking). Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
 | POST   | `/api/profile`         | Yes  | Update current user profile fields (`name`, `address`, `image`). See **5.4c**. |
 | GET    | `/api/profile/:id`     | No   | Get a public seller profile and their active products (optional query: page, limit, filters).                                                                                                            |
@@ -461,7 +462,7 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 
 **Behaviour:** The public list returns **active** products only by default. Use the `status` query param to request other statuses (e.g. `archive`, `sold`, `hidden`) if needed. Use `isPrivilegeAssist=true` to list only Privilege Assist products (sold by us).
 
-**Collector pieces (`isCollectorPiece=true`):** **No auth required** — the list is public. Returns all active collector pieces but with masked data only: `imageUrl` and `maskedPrice` (e.g. `"1xxxxx"`) are set; `title`, `price`, `sellerName`, and all spec fields are `null`. To see full details of a specific collector piece, users must submit a show-request (see **5.4.4**) and wait for admin approval. Once approved, `GET /api/products/:id` returns full data for that product (see **5.2**). These responses use shared CDN cache (60s/300s).
+**Collector pieces (`isCollectorPiece=true`):** **No auth required** — the list is public. Returns all active collector pieces but with masked data only: `imageUrl` and `maskedPrice` (e.g. `"1xxxxx"`) are set; `title`, `price`, `sellerName`, and all spec fields are `null`. For full details on `GET /api/products/:id`, owner (seller) can access full data while authenticated; other users must submit a show-request (see **5.4.4**) and wait for admin approval. These responses use shared CDN cache (60s/300s).
 
 **Sort order:**  
 - **With `search`:** (1) full-text **relevance**, (2) collector pieces, (3) privilege assist, (4) featured, (5) promotion, (6) `createdAt` (newest first). **`newest=true` is ignored** so search always uses this ordering.  
@@ -575,7 +576,7 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`.                                                                     |
 | `origin`            | string  | -       | Filter by origin name.                                                                                                            |
 | `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
-| `isCollectorPiece`  | boolean | -       | When `true` on **GET /api/products**, public — returns all active collector pieces with masked data only (image + `maskedPrice`). On **GET /api/products/mine**, returns seller’s own collector-tagged listings (unchanged). |
+| `isCollectorPiece`  | boolean | -       | When `true` on **GET /api/products**, public — returns all active collector pieces with masked data only (image + `maskedPrice`). On **GET /api/products/mine**, returns seller’s own collector-tagged listings as owner data (no public masking). |
 | `isPrivilegeAssist` | boolean | -       | When `true`, only Privilege Assist (sold by us).                                                                                  |
 
 
@@ -653,13 +654,13 @@ Public masked list (image + masked price, no auth):
 GET /api/products?isCollectorPiece=true
 ```
 
-Single product — limited shape for unapproved (returns `maskedPrice` + `requestStatus`):
+Single product — limited shape for non-owner without approval (returns `maskedPrice` + `requestStatus`):
 
 ```
 GET /api/products/<collector-piece-id>
 ```
 
-Single product — full detail after approval (auth required):
+Single product — full detail for owner (auth required) or approved requester:
 
 ```
 GET /api/products/<collector-piece-id>
@@ -727,11 +728,12 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 **Auth:** Not required (optional for collector pieces — presence of a valid Bearer token determines whether full data is returned).
 
-**Collector-piece gate:** If the product has `isCollectorPiece: true`, the response shape depends on the user's approval status:
+**Collector-piece gate:** If the product has `isCollectorPiece: true`, the response shape depends on auth + ownership + approval:
 
 | Situation | Response |
 | --------- | -------- |
 | Not a collector piece | Full product data (existing behaviour) |
+| Collector piece, seller (owner) is logged in | Full product data **plus** `requestStatus` |
 | Collector piece, no auth or no request submitted | Limited shape — `imageUrls`, `maskedPrice`, `currency`, `status`, `isCollectorPiece: true`, `requestStatus: null` |
 | Collector piece, request submitted but not yet approved | Limited shape — same as above but `requestStatus: { id, status: "pending" \| "dismissed", createdAt }` |
 | Collector piece, request approved | Full product data **plus** `requestStatus` |
@@ -778,7 +780,7 @@ To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. All are optional. My products returns **all statuses** by default (seller sees full list); use `status` to filter.
+**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. All are optional. My products returns **all statuses** by default (seller sees full list); use `status` to filter. For collector pieces, this endpoint is owner-scoped (`sellerId = logged-in user id`), so owner listings are returned directly (no public masking).
 
 **Examples:**
 
@@ -2712,7 +2714,7 @@ Returns a single published article by ID. Draft items return **404**.
   - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isPrivilegeAssist`, etc.). Public list defaults to active only.
   - **Save/Unsave favourites:** `POST /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to save; `DELETE /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to unsave; `GET /api/mobile/favourite-products?page=1&limit=20` to show saved items.
   - **Collector piece browse (public):** `GET /api/products?isCollectorPiece=true` — no auth needed. Returns image + masked price only for all active collector pieces.
-  - **Collector piece detail:** `GET /api/products/:id` — returns limited shape (image + masked price + `requestStatus`) for unapproved collector pieces, full data once approved.
+  - **Collector piece detail:** `GET /api/products/:id` — seller(owner) gets full data when logged in; non-owner gets limited shape (image + masked price + `requestStatus`) until approved.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
@@ -2797,8 +2799,8 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
-| GET    | `/api/products/:id`    | No†  | Get one product. **†** Collector pieces: limited shape unless approved — see 5.2.                           |
-| GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all)                                   |
+| GET    | `/api/products/:id`    | No†  | Get one product. **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
+| GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all). Collector pieces are owner-visible (not public-masked).                                   |
 | GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |
 | GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (optional query params)                                       |
 | POST   | `/api/products`        | Yes  | Create product                                                                                              |
