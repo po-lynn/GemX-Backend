@@ -277,8 +277,7 @@ export type ChatConversation = {
 }
 
 function sortConversationsForSidebar(
-  items: ChatConversation[],
-  activeUserId: string
+  items: ChatConversation[]
 ): ChatConversation[] {
   const sorted = [...items]
   sorted.sort((a, b) => {
@@ -317,7 +316,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
   const [uploading, setUploading] = useState(false)
   /** Left sidebar: live list driven by React state + Supabase Realtime (see postgres_changes effect). */
   const [conversations, setConversations] = useState<ChatConversation[]>(() =>
-    sortConversationsForSidebar(buildConversationsFromUsers(users, null), users[0]?.id ?? "")
+    sortConversationsForSidebar(buildConversationsFromUsers(users, null))
   )
   const threadEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -356,7 +355,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
           unreadCount:
             row.user.id === selectedUserId ? 0 : (byPeer[row.user.id] ?? 0),
         }))
-        return sortConversationsForSidebar(next, selectedUserId)
+        return sortConversationsForSidebar(next)
       })
     } catch {
       /* ignore */
@@ -393,9 +392,9 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
 
   useEffect(() => {
     setConversations((prev) =>
-      sortConversationsForSidebar(buildConversationsFromUsers(users, prev), selectedUserId)
+      sortConversationsForSidebar(buildConversationsFromUsers(users, prev))
     )
-  }, [users, selectedUserId])
+  }, [users])
 
   useEffect(() => {
     setUnreadDividerIndex(null)
@@ -446,7 +445,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
             typeof m.createdAt === "string" ? m.createdAt : String(m.createdAt),
           unreadCount,
         }
-        return sortConversationsForSidebar(updated, selectedUserId)
+        return sortConversationsForSidebar(updated)
       })
     },
     [selectedUserId]
@@ -512,7 +511,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
                 : String(last.createdAt),
             unreadCount: 0,
           }
-          return sortConversationsForSidebar(next, selectedUserId)
+          return sortConversationsForSidebar(next)
         })
       }
 
@@ -1239,26 +1238,33 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
                 onClick={() => setSelectedUserId(u.id)}
                 className={cn(
                   "mb-1 flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                  selected ? "bg-[#ababab]" : "hover:bg-muted/80"
+                  selected ? "bg-[#e8e8e8]" : "hover:bg-muted/80"
                 )}
               >
-                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-                  {u.image ? (
-                    <Image
-                      src={u.image}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="44px"
-                      unoptimized={
-                        u.image.startsWith("blob:") || u.image.startsWith("data:")
-                      }
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-primary/15 text-xs font-semibold text-primary">
-                      {initials(u.name)}
-                    </div>
-                  )}
+                <div className="relative h-11 w-11 shrink-0">
+                  <div className="relative h-full w-full overflow-hidden rounded-full bg-muted ring-1 ring-border">
+                    {u.image ? (
+                      <Image
+                        src={u.image}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="44px"
+                        unoptimized={
+                          u.image.startsWith("blob:") || u.image.startsWith("data:")
+                        }
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-primary/15 text-xs font-semibold text-primary">
+                        {initials(u.name)}
+                      </div>
+                    )}
+                  </div>
+                  {/* Rim overlap: anchored bottom-right, shifted outward (~¼ inside circle) */}
+                  <span
+                    className="pointer-events-none absolute bottom-0 right-0 z-10 size-[10px] translate-x-[32%] translate-y-[32%] rounded-full border-2 border-background bg-emerald-500 shadow-sm"
+                    aria-hidden
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
@@ -1293,24 +1299,32 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       <div className="flex min-w-0 flex-1 flex-col bg-background">
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-              {selectedUser?.image ? (
-                <Image
-                  src={selectedUser.image}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                  unoptimized={
-                    selectedUser.image.startsWith("blob:") ||
-                    selectedUser.image.startsWith("data:")
-                  }
+            <div className="relative h-10 w-10 shrink-0">
+              <div className="relative h-full w-full overflow-hidden rounded-full bg-muted ring-1 ring-border">
+                {selectedUser?.image ? (
+                  <Image
+                    src={selectedUser.image}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                    unoptimized={
+                      selectedUser.image.startsWith("blob:") ||
+                      selectedUser.image.startsWith("data:")
+                    }
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-primary/15 text-xs font-semibold text-primary">
+                    {selectedUser ? initials(selectedUser.name) : "?"}
+                  </div>
+                )}
+              </div>
+              {selectedUser ? (
+                <span
+                  className="pointer-events-none absolute bottom-0 right-0 z-10 size-[10px] translate-x-[32%] translate-y-[32%] rounded-full border-2 border-background bg-emerald-500 shadow-sm"
+                  aria-hidden
                 />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-primary/15 text-xs font-semibold text-primary">
-                  {selectedUser ? initials(selectedUser.name) : "?"}
-                </div>
-              )}
+              ) : null}
             </div>
             <div className="min-w-0">
               <div className="truncate font-semibold leading-tight">
