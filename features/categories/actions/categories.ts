@@ -23,6 +23,7 @@ export async function createCategoryAction(formData: FormData) {
     type: formData.get("type"),
     name: formData.get("name"),
     shortCode: formData.get("shortCode"),
+    image: formData.get("image"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
@@ -52,6 +53,7 @@ export async function updateCategoryAction(formData: FormData) {
     type: formData.get("type"),
     name: formData.get("name"),
     shortCode: formData.get("shortCode"),
+    image: formData.get("image"),
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {

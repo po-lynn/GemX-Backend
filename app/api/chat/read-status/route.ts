@@ -1,5 +1,5 @@
 import { NextRequest, connection } from "next/server";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/drizzle/db";
@@ -13,7 +13,7 @@ const bodySchema = z.object({
 /**
  * PATCH /api/chat/read-status
  * Mark messages as read for the current user's conversation.
- * Accepts message IDs where current user is either sender or recipient.
+ * Accepts message IDs for rows where the current user is the recipient (incoming messages).
  */
 export async function PATCH(request: NextRequest) {
   await connection();
@@ -29,10 +29,7 @@ export async function PATCH(request: NextRequest) {
       .update(messages)
       .set({ isRead: true })
       .where(
-        and(
-          inArray(messages.id, messageIds),
-          or(eq(messages.recipientId, session.user.id), eq(messages.senderId, session.user.id))
-        )
+        and(inArray(messages.id, messageIds), eq(messages.recipientId, session.user.id))
       )
       .returning({ id: messages.id });
 

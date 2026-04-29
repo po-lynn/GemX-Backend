@@ -7,6 +7,7 @@
 ## Recent changes
 
 - **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
+- **Categories image support** – Categories now have optional **`image`** (URL) returned by **GET `/api/categories`**. Admin can upload one image via **POST `/api/categories/image`** (multipart) and store the returned `url` into `category.image` via admin UI. See **4.1**.
 - **My products collector-piece owner visibility** – **GET `/api/products/mine`** always returns the logged-in seller’s own collector-piece listings (full owner list shape, same as other mine products), because results are restricted by `sellerId = session.user.id`. See **5.3**.
 - **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset). See **5.4.3c**.
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
@@ -77,7 +78,8 @@
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
-| GET    | `/api/categories`      | No   | List categories. Query: `type` (optional)                                                                                                                                                                |
+| GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `type` (optional)                                                                                                                                    |
+| POST   | `/api/categories/image` | Yes* | Upload one category image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for saving as `category.image` (admin only). See **4.1a**.                                                     |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
@@ -219,6 +221,7 @@ Used for dropdowns/filters when creating or editing products. **No auth required
     "id": "uuid",
     "type": "loose_stone",
     "name": "Sapphire",
+    "image": "https://…/category.jpg",
     "slug": "sapphire",
     "sortOrder": 0
   }
@@ -226,6 +229,30 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 ```
 
 **Use in app:** Call this once (e.g. on app start or when opening “Add product”), cache the list, and use `id` / `name` for product `categoryId` and UI.
+
+---
+
+### 4.1a Upload category image (admin)
+
+**POST** `/api/categories/image`
+
+**Auth:** Required (admin/staff session).
+
+**Content-Type:** `multipart/form-data`
+
+**Form fields:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `file` | file | Yes | One category image (`jpeg`, `png`, `webp`, `gif`). Max 5 MB. |
+
+**Success (200):**
+
+```json
+{ "url": "https://<project>.supabase.co/storage/v1/object/public/category-images/<...>.jpg" }
+```
+
+Use the returned `url` as the category’s `image` (saved via admin UI).
 
 ---
 
@@ -2792,7 +2819,8 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
-| GET    | `/api/categories`      | No   | List categories (`?type` optional)                                                                          |
+| GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `?type` optional                                        |
+| POST   | `/api/categories/image` | Yes* | Upload one category image (admin only). Returns `url` for `category.image`. See 4.1a.                      |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |

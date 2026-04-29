@@ -52,6 +52,7 @@ export async function getAllUsersFromDb(opts?: {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      image: user.image,
       gender: user.gender,
       dateOfBirth: user.dateOfBirth,
       points: user.points,

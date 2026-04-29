@@ -7,6 +7,7 @@ export type CategoryRow = {
   type: "loose_stone" | "jewellery"
   name: string
   shortCode: string | null
+  image: string | null
   slug: string
   sortOrder: number
 }
@@ -20,6 +21,7 @@ export async function getCategoriesByType(
       type: category.type,
       name: category.name,
       shortCode: category.shortCode,
+      image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -37,6 +39,7 @@ export async function getAllCategories(): Promise<CategoryRow[]> {
       type: category.type,
       name: category.name,
       shortCode: category.shortCode,
+      image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -53,6 +56,7 @@ export async function getCategoryById(id: string): Promise<CategoryRow | null> {
       type: category.type,
       name: category.name,
       shortCode: category.shortCode,
+      image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
     })
@@ -66,6 +70,7 @@ export type CreateCategoryInput = {
   type: "loose_stone" | "jewellery"
   name: string
   shortCode: string
+  image?: string | null
   slug: string
   sortOrder?: number
 }
@@ -77,6 +82,7 @@ export async function createCategoryInDb(input: CreateCategoryInput): Promise<st
       type: input.type,
       name: input.name,
       shortCode: input.shortCode.trim(),
+      image: input.image?.trim() || null,
       slug: input.slug,
       sortOrder: input.sortOrder ?? 0,
     })
@@ -90,6 +96,7 @@ export type UpdateCategoryInput = {
   type?: "loose_stone" | "jewellery"
   name?: string
   shortCode?: string | null
+  image?: string | null
   slug?: string
   sortOrder?: number
 }
@@ -99,6 +106,7 @@ export async function updateCategoryInDb(id: string, input: UpdateCategoryInput)
   if (input.type !== undefined) updates.type = input.type
   if (input.name !== undefined) updates.name = input.name
   if (input.shortCode !== undefined) updates.shortCode = input.shortCode?.trim() || null
+  if (input.image !== undefined) updates.image = input.image?.trim() || null
   if (input.slug !== undefined) updates.slug = input.slug
   if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder
   if (Object.keys(updates).length === 0) return

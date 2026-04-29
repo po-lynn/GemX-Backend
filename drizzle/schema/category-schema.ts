@@ -13,6 +13,8 @@ export const category = pgTable(
     type: productTypeEnum("type").notNull(),
     name: text("name").notNull(),
     shortCode: text("short_code"),
+    /** Optional category image URL (public, typically from Supabase Storage). */
+    image: text("image"),
     slug: text("slug").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),

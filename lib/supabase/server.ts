@@ -46,3 +46,6 @@ export const USER_IMAGES_BUCKET = "user-images"
 
 /** Bucket for user chat media (images, audio, files). */
 export const CHAT_MEDIA_BUCKET = "chat-media"
+
+/** Bucket for category images (public for direct links). */
+export const CATEGORY_IMAGES_BUCKET = "category-images"

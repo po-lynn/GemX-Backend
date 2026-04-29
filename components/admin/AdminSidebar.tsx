@@ -69,6 +69,12 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: HandCoins,
         isActive: (p) => p.startsWith("/admin/credit/feature-settings/premium-dealers"),
       },
+      {
+        href: "/admin/settings/escrow-service",
+        label: "Escrow Service",
+        icon: ShieldCheck,
+        isActive: (p) => p.startsWith("/admin/settings/escrow-service"),
+      },
     ],
   },
   {
@@ -87,6 +93,7 @@ const navGroups: (NavItem | NavGroup)[] = [
       },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare },
+      { href: "/admin/chat-dashboard", label: "Chat Dashboard", icon: MessageSquare },
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/news", label: "News", icon: Newspaper },
       { href: "/admin/articles", label: "Articles", icon: FileText },

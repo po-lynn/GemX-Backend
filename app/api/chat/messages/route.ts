@@ -15,11 +15,13 @@ const bodySchema = z
     recipientId: z.string().trim().min(1),
     content: z.string().trim().max(5000).optional(),
     fileUrl: z.string().trim().url().max(2000).optional(),
+    /** Same-message gallery: every image URL (first is mirrored on `file_url`). */
+    imageUrls: z.array(z.string().trim().url()).min(1).max(12).optional(),
     messageType: z.enum(messageTypeValues).optional(),
     tempId: z.string().trim().max(120).optional(),
   })
-  .refine((v) => !!v.content || !!v.fileUrl, {
-    message: "content or fileUrl is required",
+  .refine((v) => !!v.content || !!v.fileUrl || (v.imageUrls && v.imageUrls.length > 0), {
+    message: "content, fileUrl, or imageUrls is required",
   });
 
 /**
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return jsonError("Invalid input", 400);
 
     const senderId = session.user.id;
-    const { recipientId, content, fileUrl, tempId } = parsed.data;
+    const { recipientId, content, fileUrl, imageUrls, tempId } = parsed.data;
     if (senderId === recipientId) return jsonError("Cannot send message to yourself", 400);
 
     const [recipient] = await db
@@ -47,9 +49,18 @@ export async function POST(request: NextRequest) {
       .limit(1);
     if (!recipient) return jsonError("Recipient not found", 404);
 
+    const resolvedImageUrls =
+      imageUrls && imageUrls.length > 0 ? imageUrls : null;
+    const primaryFileUrl =
+      resolvedImageUrls?.[0] ?? fileUrl ?? null;
+
     const messageType =
       parsed.data.messageType ??
-      (fileUrl ? "file" : "text");
+      (resolvedImageUrls
+        ? "image"
+        : primaryFileUrl
+          ? "file"
+          : "text");
 
     const [saved] = await db
       .insert(messages)
@@ -57,7 +68,8 @@ export async function POST(request: NextRequest) {
         senderId,
         recipientId,
         content: content ?? "",
-        fileUrl: fileUrl ?? null,
+        fileUrl: primaryFileUrl,
+        imageUrls: resolvedImageUrls,
         messageType,
         isRead: false,
       })
@@ -67,8 +79,11 @@ export async function POST(request: NextRequest) {
         recipientId: messages.recipientId,
         content: messages.content,
         fileUrl: messages.fileUrl,
+        imageUrls: messages.imageUrls,
         messageType: messages.messageType,
         isRead: messages.isRead,
+        starred: messages.starred,
+        editedAt: messages.editedAt,
         createdAt: messages.createdAt,
       });
 
@@ -78,7 +93,10 @@ export async function POST(request: NextRequest) {
     // We still trigger push so recipients get notified when app is backgrounded.
     await sendPushToUserIds([recipientId], {
       title: "New message",
-      body: (saved.content || "Sent you a file").slice(0, 120),
+      body: (saved.content || (saved.imageUrls?.length ? "Sent photos" : "") || "Sent you a file").slice(
+        0,
+        120
+      ),
       data: {
         type: "chat_message",
         senderId,

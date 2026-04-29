@@ -52,12 +52,12 @@ export async function createUserAction(formData: FormData) {
     return { error: "Email is required to create a user." };
   }
   const imageUrl = (parsed.data.image ?? "").trim() || undefined;
+  // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
   const result = await auth.api.signUpEmail({
     body: {
       email,
       password: parsed.data.password,
       name: parsed.data.name,
-      role: parsed.data.role,
       image: imageUrl,
       phone: (parsed.data.phone ?? "").trim() || undefined,
       gender: (parsed.data.gender ?? "").trim() || undefined,
@@ -68,7 +68,7 @@ export async function createUserAction(formData: FormData) {
       state: (parsed.data.state ?? "").trim() || undefined,
       country: (parsed.data.country ?? "").trim() || undefined,
     },
-  });
+  } as Parameters<typeof auth.api.signUpEmail>[0]);
   if (result && "error" in result && result.error) {
     const msg = String(result.error);
     if (
@@ -81,12 +81,14 @@ export async function createUserAction(formData: FormData) {
     return { error: msg };
   }
   await applyDefaultPointsToNewUser(email);
-  // Ensure profile image and archived are saved (better-auth may not persist on signup)
-  const needUpdate = imageUrl || parsed.data.archived === true;
+  // Ensure role/profile image/archived are saved (better-auth may block custom roles on signup).
+  const needUpdate =
+    parsed.data.role !== "user" || !!imageUrl || parsed.data.archived === true;
   if (needUpdate) {
     const newUser = await getUserByEmail(email);
     if (newUser) {
-      const updates: { image?: string; archived?: boolean } = {};
+      const updates: { role?: string; image?: string; archived?: boolean } = {};
+      if (parsed.data.role !== "user") updates.role = parsed.data.role;
       if (imageUrl) updates.image = imageUrl;
       if (parsed.data.archived === true) updates.archived = true;
       await updateUserInDb(newUser.id, updates);

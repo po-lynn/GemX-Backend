@@ -40,8 +40,11 @@ export async function GET(request: NextRequest) {
           recipientId: messages.recipientId,
           content: messages.content,
           fileUrl: messages.fileUrl,
+          imageUrls: messages.imageUrls,
           messageType: messages.messageType,
           isRead: messages.isRead,
+          starred: messages.starred,
+          editedAt: messages.editedAt,
           createdAt: messages.createdAt,
         })
         .from(messages)

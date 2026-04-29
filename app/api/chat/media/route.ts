@@ -12,6 +12,7 @@ const ALLOWED_MEDIA_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "audio/webm",
   "audio/mpeg",
   "audio/mp4",
   "audio/aac",

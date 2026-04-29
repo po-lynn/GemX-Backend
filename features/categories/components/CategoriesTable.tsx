@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { CategoryRow } from "@/features/categories/db/categories"
@@ -61,6 +62,9 @@ export function CategoriesTable({ categories }: Props) {
                 <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Name
                 </th>
+                <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground w-20">
+                  Image
+                </th>
                 <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Short Code
                 </th>
@@ -79,7 +83,7 @@ export function CategoriesTable({ categories }: Props) {
               {loose.length === 0 && jewellery.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="h-28 px-4 text-center text-muted-foreground"
                   >
                     No categories yet. Add one to use in products.
@@ -102,6 +106,24 @@ export function CategoriesTable({ categories }: Props) {
                   >
                     <td className="px-4 py-3">
                       <div className="font-medium text-foreground">{c.name}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="relative h-10 w-10 overflow-hidden rounded-md ring-1 ring-border bg-muted">
+                        {c.image ? (
+                          <Image
+                            src={c.image}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            unoptimized={
+                              c.image.startsWith("blob:") || c.image.startsWith("data:")
+                            }
+                            sizes="40px"
+                          />
+                        ) : (
+                          <div className="h-full w-full" />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-muted-foreground font-mono text-xs">

@@ -8,6 +8,7 @@ export const categoryCreateSchema = z.object({
     .min(1, "Short code is required")
     .max(20)
     .transform((v) => v.trim()),
+  image: z.string().trim().url().max(2000).optional(),
   sortOrder: z.coerce.number().int().min(0).default(0),
 })
 
