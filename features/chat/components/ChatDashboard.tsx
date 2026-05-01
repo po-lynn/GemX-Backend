@@ -63,6 +63,8 @@ type ChatUser = {
   name: string
   role: string
   image?: string | null
+  /** Latest activity on a non-expired session (ISO); admin chat presence proxy. */
+  lastSessionAt?: string | null
 }
 
 type ChatMessage = {
@@ -148,6 +150,24 @@ function relativeTime(iso: string) {
   if (days === 1) return "Yesterday"
   if (days < 7) return `${days}d ago`
   return d.toLocaleDateString()
+}
+
+/** Session touched within this window ⇒ green dot + “Online” (Better Auth `session.updated_at`). */
+const PRESENCE_ONLINE_WINDOW_MS = 5 * 60 * 1000
+
+function isPeerOnline(lastSessionAtIso: string | null | undefined): boolean {
+  if (!lastSessionAtIso) return false
+  const t = new Date(lastSessionAtIso).getTime()
+  if (Number.isNaN(t)) return false
+  return Date.now() - t < PRESENCE_ONLINE_WINDOW_MS
+}
+
+function peerPresenceSubtitle(
+  lastSessionAtIso: string | null | undefined
+): string {
+  if (!lastSessionAtIso) return "Offline"
+  if (isPeerOnline(lastSessionAtIso)) return "Online"
+  return `Last active ${relativeTime(lastSessionAtIso)}`
 }
 
 function getImageUrlsFromMessage(m: ChatMessage): string[] {
@@ -307,6 +327,13 @@ function buildConversationsFromUsers(
 
 export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
   const [selectedUserId, setSelectedUserId] = useState<string>(users[0]?.id ?? "")
+  const [sessionActivityByUserId, setSessionActivityByUserId] = useState<
+    Record<string, string | null>
+  >(() => {
+    const acc: Record<string, string | null> = {}
+    for (const u of users) acc[u.id] = u.lastSessionAt ?? null
+    return acc
+  })
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -394,6 +421,51 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
     setConversations((prev) =>
       sortConversationsForSidebar(buildConversationsFromUsers(users, prev))
     )
+  }, [users])
+
+  useEffect(() => {
+    setSessionActivityByUserId((prev) => {
+      const next = { ...prev }
+      for (const u of users) {
+        if (u.lastSessionAt != null) next[u.id] = u.lastSessionAt
+      }
+      return next
+    })
+  }, [users])
+
+  /** Refresh peer presence from DB (non-expired session activity). */
+  useEffect(() => {
+    const ids = users.map((u) => u.id)
+    if (ids.length === 0) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const params = new URLSearchParams({ ids: ids.join(",") })
+        const res = await fetch(`/api/admin/chat/presence?${params}`, {
+          credentials: "include",
+        })
+        const data = (await res.json()) as {
+          activity?: Record<string, string | null>
+        }
+        if (!res.ok || cancelled || !data.activity) return
+        setSessionActivityByUserId((prev) => ({ ...prev, ...data.activity }))
+      } catch {
+        /* ignore */
+      }
+    }
+    void load()
+    const interval = setInterval(load, 60_000)
+    const onVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void load()
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [users])
 
   useEffect(() => {
@@ -1260,11 +1332,12 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
                       </div>
                     )}
                   </div>
-                  {/* Rim overlap: anchored bottom-right, shifted outward (~¼ inside circle) */}
-                  <span
-                    className="pointer-events-none absolute bottom-0 right-0 z-10 size-[10px] translate-x-[32%] translate-y-[32%] rounded-full border-2 border-background bg-emerald-500 shadow-sm"
-                    aria-hidden
-                  />
+                  {isPeerOnline(sessionActivityByUserId[u.id] ?? null) ? (
+                    <span
+                      className="pointer-events-none absolute bottom-0 right-0 z-10 size-[10px] translate-x-[32%] translate-y-[32%] rounded-full border-2 border-background bg-emerald-500 shadow-sm"
+                      aria-hidden
+                    />
+                  ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
@@ -1319,7 +1392,8 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
                   </div>
                 )}
               </div>
-              {selectedUser ? (
+              {selectedUser &&
+              isPeerOnline(sessionActivityByUserId[selectedUser.id] ?? null) ? (
                 <span
                   className="pointer-events-none absolute bottom-0 right-0 z-10 size-[10px] translate-x-[32%] translate-y-[32%] rounded-full border-2 border-background bg-emerald-500 shadow-sm"
                   aria-hidden
@@ -1330,9 +1404,20 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
               <div className="truncate font-semibold leading-tight">
                 {selectedUser?.name ?? "Select a chat"}
               </div>
-              {selectedUser && (
-                <div className="text-xs font-medium text-emerald-600">Online</div>
-              )}
+              {selectedUser ? (
+                <div
+                  className={cn(
+                    "text-xs font-medium",
+                    isPeerOnline(sessionActivityByUserId[selectedUser.id] ?? null)
+                      ? "text-emerald-600"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {peerPresenceSubtitle(
+                    sessionActivityByUserId[selectedUser.id] ?? null
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">

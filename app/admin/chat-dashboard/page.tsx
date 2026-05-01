@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { getUsersPaginatedFromDb } from "@/features/users/db/users"
 import { ChatDashboard } from "@/features/chat/components/ChatDashboard"
+import { getLastSessionActivityByUserIds } from "@/features/chat/db/session-presence"
 
 export default async function AdminChatDashboardPage({
   searchParams,
@@ -22,14 +23,15 @@ export default async function AdminChatDashboardPage({
 
   const peerFromUrl = (await searchParams)?.peer
   const { users } = await getUsersPaginatedFromDb({ page: 1, limit: 200 })
-  const peers = users
-    .filter((u) => u.id !== session.user.id)
-    .map((u) => ({
-      id: u.id,
-      name: u.name,
-      role: u.role,
-      image: u.image ?? null,
-    }))
+  const peerRows = users.filter((u) => u.id !== session.user.id)
+  const activityMap = await getLastSessionActivityByUserIds(peerRows.map((u) => u.id))
+  const peers = peerRows.map((u) => ({
+    id: u.id,
+    name: u.name,
+    role: u.role,
+    image: u.image ?? null,
+    lastSessionAt: activityMap.get(u.id)?.toISOString() ?? null,
+  }))
 
   return (
     <div className="container my-6 space-y-4">
