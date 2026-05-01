@@ -155,6 +155,9 @@ function relativeTime(iso: string) {
 /** Session touched within this window ⇒ green dot + “Online” (Better Auth `session.updated_at`). */
 const PRESENCE_ONLINE_WINDOW_MS = 5 * 60 * 1000
 
+/** Max peer ids per `user_id=in.(…)` Postgres Changes filter (URL / engine limits). */
+const SESSION_REALTIME_PEER_CHUNK = 32
+
 function isPeerOnline(lastSessionAtIso: string | null | undefined): boolean {
   if (!lastSessionAtIso) return false
   const t = new Date(lastSessionAtIso).getTime()
@@ -168,6 +171,24 @@ function peerPresenceSubtitle(
   if (!lastSessionAtIso) return "Offline"
   if (isPeerOnline(lastSessionAtIso)) return "Online"
   return `Last active ${relativeTime(lastSessionAtIso)}`
+}
+
+/** Keeps presence UI in sync when the online window expires (no REST polling). */
+function usePresenceRerenderTicker(intervalMs: number) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), intervalMs)
+    return () => window.clearInterval(id)
+  }, [intervalMs])
+}
+
+/** Realtime filters have size limits — chunk `user_id=in.(…)` subscriptions. */
+function chunkStrings<T>(xs: readonly T[], chunkSize: number): T[][] {
+  if (!xs.length) return []
+  const out: T[][] = []
+  for (let i = 0; i < xs.length; i += chunkSize)
+    out.push(xs.slice(i, i + chunkSize) as T[])
+  return out
 }
 
 function getImageUrlsFromMessage(m: ChatMessage): string[] {
@@ -326,6 +347,7 @@ function buildConversationsFromUsers(
 }
 
 export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
+  usePresenceRerenderTicker(10_000)
   const [selectedUserId, setSelectedUserId] = useState<string>(users[0]?.id ?? "")
   const [sessionActivityByUserId, setSessionActivityByUserId] = useState<
     Record<string, string | null>
@@ -433,12 +455,15 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
     })
   }, [users])
 
-  /** Refresh peer presence from DB (non-expired session activity). */
+  /**
+   * Bootstrap presence once per peer list; live updates come from Supabase `session`
+   * `postgres_changes` (see main Realtime effect). No polling interval.
+   */
   useEffect(() => {
     const ids = users.map((u) => u.id)
     if (ids.length === 0) return
     let cancelled = false
-    const load = async () => {
+    void (async () => {
       try {
         const params = new URLSearchParams({ ids: ids.join(",") })
         const res = await fetch(`/api/admin/chat/presence?${params}`, {
@@ -452,19 +477,9 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       } catch {
         /* ignore */
       }
-    }
-    void load()
-    const interval = setInterval(load, 60_000)
-    const onVisible = () => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        void load()
-      }
-    }
-    document.addEventListener("visibilitychange", onVisible)
+    })()
     return () => {
       cancelled = true
-      clearInterval(interval)
-      document.removeEventListener("visibilitychange", onVisible)
     }
   }, [users])
 
@@ -812,12 +827,92 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       )
       .subscribe()
 
+    /** Live peer presence from Better Auth rows (enable Realtime replication for `public.session` in Supabase). */
+    const peerIdsForPresence = users.map((u) => u.id)
+    const fetchPresenceSubset = async (ids: string[]) => {
+      if (ids.length === 0) return
+      try {
+        const params = new URLSearchParams({ ids: ids.join(",") })
+        const res = await fetch(`/api/admin/chat/presence?${params}`, {
+          credentials: "include",
+        })
+        const data = (await res.json()) as {
+          activity?: Record<string, string | null>
+        }
+        if (!res.ok || !data.activity) return
+        setSessionActivityByUserId((prev) => ({ ...prev, ...data.activity }))
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const mergeSessionPresenceRow = (raw: Record<string, unknown>) => {
+      const userId = String(raw.user_id ?? raw.userId ?? "")
+      if (!userId || !users.some((u) => u.id === userId)) return
+      const expStr = raw.expires_at ?? raw.expiresAt
+      const updStr = raw.updated_at ?? raw.updatedAt
+      if (expStr == null || updStr == null) return
+      const exp = new Date(String(expStr))
+      const upd = new Date(String(updStr))
+      if (Number.isNaN(exp.getTime()) || Number.isNaN(upd.getTime())) return
+      setSessionActivityByUserId((prev) => {
+        const next = { ...prev }
+        if (exp.getTime() <= Date.now()) next[userId] = null
+        else {
+          const prevIso = prev[userId]
+          const prevT = prevIso ? new Date(prevIso).getTime() : -1
+          if (upd.getTime() >= prevT) next[userId] = upd.toISOString()
+        }
+        return next
+      })
+    }
+
+    const sessionChannels = chunkStrings(peerIdsForPresence, SESSION_REALTIME_PEER_CHUNK).map(
+      (chunk, ci) => {
+        const filter = `user_id=in.(${chunk.join(",")})`
+        return supabase
+          .channel(`chat-dash-sess-${currentUserId}-${ci}`)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "session", filter },
+            (p) => {
+              const row = p.new
+              if (row && typeof row === "object")
+                mergeSessionPresenceRow(row as Record<string, unknown>)
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "session", filter },
+            (p) => {
+              const row = p.new
+              if (row && typeof row === "object")
+                mergeSessionPresenceRow(row as Record<string, unknown>)
+            }
+          )
+          .on(
+            "postgres_changes",
+            { event: "DELETE", schema: "public", table: "session", filter },
+            (p) => {
+              const old = (p.old ?? {}) as Record<string, unknown>
+              const uid = String(old.user_id ?? old.userId ?? "")
+              if (uid && users.some((u) => u.id === uid))
+                void fetchPresenceSubset([uid])
+            }
+          )
+          .subscribe()
+      }
+    )
+
     return () => {
       if (unreadSyncTimer) clearTimeout(unreadSyncTimer)
       supabase.removeChannel(inbound)
       supabase.removeChannel(outbound)
       supabase.removeChannel(readUpdates)
       supabase.removeChannel(incomingDeletes)
+      sessionChannels.forEach((ch) => {
+        supabase.removeChannel(ch)
+      })
     }
   }, [currentUserId, selectedUserId, users, patchConversationFromMessage, refreshUnreadCounts])
 
