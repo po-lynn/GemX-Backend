@@ -1,15 +1,29 @@
 import { db } from "@/drizzle/db";
+import { user } from "@/drizzle/schema/auth-schema";
 import { messages } from "@/drizzle/schema/chat-schema";
 import { desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+
+const senderUser = alias(user, "msg_list_sender");
+const recipientUser = alias(user, "msg_list_recipient");
 
 export type MessageRow = {
   id: string;
   senderId: string;
   recipientId: string;
+  senderName: string | null;
+  recipientName: string | null;
+  senderImage: string | null;
+  recipientImage: string | null;
+  senderUsername: string | null;
+  senderDisplayUsername: string | null;
+  recipientUsername: string | null;
+  recipientDisplayUsername: string | null;
   content: string;
   fileUrl: string | null;
   messageType: "text" | "image" | "audio" | "file";
   isRead: boolean | null;
+  starred: boolean | null;
   createdAt: Date;
 };
 
@@ -19,13 +33,24 @@ export async function getAllMessages(): Promise<MessageRow[]> {
       id: messages.id,
       senderId: messages.senderId,
       recipientId: messages.recipientId,
+      senderName: senderUser.name,
+      recipientName: recipientUser.name,
+      senderImage: senderUser.image,
+      recipientImage: recipientUser.image,
+      senderUsername: senderUser.username,
+      senderDisplayUsername: senderUser.displayUsername,
+      recipientUsername: recipientUser.username,
+      recipientDisplayUsername: recipientUser.displayUsername,
       content: messages.content,
       fileUrl: messages.fileUrl,
       messageType: messages.messageType,
       isRead: messages.isRead,
+      starred: messages.starred,
       createdAt: messages.createdAt,
     })
     .from(messages)
+    .leftJoin(senderUser, eq(senderUser.id, messages.senderId))
+    .leftJoin(recipientUser, eq(recipientUser.id, messages.recipientId))
     .orderBy(desc(messages.createdAt));
 }
 
@@ -35,13 +60,24 @@ export async function getMessageById(id: string): Promise<MessageRow | null> {
       id: messages.id,
       senderId: messages.senderId,
       recipientId: messages.recipientId,
+      senderName: senderUser.name,
+      recipientName: recipientUser.name,
+      senderImage: senderUser.image,
+      recipientImage: recipientUser.image,
+      senderUsername: senderUser.username,
+      senderDisplayUsername: senderUser.displayUsername,
+      recipientUsername: recipientUser.username,
+      recipientDisplayUsername: recipientUser.displayUsername,
       content: messages.content,
       fileUrl: messages.fileUrl,
       messageType: messages.messageType,
       isRead: messages.isRead,
+      starred: messages.starred,
       createdAt: messages.createdAt,
     })
     .from(messages)
+    .leftJoin(senderUser, eq(senderUser.id, messages.senderId))
+    .leftJoin(recipientUser, eq(recipientUser.id, messages.recipientId))
     .where(eq(messages.id, id))
     .limit(1);
   return row ?? null;
@@ -79,6 +115,7 @@ export async function updateMessageInDb(
     fileUrl?: string | null;
     messageType?: "text" | "image" | "audio" | "file";
     isRead?: boolean;
+    starred?: boolean;
   }
 ): Promise<void> {
   const updates: Partial<typeof messages.$inferInsert> = {};
@@ -88,6 +125,7 @@ export async function updateMessageInDb(
   if (input.fileUrl !== undefined) updates.fileUrl = input.fileUrl;
   if (input.messageType !== undefined) updates.messageType = input.messageType;
   if (input.isRead !== undefined) updates.isRead = input.isRead;
+  if (input.starred !== undefined) updates.starred = input.starred;
   if (Object.keys(updates).length === 0) return;
   await db.update(messages).set(updates).where(eq(messages.id, id));
 }
@@ -99,4 +137,3 @@ export async function deleteMessageInDb(id: string): Promise<boolean> {
     .returning({ id: messages.id });
   return deleted.length > 0;
 }
-

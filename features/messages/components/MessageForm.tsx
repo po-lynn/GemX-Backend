@@ -40,23 +40,23 @@ export function MessageForm({ mode, message }: Props) {
 
       <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="senderId">Sender ID</label>
+          <label className="text-sm font-medium" htmlFor="senderId">Sender Name</label>
           <input
             id="senderId"
             name="senderId"
             className={inputClass}
-            defaultValue={message?.senderId ?? ""}
+            defaultValue={message?.senderName ?? ""}
             required
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="recipientId">Recipient ID</label>
+          <label className="text-sm font-medium" htmlFor="recipientId">Recipient Name</label>
           <input
             id="recipientId"
             name="recipientId"
             className={inputClass}
-            defaultValue={message?.recipientId ?? ""}
+            defaultValue={message?.recipientName ?? ""}
             required
           />
         </div>

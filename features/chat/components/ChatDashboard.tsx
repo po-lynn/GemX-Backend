@@ -83,8 +83,14 @@ type ChatMessage = {
 
 type Props = {
   currentUserId: string
+  /** Sidebar + conversation list: peers with existing chat history only (typical admin setup). */
   users: ChatUser[]
-  /** Select this peer when present in `users` (e.g. `?peer=` on chat dashboard). */
+  /**
+   * Optional wider directory for “New chat” / Forward pickers (e.g. all staff/users).
+   * Defaults to `users` when omitted.
+   */
+  contactPickerUsers?: ChatUser[]
+  /** Select this peer when present in `users` or `contactPickerUsers` (e.g. `?peer=`). */
   initialPeerId?: string
 }
 
@@ -346,8 +352,35 @@ function buildConversationsFromUsers(
   })
 }
 
-export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
+export function ChatDashboard({
+  currentUserId,
+  users,
+  contactPickerUsers,
+  initialPeerId,
+}: Props) {
   usePresenceRerenderTicker(10_000)
+
+  const dialogPickUsers = contactPickerUsers ?? users
+
+  const resolvePeerProfile = useCallback(
+    (peerId: string): ChatUser =>
+      users.find((u) => u.id === peerId) ??
+      contactPickerUsers?.find((u) => u.id === peerId) ?? {
+        id: peerId,
+        name: "Unknown user",
+        role: "",
+        image: null,
+        lastSessionAt: null,
+      },
+    [users, contactPickerUsers]
+  )
+
+  const presencePeerIds = useMemo(() => {
+    const s = new Set(users.map((u) => u.id))
+    contactPickerUsers?.forEach((u) => s.add(u.id))
+    return s
+  }, [users, contactPickerUsers])
+
   const [selectedUserId, setSelectedUserId] = useState<string>(users[0]?.id ?? "")
   const [sessionActivityByUserId, setSessionActivityByUserId] = useState<
     Record<string, string | null>
@@ -489,10 +522,11 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
 
   useEffect(() => {
     if (!initialPeerId) return
-    if (users.some((u) => u.id === initialPeerId)) {
-      setSelectedUserId(initialPeerId)
-    }
-  }, [initialPeerId, users])
+    const known =
+      users.some((u) => u.id === initialPeerId) ||
+      (contactPickerUsers?.some((u) => u.id === initialPeerId) ?? false)
+    if (known) setSelectedUserId(initialPeerId)
+  }, [initialPeerId, users, contactPickerUsers])
 
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -508,8 +542,9 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
     () =>
       conversations.find((row) => row.user.id === selectedUserId)?.user ??
       users.find((u) => u.id === selectedUserId) ??
+      dialogPickUsers.find((u) => u.id === selectedUserId) ??
       null,
-    [conversations, users, selectedUserId]
+    [conversations, users, dialogPickUsers, selectedUserId]
   )
 
   /** Apply one new/updated message to the matching peer row (called from Realtime + local sends). */
@@ -517,7 +552,25 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
     (peerId: string, m: ChatMessage, opts?: { incrementUnread?: boolean }) => {
       setConversations((prev) => {
         const idx = prev.findIndex((x) => x.user.id === peerId)
-        if (idx === -1) return prev
+        const lastAt =
+          typeof m.createdAt === "string" ? m.createdAt : String(m.createdAt)
+        const preview = previewFromMessage(m)
+
+        if (idx === -1) {
+          const peerUser = resolvePeerProfile(peerId)
+          let unreadCount = 0
+          if (opts?.incrementUnread === true) {
+            unreadCount = peerId === selectedUserId ? 0 : 1
+          }
+          const newRow: ChatConversation = {
+            user: peerUser,
+            unreadCount,
+            preview,
+            lastAt,
+          }
+          return sortConversationsForSidebar([newRow, ...prev])
+        }
+
         const row = prev[idx]!
         let unreadCount = row.unreadCount
         if (opts?.incrementUnread === true) {
@@ -527,15 +580,14 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
         const updated = [...prev]
         updated[idx] = {
           ...row,
-          preview: previewFromMessage(m),
-          lastAt:
-            typeof m.createdAt === "string" ? m.createdAt : String(m.createdAt),
+          preview,
+          lastAt,
           unreadCount,
         }
         return sortConversationsForSidebar(updated)
       })
     },
-    [selectedUserId]
+    [selectedUserId, resolvePeerProfile]
   )
 
   const loadHistory = useCallback(async () => {
@@ -586,16 +638,27 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       if (last) {
         setConversations((prev) => {
           const idx = prev.findIndex((x) => x.user.id === selectedUserId)
-          if (idx === -1) return prev
+          const lastAt =
+            typeof last.createdAt === "string"
+              ? last.createdAt
+              : String(last.createdAt)
+          const preview = previewFromMessage(last)
+          if (idx === -1) {
+            const peerUser = resolvePeerProfile(selectedUserId)
+            const newRow: ChatConversation = {
+              user: peerUser,
+              unreadCount: 0,
+              preview,
+              lastAt,
+            }
+            return sortConversationsForSidebar([newRow, ...prev])
+          }
           const row = prev[idx]!
           const next = [...prev]
           next[idx] = {
             ...row,
-            preview: previewFromMessage(last),
-            lastAt:
-              typeof last.createdAt === "string"
-                ? last.createdAt
-                : String(last.createdAt),
+            preview,
+            lastAt,
             unreadCount: 0,
           }
           return sortConversationsForSidebar(next)
@@ -610,7 +673,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [selectedUserId, currentUserId, refreshUnreadCounts])
+  }, [selectedUserId, currentUserId, refreshUnreadCounts, resolvePeerProfile])
 
   useEffect(() => {
     loadHistory()
@@ -693,7 +756,6 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       const row = normalizeChatRow(raw)
       const other =
         row.senderId === currentUserId ? row.recipientId : row.senderId
-      if (!users.some((u) => u.id === other)) return
       if (processedRealtimeIds.current.has(row.id)) return
       processedRealtimeIds.current.add(row.id)
 
@@ -848,7 +910,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
 
     const mergeSessionPresenceRow = (raw: Record<string, unknown>) => {
       const userId = String(raw.user_id ?? raw.userId ?? "")
-      if (!userId || !users.some((u) => u.id === userId)) return
+      if (!userId || !presencePeerIds.has(userId)) return
       const expStr = raw.expires_at ?? raw.expiresAt
       const updStr = raw.updated_at ?? raw.updatedAt
       if (expStr == null || updStr == null) return
@@ -896,8 +958,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
             (p) => {
               const old = (p.old ?? {}) as Record<string, unknown>
               const uid = String(old.user_id ?? old.userId ?? "")
-              if (uid && users.some((u) => u.id === uid))
-                void fetchPresenceSubset([uid])
+              if (uid && presencePeerIds.has(uid)) void fetchPresenceSubset([uid])
             }
           )
           .subscribe()
@@ -914,7 +975,14 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
         supabase.removeChannel(ch)
       })
     }
-  }, [currentUserId, selectedUserId, users, patchConversationFromMessage, refreshUnreadCounts])
+  }, [
+    currentUserId,
+    selectedUserId,
+    users,
+    presencePeerIds,
+    patchConversationFromMessage,
+    refreshUnreadCounts,
+  ])
 
   async function sendMessage(body: {
     content?: string
@@ -1116,15 +1184,17 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error ?? "Forward failed")
       const saved = (data as { message?: ChatMessage }).message
-      if (saved && targetUserId === selectedUserId) {
-        setMessages((prev) => {
-          if (prev.some((x) => x.id === saved.id)) return prev
-          return [...prev, saved].sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          )
-        })
-        patchConversationFromMessage(selectedUserId, saved)
+      if (saved) {
+        if (targetUserId === selectedUserId) {
+          setMessages((prev) => {
+            if (prev.some((x) => x.id === saved.id)) return prev
+            return [...prev, saved].sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            )
+          })
+        }
+        patchConversationFromMessage(targetUserId, saved)
       }
       setForwardOpen(false)
       setForwardSource(null)
@@ -1211,7 +1281,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
             <CommandList>
               <CommandEmpty>No users found.</CommandEmpty>
               <CommandGroup heading="People">
-                {users.map((u) => (
+                {dialogPickUsers.map((u) => (
                   <CommandItem
                     key={u.id}
                     value={`${u.name} ${u.role}`}
@@ -1309,7 +1379,7 @@ export function ChatDashboard({ currentUserId, users, initialPeerId }: Props) {
             <CommandList>
               <CommandEmpty>No users found.</CommandEmpty>
               <CommandGroup heading="People">
-                {users.map((u) => (
+                {dialogPickUsers.map((u) => (
                     <CommandItem
                       key={u.id}
                       value={`${u.name} ${u.role}`}
