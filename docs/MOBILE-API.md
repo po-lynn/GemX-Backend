@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`** and **GET `/api/chat/history`**. See **5.4.5a**.
 - **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
 - **Categories image support** – Categories now have optional **`image`** (URL) returned by **GET `/api/categories`**. Admin can upload one image via **POST `/api/categories/image`** (multipart) and store the returned `url` into `category.image` via admin UI. See **4.1**.
 - **My products collector-piece owner visibility** – **GET `/api/products/mine`** always returns the logged-in seller’s own collector-piece listings (full owner list shape, same as other mine products), because results are restricted by `sellerId = session.user.id`. See **5.3**.
@@ -67,6 +68,7 @@
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
+| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow-service chat account from `escrow_service_setting.user_id` (`id`, `name`, `image`, `role` for **5.4.5a** / chat `recipientId`). |
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark one product by `productId` (UUID). Idempotent for duplicates. See **5.4.6**. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List current user's favourite products (paginated). Query: `page`, `limit`. See **5.4.6**. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove one favourite by `productId` (UUID) in JSON body. See **5.4.6**. |
@@ -1884,6 +1886,54 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 
 ---
 
+#### GET `/api/mobile/escrow-chat-user`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the **GemX user account** configured for escrow-related in-app chat. That account is the **`user_id`** on the latest admin **`escrow_service_setting`** row (same user chosen in the admin escrow service settings UI).
+
+**Success (200):**
+
+When a valid user is linked:
+
+```json
+{
+  "success": true,
+  "configured": true,
+  "user": {
+    "id": "user_escrow_support_001",
+    "name": "GemX Escrow",
+    "image": "https://…/profile.png",
+    "role": "admin"
+  }
+}
+```
+
+When no row exists, `user_id` is unset, or the linked user no longer exists:
+
+```json
+{
+  "success": true,
+  "configured": false,
+  "user": null
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `success` | boolean | Always `true` on 200. |
+| `configured` | boolean | `true` when a non-null `user_id` is set and the user row exists. |
+| `user` | object \| null | Public fields only: `id`, `name`, `image` (nullable URL), `role`. Use **`user.id`** as **`recipientId`** in **POST `/api/chat/messages`** and as **`userId`** in **GET `/api/chat/history`** to open the escrow support thread. |
+
+**Errors:**
+
+- **401** — `{ "error": "Unauthorized" }`.
+- **500** — `{ "error": "Failed to load escrow chat user" }`.
+
+**Recommended flow:** Call this endpoint when the user opens “Chat with escrow” (or similar). If `configured` is `false`, show a message that chat is not available and direct them to submit **POST `/api/mobile/escrow-service-requests`** instead.
+
+---
+
 ### 5.4.6 Favourite products (mobile)
 
 Use these endpoints for the mobile "Saved/Favourites" feature.
@@ -2807,6 +2857,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
+| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow chat account from `escrow_service_setting` (`user` or `null`). See 5.4.5a. |
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark a product by `productId` (idempotent). See 5.4.6. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List own favourite products (paginated: `page`, `limit`). See 5.4.6. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove saved product by `productId`. See 5.4.6. |
