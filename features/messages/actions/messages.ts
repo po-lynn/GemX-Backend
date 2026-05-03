@@ -13,6 +13,12 @@ import {
   deleteMessageInDb,
   updateMessageInDb,
 } from "@/features/messages/db/messages";
+import { z } from "zod";
+
+const toggleStarSchema = z.object({
+  id: z.string().uuid(),
+  starred: z.enum(["true", "false"]),
+});
 
 function emptyToUndefined<T>(v: T): T | undefined {
   return (v === "" ? undefined : v) as T | undefined;
@@ -76,6 +82,29 @@ export async function updateMessageAction(formData: FormData) {
     await updateMessageInDb(id, {
       ...updates,
       ...(updates.fileUrl !== undefined ? { fileUrl: updates.fileUrl ?? null } : {}),
+    });
+    return { success: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to update message";
+    return { error: message };
+  }
+}
+
+export async function setMessageStarredAction(formData: FormData) {
+  const parsed = toggleStarSchema.safeParse({
+    id: formData.get("id"),
+    starred: formData.get("starred"),
+  });
+  if (!parsed.success) return { error: "Invalid input" };
+
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+
+  try {
+    await updateMessageInDb(parsed.data.id, {
+      starred: parsed.data.starred === "true",
     });
     return { success: true };
   } catch (e) {

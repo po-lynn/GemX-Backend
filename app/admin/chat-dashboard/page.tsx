@@ -5,6 +5,7 @@ import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { getUsersPaginatedFromDb } from "@/features/users/db/users"
 import { ChatDashboard } from "@/features/chat/components/ChatDashboard"
 import { getLastSessionActivityByUserIds } from "@/features/chat/db/session-presence"
+import { getChatPeerProfilesForUser } from "@/features/chat/db/chat-peers"
 
 export default async function AdminChatDashboardPage({
   searchParams,
@@ -22,10 +23,10 @@ export default async function AdminChatDashboardPage({
   }
 
   const peerFromUrl = (await searchParams)?.peer
-  const { users } = await getUsersPaginatedFromDb({ page: 1, limit: 200 })
-  const peerRows = users.filter((u) => u.id !== session.user.id)
-  const activityMap = await getLastSessionActivityByUserIds(peerRows.map((u) => u.id))
-  const peers = peerRows.map((u) => ({
+  const chatPeerRows = await getChatPeerProfilesForUser(session.user.id)
+  const chatPeerIds = chatPeerRows.map((u) => u.id)
+  const activityMap = await getLastSessionActivityByUserIds(chatPeerIds)
+  const peers = chatPeerRows.map((u) => ({
     id: u.id,
     name: u.name,
     role: u.role,
@@ -33,22 +34,38 @@ export default async function AdminChatDashboardPage({
     lastSessionAt: activityMap.get(u.id)?.toISOString() ?? null,
   }))
 
+  const { users: directoryRows } = await getUsersPaginatedFromDb({ page: 1, limit: 200 })
+  const contactPickerUsers = directoryRows
+    .filter((u) => u.id !== session.user.id)
+    .map((u) => ({
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      image: u.image ?? null,
+      lastSessionAt: null as string | null,
+    }))
+
+  const peerIdsSet = new Set(peers.map((p) => p.id))
+  const initialPeerValid =
+    peerFromUrl &&
+    (peerIdsSet.has(peerFromUrl) ||
+      contactPickerUsers.some((u) => u.id === peerFromUrl))
+
   return (
     <div className="container my-6 space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Chat Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Realtime conversation view using Supabase subscriptions.
+          Left panel lists people you already have messages with. Use “New chat” to message
+          anyone else.
         </p>
       </div>
       <ChatDashboard
         currentUserId={session.user.id}
         users={peers}
-        initialPeerId={
-          peerFromUrl && peers.some((p) => p.id === peerFromUrl) ? peerFromUrl : undefined
-        }
+        contactPickerUsers={contactPickerUsers}
+        initialPeerId={initialPeerValid ? peerFromUrl : undefined}
       />
     </div>
   )
 }
-
