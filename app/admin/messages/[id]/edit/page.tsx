@@ -1,8 +1,5 @@
-import Link from "next/link";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { MessageForm } from "@/features/messages/components/MessageForm";
 import { getMessageById } from "@/features/messages/db/messages";
 
@@ -17,22 +14,12 @@ export default async function AdminMessagesEditPage({ params }: Props) {
   if (!message) notFound();
 
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/messages">
-            <ChevronLeft className="size-4" />
-            <span className="sr-only">Back</span>
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Edit Message</h1>
-          <p className="text-sm text-muted-foreground font-mono">{message.id}</p>
-        </div>
+    <div className="space-y-5 py-2">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit Message</h1>
+        <p className="mt-0.5 font-mono text-sm text-slate-500">{message.id}</p>
       </div>
-
       <MessageForm mode="edit" message={message} />
     </div>
   );
 }
-

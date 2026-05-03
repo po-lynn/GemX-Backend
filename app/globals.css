@@ -116,14 +116,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Premium admin theme: dark sidebar, refined surfaces */
+/* Premium admin theme: light sidebar, refined surfaces */
 .admin-premium {
-  --admin-sidebar-bg: #0f172a;
-  --admin-sidebar-border: rgba(248, 250, 252, 0.08);
-  --admin-sidebar-text: #f1f5f9;
-  --admin-sidebar-muted: #94a3b8;
-  --admin-sidebar-accent: rgba(155, 92, 255, 0.15);
-  --admin-sidebar-active: #9B5CFF;
+  --admin-sidebar-bg: #ffffff;
+  --admin-sidebar-border: #e2e8f0;
+  --admin-sidebar-text: #0f172a;
+  --admin-sidebar-muted: #64748b;
+  --admin-sidebar-accent: rgba(124, 58, 237, 0.08);
+  --admin-sidebar-active: #7c3aed;
   --admin-header-bg: #ffffff;
   --admin-header-border: #e2e8f0;
   --admin-main-bg: #f8fafc;

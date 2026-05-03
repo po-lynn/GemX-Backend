@@ -1,28 +1,12 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { NewLaboratoryFormWrapper } from "./NewLaboratoryFormWrapper";
-import { ChevronLeft } from "lucide-react";
 
 export default function AdminLaboratoryNewPage() {
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/laboratory">
-            <ChevronLeft className="size-4" />
-            <span className="sr-only">Back</span>
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            New Laboratory
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Add a certification laboratory
-          </p>
-        </div>
+    <div className="space-y-5 py-2">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">New Laboratory</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Add a certification laboratory (e.g. GIA, AGS)</p>
       </div>
-
       <NewLaboratoryFormWrapper />
     </div>
   );

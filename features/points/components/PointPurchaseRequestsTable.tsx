@@ -1,16 +1,27 @@
 "use client"
 
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { CheckCircle, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AdminTableShell,
+  AdminStatusBadge,
+  AdminEmptyRow,
+  adminTH,
+  adminTHCenter,
+  adminTR,
+  adminTD,
+  adminTDMuted,
+} from "@/components/admin/admin-ui"
 import type { PointPurchaseRequestRow } from "@/features/points/db/points"
 import {
   approvePointPurchaseRequestAction,
@@ -24,136 +35,181 @@ type Props = {
 export function PointPurchaseRequestsTable({ requests }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null)
+  const [rejectNote, setRejectNote] = useState("")
+  const [rejectError, setRejectError] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState(false)
 
   function approve(requestId: string) {
     const form = new FormData()
     form.set("requestId", requestId)
     startTransition(async () => {
-      const result = await approvePointPurchaseRequestAction(form)
-      if (result?.error) { alert(result.error); return }
+      await approvePointPurchaseRequestAction(form)
       router.refresh()
     })
   }
 
-  function reject(requestId: string) {
-    const note = prompt("Rejection reason (optional):")
-    const form = new FormData()
-    form.set("requestId", requestId)
-    if (note) form.set("adminNote", note)
-    startTransition(async () => {
+  function openReject(requestId: string) {
+    setRejectTarget(requestId)
+    setRejectNote("")
+    setRejectError(null)
+  }
+
+  async function confirmReject() {
+    if (!rejectTarget) return
+    setRejectError(null)
+    setRejecting(true)
+    try {
+      const form = new FormData()
+      form.set("requestId", rejectTarget)
+      if (rejectNote.trim()) form.set("adminNote", rejectNote.trim())
       const result = await rejectPointPurchaseRequestAction(form)
-      if (result?.error) { alert(result.error); return }
-      router.refresh()
-    })
-  }
-
-  const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800",
-      approved: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
+      if (result?.error) {
+        setRejectError(result.error)
+      } else {
+        setRejectTarget(null)
+        router.refresh()
+      }
+    } catch (e) {
+      setRejectError(e instanceof Error ? e.message : "An unexpected error occurred.")
+    } finally {
+      setRejecting(false)
     }
-    return (
-      <span className={`rounded px-2 py-0.5 text-xs font-medium ${colors[status] ?? "bg-slate-100 text-slate-700"}`}>
-        {status}
-      </span>
-    )
   }
 
   return (
-    <div className="overflow-x-auto rounded-none border border-border">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-0 hover:bg-transparent">
-            {["User", "Package", "Points", "Price", "Transferred", "Name", "Reference", "Note", "Status", "Date", "Actions"].map((h) => (
-              <TableHead
-                key={h}
-                className="border-r last:border-r-0 border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white"
-              >
-                {h}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {requests.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={11} className="text-muted-foreground py-8 text-center">
-                No purchase requests.
-              </TableCell>
-            </TableRow>
-          ) : (
-            requests.map((r, index) => (
-              <TableRow
-                key={r.id}
-                className={`border-b border-border/50 transition-colors last:border-0 ${
-                  index % 2 === 1 ? "bg-[#f5f5f5]" : ""
-                }`}
-              >
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
-                  <div className="font-medium">{r.userName ?? "—"}</div>
-                  <div className="text-muted-foreground text-xs">{r.userEmail ?? "—"}</div>
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
-                  {r.packageName}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-center text-sm font-mono">
-                  {r.points}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-center text-sm font-mono">
-                  {r.price.toLocaleString()} {r.currency.toUpperCase()}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-center text-sm font-mono">
-                  {r.transferredAmount != null ? r.transferredAmount.toLocaleString() : "—"}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
-                  {r.transferredName ?? "—"}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm font-mono">
-                  {r.transactionReference ?? "—"}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-sm">
-                  {r.transferNote ?? "—"}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-center text-sm">
-                  {statusBadge(r.status)}
-                  {r.adminNote && (
-                    <div className="text-muted-foreground mt-1 text-xs">{r.adminNote}</div>
-                  )}
-                </TableCell>
-                <TableCell className="border-r border-border/40 px-3 py-2.5 text-xs text-muted-foreground">
-                  {r.createdAt.toLocaleString()}
-                </TableCell>
-                <TableCell className="px-3 py-2.5">
-                  {r.status === "pending" ? (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => approve(r.id)}
-                        className="bg-green-600 text-white hover:bg-green-700"
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={isPending}
-                        onClick={() => reject(r.id)}
-                        className="border-red-300 text-red-600 hover:bg-red-50"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
+    <>
+      <AdminTableShell>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/60">
+              <th className={adminTH}>User</th>
+              <th className={adminTH}>Package</th>
+              <th className={adminTHCenter}>Points</th>
+              <th className={adminTHCenter}>Price</th>
+              <th className={adminTHCenter}>Transferred</th>
+              <th className={adminTH}>Transfer Name</th>
+              <th className={adminTH}>Reference</th>
+              <th className={adminTH}>Note</th>
+              <th className={adminTHCenter}>Status</th>
+              <th className={adminTH}>Date</th>
+              <th className={adminTHCenter}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.length === 0 ? (
+              <AdminEmptyRow colSpan={11} message="No purchase requests found." />
+            ) : (
+              requests.map((r) => (
+                <tr key={r.id} className={adminTR}>
+                  <td className={adminTD}>
+                    <div className="font-medium text-slate-800">{r.userName ?? "—"}</div>
+                    <div className="text-xs text-slate-400">{r.userEmail ?? "—"}</div>
+                  </td>
+                  <td className={adminTD}>{r.packageName}</td>
+                  <td className="px-4 py-3 text-center font-mono text-slate-700">
+                    {r.points.toLocaleString()}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono text-slate-700">
+                    {r.price.toLocaleString()} {r.currency.toUpperCase()}
+                  </td>
+                  <td className="px-4 py-3 text-center font-mono text-slate-700">
+                    {r.transferredAmount != null ? r.transferredAmount.toLocaleString() : "—"}
+                  </td>
+                  <td className={adminTD}>{r.transferredName ?? "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600">
+                    {r.transactionReference ?? "—"}
+                  </td>
+                  <td className={adminTDMuted}>{r.transferNote ?? "—"}</td>
+                  <td className="px-4 py-3 text-center">
+                    <AdminStatusBadge status={r.status} />
+                    {r.adminNote && (
+                      <p className="mt-1 text-[11px] text-slate-400">{r.adminNote}</p>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">
+                    {r.createdAt.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.status === "pending" ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => approve(r.id)}
+                          className="h-7 gap-1 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60 hover:bg-emerald-100 hover:text-emerald-800"
+                        >
+                          <CheckCircle className="size-3.5" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => openReject(r.id)}
+                          className="h-7 gap-1 bg-red-50 px-2.5 text-xs font-medium text-red-700 ring-1 ring-red-200/60 hover:bg-red-100 hover:text-red-800"
+                        >
+                          <XCircle className="size-3.5" />
+                          Reject
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </AdminTableShell>
+
+      <Dialog
+        open={rejectTarget !== null}
+        onOpenChange={(v) => { if (!rejecting && !v) setRejectTarget(null) }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-base">Reject Purchase Request</DialogTitle>
+            <DialogDescription>
+              Optionally provide a reason. The request will be marked as rejected and the user will
+              not receive points.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            placeholder="Rejection reason (optional)"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            rows={3}
+            disabled={rejecting}
+            className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:opacity-50"
+          />
+          {rejectError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200/60">
+              {rejectError}
+            </p>
           )}
-        </TableBody>
-      </Table>
-    </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRejectTarget(null)}
+              disabled={rejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={confirmReject}
+              disabled={rejecting}
+            >
+              {rejecting ? "Rejecting…" : "Confirm Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

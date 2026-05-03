@@ -2,11 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useState } from "react"
-import { Search } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 type Props = {
   defaultValue?: string
-  /** Path for search submit (query appended). Default `/admin/products`. */
   listPath?: string
 }
 
@@ -14,6 +13,7 @@ export function ProductsSearchInput({ defaultValue = "", listPath = "/admin/prod
   const router = useRouter()
   const searchParams = useSearchParams()
   const [value, setValue] = useState(defaultValue)
+  const listBase = listPath.replace(/\/$/, "")
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -26,33 +26,46 @@ export function ProductsSearchInput({ defaultValue = "", listPath = "/admin/prod
         params.delete("search")
         params.delete("page")
       }
-      const base = listPath.replace(/\/$/, "")
-      router.push(`${base}?${params.toString()}`)
+      router.push(`${listBase}?${params.toString()}`)
     },
-    [value, router, searchParams, listPath]
+    [value, router, searchParams, listBase]
   )
 
+  function handleClear() {
+    setValue("")
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("search")
+    params.delete("page")
+    router.push(`${listBase}?${params.toString()}`)
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:min-w-[280px]">
-      <div className="relative flex flex-1 items-center">
-        <Search
-          className="absolute left-3 size-4 text-muted-foreground pointer-events-none"
-          aria-hidden
-        />
+    <form onSubmit={handleSubmit} className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[300px]">
+      <div className="relative flex min-w-0 flex-1 items-center">
+        <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" aria-hidden />
         <input
           type="search"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Search by title, seller, phone, email..."
-          className="h-10 w-full rounded-lg border border-border bg-card pl-9 pr-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gem-focus)] focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="Search by title, seller, phone, email…"
+          className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-8 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50"
           aria-label="Search products"
         />
+        {value && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2.5 flex items-center text-slate-400 hover:text-slate-600"
+            aria-label="Clear search"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </div>
       <button
         type="submit"
-        className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <Search className="size-4" aria-hidden />
         Search
       </button>
     </form>

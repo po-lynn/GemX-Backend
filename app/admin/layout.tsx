@@ -26,12 +26,18 @@ export default async function AdminLayout({
           <div className="flex h-14 items-center gap-3 px-4 md:px-6">
             <AdminSidebarSheet />
 
-            <div className="mr-auto leading-tight">
-              <div className="text-sm font-semibold tracking-tight text-foreground">
-                Admin
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Manage products, news, articles, and users
+            <div className="mr-auto flex items-center gap-2.5">
+              <div
+                className="hidden h-6 w-px md:block"
+                style={{ backgroundColor: "var(--admin-header-border)" }}
+              />
+              <div className="leading-tight">
+                <div className="text-sm font-semibold tracking-tight text-foreground">
+                  Admin Panel
+                </div>
+                <div className="hidden text-[11px] text-muted-foreground md:block">
+                  GemX Marketplace
+                </div>
               </div>
             </div>
 
