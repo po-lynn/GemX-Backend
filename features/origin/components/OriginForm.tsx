@@ -5,20 +5,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AdminFormSection,
+  AdminFormError,
+  adminInput,
+  adminSelect,
+  adminLabel,
+  adminFieldClass,
+} from "@/components/admin/admin-ui";
 import {
   createOriginAction,
   updateOriginAction,
 } from "@/features/origin/actions/origin";
 import type { OriginForEdit } from "@/features/origin/db/origin";
-
-const inputClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
 const LOCATION_OPTIONS = [
   { value: "", label: "Select location" },
@@ -56,17 +54,12 @@ export function OriginForm({ mode, origin }: Props) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+    const formData = new FormData(e.currentTarget);
     try {
       const result = isEdit
         ? await updateOriginAction(formData)
         : await createOriginAction(formData);
-      if (result?.error) {
-        setError(result.error);
-        setLoading(false);
-        return;
-      }
+      if (result?.error) { setError(result.error); return; }
       router.push("/admin/origin");
       router.refresh();
     } catch {
@@ -76,97 +69,71 @@ export function OriginForm({ mode, origin }: Props) {
     }
   }
 
-  const isMyanmar = location === "Myanmar";
-  const isOther = location === "Other";
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEdit ? "Edit Origin" : "New Origin"}</CardTitle>
-        <CardDescription>
-          {isEdit ? "Update origin" : "Add a gem origin (Myanmar or Other)"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {isEdit && origin && (
-            <input type="hidden" name="originId" value={origin.id} />
-          )}
-
-          <div className="space-y-2">
-            <label htmlFor="country" className="text-sm font-medium">
-              Location *
-            </label>
-            <select
-              id="country"
-              name="country"
-              required
-              value={location}
-              onChange={(e) =>
-                setLocation((e.target.value || "") as "" | "Myanmar" | "Other")
-              }
-              className={inputClass}
-            >
-              {LOCATION_OPTIONS.map((opt) => (
-                <option key={opt.value || "empty"} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {isMyanmar && (
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Origin name *
-              </label>
+    <div className="max-w-2xl space-y-5">
+      <form onSubmit={handleSubmit}>
+        {isEdit && origin && (
+          <input type="hidden" name="originId" value={origin.id} />
+        )}
+        <AdminFormSection
+          title={isEdit ? "Edit origin" : "New origin"}
+          description={isEdit ? "Update origin details" : "Add a gem origin (Myanmar or Other)"}
+        >
+          <div className="space-y-4">
+            <div className={adminFieldClass}>
+              <label htmlFor="country" className={adminLabel}>Location *</label>
               <select
-                id="name"
-                name="name"
-                required
-                defaultValue={
-                  origin?.country === "Myanmar" ? origin.name : ""
-                }
-                className={inputClass}
+                id="country" name="country" required
+                value={location}
+                onChange={(e) => setLocation((e.target.value || "") as "" | "Myanmar" | "Other")}
+                className={adminSelect}
               >
-                {MYANMAR_ORIGINS.map((opt) => (
-                  <option key={opt.value || "empty"} value={opt.value}>
-                    {opt.label}
-                  </option>
+                {LOCATION_OPTIONS.map((opt) => (
+                  <option key={opt.value || "empty"} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
-          )}
 
-          {isOther && (
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Origin name *
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                maxLength={200}
-                defaultValue={origin?.country !== "Myanmar" ? origin?.name ?? "" : ""}
-                placeholder="e.g. Sri Lanka, Madagascar"
-                className={inputClass}
-              />
-            </div>
-          )}
+            {location === "Myanmar" && (
+              <div className={adminFieldClass}>
+                <label htmlFor="name" className={adminLabel}>Origin name *</label>
+                <select
+                  id="name" name="name" required
+                  defaultValue={origin?.country === "Myanmar" ? origin.name : ""}
+                  className={adminSelect}
+                >
+                  {MYANMAR_ORIGINS.map((opt) => (
+                    <option key={opt.value || "empty"} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={loading || !location}>
-              {loading ? "Saving…" : isEdit ? "Update" : "Create"}
-            </Button>
-            <Button type="button" variant="outline" asChild>
-              <Link href="/admin/origin">Cancel</Link>
-            </Button>
+            {location === "Other" && (
+              <div className={adminFieldClass}>
+                <label htmlFor="name" className={adminLabel}>Origin name *</label>
+                <input
+                  id="name" name="name" type="text" required maxLength={200}
+                  defaultValue={origin?.country !== "Myanmar" ? origin?.name ?? "" : ""}
+                  placeholder="e.g. Sri Lanka, Madagascar"
+                  className={adminInput}
+                />
+              </div>
+            )}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </AdminFormSection>
+
+        <AdminFormError error={error} />
+
+        <div className="mt-5 flex gap-2">
+          <Button type="submit" disabled={loading || !location}>
+            {loading ? "Saving…" : isEdit ? "Update" : "Create"}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link href="/admin/origin">Cancel</Link>
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

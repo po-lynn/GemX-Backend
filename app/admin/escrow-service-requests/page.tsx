@@ -1,14 +1,6 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { EscrowServiceRequestsTable } from "@/features/escrow-service-requests/components/EscrowServiceRequestsTable"
 import {
   getEscrowServiceRequestsPaginated,
@@ -18,15 +10,19 @@ import {
 } from "@/features/escrow-service-requests/db/escrow-service-requests"
 
 const PAGE_SIZE = 20
-
 const STATUS_FILTERS = ["all", "pending", "contacted", "deal_made", "rejected"] as const
 const TYPE_FILTERS = ["all", "buyer", "seller"] as const
 
-type Props = {
-  searchParams: Promise<{ page?: string; status?: string; type?: string; sort?: string; order?: string }>
-}
+type StatusFilter = (typeof STATUS_FILTERS)[number]
+type TypeFilter = (typeof TYPE_FILTERS)[number]
 
-function buildPageLink(page: number, status: string, type: string, sort: SortColumn, order: SortOrder) {
+function buildLink(
+  page: number,
+  status: StatusFilter,
+  type: TypeFilter,
+  sort: SortColumn,
+  order: SortOrder
+) {
   const p = new URLSearchParams()
   p.set("page", String(page))
   if (status !== "all") p.set("status", status)
@@ -38,15 +34,25 @@ function buildPageLink(page: number, status: string, type: string, sort: SortCol
   return `/admin/escrow-service-requests?${p.toString()}`
 }
 
+type Props = {
+  searchParams: Promise<{
+    page?: string
+    status?: string
+    type?: string
+    sort?: string
+    order?: string
+  }>
+}
+
 export default async function AdminEscrowServiceRequestsPage({ searchParams }: Props) {
   await connection()
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
-  const status = (STATUS_FILTERS as readonly string[]).includes(params.status ?? "")
-    ? (params.status as string)
+  const status: StatusFilter = (STATUS_FILTERS as readonly string[]).includes(params.status ?? "")
+    ? (params.status as StatusFilter)
     : "all"
-  const type = (TYPE_FILTERS as readonly string[]).includes(params.type ?? "")
-    ? (params.type as string)
+  const type: TypeFilter = (TYPE_FILTERS as readonly string[]).includes(params.type ?? "")
+    ? (params.type as TypeFilter)
     : "all"
   const sort: SortColumn = (SORT_COLUMNS as readonly string[]).includes(params.sort ?? "")
     ? (params.sort as SortColumn)
@@ -61,98 +67,98 @@ export default async function AdminEscrowServiceRequestsPage({ searchParams }: P
     sortBy: sort,
     order,
   })
-
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin">
-            <ChevronLeft className="size-4" />
-            <span className="sr-only">Back</span>
-          </Link>
-        </Button>
+    <div className="space-y-5 py-2">
+      {/* Page header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Escrow Service Requests</h1>
-          <p className="text-muted-foreground text-sm">
-            Review escrow requests from buyers and sellers, then contact them to facilitate the deal
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+            Escrow Requests
+          </h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Review escrow requests from buyers and sellers — contact to facilitate deals
           </p>
+        </div>
+        <span className="text-sm text-slate-500">
+          {total.toLocaleString()} request{total !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-medium text-slate-500">Status</span>
+          {STATUS_FILTERS.map((s) => (
+            <Button
+              key={s}
+              asChild
+              size="sm"
+              variant={status === s ? "default" : "outline"}
+              className="h-8 text-xs capitalize"
+            >
+              <Link href={buildLink(1, s, type, sort, order)}>
+                {s === "all" ? "All" : s.replace("_", " ")}
+              </Link>
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-medium text-slate-500">Type</span>
+          {TYPE_FILTERS.map((t) => (
+            <Button
+              key={t}
+              asChild
+              size="sm"
+              variant={type === t ? "default" : "outline"}
+              className="h-8 text-xs capitalize"
+            >
+              <Link href={buildLink(1, status, t, sort, order)}>
+                {t === "all" ? "All" : t}
+              </Link>
+            </Button>
+          ))}
         </div>
       </div>
 
-      <Card className="bg-transparent border-0 shadow-none">
-        <CardHeader className="gap-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>All Requests</CardTitle>
-              <CardDescription>
-                {total} request{total !== 1 ? "s" : ""} total
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex flex-wrap gap-2">
-              <span className="self-center text-sm font-medium text-muted-foreground">Status:</span>
-              {STATUS_FILTERS.map((s) => (
-                <Button
-                  key={s}
-                  asChild
-                  size="sm"
-                  variant={status === s ? "default" : "outline"}
-                >
-                  <Link href={buildPageLink(1, s, type, sort, order)}>
-                    {s === "all" ? "All" : s[0]?.toUpperCase() + s.slice(1).replace("_", " ")}
-                  </Link>
-                </Button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="self-center text-sm font-medium text-muted-foreground">Type:</span>
-              {TYPE_FILTERS.map((t) => (
-                <Button
-                  key={t}
-                  asChild
-                  size="sm"
-                  variant={type === t ? "default" : "outline"}
-                >
-                  <Link href={buildPageLink(1, status, t, sort, order)}>
-                    {t === "all" ? "All" : t[0]?.toUpperCase() + t.slice(1)}
-                  </Link>
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <EscrowServiceRequestsTable requests={requests} sort={sort} order={order} />
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-muted-foreground text-sm">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex items-center gap-2">
-              {page <= 1 ? (
-                <Button variant="outline" size="sm" disabled>
-                  Previous
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={buildPageLink(page - 1, status, type, sort, order)}>Previous</Link>
-                </Button>
-              )}
-              {page >= totalPages ? (
-                <Button variant="outline" size="sm" disabled>
-                  Next
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={buildPageLink(page + 1, status, type, sort, order)}>Next</Link>
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Table */}
+      <EscrowServiceRequestsTable requests={requests} sort={sort} order={order} />
+
+      {/* Pagination */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Page {page} of {totalPages} · {total.toLocaleString()} total
+        </p>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            className="h-8 text-xs"
+            asChild={page > 1}
+          >
+            {page > 1 ? (
+              <Link href={buildLink(page - 1, status, type, sort, order)}>← Prev</Link>
+            ) : (
+              <span>← Prev</span>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            className="h-8 text-xs"
+            asChild={page < totalPages}
+          >
+            {page < totalPages ? (
+              <Link href={buildLink(page + 1, status, type, sort, order)}>Next →</Link>
+            ) : (
+              <span>Next →</span>
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

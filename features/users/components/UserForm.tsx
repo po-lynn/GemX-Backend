@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AdminFormSection,
+  AdminFormError,
+} from "@/components/admin/admin-ui";
 import {
   createUserAction,
   updateUserAction,
@@ -37,9 +34,9 @@ import {
 } from "@/components/ui/dialog";
 
 const inputClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
+  "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60";
 const selectClass =
-  `${inputClass} cursor-pointer bg-(--form-bg) text-(--form-foreground) [&>option]:bg-(--form-bg) [&>option]:text-(--form-foreground)`;
+  `${inputClass} cursor-pointer`;
 
 const ROLES = [
   { value: "", label: "Select role" },
@@ -243,114 +240,88 @@ export function UserForm({ mode, user }: Props) {
   const displayName = user?.name ?? user?.email ?? "User";
 
   return (
-    <Card>
-      <CardHeader className="relative">
-        <div className="flex items-start justify-between gap-4">
+    <div className="max-w-3xl space-y-5">
+      {/* Top controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {isEdit && user && (
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-violet-100 ring-2 ring-slate-200">
+              {user.image ? (
+                <Image
+                  src={user.image} alt="" fill className="object-cover"
+                  referrerPolicy="no-referrer" sizes="56px"
+                />
+              ) : (
+                <span className="text-xl font-semibold text-violet-600">
+                  {displayName.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+          )}
           <div>
-            {isEdit && user && (
-              <div className="mb-2 flex justify-center">
-                <div className="relative flex h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
-                  {user.image ? (
-                    <Image
-                      src={user.image}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      referrerPolicy="no-referrer"
-                      sizes="64px"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-medium text-muted-foreground">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <CardTitle>{isEdit ? "Edit User" : "New User"}</CardTitle>
-            <CardDescription>
-              {isEdit
-                ? "Update user details"
-                : "Create a new user with email and password"}
-            </CardDescription>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] hover:text-[var(--form-foreground)]"
-                  aria-label="Settings"
-                >
-                  <Settings2 className="size-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-56 p-2">
-                <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--form-muted-foreground)]">
-                  Quick settings
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById("verified")?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "center",
-                    })
-                  }
-                  className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
-                >
-                  Verified
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById("archived")?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "center",
-                    })
-                  }
-                  className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
-                >
-                  Archive
-                </button>
-                {isEdit && user ? (
-                  <button
-                    type="button"
-                    onClick={openChangePasswordModal}
-                    className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-foreground)] hover:bg-[var(--form-muted)]"
-                  >
-                    Change password
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors text-[var(--form-muted-foreground)] hover:bg-[var(--form-muted)] opacity-60 cursor-not-allowed"
-                    aria-disabled="true"
-                  >
-                    Change password
-                  </button>
-                )}
-              </PopoverContent>
-            </Popover>
-
-            <Button
-              type="submit"
-              form="user-form"
-              disabled={loading}
-              className="h-10 rounded-lg px-5 text-sm font-semibold shadow-sm"
-            >
-              {loading ? "Saving…" : isEdit ? "Update" : "Create"}
-            </Button>
-            <Button variant="outline" size="sm" type="button" asChild>
-              <Link href="/admin/users">Cancel</Link>
-            </Button>
+            <div className="font-semibold text-slate-900">{isEdit ? "Edit User" : "New User"}</div>
+            <div className="text-sm text-slate-500">
+              {isEdit ? `Updating ${displayName}` : "Create a new user with email and password"}
+            </div>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <form id="user-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Settings"
+              >
+                <Settings2 className="size-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-52 p-2">
+              <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Quick settings
+              </div>
+              <button
+                type="button"
+                onClick={() => document.getElementById("verified")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+              >
+                Verified
+              </button>
+              <button
+                type="button"
+                onClick={() => document.getElementById("archived")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+              >
+                Archive
+              </button>
+              {isEdit && user ? (
+                <button
+                  type="button" onClick={openChangePasswordModal}
+                  className="flex w-full cursor-pointer items-center rounded-md px-2 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                >
+                  Change password
+                </button>
+              ) : (
+                <button
+                  type="button" disabled
+                  className="flex w-full cursor-not-allowed items-center rounded-md px-2 py-2 text-sm font-medium text-slate-400 opacity-60"
+                >
+                  Change password
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
+          <Button type="submit" form="user-form" disabled={loading} size="sm">
+            {loading ? "Saving…" : isEdit ? "Update" : "Create"}
+          </Button>
+          <Button variant="outline" size="sm" type="button" asChild>
+            <Link href="/admin/users">Cancel</Link>
+          </Button>
+        </div>
+      </div>
+
+      <AdminFormSection>
+        <form id="user-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
           {isEdit && user && (
             <input type="hidden" name="userId" value={user.id} />
           )}
@@ -360,10 +331,10 @@ export function UserForm({ mode, user }: Props) {
                 <span className="text-sm font-medium">Profile image</span>
                 <label
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                    "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700",
                     uploadingImage
                       ? "cursor-not-allowed opacity-60 pointer-events-none"
-                      : "cursor-pointer hover:bg-(--form-muted)"
+                      : "cursor-pointer hover:bg-slate-50"
                   )}
                 >
                   <Upload className="h-4 w-4" />
@@ -491,10 +462,10 @@ export function UserForm({ mode, user }: Props) {
                     <span className="text-sm font-medium">Profile image</span>
                     <label
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg border border-(--form-input-border) bg-(--form-bg) px-3 py-1.5 text-sm font-medium text-(--form-foreground)",
+                        "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700",
                         uploadingImage
                           ? "cursor-not-allowed opacity-60 pointer-events-none"
-                          : "cursor-pointer hover:bg-(--form-muted)"
+                          : "cursor-pointer hover:bg-slate-50"
                       )}
                     >
                       <Upload className="h-4 w-4" />
@@ -794,9 +765,11 @@ export function UserForm({ mode, user }: Props) {
               </div>
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
         </form>
-      </CardContent>
+      </AdminFormSection>
+
+      <AdminFormError error={error} />
+
       <Dialog
         open={changePasswordOpen}
         onOpenChange={(open) => {
@@ -866,7 +839,9 @@ export function UserForm({ mode, user }: Props) {
             </div>
 
             {changePasswordError && (
-              <p className="text-sm text-destructive">{changePasswordError}</p>
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200/60">
+                {changePasswordError}
+              </p>
             )}
           </div>
 
@@ -892,6 +867,6 @@ export function UserForm({ mode, user }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

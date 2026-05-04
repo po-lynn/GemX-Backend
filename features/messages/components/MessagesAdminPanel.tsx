@@ -158,7 +158,7 @@ export function MessagesAdminPanel({
     setAppliedFrom(draftFrom);
     setAppliedTo(draftTo);
     setAppliedUserId(draftUserId);
-    if (draftStatus) setTab(draftStatus);
+    if (draftStatus) setTab(draftStatus as TabKey);
     goPageOne();
   }, [draftSearch, draftFrom, draftTo, draftUserId, draftStatus, goPageOne]);
 

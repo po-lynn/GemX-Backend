@@ -1,86 +1,69 @@
-"use client";
+"use client"
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { UserRow } from "@/features/users/db/users";
-import { deleteUserAction } from "@/features/users/actions/users";
+import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import type { UserRow } from "@/features/users/db/users"
+import { deleteUserAction } from "@/features/users/actions/users"
+import { Button } from "@/components/ui/button"
+import { Search, X, ExternalLink } from "lucide-react"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "../../../components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+  AdminTableShell,
+  AdminPagination,
+  AdminDeleteDialog,
+  AdminEmptyRow,
+  adminTH,
+  adminTHRight,
+  adminTRClickable,
+  adminTD,
+} from "@/components/admin/admin-ui"
 
-const ELLIPSIS_PREV = -1;
-const ELLIPSIS_NEXT = -2;
-
-function getPageNumbers(page: number, totalPages: number): number[] {
-  if (totalPages <= 1) return [];
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-  const pages: number[] = [1];
-  const start = Math.max(2, page - 1);
-  const end = Math.min(totalPages - 1, page + 1);
-  if (start > 2) pages.push(ELLIPSIS_PREV);
-  for (let i = start; i <= end; i++) if (!pages.includes(i)) pages.push(i);
-  if (end < totalPages - 1) pages.push(ELLIPSIS_NEXT);
-  pages.push(totalPages);
-  return pages;
-}
-
-function UserPhotoCell({ imageUrl }: { imageUrl: string | null | undefined }) {
-  const [loadError, setLoadError] = useState(false);
-  const showImg = imageUrl && !loadError;
-  return (
-    <div className="flex justify-center">
-      {showImg ? (
-        <Image
-          src={imageUrl}
-          alt=""
-          width={44}
-          height={44}
-          className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
-          onError={() => setLoadError(true)}
-        />
-      ) : (
-        <span
-          className="text-muted-foreground flex items-center justify-center h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-border/50"
-          aria-hidden
-        >
-          —
-        </span>
-      )}
-    </div>
-  );
-}
-
-const TRUNCATE_TOKEN_LEN = 24;
-const SUGGEST_DEBOUNCE_MS = 300;
+const TRUNCATE_TOKEN_LEN = 20
+const SUGGEST_DEBOUNCE_MS = 300
 
 type Props = {
-  users: UserRow[];
-  page: number;
-  totalPages: number;
-  total: number;
-  /** Current search query from URL (for initial input and pagination links). */
-  searchQuery?: string;
-  /** Push device tokens per user id (from getPushTokensByUserIds). */
-  pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>;
-};
+  users: UserRow[]
+  page: number
+  totalPages: number
+  total: number
+  searchQuery?: string
+  pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>
+}
+
+function UserAvatar({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) {
+  const [error, setError] = useState(false)
+  const initials = (name ?? "U").charAt(0).toUpperCase()
+  return imageUrl && !error ? (
+    <Image
+      src={imageUrl}
+      alt=""
+      width={36}
+      height={36}
+      className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-200/60"
+      onError={() => setError(true)}
+    />
+  ) : (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-semibold text-violet-600 ring-1 ring-slate-200/60">
+      {initials}
+    </div>
+  )
+}
+
+const ROLE_STYLE: Record<string, string> = {
+  admin: "bg-violet-50 text-violet-700 ring-violet-200/60",
+  escrow: "bg-sky-50 text-sky-700 ring-sky-200/60",
+  user: "bg-slate-100 text-slate-600 ring-slate-200/60",
+}
+
+function RoleBadge({ role }: { role: string }) {
+  const style = ROLE_STYLE[role?.toLowerCase()] ?? ROLE_STYLE.user
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${style}`}>
+      {role}
+    </span>
+  )
+}
 
 export function UsersTable({
   users,
@@ -90,376 +73,257 @@ export function UsersTable({
   searchQuery = "",
   pushTokensByUserId = {},
 }: Props) {
-  const router = useRouter();
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [inputValue, setInputValue] = useState(searchQuery);
-  const [suggestions, setSuggestions] = useState<UserRow[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestLoading, setSuggestLoading] = useState(false);
-  const suggestAbortRef = useRef<AbortController | null>(null);
-  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const router = useRouter()
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [inputValue, setInputValue] = useState(searchQuery)
+  const [suggestions, setSuggestions] = useState<UserRow[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const suggestAbortRef = useRef<AbortController | null>(null)
+  const searchWrapRef = useRef<HTMLDivElement>(null)
+  const base = "/admin/users"
+
+  useEffect(() => { setInputValue(searchQuery) }, [searchQuery])
 
   useEffect(() => {
-    setInputValue(searchQuery);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    const q = inputValue.trim();
-    if (!q) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
+    const q = inputValue.trim()
+    if (!q) { setSuggestions([]); setShowSuggestions(false); return }
     const t = setTimeout(() => {
-      suggestAbortRef.current?.abort();
-      suggestAbortRef.current = new AbortController();
-      setSuggestLoading(true);
+      suggestAbortRef.current?.abort()
+      suggestAbortRef.current = new AbortController()
+      setSuggestLoading(true)
       fetch(`/api/admin/users/suggest?q=${encodeURIComponent(q)}`, {
         signal: suggestAbortRef.current.signal,
       })
         .then((r) => r.json())
         .then((data: { users?: UserRow[] }) => {
-          setSuggestions(data.users ?? []);
-          setShowSuggestions(true);
+          setSuggestions(data.users ?? [])
+          setShowSuggestions(true)
         })
-        .catch(() => {
-          setSuggestions([]);
-        })
-        .finally(() => setSuggestLoading(false));
-    }, SUGGEST_DEBOUNCE_MS);
-    return () => clearTimeout(t);
-  }, [inputValue]);
+        .catch(() => setSuggestions([]))
+        .finally(() => setSuggestLoading(false))
+    }, SUGGEST_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [inputValue])
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClick(e: MouseEvent) {
       if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
+        setShowSuggestions(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
 
-  const base = "/admin/users";
-  const pageLink = useCallback(
-    (p: number) => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.set("search", searchQuery);
-      params.set("page", String(p));
-      return `${base}?${params.toString()}`;
-    },
-    [searchQuery]
-  );
+  function buildHref(p: number) {
+    const params = new URLSearchParams()
+    if (searchQuery) params.set("search", searchQuery)
+    params.set("page", String(p))
+    return `${base}?${params.toString()}`
+  }
 
   function handleSearchSubmit() {
-    const q = inputValue.trim();
-    router.push(q ? `${base}?search=${encodeURIComponent(q)}&page=1` : base);
-    setShowSuggestions(false);
+    const q = inputValue.trim()
+    setShowSuggestions(false)
+    router.push(q ? `${base}?search=${encodeURIComponent(q)}&page=1` : base)
   }
 
   function handleSuggestionClick(u: UserRow) {
-    const q = [u.name, u.email, u.phone, u.country].filter(Boolean).join(" ").trim() || u.name;
-    setInputValue(q);
-    router.push(`${base}?search=${encodeURIComponent(q)}&page=1`);
-    setShowSuggestions(false);
+    const q = u.name
+    setInputValue(q)
+    setShowSuggestions(false)
+    router.push(`${base}?search=${encodeURIComponent(q)}&page=1`)
   }
 
-  function openDeleteDialog(id: string, name: string) {
-    setDeleteTarget({ id, name });
+  function handleClear() {
+    setInputValue("")
+    setShowSuggestions(false)
+    router.push(base)
   }
-
-  function closeDeleteDialog() {
-    if (!deleting) setDeleteTarget(null);
-  }
-
-  async function confirmDelete() {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    const form = new FormData();
-    form.set("userId", deleteTarget.id);
-    const result = await deleteUserAction(form);
-    setDeleting(false);
-    setDeleteTarget(null);
-    if (result?.error) {
-      alert(result.error);
-    } else {
-      router.refresh();
-    }
-  }
-
-  const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
     <>
-      <div ref={searchWrapRef} className="relative mb-4 flex flex-wrap items-center gap-2">
-        <Input
-          type="search"
-          placeholder="Search by name, email, phone, country"
-          value={inputValue}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setInputValue(e.target.value)
-          }
-          onFocus={() =>
-            inputValue.trim() && setShowSuggestions(suggestions.length > 0)
-          }
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-            e.key === "Enter" && handleSearchSubmit()
-          }
-          className="max-w-sm"
-        />
-        <Button type="button" onClick={handleSearchSubmit}>
+      {/* Search bar */}
+      <div ref={searchWrapRef} className="relative flex flex-wrap items-center gap-2">
+        <div className="relative flex min-w-0 flex-1 items-center sm:min-w-[320px]">
+          <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" aria-hidden />
+          <input
+            type="search"
+            placeholder="Search by name, email, phone, country…"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onFocus={() => inputValue.trim() && setShowSuggestions(suggestions.length > 0)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+            className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-8 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50"
+            aria-label="Search users"
+          />
+          {inputValue && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-2.5 text-slate-400 hover:text-slate-600"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <Button size="sm" type="button" onClick={handleSearchSubmit} className="h-9">
           Search
         </Button>
+
         {showSuggestions && (suggestions.length > 0 || suggestLoading) && (
           <ul
-            className="absolute left-0 top-full z-10 mt-1 max-h-60 w-full max-w-sm overflow-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md"
+            className="absolute left-0 top-full z-20 mt-1 w-full max-w-sm overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
             role="listbox"
           >
             {suggestLoading ? (
-              <li className="px-3 py-2 text-sm text-muted-foreground">Loading…</li>
+              <li className="px-3 py-2 text-sm text-slate-400">Loading…</li>
             ) : (
               suggestions.map((u) => (
                 <li
                   key={u.id}
                   role="option"
                   aria-selected={false}
-                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
-                  onMouseDown={(e: React.MouseEvent<HTMLLIElement>) => {
-                    e.preventDefault();
-                    handleSuggestionClick(u);
-                  }}
+                  className="cursor-pointer px-3 py-2 text-sm transition-colors hover:bg-slate-50"
+                  onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(u) }}
                 >
-                  <span className="font-medium">{u.name}</span>
-                  {u.email && (
-                    <span className="text-muted-foreground ml-2">{u.email}</span>
-                  )}
-                  {u.phone && (
-                    <span className="text-muted-foreground ml-2">{u.phone}</span>
-                  )}
-                  {u.country && (
-                    <span className="text-muted-foreground ml-2">{u.country}</span>
-                  )}
+                  <span className="font-medium text-slate-800">{u.name}</span>
+                  {u.email && <span className="ml-2 text-slate-500">{u.email}</span>}
+                  {u.phone && <span className="ml-2 text-slate-400">{u.phone}</span>}
                 </li>
               ))
             )}
           </ul>
         )}
       </div>
-      <div className="overflow-x-auto rounded-none border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-0 hover:bg-transparent">
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Photo
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Name
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Email
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Role
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Phone
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Country
-              </TableHead>
-              <TableHead className="border-r border-white/20 bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Products
-              </TableHead>
-              <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Push token
-              </TableHead>
-              <TableHead className="bg-gray-800 px-3 py-3 text-center text-sm font-semibold text-white">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+
+      {/* Table */}
+      <AdminTableShell>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/80">
+              <th className={adminTH + " w-12 text-center"}>Photo</th>
+              <th className={adminTH}>Name</th>
+              <th className={adminTH}>Email</th>
+              <th className={adminTH}>Role</th>
+              <th className={adminTH}>Phone</th>
+              <th className={adminTH}>Country</th>
+              <th className={adminTH}>Products</th>
+              <th className={adminTH}>Push token</th>
+              <th className={adminTHRight}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {users.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={9}
-                  className="text-muted-foreground py-8 text-center"
-                >
-                  No users yet.
-                </TableCell>
-              </TableRow>
+              <AdminEmptyRow colSpan={9} message="No users found." />
             ) : (
-              users.map((u, index) => (
-                <TableRow
+              users.map((u) => (
+                <tr
                   key={u.id}
                   role="button"
                   tabIndex={0}
                   onClick={() => router.push(`${base}/${u.id}/edit`)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`${base}/${u.id}/edit`);
+                      e.preventDefault()
+                      router.push(`${base}/${u.id}/edit`)
                     }
                   }}
-                  className={`cursor-pointer border-b border-border/50 transition-colors last:border-0 hover:bg-muted/50 ${
-                    index % 2 === 1 ? "bg-[#f5f5f5]" : ""
-                  }`}
+                  className={adminTRClickable}
                 >
-                  <TableCell className="border-r border-border/40 px-3 py-2.5">
-                    <UserPhotoCell imageUrl={u.image} />
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-medium">
-                    {u.name}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.email}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.role}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.phone ?? "—"}
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm">
-                    {u.country ?? "—"}
-                  </TableCell>
-                  <TableCell
-                    className="border-r border-border/40 px-3 py-2.5 text-center text-sm"
+                  <td className="px-4 py-2.5 text-center">
+                    <UserAvatar imageUrl={u.image} name={u.name} />
+                  </td>
+                  <td className={adminTD}>
+                    <span className="font-medium text-slate-800">{u.name}</span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{u.email}</td>
+                  <td className={adminTD}>
+                    <RoleBadge role={u.role} />
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{u.phone ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{u.country ?? "—"}</td>
+                  <td
+                    className="px-4 py-3"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Link
                       href={`/admin/users/${u.id}/products`}
-                      className="font-medium text-primary underline underline-offset-2 hover:text-primary/90"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
                     >
-                      View products
+                      View
+                      <ExternalLink className="size-3" />
                     </Link>
-                  </TableCell>
-                  <TableCell className="border-r border-border/40 px-3 py-2.5 text-left text-sm font-mono text-muted-foreground">
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
                     {(() => {
-                      const tokens = pushTokensByUserId[u.id];
-                      if (!tokens?.length) return "—";
-                      const first = tokens[0];
+                      const tokens = pushTokensByUserId[u.id]
+                      if (!tokens?.length) return "—"
+                      const first = tokens[0]
                       const truncated =
                         first.token.length > TRUNCATE_TOKEN_LEN
                           ? `${first.token.slice(0, TRUNCATE_TOKEN_LEN)}…`
-                          : first.token;
+                          : first.token
                       return tokens.length === 1 ? (
                         <span title={first.token}>{truncated}</span>
                       ) : (
                         <span title={tokens.map((t) => t.token).join("\n")}>
-                          {truncated} (+{tokens.length - 1})
+                          {truncated} <span className="text-slate-500">+{tokens.length - 1}</span>
                         </span>
-                      );
+                      )
                     })()}
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        onClick={(e) => {
-                          // Prevent row navigation when clicking delete.
-                          e.stopPropagation();
-                          openDeleteDialog(u.id, u.name);
-                        }}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                  <td
+                    className="px-4 py-3 text-right"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Delete ${u.name}`}
+                    >
+                      <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
-      </div>
+          </tbody>
+        </table>
 
-      {(totalPages >= 1 || users.length > 0) && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-muted-foreground text-sm">
-            Page {page} of {totalPages || 1}
-            {total > 0 && (
-              <span className="ml-2">
-                (showing {users.length} of {total})
-              </span>
-            )}
-          </p>
-          <div className="flex items-center gap-2">
-            {page <= 1 ? (
-              <Button variant="outline" size="sm" disabled>
-                Previous
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={pageLink(page - 1)}>Previous</Link>
-              </Button>
-            )}
-            {pageNumbers.map((p) =>
-              p === ELLIPSIS_PREV || p === ELLIPSIS_NEXT ? (
-                <span key={p} className="px-1 text-muted-foreground">
-                  …
-                </span>
-              ) : (
-                <Button
-                  key={p}
-                  variant={p === page ? "default" : "outline"}
-                  size="sm"
-                  asChild
-                >
-                  <Link href={pageLink(p)}>{p}</Link>
-                </Button>
-              )
-            )}
-            {page >= totalPages ? (
-              <Button variant="outline" size="sm" disabled>
-                Next
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={pageLink(page + 1)}>Next</Link>
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageCount={users.length}
+          buildHref={buildHref}
+        />
+      </AdminTableShell>
 
-      <Dialog
+      <AdminDeleteDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => !open && closeDeleteDialog()}
-      >
-        <DialogContent showCloseButton={!deleting}>
-          <DialogHeader>
-            <DialogTitle>Delete user</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the user &quot;{deleteTarget?.name}
-              &quot;? This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeDeleteDialog}
-              disabled={deleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title="Delete user"
+        description={
+          <>
+            Delete <strong>{deleteTarget?.name}</strong>? This will remove their
+            account and all associated data. This cannot be undone.
+          </>
+        }
+        onDelete={async () => {
+          if (!deleteTarget) return
+          const form = new FormData()
+          form.set("userId", deleteTarget.id)
+          const result = await deleteUserAction(form)
+          if (result?.error) return result.error
+          router.refresh()
+          setDeleteTarget(null)
+        }}
+      />
     </>
-  );
+  )
 }

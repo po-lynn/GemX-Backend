@@ -1,65 +1,32 @@
-import Link from "next/link";
-import { connection } from "next/server";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory";
-import { LaboratoryTable } from "@/features/laboratory/components";
-import { ChevronLeft, Plus } from "lucide-react";
+import Link from "next/link"
+import { connection } from "next/server"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
+import { LaboratoryTable } from "@/features/laboratory/components"
 
 export default async function AdminLaboratoryPage() {
-  await connection();
-  const laboratories = await getCachedLaboratories();
+  await connection()
+  const laboratories = await getCachedLaboratories()
 
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin">
-              <ChevronLeft className="size-4" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Laboratory
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Manage certification laboratories (e.g. GIA, AGS)
-            </p>
-          </div>
+    <div className="space-y-5 py-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Laboratory</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Manage certification laboratories — GIA, AGS, and others
+          </p>
         </div>
-        <Button asChild>
+        <Button asChild size="sm" className="shrink-0 shadow-sm">
           <Link href="/admin/laboratory/new">
-            <Plus className="mr-2 size-4" />
+            <Plus className="mr-1.5 size-4" />
             New Laboratory
           </Link>
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Laboratories</CardTitle>
-          <CardDescription>
-            Add or edit laboratories used for product certifications.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {laboratories.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No laboratories yet. Create one to get started.
-            </p>
-          ) : (
-            <LaboratoryTable laboratories={laboratories} />
-          )}
-        </CardContent>
-      </Card>
+      <LaboratoryTable laboratories={laboratories} />
     </div>
-  );
+  )
 }

@@ -1,63 +1,32 @@
-import Link from "next/link";
-import { connection } from "next/server";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { getCachedOrigins } from "@/features/origin/db/cache/origin";
-import { OriginTable } from "@/features/origin/components";
-import { ChevronLeft, Plus } from "lucide-react";
+import Link from "next/link"
+import { connection } from "next/server"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { getCachedOrigins } from "@/features/origin/db/cache/origin"
+import { OriginTable } from "@/features/origin/components"
 
 export default async function AdminOriginPage() {
-  await connection();
-  const origins = await getCachedOrigins();
+  await connection()
+  const origins = await getCachedOrigins()
 
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin">
-              <ChevronLeft className="size-4" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Origin</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage gem origins (e.g. Myanmar, Sri Lanka)
-            </p>
-          </div>
+    <div className="space-y-5 py-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Origin</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Manage gem origins — Myanmar, Sri Lanka, Colombia, and more
+          </p>
         </div>
-        <Button asChild>
+        <Button asChild size="sm" className="shrink-0 shadow-sm">
           <Link href="/admin/origin/new">
-            <Plus className="mr-2 size-4" />
+            <Plus className="mr-1.5 size-4" />
             New Origin
           </Link>
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Origins</CardTitle>
-          <CardDescription>
-            Add or edit origins used for product sourcing.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {origins.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              No origins yet. Create one to get started.
-            </p>
-          ) : (
-            <OriginTable origins={origins} />
-          )}
-        </CardContent>
-      </Card>
+      <OriginTable origins={origins} />
     </div>
-  );
+  )
 }

@@ -1,87 +1,80 @@
-import Link from "next/link";
-import { connection } from "next/server";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { getUsersPaginatedFromDb } from "@/features/users/db/users";
-import { getPushTokensByUserIds } from "@/features/push/db/push-tokens";
-import { UsersTable } from "@/features/users/components";
-import { ChevronLeft, Plus } from "lucide-react";
+import Link from "next/link"
+import { connection } from "next/server"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { getUsersPaginatedFromDb } from "@/features/users/db/users"
+import { getPushTokensByUserIds } from "@/features/push/db/push-tokens"
+import { UsersTable } from "@/features/users/components"
+import { UserFilters } from "@/features/users/components/UserFilters"
 
-const USERS_PAGE_SIZE = 20;
+const USERS_PAGE_SIZE = 20
 
 type Props = {
-  searchParams: Promise<{ page?: string; search?: string }>;
-};
+  searchParams: Promise<{
+    page?: string
+    search?: string
+    country?: string
+    state?: string
+    city?: string
+  }>
+}
 
 export default async function AdminUsersPage({ searchParams }: Props) {
-  await connection();
-  const params = await searchParams;
-  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
-  const search = params.search?.trim() ?? "";
+  await connection()
+  const params = await searchParams
+  const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
+  const search = params.search?.trim() ?? ""
+  const country = params.country?.trim() ?? ""
+  const state = params.state?.trim() ?? ""
+  const city = params.city?.trim() ?? ""
+
   const { users, total } = await getUsersPaginatedFromDb({
     page: rawPage,
     limit: USERS_PAGE_SIZE,
     search: search || undefined,
-  });
-  let pushTokensByUserId: Record<string, { token: string; platform: string | null }[]> = {};
+  })
+
+  let pushTokensByUserId: Record<string, { token: string; platform: string | null }[]> = {}
   if (users.length > 0) {
     try {
-      pushTokensByUserId = await getPushTokensByUserIds(users.map((u) => u.id));
+      pushTokensByUserId = await getPushTokensByUserIds(users.map((u) => u.id))
     } catch (e) {
-      console.error("Failed to load push tokens (table may not exist; run npm run db:push or scripts/create-push-device-token-table.sql):", e);
+      console.error("Failed to load push tokens:", e)
     }
   }
-  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE))
 
   return (
-    <div className="container my-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/admin">
-              <ChevronLeft className="size-4" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage user accounts and roles
-            </p>
-          </div>
+    <div className="space-y-5 py-2">
+      {/* Page header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Users</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Manage buyer and seller accounts, roles, and points
+          </p>
         </div>
-        <Button asChild>
+        <Button asChild size="sm" className="shrink-0 shadow-sm">
           <Link href="/admin/users/new">
-            <Plus className="mr-2 size-4" />
+            <Plus className="mr-1.5 size-4" />
             New User
           </Link>
         </Button>
       </div>
 
-      <Card className="bg-transparent border-0 shadow-none">
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
-          <CardDescription>
-          {total} user{total !== 1 ? "s" : ""} total
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <UsersTable
-            users={users}
-            page={rawPage}
-            totalPages={totalPages}
-            total={total}
-            searchQuery={search}
-            pushTokensByUserId={pushTokensByUserId}
-          />
-        </CardContent>
-      </Card>
+      {/* Location filters */}
+      <UserFilters country={country} state={state} city={city} />
+
+      {/* Table */}
+      <UsersTable
+        users={users}
+        page={rawPage}
+        totalPages={totalPages}
+        total={total}
+        searchQuery={search}
+        pushTokensByUserId={pushTokensByUserId}
+      />
     </div>
-  );
+  )
 }
