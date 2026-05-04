@@ -6,11 +6,13 @@
 
 ## Recent changes
 
+- **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
+- **Public seller profile — presence** – **GET `/api/profile/:id`** now includes **`presence`** (`"online"` \| `"offline"`), **`status`** (e.g. `"Online"` or `"Last seen 2 hours ago"`), and **`lastSeenAt`** (ISO 8601 or `null`). Presence is derived from Better Auth **`session`** rows in Postgres (Supabase): **online** means a non-expired session was touched within the last **5 minutes**. Response uses **`Cache-Control: no-store`** so presence is not served stale from CDN. See **5.4a**.
 - **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`** and **GET `/api/chat/history`**. See **5.4.5a**.
 - **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
 - **Categories image support** – Categories now have optional **`image`** (URL) returned by **GET `/api/categories`**. Admin can upload one image via **POST `/api/categories/image`** (multipart) and store the returned `url` into `category.image` via admin UI. See **4.1**.
 - **My products collector-piece owner visibility** – **GET `/api/products/mine`** always returns the logged-in seller’s own collector-piece listings (full owner list shape, same as other mine products), because results are restricted by `sellerId = session.user.id`. See **5.3**.
-- **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset). See **5.4.3c**.
+- **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset), plus **`presence`**, **`status`**, and **`lastSeenAt`** from **`session`** (Supabase Postgres). See **5.4.3c**.
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
@@ -58,7 +60,7 @@
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. See **5.4.3a**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`). See **5.4.3c**. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
@@ -890,6 +892,10 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 
 **Query (optional):** Same filtering set as profile products: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Products are always restricted to `status=active`.
 
+**Caching:** Responses include **`Cache-Control: no-store`** so **`presence`** / **`status`** stay reasonably fresh (not edge-cached for 60s).
+
+**Presence (Supabase / Postgres):** **`presence`** and **`lastSeenAt`** come from Better Auth **`session`** rows stored in your Supabase database—the same underlying signal as admin chat presence (**GET `/api/admin/chat/presence`**). A user counts as **`online`** only if they have at least one **non-expired** session whose **`updated_at`** is within the **last 5 minutes**. **`lastSeenAt`** is the latest **`session.updated_at`** across **all** of that user’s sessions (including expired), so offline users still get a meaningful `"Last seen …"` when they have signed in before. If they have never had a session row, **`lastSeenAt`** is `null` and **`status`** is `"Offline"`.
+
 **Success (200):**
 
 ```json
@@ -900,7 +906,10 @@ Use this endpoint when a user opens another seller’s profile page and needs th
     "image": "https://.../avatar.jpg",
     "username": "seller_username",
     "displayUsername": "Seller Name",
-    "createdAt": "2026-01-01T00:00:00.000Z"
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "presence": "online",
+    "status": "Online",
+    "lastSeenAt": "2026-05-03T14:02:00.000Z"
   },
   "products": {
     "products": [ { "id": "...", "title": "...", "price": "...", ... } ],
@@ -909,7 +918,29 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 }
 ```
 
-- **profile** – Public-facing seller fields only (`id`, `name`, `image`, `username`, `displayUsername`, `createdAt`).
+Example when offline:
+
+```json
+{
+  "profile": {
+    "id": "seller-uuid",
+    "name": "Seller Name",
+    "image": null,
+    "username": "seller_username",
+    "displayUsername": "Seller Name",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "presence": "offline",
+    "status": "Last seen 2 hours ago",
+    "lastSeenAt": "2026-05-03T12:00:00.000Z"
+  },
+  "products": {
+    "products": [],
+    "total": 0
+  }
+}
+```
+
+- **profile** – Public-facing seller fields (`id`, `name`, `image`, `username`, `displayUsername`, `createdAt`) plus **`presence`**, **`status`**, **`lastSeenAt`** (see above).
 - **products** – Seller’s active listings with the same item shape as list endpoints.
 
 **Errors:**
@@ -1638,7 +1669,11 @@ Returns the current user's active premium dealer status. Use this on app load or
 
 **Auth:** Not required.
 
-Returns every user who currently has **active** premium dealer status (package name and expiry set, and `expiresAt` in the future). Use this to show a public directory of premium dealers (avatars, names, and package info).
+Returns every user who currently has **active** premium dealer status (package name and expiry set, and `expiresAt` in the future). Use this to show a public directory of premium dealers (avatars, names, package info, and presence).
+
+**Caching:** **`Cache-Control: no-store`** so **`presence`** / **`status`** are not served stale from CDN.
+
+**Presence:** Same rules as **GET `/api/profile/:id`** — Better Auth **`session`** rows in Postgres (Supabase): **`online`** only if a non-expired session’s **`updated_at`** is within the **last 5 minutes**; **`lastSeenAt`** is the latest **`session.updated_at`** across all sessions; **`status`** is `"Online"`, `"Last seen …"`, or `"Offline"`. See **5.4a** for detail.
 
 **Success (200):**
 
@@ -1651,7 +1686,21 @@ Returns every user who currently has **active** premium dealer status (package n
       "username": "jane_gems",
       "image": "https://…supabase.co/storage/v1/object/public/…/profile.jpg",
       "packageName": "Basic Package",
-      "expiresAt": "2026-05-16T10:00:00.000Z"
+      "expiresAt": "2026-05-16T10:00:00.000Z",
+      "presence": "online",
+      "status": "Online",
+      "lastSeenAt": "2026-05-03T14:02:00.000Z"
+    },
+    {
+      "userId": "another-user-id",
+      "name": "Bob Gems",
+      "username": "bob_gems",
+      "image": null,
+      "packageName": "Basic Package",
+      "expiresAt": "2026-06-01T08:00:00.000Z",
+      "presence": "offline",
+      "status": "Last seen 2 hours ago",
+      "lastSeenAt": "2026-05-03T12:00:00.000Z"
     }
   ]
 }
@@ -1665,6 +1714,9 @@ Returns every user who currently has **active** premium dealer status (package n
 | `image` | string \| null | Profile image URL (same as **`user.image`** / **POST `/api/profile`**). `null` if the user has no image. |
 | `packageName` | string | Active premium dealer package name. |
 | `expiresAt` | string | ISO 8601 time when the premium dealer status ends. |
+| `presence` | `"online"` \| `"offline"` | Derived from **`session`** (see above). |
+| `status` | string | e.g. `"Online"` or `"Last seen 2 hours ago"`. |
+| `lastSeenAt` | string \| null | Latest **`session.updated_at`** (ISO 8601), or `null` if never had a session row. |
 
 **Errors:**
 
@@ -2847,7 +2899,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`). See 5.4.3c. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |

@@ -58,3 +58,17 @@ export function maskPrice(price: string): string {
   if (!intPart) return price
   return intPart[0] + "x".repeat(intPart.length - 1)
 }
+
+/** Relative past time for display, e.g. "2 hours ago" (API presence / last seen). */
+export function formatRelativeLastSeenPast(date: Date): string {
+  const diff = Date.now() - date.getTime()
+  const mins = Math.floor(diff / 60000)
+  const hrs = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (diff < 60_000) return "just now"
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`
+  if (days === 1) return "yesterday"
+  if (days < 7) return `${days} days ago`
+  return DATE_FORMATTER.format(date)
+}
