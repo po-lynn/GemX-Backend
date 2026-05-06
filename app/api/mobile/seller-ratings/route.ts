@@ -4,14 +4,20 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
+import { ratingTagMap } from "@/drizzle/schema/rating-tag-map-schema"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
 import { jsonError, jsonUncached, parseQuery } from "@/lib/api"
+import {
+  assertActiveRatingTagIds,
+  getTagIdsByRatingIds,
+} from "@/features/seller-ratings/db/rating-tag-maps"
 import { getUserById } from "@/features/users/db/users"
 
 const submitSchema = z.object({
   sellerId: z.string().trim().min(1),
   score: z.number().int().min(1).max(5),
   comment: z.string().trim().max(1000).optional(),
+  tagIds: z.array(z.string().uuid()).max(50).optional().default([]),
 })
 
 const listMyRatingsQuerySchema = z.object({
@@ -34,7 +40,7 @@ export async function POST(request: NextRequest) {
     const parsed = submitSchema.safeParse(body)
     if (!parsed.success) return jsonError("Invalid input", 400)
 
-    const { sellerId, score, comment } = parsed.data
+    const { sellerId, score, comment, tagIds } = parsed.data
     if (sellerId === session.user.id) {
       return jsonError("Cannot rate yourself", 400)
     }
@@ -42,29 +48,49 @@ export async function POST(request: NextRequest) {
     const seller = await getUserById(sellerId)
     if (!seller || seller.archived) return jsonError("Seller not found", 404)
 
-    const [row] = await db
-      .insert(sellerRating)
-      .values({
-        raterUserId: session.user.id,
-        sellerUserId: sellerId,
-        score,
-        comment: comment?.length ? comment : null,
-      })
-      .onConflictDoUpdate({
-        target: [sellerRating.raterUserId, sellerRating.sellerUserId],
-        set: {
+    const uniqueTagIds = [...new Set(tagIds)]
+    if (!(await assertActiveRatingTagIds(uniqueTagIds))) {
+      return jsonError("Invalid or inactive tag id", 400)
+    }
+
+    const row = await db.transaction(async (tx) => {
+      const [saved] = await tx
+        .insert(sellerRating)
+        .values({
+          raterUserId: session.user.id,
+          sellerUserId: sellerId,
           score,
           comment: comment?.length ? comment : null,
-          updatedAt: new Date(),
-        },
-      })
-      .returning({
-        id: sellerRating.id,
-        createdAt: sellerRating.createdAt,
-        updatedAt: sellerRating.updatedAt,
-      })
+        })
+        .onConflictDoUpdate({
+          target: [sellerRating.raterUserId, sellerRating.sellerUserId],
+          set: {
+            score,
+            comment: comment?.length ? comment : null,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({
+          id: sellerRating.id,
+          createdAt: sellerRating.createdAt,
+          updatedAt: sellerRating.updatedAt,
+        })
+
+      if (!saved) return null
+
+      await tx.delete(ratingTagMap).where(eq(ratingTagMap.ratingId, saved.id))
+      if (uniqueTagIds.length > 0) {
+        await tx.insert(ratingTagMap).values(
+          uniqueTagIds.map((tagId) => ({ ratingId: saved.id, tagId }))
+        )
+      }
+
+      return saved
+    })
 
     if (!row) return jsonError("Failed to save rating", 500)
+
+    const tagIdsOut = [...uniqueTagIds].sort()
 
     return jsonUncached({
       success: true,
@@ -73,6 +99,7 @@ export async function POST(request: NextRequest) {
         sellerId,
         score,
         comment: comment?.length ? comment : null,
+        tagIds: tagIdsOut,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       },
@@ -124,6 +151,9 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .offset(offset)
 
+    const ratingIds = rows.map((r) => r.id)
+    const tagIdsByRating = await getTagIdsByRatingIds(ratingIds)
+
     const countRows = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(sellerRating)
@@ -135,6 +165,7 @@ export async function GET(request: NextRequest) {
         sellerId: r.sellerUserId,
         score: r.score,
         comment: r.comment,
+        tagIds: [...(tagIdsByRating.get(r.id) ?? [])].sort(),
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         seller: {

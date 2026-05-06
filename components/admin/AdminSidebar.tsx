@@ -22,6 +22,7 @@ import {
   ShoppingBag,
   ClipboardList,
   MessageSquare,
+  Tags,
 } from "lucide-react";
 
 type NavItem = {
@@ -84,6 +85,13 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: ShieldCheck,
         color: "#ef4444",
         isActive: (p) => p.startsWith("/admin/settings/escrow-service"),
+      },
+      {
+        href: "/admin/settings/rating-tags",
+        label: "Seller Rating Tags",
+        icon: Tags,
+        color: "#f43f5e",
+        isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
       },
     ],
   },

@@ -6,6 +6,7 @@ import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
 import { jsonError, jsonUncached, parseQuery } from "@/lib/api"
+import { getTagIdsByRatingIds } from "@/features/seller-ratings/db/rating-tag-maps"
 import { getUserById } from "@/features/users/db/users"
 
 const listQuerySchema = z.object({
@@ -63,6 +64,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .limit(limit)
       .offset(offset)
 
+    const publicRatingIds = rows.map((r) => r.id)
+    const tagIdsByRating = await getTagIdsByRatingIds(publicRatingIds)
+
     const averageScore = Number(agg?.avgScore ?? 0)
     const totalRatings = agg?.totalRatings ?? 0
 
@@ -74,6 +78,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: r.id,
         score: r.score,
         comment: r.comment,
+        tagIds: [...(tagIdsByRating.get(r.id) ?? [])].sort(),
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         rater: {

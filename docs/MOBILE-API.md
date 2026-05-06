@@ -6,6 +6,8 @@
 
 ## Recent changes
 
+- **Seller ratings — preset `tagIds`** – **POST `/api/mobile/seller-ratings`** accepts optional **`tagIds`** (UUID array, max 50); each id must be an **active** tag from **GET `/api/rating-tags`**. Server stores links in **`rating_tag_map`** (replacing prior links on update). Responses from **POST** and both seller-rating **GET**s include **`tagIds`** (sorted). See **5.4b**.
+- **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
 - **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
 - **Public seller profile — presence** – **GET `/api/profile/:id`** now includes **`presence`** (`"online"` \| `"offline"`), **`status`** (e.g. `"Online"` or `"Last seen 2 hours ago"`), and **`lastSeenAt`** (ISO 8601 or `null`). Presence is derived from Better Auth **`session`** rows in Postgres (Supabase): **online** means a non-expired session was touched within the last **5 minutes**. Response uses **`Cache-Control: no-store`** so presence is not served stale from CDN. See **5.4a**.
 - **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`** and **GET `/api/chat/history`**. See **5.4.5a**.
@@ -16,7 +18,7 @@
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
-- **Seller ratings (mobile)** – Added **POST `/api/mobile/seller-ratings`** (auth) so one user can rate another user (seller) with **`score`** (1–5); same endpoint updates an existing rating. **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus a paginated list of ratings received by that seller. See **5.4b**.
+- **Seller ratings (mobile)** – **POST `/api/mobile/seller-ratings`** (auth): rate another user (seller) with **`score`** (1–5), optional **`comment`**, optional **`tagIds`** (active preset tag UUIDs; stored in **`rating_tag_map`**). **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated; each row includes **`tagIds`**). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus paginated received ratings (each includes **`tagIds`**). Preset tag list: **GET `/api/rating-tags`** (no auth). See **5.4b**.
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
 - **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
@@ -74,9 +76,10 @@
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark one product by `productId` (UUID). Idempotent for duplicates. See **5.4.6**. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List current user's favourite products (paginated). Query: `page`, `limit`. See **5.4.6**. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove one favourite by `productId` (UUID) in JSON body. See **5.4.6**. |
-| POST   | `/api/mobile/seller-ratings` | Yes  | Rate another user (seller): body `sellerId` (user id), `score` (1–5), optional `comment`. Create/update. See **5.4b**. |
-| GET    | `/api/mobile/seller-ratings` | Yes  | List ratings you submitted to sellers (paginated). Query: `page`, `limit`, optional `sellerId`. See **5.4b**. |
-| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller. Query: `page`, `limit`. See **5.4b**. |
+| POST   | `/api/mobile/seller-ratings` | Yes  | Rate another user (seller): body `sellerId` (user id), `score` (1–5), optional `comment`, optional **`tagIds`** (UUID array, max 50; each must be an **active** tag from **GET `/api/rating-tags`**). Create/update; replaces stored tag links for that rating. See **5.4b**. |
+| GET    | `/api/mobile/seller-ratings` | Yes  | List ratings you submitted to sellers (paginated; each item includes **`tagIds`**). Query: `page`, `limit`, optional `sellerId`. See **5.4b**. |
+| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller (each rating includes **`tagIds`**). Query: `page`, `limit`. See **5.4b**. |
+| GET    | `/api/rating-tags` | No   | List active seller-rating preset tags (`ratingTags`: `id`, `name`, `type`). Cached. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
 | POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery is via Supabase Realtime on `messages`. See **5.4d**. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
@@ -85,6 +88,7 @@
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `type` (optional)                                                                                                                                    |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for saving as `category.image` (admin only). See **4.1a**.                                                     |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
+| GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See **5.4b**.                                                                                                                                       |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                                                                                                        |
@@ -1311,7 +1315,11 @@ Authenticated users can rate **other** users as sellers (one rating per rater–
 {
   "sellerId": "seller-user-id",
   "score": 5,
-  "comment": "Fast shipping, item as described."
+  "comment": "Fast shipping, item as described.",
+  "tagIds": [
+    "770e8400-e29b-41d4-a716-446655440001",
+    "770e8400-e29b-41d4-a716-446655440002"
+  ]
 }
 ```
 
@@ -1320,6 +1328,7 @@ Authenticated users can rate **other** users as sellers (one rating per rater–
 | `sellerId` | string | Yes | Target seller’s user id (same as `GET /api/profile/:id` path `id`). |
 | `score` | number | Yes | Integer from **1** to **5**. |
 | `comment` | string | No | Optional note (trimmed, max 1000 characters). |
+| `tagIds` | string[] (UUID) | No | Preset tags to attach (from **GET `/api/rating-tags`**). Omit or use `[]` to clear tags. Max **50** entries; duplicates are ignored. Every id must exist and be **`is_active`** on the server. |
 
 **Success (200):**
 
@@ -1331,17 +1340,24 @@ Authenticated users can rate **other** users as sellers (one rating per rater–
     "sellerId": "seller-user-id",
     "score": 5,
     "comment": "Fast shipping, item as described.",
+    "tagIds": [
+      "770e8400-e29b-41d4-a716-446655440001",
+      "770e8400-e29b-41d4-a716-446655440002"
+    ],
     "createdAt": "2026-04-16T12:00:00.000Z",
     "updatedAt": "2026-04-16T12:00:00.000Z"
   }
 }
 ```
 
+`tagIds` in the response is sorted ascending and reflects what was stored (after deduplication).
+
 **Errors:**
 
 - **401** – `{ "error": "Unauthorized" }`.
-- **400** – `{ "error": "Invalid input" }` (e.g. score not 1–5).
+- **400** – `{ "error": "Invalid input" }` (e.g. score not 1–5, invalid UUID in `tagIds`, or more than 50 tag ids).
 - **400** – `{ "error": "Cannot rate yourself" }`.
+- **400** – `{ "error": "Invalid or inactive tag id" }` — at least one `tagIds` entry is unknown or not active.
 - **404** – `{ "error": "Seller not found" }` (unknown or archived seller).
 - **500** – `{ "error": "Failed to submit seller rating" }` or `{ "error": "Failed to save rating" }`.
 
@@ -1371,6 +1387,7 @@ Returns ratings **you** have submitted to sellers (newest `updatedAt` first).
       "sellerId": "seller-user-id",
       "score": 5,
       "comment": null,
+      "tagIds": ["770e8400-e29b-41d4-a716-446655440001"],
       "createdAt": "2026-04-16T12:00:00.000Z",
       "updatedAt": "2026-04-16T12:00:00.000Z",
       "seller": {
@@ -1387,6 +1404,8 @@ Returns ratings **you** have submitted to sellers (newest `updatedAt` first).
   "total": 1
 }
 ```
+
+Each rating includes **`tagIds`**: UUIDs of linked preset tags (sorted ascending); `[]` when none.
 
 **Errors:**
 
@@ -1426,6 +1445,7 @@ Returns aggregate stats and a paginated list of ratings **received** by the sell
       "id": "770e8400-e29b-41d4-a716-446655440001",
       "score": 5,
       "comment": "Great experience",
+      "tagIds": ["770e8400-e29b-41d4-a716-446655440001"],
       "createdAt": "2026-04-16T12:00:00.000Z",
       "updatedAt": "2026-04-16T12:00:00.000Z",
       "rater": {
@@ -1440,6 +1460,8 @@ Returns aggregate stats and a paginated list of ratings **received** by the sell
 }
 ```
 
+Each **`ratings[]`** item includes **`tagIds`** (sorted UUIDs; `[]` if none).
+
 - **`averageScore`:** Rounded to 2 decimal places; `0` when there are no ratings yet.
 - **`totalRatings`:** Total count of ratings for this seller (same as `total` when listing all pages).
 
@@ -1447,6 +1469,47 @@ Returns aggregate stats and a paginated list of ratings **received** by the sell
 
 - **404** – `{ "error": "Seller not found" }`.
 - **500** – `{ "error": "Failed to load seller ratings" }`.
+
+---
+
+#### GET `/api/rating-tags`
+
+**Auth:** Not required.
+
+Returns **active** preset tags only (`is_active` in admin). Hidden tags are omitted so clients never show stale options.
+
+**Caching:** Same pattern as **GET `/api/origins`**: `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+
+**Success (200):**
+
+```json
+{
+  "ratingTags": [
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440001",
+      "name": "Fast shipping",
+      "type": "positive"
+    },
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440002",
+      "name": "Slow to respond",
+      "type": "negative"
+    }
+  ]
+}
+```
+
+| Field (each item) | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | string (UUID) | Tag id — pass in **POST `/api/mobile/seller-ratings`** **`tagIds`** array. |
+| `name` | string | Display text. |
+| `type` | string | `"positive"` or `"negative"` — group chips in the rating UI. |
+
+List order: `type` ascending, then `name` ascending.
+
+**Errors:**
+
+- **500** – `{ "error": "Failed to load rating tags" }`.
 
 ---
 
@@ -2847,8 +2910,7 @@ Returns a single published article by ID. Draft items return **404**.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
-  - **Seller ratings:** After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional" }`. List ratings you have given: `GET /api/mobile/seller-rating
-  s?page=1&limit=20`.
+  - **Seller ratings:** Load preset tag options with `GET /api/rating-tags` (cache locally). After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional", "tagIds": ["<uuid>", ...] }` (`tagIds` optional; each id must be active in **GET `/api/rating-tags`**). List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20` (each item includes `tagIds`).
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
@@ -2913,9 +2975,10 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark a product by `productId` (idempotent). See 5.4.6. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List own favourite products (paginated: `page`, `limit`). See 5.4.6. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove saved product by `productId`. See 5.4.6. |
-| POST   | `/api/mobile/seller-ratings` | Yes  | Rate a seller user (`sellerId`, `score` 1–5, optional `comment`). See 5.4b. |
-| GET    | `/api/mobile/seller-ratings` | Yes  | List own submitted seller ratings (paginated; optional `sellerId`). See 5.4b. |
-| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public seller rating summary + paginated received ratings. See 5.4b. |
+| POST   | `/api/mobile/seller-ratings` | Yes  | Rate a seller user (`sellerId`, `score` 1–5, optional `comment`, optional `tagIds` UUID[] active tags). See 5.4b. |
+| GET    | `/api/mobile/seller-ratings` | Yes  | List own submitted seller ratings (paginated; optional `sellerId`; each rating has `tagIds`). See 5.4b. |
+| GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public seller rating summary + paginated received ratings (each rating has `tagIds`). See 5.4b. |
+| GET    | `/api/rating-tags` | No   | Active seller-rating preset tags (`ratingTags`). Cached. See 5.4b. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase Realtime on `messages`. See 5.4d. |
@@ -2925,6 +2988,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `?type` optional                                        |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (admin only). Returns `url` for `category.image`. See 4.1a.                      |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
+| GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See 5.4b.                                             |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |

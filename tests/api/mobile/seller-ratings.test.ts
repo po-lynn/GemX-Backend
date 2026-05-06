@@ -12,6 +12,10 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/features/users/db/users", () => ({
   getUserById: vi.fn(),
 }))
+vi.mock("@/features/seller-ratings/db/rating-tag-maps", () => ({
+  assertActiveRatingTagIds: vi.fn().mockResolvedValue(true),
+  getTagIdsByRatingIds: vi.fn().mockResolvedValue(new Map()),
+}))
 vi.mock("@/drizzle/schema/seller-rating-schema", () => ({
   sellerRating: {
     id: "id",
@@ -33,7 +37,7 @@ vi.mock("drizzle-orm", () => ({
   sql: vi.fn(),
 }))
 vi.mock("@/drizzle/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn() },
+  db: { select: vi.fn(), insert: vi.fn(), delete: vi.fn(), transaction: vi.fn() },
 }))
 
 function selectChain(rows: unknown[]) {
@@ -70,6 +74,10 @@ describe("mobile seller ratings", () => {
     vi.clearAllMocks()
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(db as never))
+    vi.mocked(db.delete).mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    } as never)
   })
 
   it("POST returns 401 when unauthenticated", async () => {
@@ -121,7 +129,13 @@ describe("mobile seller ratings", () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({
       success: true,
-      rating: { id: "rating-1", sellerId: SELLER_ID, score: 4, comment: "Good seller" },
+      rating: {
+        id: "rating-1",
+        sellerId: SELLER_ID,
+        score: 4,
+        comment: "Good seller",
+        tagIds: [],
+      },
     })
   })
 
@@ -155,6 +169,7 @@ describe("mobile seller ratings", () => {
     expect(body.ratings[0]).toMatchObject({
       sellerId: SELLER_ID,
       score: 5,
+      tagIds: [],
       seller: { name: "Seller" },
     })
   })
