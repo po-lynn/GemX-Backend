@@ -94,6 +94,7 @@ export function RatingTagForm({ mode, ratingTag }: Props) {
                 className={adminSelect}
               >
                 <option value="positive">Positive</option>
+                <option value="neutral">Neutral</option>
                 <option value="negative">Negative</option>
               </select>
             </div>

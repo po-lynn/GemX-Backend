@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 /** Sentiment bucket for preset tags buyers attach to seller ratings. */
-export const ratingTagTypeEnum = pgEnum("rating_tag_type", ["positive", "negative"])
+export const ratingTagTypeEnum = pgEnum("rating_tag_type", ["positive", "neutral", "negative"])
 
 /**
  * Admin-managed tags for seller ratings (e.g. “Fast shipping”).

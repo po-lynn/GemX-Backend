@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const ratingTagTypeSchema = z.enum(["positive", "negative"])
+const ratingTagTypeSchema = z.enum(["positive", "neutral", "negative"])
 
 export const ratingTagCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),

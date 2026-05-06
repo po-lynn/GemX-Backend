@@ -19,6 +19,7 @@ describe("GET /api/rating-tags", () => {
   it("returns 200 and ratingTags wrapper", async () => {
     const tags = [
       { id: "t1", name: "Fast shipping", type: "positive" as const },
+      { id: "t3", name: "As described", type: "neutral" as const },
       { id: "t2", name: "Slow reply", type: "negative" as const },
     ]
     vi.mocked(getPublicRatingTags).mockResolvedValue(tags)

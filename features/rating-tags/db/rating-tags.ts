@@ -5,7 +5,7 @@ import { asc, eq } from "drizzle-orm"
 export type RatingTagRow = {
   id: string
   name: string
-  type: "positive" | "negative"
+  type: "positive" | "neutral" | "negative"
   isActive: boolean
 }
 
@@ -15,7 +15,7 @@ export type RatingTagForEdit = RatingTagRow
 export type RatingTagPublic = {
   id: string
   name: string
-  type: "positive" | "negative"
+  type: "positive" | "neutral" | "negative"
 }
 
 export async function getPublicRatingTags(): Promise<RatingTagPublic[]> {
@@ -58,7 +58,7 @@ export async function getRatingTagById(id: string): Promise<RatingTagForEdit | n
 
 export async function createRatingTagInDb(input: {
   name: string
-  type: "positive" | "negative"
+  type: "positive" | "neutral" | "negative"
   isActive: boolean
 }): Promise<string> {
   const [inserted] = await db
@@ -74,13 +74,13 @@ export async function createRatingTagInDb(input: {
 
 export async function updateRatingTagInDb(
   id: string,
-  input: { name?: string; type?: "positive" | "negative"; isActive?: boolean }
+  input: { name?: string; type?: "positive" | "neutral" | "negative"; isActive?: boolean }
 ): Promise<boolean> {
   const updates = Object.fromEntries(
     Object.entries(input).filter(([, v]) => v !== undefined)
   ) as Partial<{
     name: string
-    type: "positive" | "negative"
+    type: "positive" | "neutral" | "negative"
     isActive: boolean
   }>
   if (Object.keys(updates).length === 0) return true

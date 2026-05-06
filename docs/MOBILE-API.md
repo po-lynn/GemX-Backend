@@ -8,7 +8,7 @@
 
 - **Product detail seller rating in `seller`** – **GET `/api/products/:id`** now includes seller aggregate rating in **`seller.rating`** (`averageScore`, `totalRatings`) and seller image in **`seller.image`**. Top-level `sellerImage` / `sellerRating` are removed. The seller block is returned in both full and collector-limited response shapes. See **5.2**.
 - **Seller ratings — preset `tagIds`** – **POST `/api/mobile/seller-ratings`** accepts optional **`tagIds`** (UUID array, max 50); each id must be an **active** tag from **GET `/api/rating-tags`**. Server stores links in **`rating_tag_map`** (replacing prior links on update). Responses from **POST** and both seller-rating **GET**s include **`tagIds`** (sorted). See **5.4b**.
-- **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
+- **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `neutral` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
 - **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
 - **Public seller profile — presence** – **GET `/api/profile/:id`** now includes **`presence`** (`"online"` \| `"offline"`), **`status`** (e.g. `"Online"` or `"Last seen 2 hours ago"`), and **`lastSeenAt`** (ISO 8601 or `null`). Presence is derived from Better Auth **`session`** rows in Postgres (Supabase): **online** means a non-expired session was touched within the last **5 minutes**. Response uses **`Cache-Control: no-store`** so presence is not served stale from CDN. See **5.4a**.
 - **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`** and **GET `/api/chat/history`**. See **5.4.5a**.
@@ -1505,6 +1505,11 @@ Returns **active** preset tags only (`is_active` in admin). Hidden tags are omit
     },
     {
       "id": "770e8400-e29b-41d4-a716-446655440002",
+      "name": "As described",
+      "type": "neutral"
+    },
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440003",
       "name": "Slow to respond",
       "type": "negative"
     }
@@ -1516,7 +1521,7 @@ Returns **active** preset tags only (`is_active` in admin). Hidden tags are omit
 | ----- | ---- | ----------- |
 | `id` | string (UUID) | Tag id — pass in **POST `/api/mobile/seller-ratings`** **`tagIds`** array. |
 | `name` | string | Display text. |
-| `type` | string | `"positive"` or `"negative"` — group chips in the rating UI. |
+| `type` | string | `"positive"`, `"neutral"`, or `"negative"` — group chips in the rating UI. |
 
 List order: `type` ascending, then `name` ascending.
 
