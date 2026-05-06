@@ -6,6 +6,7 @@ import { getCachedProduct } from "@/features/products/db/cache/products"
 import { updateProductInDb, deleteProductInDb } from "@/features/products/db/products"
 import { getUserById } from "@/features/users/db/users"
 import { auth } from "@/lib/auth"
+import { db } from "@/drizzle/db"
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 
@@ -26,24 +27,65 @@ vi.mock("@/features/products/db/products", () => ({
 vi.mock("@/features/users/db/users", () => ({
   getUserById: vi.fn(),
 }))
+vi.mock("@/drizzle/db", () => ({
+  db: { select: vi.fn() },
+}))
+vi.mock("@/drizzle/schema/seller-rating-schema", () => ({
+  sellerRating: { score: "score", sellerUserId: "seller_user_id" },
+}))
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
+  return {
+    ...actual,
+    eq: vi.fn((_c, v) => `eq:${String(v)}`),
+    sql: vi.fn(),
+  }
+})
+
+function selectChain(rows: unknown[]) {
+  const chain: Record<string, unknown> = {}
+  for (const m of ["from", "where"]) {
+    chain[m] = vi.fn().mockReturnValue(chain)
+  }
+  chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve(rows).then(resolve, reject)
+  chain.catch = (reject: (e: unknown) => unknown) => Promise.resolve(rows).catch(reject)
+  return chain
+}
 
 describe("GET /api/products/[id]", () => {
   beforeEach(() => {
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(getUserById).mockResolvedValue(null)
+    vi.mocked(db.select).mockReturnValue(selectChain([{ averageScore: 0, totalRatings: 0 }]) as never)
   })
 
   it("returns 200 and product with seller when found", async () => {
     const product = { id: "p1", title: "Ruby", sellerId: "u1" }
-    const user = { id: "u1", name: "Seller", phone: null, username: "s", displayUsername: "s" }
+    const user = {
+      id: "u1",
+      name: "Seller",
+      image: "https://img.example/seller.jpg",
+      phone: null,
+      username: "s",
+      displayUsername: "s",
+    }
     vi.mocked(getCachedProduct).mockResolvedValue(product as never)
     vi.mocked(getUserById).mockResolvedValue(user as never)
+    vi.mocked(db.select).mockReturnValue(selectChain([{ averageScore: 4.5, totalRatings: 12 }]) as never)
     const res = await GET({} as NextRequest, params("p1"))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data).toMatchObject({ id: "p1", title: "Ruby" })
     expect(data).toHaveProperty("seller")
-    expect(data.seller).toMatchObject({ id: "u1", name: "Seller" })
+    expect(data.seller).toMatchObject({
+      id: "u1",
+      name: "Seller",
+      image: "https://img.example/seller.jpg",
+      rating: { averageScore: 4.5, totalRatings: 12 },
+    })
+    expect(data).not.toHaveProperty("sellerImage")
+    expect(data).not.toHaveProperty("sellerRating")
   })
 
   it("omits admin changeLog from GET JSON (not exposed publicly)", async () => {

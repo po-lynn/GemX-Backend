@@ -16,6 +16,9 @@ import { normalizeProductBody } from "@/features/products/api/normalize-product-
 import { deductUserPoints } from "@/features/points/db/points"
 import { getCollectorPieceShowRequestForUser } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import { maskPrice } from "@/lib/formatters"
+import { db } from "@/drizzle/db"
+import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
+import { eq, sql } from "drizzle-orm"
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -31,6 +34,18 @@ export async function GET(
 
     let requestStatus: { id: string; status: string; createdAt: Date } | null = null
     const session = await auth.api.getSession({ headers: request.headers })
+    const sellerUser = await getUserById(product.sellerId)
+    const [sellerRatingAgg] = await db
+      .select({
+        averageScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
+        totalRatings: sql<number>`count(*)::int`,
+      })
+      .from(sellerRating)
+      .where(eq(sellerRating.sellerUserId, product.sellerId))
+    const sellerRatingSummary = {
+      averageScore: Number(sellerRatingAgg?.averageScore ?? 0),
+      totalRatings: sellerRatingAgg?.totalRatings ?? 0,
+    }
 
     if (product.isCollectorPiece) {
       const isOwner = session?.user?.id === product.sellerId
@@ -48,24 +63,37 @@ export async function GET(
           currency: product.currency,
           imageUrls: product.imageUrls,
           maskedPrice: maskPrice(product.price),
+          seller: sellerUser
+            ? {
+                id: sellerUser.id,
+                name: sellerUser.name,
+                image: sellerUser.image ?? null,
+                rating: sellerRatingSummary,
+              }
+            : null,
           requestStatus,
         })
       }
       // Approved: fall through to full data response below
     }
 
-    const sellerUser = await getUserById(product.sellerId)
     const seller = sellerUser
       ? {
           id: sellerUser.id,
           name: sellerUser.name,
+          image: sellerUser.image ?? null,
           phone: sellerUser.phone ?? null,
           username: sellerUser.username ?? null,
           displayUsername: sellerUser.displayUsername ?? null,
+          rating: sellerRatingSummary,
         }
       : null
     const { changeLog: _adminChangeLog, ...publicProduct } = product
-    return jsonCached({ ...publicProduct, seller, requestStatus })
+    return jsonCached({
+      ...publicProduct,
+      seller,
+      requestStatus,
+    })
   } catch (error) {
     console.error("GET /api/products/[id]:", error)
     return jsonError("Failed to fetch product", 500)

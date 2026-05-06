@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Product detail seller rating in `seller`** – **GET `/api/products/:id`** now includes seller aggregate rating in **`seller.rating`** (`averageScore`, `totalRatings`) and seller image in **`seller.image`**. Top-level `sellerImage` / `sellerRating` are removed. The seller block is returned in both full and collector-limited response shapes. See **5.2**.
 - **Seller ratings — preset `tagIds`** – **POST `/api/mobile/seller-ratings`** accepts optional **`tagIds`** (UUID array, max 50); each id must be an **active** tag from **GET `/api/rating-tags`**. Server stores links in **`rating_tag_map`** (replacing prior links on update). Responses from **POST** and both seller-rating **GET**s include **`tagIds`** (sorted). See **5.4b**.
 - **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
 - **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
@@ -34,7 +35,7 @@
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
 - **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Collector-piece rows are shown as owner data (no public masking), since this endpoint is seller-scoped. Same sort order as public list when filters apply.
-- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, phone, username, displayUsername), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: owner (seller) gets full data when authenticated; non-owner gets limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the show-request is approved — see **5.2**.
+- **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, image, phone, username, displayUsername, `rating: { averageScore, totalRatings }`), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: owner (seller) gets full data when authenticated; non-owner gets limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the show-request is approved — see **5.2**.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
@@ -95,7 +96,7 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
-| GET    | `/api/products/:id`    | No†  | Get single product. **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
+| GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Seller-scoped: collector-piece rows are returned for owner (no public masking). Same query params as list all.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
 | POST   | `/api/profile`         | Yes  | Update current user profile fields (`name`, `address`, `image`). See **5.4c**. |
@@ -769,7 +770,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 | --------- | -------- |
 | Not a collector piece | Full product data (existing behaviour) |
 | Collector piece, seller (owner) is logged in | Full product data **plus** `requestStatus` |
-| Collector piece, no auth or no request submitted | Limited shape — `imageUrls`, `maskedPrice`, `currency`, `status`, `isCollectorPiece: true`, `requestStatus: null` |
+| Collector piece, no auth or no request submitted | Limited shape — `imageUrls`, `maskedPrice`, `currency`, `status`, `seller` (with `image` + `rating`), `isCollectorPiece: true`, `requestStatus: null` |
 | Collector piece, request submitted but not yet approved | Limited shape — same as above but `requestStatus: { id, status: "pending" \| "dismissed", createdAt }` |
 | Collector piece, request approved | Full product data **plus** `requestStatus` |
 
@@ -783,6 +784,15 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
   "currency": "USD",
   "imageUrls": ["https://cdn.example.com/img.jpg"],
   "maskedPrice": "1xxxxx",
+  "seller": {
+    "id": "seller-uuid",
+    "name": "Seller Name",
+    "image": "https://cdn.example.com/seller.jpg",
+    "rating": {
+      "averageScore": 4.5,
+      "totalRatings": 12
+    }
+  },
   "requestStatus": null
 }
 ```
@@ -798,9 +808,12 @@ To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`
 | ----------------- | ------------- | -------------------------- |
 | `id`              | string        | Seller user ID             |
 | `name`            | string        | Seller display name        |
+| `image`           | string | null | Seller avatar URL          |
 | `phone`           | string | null | Seller phone (for contact) |
 | `username`        | string | null | Seller username            |
 | `displayUsername` | string | null | Seller display username    |
+| `rating.averageScore` | number | Seller average score from `seller_rating` rounded to 2 decimals (`0` if none). |
+| `rating.totalRatings` | number | Total number of ratings received by the seller. |
 
 
 **Errors:**
@@ -2994,7 +3007,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
-| GET    | `/api/products/:id`    | No†  | Get one product. **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
+| GET    | `/api/products/:id`    | No†  | Get one product (includes `seller` details with `image` + `rating`). **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
 | GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all). Collector pieces are owner-visible (not public-masked).                                   |
 | GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |
 | GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (optional query params)                                       |
