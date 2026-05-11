@@ -1,6 +1,10 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { pointPurchaseRequest, pointSetting } from "@/drizzle/schema/points-schema";
+import {
+  pointPurchaseRequest,
+  pointSetting,
+  premiumDealersPackage,
+} from "@/drizzle/schema/points-schema";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
@@ -426,10 +430,21 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
  */
 export async function activatePremiumDealer(
   userId: string,
-  pkg: PremiumDealerPackage
-): Promise<{ remainingPoints: number; expiresAt: Date } | null> {
+  pkg: PremiumDealerPackage,
+  autoRenew: boolean
+): Promise<
+  | {
+      remainingPoints: number;
+      startDate: Date;
+      expiresAt: Date;
+      autoRenew: boolean;
+      status: "active";
+    }
+  | null
+> {
   const cost = Math.max(0, Math.floor(pkg.pointsRequired));
-  const expiresAt = new Date(Date.now() + pkg.durationDays * 24 * 60 * 60 * 1000);
+  const startDate = new Date();
+  const expiresAt = new Date(startDate.getTime() + pkg.durationDays * 24 * 60 * 60 * 1000);
 
   const result = await db.transaction(async (tx) => {
     const [updatedUser] = await tx
@@ -448,7 +463,22 @@ export async function activatePremiumDealer(
       })
       .where(eq(user.id, userId));
 
-    return { remainingPoints: updatedUser.points, expiresAt };
+    await tx.insert(premiumDealersPackage).values({
+      userId,
+      packageName: pkg.name,
+      startDate,
+      endDate: expiresAt,
+      autoRenew,
+      status: "active",
+    });
+
+    return {
+      remainingPoints: updatedUser.points,
+      startDate,
+      expiresAt,
+      autoRenew,
+      status: "active" as const,
+    };
   });
 
   return result;
@@ -483,7 +513,9 @@ export async function getActivePremiumDealers(): Promise<
     username: string | null
     image: string | null
     packageName: string
+    startDate: Date
     expiresAt: Date
+    autoRenew: boolean
   }[]
 > {
   const rows = await db
@@ -492,15 +524,17 @@ export async function getActivePremiumDealers(): Promise<
       name: user.name,
       username: user.username,
       image: user.image,
-      packageName: user.premiumDealerPackageName,
-      expiresAt: user.premiumDealerExpiresAt,
+      packageName: premiumDealersPackage.packageName,
+      startDate: premiumDealersPackage.startDate,
+      expiresAt: premiumDealersPackage.endDate,
+      autoRenew: premiumDealersPackage.autoRenew,
     })
-    .from(user)
+    .from(premiumDealersPackage)
+    .innerJoin(user, eq(premiumDealersPackage.userId, user.id))
     .where(
       and(
-        isNotNull(user.premiumDealerPackageName),
-        isNotNull(user.premiumDealerExpiresAt),
-        gt(user.premiumDealerExpiresAt, sql`now()`)
+        eq(premiumDealersPackage.status, "active"),
+        gt(premiumDealersPackage.endDate, sql`now()`)
       )
     );
 
@@ -509,8 +543,10 @@ export async function getActivePremiumDealers(): Promise<
     name: r.name,
     username: r.username,
     image: r.image,
-    packageName: r.packageName!,
-    expiresAt: r.expiresAt!,
+    packageName: r.packageName,
+    startDate: r.startDate,
+    expiresAt: r.expiresAt,
+    autoRenew: r.autoRenew,
   }));
 }
 

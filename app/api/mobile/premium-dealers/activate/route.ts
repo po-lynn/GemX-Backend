@@ -6,6 +6,7 @@ import { activatePremiumDealer, getPremiumDealersSettings } from "@/features/poi
 
 const bodySchema = z.object({
   packageName: z.string().min(1).max(120),
+  autoRenew: z.boolean(),
 })
 
 /**
@@ -27,7 +28,11 @@ export async function POST(request: NextRequest) {
     const pkg = settings.packages.find((p) => p.name === parsed.data.packageName)
     if (!pkg) return jsonError("Package not found", 400)
 
-    const result = await activatePremiumDealer(session.user.id, pkg)
+    const result = await activatePremiumDealer(
+      session.user.id,
+      pkg,
+      parsed.data.autoRenew
+    )
     if (!result) return jsonError("Insufficient points balance", 400)
 
     return jsonUncached({
@@ -35,7 +40,10 @@ export async function POST(request: NextRequest) {
       packageName: pkg.name,
       pointsUsed: pkg.pointsRequired,
       remainingPoints: result.remainingPoints,
+      startDate: result.startDate.toISOString(),
       expiresAt: result.expiresAt.toISOString(),
+      autoRenew: result.autoRenew,
+      status: result.status,
     })
   } catch (e) {
     console.error("POST /api/mobile/premium-dealers/activate:", e)

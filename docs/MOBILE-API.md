@@ -6,7 +6,9 @@
 
 ## Recent changes
 
+- **Premium dealers list from activation history** – **GET `/api/mobile/premium-dealers`** now sources data from the `premium_dealers_packages` table (joined with `user`) instead of legacy `user` columns. Response includes new fields **`startDate`** and **`autoRenew`**. See **5.4.3c**.
 - **Product detail seller rating in `seller`** – **GET `/api/products/:id`** now includes seller aggregate rating in **`seller.rating`** (`averageScore`, `totalRatings`) and seller image in **`seller.image`**. Top-level `sellerImage` / `sellerRating` are removed. The seller block is returned in both full and collector-limited response shapes. See **5.2**.
+- **Premium dealer activation persistence** – **POST `/api/mobile/premium-dealers/activate`** now requires **`autoRenew`** in request body and returns activation metadata (`startDate`, `expiresAt`, `autoRenew`, `status`). Successful activations are persisted as lifecycle records (`active` \| `expired` \| `cancelled`) in the premium dealer activation history table. See **5.4.3a**.
 - **Seller ratings — preset `tagIds`** – **POST `/api/mobile/seller-ratings`** accepts optional **`tagIds`** (UUID array, max 50); each id must be an **active** tag from **GET `/api/rating-tags`**. Server stores links in **`rating_tag_map`** (replacing prior links on update). Responses from **POST** and both seller-rating **GET**s include **`tagIds`** (sorted). See **5.4b**.
 - **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `neutral` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
 - **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
@@ -61,9 +63,9 @@
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
-| POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. See **5.4.3a**.                                                                                                                          |
+| POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. Body: `packageName`, `autoRenew`. See **5.4.3a**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
@@ -1671,19 +1673,22 @@ Spend points to activate the user's premium dealer status for the selected packa
 
 ```json
 {
-  "packageName": "Basic Package"
+  "packageName": "Basic Package",
+  "autoRenew": false
 }
 ```
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `packageName` | string | Yes | Exact package name from `GET /api/mobile/premium-dealers/settings`. Max 120 chars. |
+| `autoRenew` | boolean | Yes | Whether this activation should be marked for automatic renewal in activation history. |
 
 **Business rules:**
 
 - `packageName` must exactly match a configured package name.
 - `pointsRequired` for the selected package is atomically deducted from the user's balance. Returns `400` if balance is insufficient.
 - Sets the premium dealer status active for `durationDays` from the moment of activation, overwriting any previous status.
+- Persists one activation history row with `userId`, `packageName`, `startDate`, `endDate`, `autoRenew`, and `status: "active"`.
 
 **Success (200):**
 
@@ -1693,7 +1698,10 @@ Spend points to activate the user's premium dealer status for the selected packa
   "packageName": "Basic Package",
   "pointsUsed": 100,
   "remainingPoints": 750,
-  "expiresAt": "2026-05-16T10:00:00.000Z"
+  "startDate": "2026-04-16T10:00:00.000Z",
+  "expiresAt": "2026-05-16T10:00:00.000Z",
+  "autoRenew": false,
+  "status": "active"
 }
 ```
 
@@ -1767,7 +1775,9 @@ Returns every user who currently has **active** premium dealer status (package n
       "username": "jane_gems",
       "image": "https://…supabase.co/storage/v1/object/public/…/profile.jpg",
       "packageName": "Basic Package",
+      "startDate": "2026-04-16T10:00:00.000Z",
       "expiresAt": "2026-05-16T10:00:00.000Z",
+      "autoRenew": false,
       "presence": "online",
       "status": "Online",
       "lastSeenAt": "2026-05-03T14:02:00.000Z"
@@ -1778,7 +1788,9 @@ Returns every user who currently has **active** premium dealer status (package n
       "username": "bob_gems",
       "image": null,
       "packageName": "Basic Package",
+      "startDate": "2026-05-01T08:00:00.000Z",
       "expiresAt": "2026-06-01T08:00:00.000Z",
+      "autoRenew": true,
       "presence": "offline",
       "status": "Last seen 2 hours ago",
       "lastSeenAt": "2026-05-03T12:00:00.000Z"
@@ -1794,7 +1806,9 @@ Returns every user who currently has **active** premium dealer status (package n
 | `username` | string \| null | Unique username if set. |
 | `image` | string \| null | Profile image URL (same as **`user.image`** / **POST `/api/profile`**). `null` if the user has no image. |
 | `packageName` | string | Active premium dealer package name. |
+| `startDate` | string | ISO 8601 time when the premium dealer status was activated. |
 | `expiresAt` | string | ISO 8601 time when the premium dealer status ends. |
+| `autoRenew` | boolean | Whether this activation is marked for automatic renewal. |
 | `presence` | `"online"` \| `"offline"` | Derived from **`session`** (see above). |
 | `status` | string | e.g. `"Online"` or `"Last seen 2 hours ago"`. |
 | `lastSeenAt` | string \| null | Latest **`session.updated_at`** (ISO 8601), or `null` if never had a session row. |
@@ -2979,7 +2993,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `packageName`, `expiresAt`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |

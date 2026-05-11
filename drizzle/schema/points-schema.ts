@@ -1,4 +1,12 @@
-import { pgTable, text, integer, timestamp, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  integer,
+  timestamp,
+  index,
+  boolean,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
 /**
@@ -53,5 +61,39 @@ export const pointPurchaseRequest = pgTable(
   (table) => [
     index("ppr_userId_idx").on(table.userId),
     index("ppr_status_idx").on(table.status),
+  ]
+);
+
+export const premiumDealerPackageStatusEnum = pgEnum(
+  "premium_dealer_package_status",
+  ["active", "expired", "cancelled"]
+);
+
+/**
+ * Activation history for premium dealer packages purchased by users.
+ * Each activation creates one row to preserve lifecycle/audit information.
+ */
+export const premiumDealersPackage = pgTable(
+  "premium_dealers_packages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    packageName: text("package_name").notNull(),
+    startDate: timestamp("start_date").notNull().defaultNow(),
+    endDate: timestamp("end_date").notNull(),
+    autoRenew: boolean("auto_renew").notNull().default(false),
+    status: premiumDealerPackageStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("pdp_userId_idx").on(table.userId),
+    index("pdp_status_idx").on(table.status),
+    index("pdp_endDate_idx").on(table.endDate),
   ]
 );
