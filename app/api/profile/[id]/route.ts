@@ -4,6 +4,7 @@ import { getUserById } from "@/features/users/db/users"
 import { getPublicProfilePresence } from "@/features/users/db/profile-presence"
 import { getCachedProductsBySellerId } from "@/features/products/db/cache/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
+import { isUserActivePremiumDealer } from "@/features/points/db/points"
 import type { z } from "zod"
 
 type RouteParams = { params: Promise<{ id: string }> }
@@ -48,22 +49,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
-    const { products, total } = await getCachedProductsBySellerId(id, {
-      page,
-      limit,
-      search: search ?? undefined,
-      productType: productType ?? undefined,
-      categoryId: categoryId ?? undefined,
-      status: "active",
-      stoneCut: stoneCut ?? undefined,
-      shape: shape ?? undefined,
-      origin: origin ?? undefined,
-      laboratoryId: laboratoryId ?? undefined,
-      isCollectorPiece: isCollectorPiece === true ? true : undefined,
-      isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
-      isPromotion: isPromotion === true ? true : undefined,
-    })
-    const presence = await getPublicProfilePresence(id)
+    const [{ products, total }, presence, isPremiumDealer] = await Promise.all([
+      getCachedProductsBySellerId(id, {
+        page,
+        limit,
+        search: search ?? undefined,
+        productType: productType ?? undefined,
+        categoryId: categoryId ?? undefined,
+        status: "active",
+        stoneCut: stoneCut ?? undefined,
+        shape: shape ?? undefined,
+        origin: origin ?? undefined,
+        laboratoryId: laboratoryId ?? undefined,
+        isCollectorPiece: isCollectorPiece === true ? true : undefined,
+        isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
+        isPromotion: isPromotion === true ? true : undefined,
+      }),
+      getPublicProfilePresence(id),
+      isUserActivePremiumDealer(id),
+    ])
 
     const profile = {
       id: user.id,
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       presence: presence.presence,
       status: presence.status,
       lastSeenAt: presence.lastSeenAt,
+      isPremiumDealer,
     }
 
     return jsonUncached({

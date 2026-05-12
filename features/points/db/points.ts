@@ -5,6 +5,7 @@ import {
   pointSetting,
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
+import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
@@ -505,6 +506,22 @@ export async function getUserPremiumDealerStatus(
   return { packageName: row.premiumDealerPackageName, expiresAt: row.premiumDealerExpiresAt };
 }
 
+/** True when the user has at least one active, non-expired row in `premium_dealers_packages`. */
+export async function isUserActivePremiumDealer(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: premiumDealersPackage.id })
+    .from(premiumDealersPackage)
+    .where(
+      and(
+        eq(premiumDealersPackage.userId, userId),
+        eq(premiumDealersPackage.status, "active"),
+        gt(premiumDealersPackage.endDate, sql`now()`)
+      )
+    )
+    .limit(1);
+  return row != null;
+}
+
 /** Return all users with a currently active (non-expired) premium dealer status. */
 export async function getActivePremiumDealers(): Promise<
   {
@@ -512,6 +529,11 @@ export async function getActivePremiumDealers(): Promise<
     name: string
     username: string | null
     image: string | null
+    city: string | null
+    /** Average seller rating (same rounding as product seller `rating.averageScore`); 0 when none. */
+    ratingScore: number
+    /** Calendar year of the earliest `premium_dealers_packages.created_at` for this user. */
+    firstPremiumDealerYear: number
     packageName: string
     startDate: Date
     expiresAt: Date
@@ -524,6 +546,17 @@ export async function getActivePremiumDealers(): Promise<
       name: user.name,
       username: user.username,
       image: user.image,
+      city: user.city,
+      ratingScore: sql<number>`(
+        select coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision
+        from ${sellerRating}
+        where ${sellerRating.sellerUserId} = ${user.id}
+      )`.as("rating_score"),
+      firstPremiumDealerYear: sql<number>`(
+        select extract(year from min(${premiumDealersPackage.createdAt}))::int
+        from ${premiumDealersPackage}
+        where ${premiumDealersPackage.userId} = ${user.id}
+      )`.as("first_premium_dealer_year"),
       packageName: premiumDealersPackage.packageName,
       startDate: premiumDealersPackage.startDate,
       expiresAt: premiumDealersPackage.endDate,
@@ -543,6 +576,9 @@ export async function getActivePremiumDealers(): Promise<
     name: r.name,
     username: r.username,
     image: r.image,
+    city: r.city,
+    ratingScore: Number(r.ratingScore ?? 0),
+    firstPremiumDealerYear: Number(r.firstPremiumDealerYear),
     packageName: r.packageName,
     startDate: r.startDate,
     expiresAt: r.expiresAt,

@@ -6,6 +6,8 @@
 
 ## Recent changes
 
+- **Premium dealers list — city, rating, tenure year** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`city`** (from **`user.city`**), **`ratingScore`** (average of received **`seller_rating`** scores, rounded like **`seller.rating.averageScore`** on **GET `/api/products/:id`**; **`0`** when the seller has no ratings), and **`firstPremiumDealerYear`** (calendar year of the earliest **`premium_dealers_packages.created_at`** for that user). See **5.4.3c**.
+- **Profile premium dealer flag** – **GET `/api/profile`** and **GET `/api/profile/:id`** include **`isPremiumDealer`** (`true` when the user has an active, non-expired row in **`premium_dealers_packages`**; otherwise `false`). See **5.4** and **5.4a**.
 - **Premium dealers list from activation history** – **GET `/api/mobile/premium-dealers`** now sources data from the `premium_dealers_packages` table (joined with `user`) instead of legacy `user` columns. Response includes new fields **`startDate`** and **`autoRenew`**. See **5.4.3c**.
 - **Product detail seller rating in `seller`** – **GET `/api/products/:id`** now includes seller aggregate rating in **`seller.rating`** (`averageScore`, `totalRatings`) and seller image in **`seller.image`**. Top-level `sellerImage` / `sellerRating` are removed. The seller block is returned in both full and collector-limited response shapes. See **5.2**.
 - **Premium dealer activation persistence** – **POST `/api/mobile/premium-dealers/activate`** now requires **`autoRenew`** in request body and returns activation metadata (`startDate`, `expiresAt`, `autoRenew`, `status`). Successful activations are persisted as lifecycle records (`active` \| `expired` \| `cancelled`) in the premium dealer activation history table. See **5.4.3a**.
@@ -65,7 +67,7 @@
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. Body: `packageName`, `autoRenew`. See **5.4.3a**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
@@ -100,9 +102,9 @@
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Seller-scoped: collector-piece rows are returned for owner (no public masking). Same query params as list all.                                                                                                                    |
-| GET    | `/api/profile`         | Yes  | Get current user profile and their products (optional query: page, limit, filters).                                                                                                                      |
+| GET    | `/api/profile`         | Yes  | Get current user profile (includes **`isPremiumDealer`**) and their products (optional query: page, limit, filters).                                                                                                                      |
 | POST   | `/api/profile`         | Yes  | Update current user profile fields (`name`, `address`, `image`). See **5.4c**. |
-| GET    | `/api/profile/:id`     | No   | Get a public seller profile and their active products (optional query: page, limit, filters).                                                                                                            |
+| GET    | `/api/profile/:id`     | No   | Get a public seller profile (includes **`isPremiumDealer`**) and their active products (optional query: page, limit, filters).                                                                                                            |
 | POST   | `/api/products`        | Yes  | Create product (JSON body)                                                                                                                                                                               |
 | PATCH  | `/api/products/:id`    | Yes  | Update product (owner or admin). JSON body.                                                                                                                                                              |
 | DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
@@ -876,7 +878,8 @@ To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`
     "points": 0,
     "emailVerified": false,
     "createdAt": "2026-01-01T00:00:00.000Z",
-    "updatedAt": "2026-01-01T00:00:00.000Z"
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "isPremiumDealer": false
   },
   "products": {
     "products": [ { "id": "...", "title": "...", "price": "...", ... } ],
@@ -885,7 +888,7 @@ To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`
 }
 ```
 
-- **profile** – Current user’s profile (id, name, email, phone, role, username, displayUsername, nrc, address, city, state, country, gender, dateOfBirth, points, emailVerified, createdAt, updatedAt).
+- **profile** – Current user’s profile (id, name, email, phone, role, username, displayUsername, nrc, address, city, state, country, gender, dateOfBirth, points, emailVerified, createdAt, updatedAt, **isPremiumDealer**). **`isPremiumDealer`** is `true` when the user has at least one row in **`premium_dealers_packages`** with **`status`** `active` and **`end_date`** in the future; otherwise `false`.
 - **products** – Same shape as **GET /api/products/mine**: `{ "products": [...], "total": n }` for the current user’s **active** products only, with optional pagination/filters via query params.
 
 **Errors:**
@@ -928,7 +931,8 @@ Use this endpoint when a user opens another seller’s profile page and needs th
     "createdAt": "2026-01-01T00:00:00.000Z",
     "presence": "online",
     "status": "Online",
-    "lastSeenAt": "2026-05-03T14:02:00.000Z"
+    "lastSeenAt": "2026-05-03T14:02:00.000Z",
+    "isPremiumDealer": true
   },
   "products": {
     "products": [ { "id": "...", "title": "...", "price": "...", ... } ],
@@ -950,7 +954,8 @@ Example when offline:
     "createdAt": "2026-01-01T00:00:00.000Z",
     "presence": "offline",
     "status": "Last seen 2 hours ago",
-    "lastSeenAt": "2026-05-03T12:00:00.000Z"
+    "lastSeenAt": "2026-05-03T12:00:00.000Z",
+    "isPremiumDealer": false
   },
   "products": {
     "products": [],
@@ -959,7 +964,7 @@ Example when offline:
 }
 ```
 
-- **profile** – Public-facing seller fields (`id`, `name`, `image`, `username`, `displayUsername`, `createdAt`) plus **`presence`**, **`status`**, **`lastSeenAt`** (see above).
+- **profile** – Public-facing seller fields (`id`, `name`, `image`, `username`, `displayUsername`, `createdAt`) plus **`presence`**, **`status`**, **`lastSeenAt`** (see above), and **`isPremiumDealer`** (`true` when the seller has an active, non-expired premium dealer package in **`premium_dealers_packages`**).
 - **products** – Seller’s active listings with the same item shape as list endpoints.
 
 **Errors:**
@@ -1758,7 +1763,7 @@ Returns the current user's active premium dealer status. Use this on app load or
 
 **Auth:** Not required.
 
-Returns every user who currently has **active** premium dealer status (package name and expiry set, and `expiresAt` in the future). Use this to show a public directory of premium dealers (avatars, names, package info, and presence).
+Returns every user who currently has **active** premium dealer status (package name and expiry set, and `expiresAt` in the future). Use this to show a public directory of premium dealers (avatars, names, location **`city`**, aggregate **`ratingScore`**, year they first became a premium dealer (**`firstPremiumDealerYear`**), package info, and presence).
 
 **Caching:** **`Cache-Control: no-store`** so **`presence`** / **`status`** are not served stale from CDN.
 
@@ -1774,6 +1779,9 @@ Returns every user who currently has **active** premium dealer status (package n
       "name": "Jane Dealer",
       "username": "jane_gems",
       "image": "https://…supabase.co/storage/v1/object/public/…/profile.jpg",
+      "city": "Yangon",
+      "ratingScore": 4.67,
+      "firstPremiumDealerYear": 2024,
       "packageName": "Basic Package",
       "startDate": "2026-04-16T10:00:00.000Z",
       "expiresAt": "2026-05-16T10:00:00.000Z",
@@ -1787,6 +1795,9 @@ Returns every user who currently has **active** premium dealer status (package n
       "name": "Bob Gems",
       "username": "bob_gems",
       "image": null,
+      "city": null,
+      "ratingScore": 0,
+      "firstPremiumDealerYear": 2026,
       "packageName": "Basic Package",
       "startDate": "2026-05-01T08:00:00.000Z",
       "expiresAt": "2026-06-01T08:00:00.000Z",
@@ -1805,6 +1816,9 @@ Returns every user who currently has **active** premium dealer status (package n
 | `name` | string | Display name. |
 | `username` | string \| null | Unique username if set. |
 | `image` | string \| null | Profile image URL (same as **`user.image`** / **POST `/api/profile`**). `null` if the user has no image. |
+| `city` | string \| null | **`user.city`** from profile; `null` if unset. |
+| `ratingScore` | number | Average of all **`seller_rating`** rows where this user is the seller (`seller_user_id`), rounded to two decimals — same formula as **`seller.rating.averageScore`** on **GET `/api/products/:id`**. **`0`** when the seller has no ratings. |
+| `firstPremiumDealerYear` | number | Four-digit calendar year of the **earliest** **`premium_dealers_packages.created_at`** for this user (first recorded premium-dealer package row, including expired/cancelled history). |
 | `packageName` | string | Active premium dealer package name. |
 | `startDate` | string | ISO 8601 time when the premium dealer status was activated. |
 | `expiresAt` | string | ISO 8601 time when the premium dealer status ends. |
@@ -2941,12 +2955,12 @@ Returns a single published article by ID. Draft items return **404**.
   - **Collector piece detail:** `GET /api/products/:id` — seller(owner) gets full data when logged in; non-owner gets limited shape (image + masked price + `requestStatus`) until approved.
   - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
-  - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products.
+  - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products; response **`profile`** includes **`isPremiumDealer`**.
   - **Seller ratings:** Load preset tag options with `GET /api/rating-tags` (cache locally). After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional", "tagIds": ["<uuid>", ...] }` (`tagIds` optional; each id must be active in **GET `/api/rating-tags`**). List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20` (each item includes `tagIds`).
 4. **My products**
   - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
 5. **Profile**
-  - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token).
+  - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token). Response **`profile`** includes **`isPremiumDealer`**.
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
@@ -2993,7 +3007,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
-| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
+| GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |
@@ -3028,8 +3042,8 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
 | GET    | `/api/products/:id`    | No†  | Get one product (includes `seller` details with `image` + `rating`). **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
 | GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all). Collector pieces are owner-visible (not public-masked).                                   |
-| GET    | `/api/profile`         | Yes  | Get profile and own products (optional query params)                                                        |
-| GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (optional query params)                                       |
+| GET    | `/api/profile`         | Yes  | Get profile and own products (includes **`isPremiumDealer`**; optional query params)                                                        |
+| GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (includes **`isPremiumDealer`**; optional query params)                                       |
 | POST   | `/api/products`        | Yes  | Create product                                                                                              |
 | PATCH  | `/api/products/:id`    | Yes  | Update (owner/admin)                                                                                        |
 | DELETE | `/api/products/:id`    | Yes  | Delete (owner/admin)                                                                                        |
