@@ -9,10 +9,8 @@ import { EscrowServiceSettingsForm } from "@/features/escrow-service-settings/co
 export default async function AdminEscrowServiceSettingsPage() {
   await connection()
 
-  const [settings, users] = await Promise.all([
-    getEscrowServiceSettings(),
-    getAllUsersFromDb(),
-  ])
+  const settings = await getEscrowServiceSettings()
+  const users = await getAllUsersFromDb()
 
   return (
     <div className="container my-6 space-y-6">

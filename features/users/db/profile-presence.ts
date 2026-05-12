@@ -49,10 +49,8 @@ export async function getPublicProfilePresenceMap(
   const out = new Map<string, PublicProfilePresence>()
   if (unique.length === 0) return out
 
-  const [activeMap, touchMap] = await Promise.all([
-    getLastSessionActivityByUserIds(unique),
-    getLastSessionTouchAnyExpiryByUserIds(unique),
-  ])
+  const activeMap = await getLastSessionActivityByUserIds(unique)
+  const touchMap = await getLastSessionTouchAnyExpiryByUserIds(unique)
 
   for (const userId of unique) {
     out.set(userId, resolvePresenceFromMaps(userId, activeMap, touchMap))
