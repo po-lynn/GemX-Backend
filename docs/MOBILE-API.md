@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Chat conversations list (mobile)** – **GET `/api/chat/conversations`** (auth): returns **`conversations`**: every user who shares a **`messages`** thread with the current user, each with **`userId`**, **`name`**, **`profileImage`**, **`lastMessage`** (preview; media-only threads use short labels like `"Sent photos"`), **`lastMessageTime`** (ISO 8601), **`unreadCount`** (incoming unread from that peer), and **`isOnline`** (session-derived, same ~5 minute window as **GET `/api/profile/:id`**). Sorted by **`lastMessageTime`** descending. **`Cache-Control: no-store`**. See **5.4d** (GET `/api/chat/conversations`).
 - **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
 - **Premium dealers list — city, rating, tenure year** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`city`** (from **`user.city`**), **`ratingScore`** (average of received **`seller_rating`** scores, rounded like **`seller.rating.averageScore`** on **GET `/api/products/:id`**; **`0`** when the seller has no ratings), and **`firstPremiumDealerYear`** (calendar year of the earliest **`premium_dealers_packages.created_at`** for that user). See **5.4.3c**.
 - **Profile premium dealer flag** – **GET `/api/profile`** and **GET `/api/profile/:id`** include **`isPremiumDealer`** (`true` when the user has an active, non-expired row in **`premium_dealers_packages`**; otherwise `false`). See **5.4** and **5.4a**.
@@ -16,7 +17,7 @@
 - **Seller rating preset tags (public)** – **GET `/api/rating-tags`** (no auth) returns **`ratingTags`**: active admin-defined tags only (`id`, `name`, `type`: `positive` \| `neutral` \| `negative`). Cached like **GET `/api/origins`** (60s / stale-while-revalidate). Use when building tag chips; selected ids go in **POST `/api/mobile/seller-ratings`** as **`tagIds`**. See **5.4b** (GET `/api/rating-tags`).
 - **Premium dealers list — presence** – **GET `/api/mobile/premium-dealers`** includes **`presence`**, **`status`**, and **`lastSeenAt`** on each **`premiumDealers`** item (same semantics as **GET `/api/profile/:id`**). Response uses **`Cache-Control: no-store`**. See **5.4.3c**.
 - **Public seller profile — presence** – **GET `/api/profile/:id`** now includes **`presence`** (`"online"` \| `"offline"`), **`status`** (e.g. `"Online"` or `"Last seen 2 hours ago"`), and **`lastSeenAt`** (ISO 8601 or `null`). Presence is derived from Better Auth **`session`** rows in Postgres (Supabase): **online** means a non-expired session was touched within the last **5 minutes**. Response uses **`Cache-Control: no-store`** so presence is not served stale from CDN. See **5.4a**.
-- **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`** and **GET `/api/chat/history`**. See **5.4.5a**.
+- **Escrow service chat user (mobile)** – **GET `/api/mobile/escrow-chat-user`** (auth): returns the GemX user designated as the escrow-service chat account from the latest **`escrow_service_setting`** row (`user_id` → `user`). Response: `success`, `configured`, and `user` (`id`, `name`, `image`, `role`) or `user: null` when not configured. Use `user.id` as **`recipientId`** for **POST `/api/chat/messages`**, **`userId`** for **GET `/api/chat/history`**, and the peer appears in **GET `/api/chat/conversations`** after messages exist. See **5.4.5a**.
 - **Chat history — peer avatar** – **GET `/api/chat/history`** now includes **`participantImage`**: the other participant’s profile image URL (`user.image`; `null` if unset or user row missing), alongside `messages`, `page`, `limit`, and `total`. See **5.4d** (GET `/api/chat/history`).
 - **Categories image support** – Categories now have optional **`image`** (URL) returned by **GET `/api/categories`**. Admin can upload one image via **POST `/api/categories/image`** (multipart) and store the returned `url` into `category.image` via admin UI. See **4.1**.
 - **My products collector-piece owner visibility** – **GET `/api/products/mine`** always returns the logged-in seller’s own collector-piece listings (full owner list shape, same as other mine products), because results are restricted by `sellerId = session.user.id`. See **5.3**.
@@ -26,7 +27,7 @@
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history (all statuses). Added **GET `/api/mobile/points/purchase-history`** (auth): approved requests only — see **5.4.2**.
 - **Seller ratings (mobile)** – **POST `/api/mobile/seller-ratings`** (auth): rate another user (seller) with **`score`** (1–5), optional **`comment`**, optional **`tagIds`** (active preset tag UUIDs; stored in **`rating_tag_map`**). **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated; each row includes **`tagIds`**). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus paginated received ratings (each includes **`tagIds`**). Preset tag list: **GET `/api/rating-tags`** (no auth). See **5.4b**.
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
-- **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
+- **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/conversations`** (inbox: peers + last message + unread + online), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece owner visibility** – `GET /api/products/:id` now returns **full collector-piece details for the owner** when `sellerId === logged-in user id` (Bearer token), even without a show-request. Non-owners still receive limited shape until their `collector_piece_show_request` is approved. See **5.2**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -89,6 +90,7 @@
 | GET    | `/api/rating-tags` | No   | List active seller-rating preset tags (`ratingTags`: `id`, `name`, `type`). Cached. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
 | POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery is via Supabase Realtime on `messages`. See **5.4d**. |
+| GET    | `/api/chat/conversations` | Yes  | List all chat peers for the current user with last message preview, timestamps (newest first), per-peer unread count, and online flag. See **5.4d**. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
@@ -1061,14 +1063,15 @@ At least one of `name`, `address`, `image` is required.
 
 ### 5.4d Chat APIs (mobile) + API tests
 
-These routes support send/save message, history, media upload before sending, and read-status updates.
+These routes support send/save message, inbox list (conversations), history, media upload before sending, and read-status updates.
 
 **Realtime engine:** Supabase Realtime (Postgres changes), not Socket.IO.
 
 Mobile flow:
 1. Subscribe to `messages` table changes with Supabase Realtime (typically `INSERT` events where `recipient_id = currentUserId` or `sender_id = currentUserId`).
-2. Send a message via `POST /api/chat/messages`.
-3. Receive realtime updates from Supabase subscription.
+2. Load or refresh the chat inbox with `GET /api/chat/conversations` (peers, last preview, unread counts, sort).
+3. Send a message via `POST /api/chat/messages`.
+4. Receive realtime updates from Supabase subscription.
 
 **React Native quick example (Supabase Realtime):**
 
@@ -1237,6 +1240,61 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 4. **Isolation**  
    Seed chats for different user pairs, fetch one conversation  
    Expect: only messages between current user and `userId`.
+
+---
+
+#### GET `/api/chat/conversations`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Query params:** None.
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "conversations": [
+    {
+      "userId": "other-user-id",
+      "name": "Jane Seller",
+      "profileImage": "https://…/profile.jpg",
+      "lastMessage": "Thanks — shipped today.",
+      "lastMessageTime": "2026-05-12T14:30:00.000Z",
+      "unreadCount": 2,
+      "isOnline": true
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `success` | boolean | Always `true` on 200. |
+| `conversations` | array | One object per **other** user who has at least one `messages` row with the current user (as sender or recipient). |
+| `conversations[].userId` | string | Peer user id — use as **`userId`** in **GET `/api/chat/history`** and as **`recipientId`** in **POST `/api/chat/messages`**. |
+| `conversations[].name` | string | Peer’s display name from `user.name` (`"Unknown user"` if the user row is missing). |
+| `conversations[].profileImage` | string \| null | Peer’s profile image URL (`user.image`). |
+| `conversations[].lastMessage` | string | Preview text: trimmed message `content` when non-empty; otherwise short labels such as `"Sent photos"`, `"Voice message"`, or `"Sent a file"` for media-only rows. |
+| `conversations[].lastMessageTime` | string | ISO 8601 — `created_at` of the **latest** message in that thread (either direction). |
+| `conversations[].unreadCount` | number | Count of messages **from this peer** to the current user with `is_read = false` (incoming unread only). |
+| `conversations[].isOnline` | boolean | `true` when the peer has a non-expired Better Auth session touched within the last **5 minutes** (same proxy as **GET `/api/profile/:id`** `presence`); otherwise `false`. |
+
+**Ordering:** `conversations` is sorted by **`lastMessageTime`** descending (most recently active thread first).
+
+**Caching:** Response uses **`Cache-Control: no-store`** (like **GET `/api/chat/history`**) so unread and presence are not stale.
+
+**API tests (conversations):**
+
+1. **Happy path**  
+   Request: `GET /api/chat/conversations` with Bearer token after seeding messages between two users  
+   Expect: `200`, `success: true`, each peer appears once with expected `lastMessageTime` ordering and `unreadCount` matching unread incoming rows from that peer.
+2. **Empty inbox**  
+   User with no messages  
+   Expect: `200`, `conversations: []`.
+3. **Unauthorized**  
+   Request without token  
+   Expect: `401` with `{ "error": "Unauthorized" }`.
 
 ---
 
@@ -2086,7 +2144,7 @@ When no row exists, `user_id` is unset, or the linked user no longer exists:
 | ----- | ---- | ----------- |
 | `success` | boolean | Always `true` on 200. |
 | `configured` | boolean | `true` when a non-null `user_id` is set and the user row exists. |
-| `user` | object \| null | Public fields only: `id`, `name`, `image` (nullable URL), `role`. Use **`user.id`** as **`recipientId`** in **POST `/api/chat/messages`** and as **`userId`** in **GET `/api/chat/history`** to open the escrow support thread. |
+| `user` | object \| null | Public fields only: `id`, `name`, `image` (nullable URL), `role`. Use **`user.id`** as **`recipientId`** in **POST `/api/chat/messages`** and as **`userId`** in **GET `/api/chat/history`**; after messages exist, the same id appears as **`userId`** in **GET `/api/chat/conversations`**. |
 
 **Errors:**
 
@@ -3005,6 +3063,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
+  - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first).
   - Chat realtime: subscribe to `messages` table via Supabase Realtime for incoming rows.
   - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` — includes `participantImage` for the peer’s avatar.
   - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
@@ -3069,6 +3128,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase Realtime on `messages`. See 5.4d. |
+| GET    | `/api/chat/conversations` | Yes  | List chat peers with last preview, unread counts, online flag; sorted by last message time desc. See 5.4d. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
