@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Chat conversations — live SSE** – **GET `/api/chat/conversations?stream=1`** (auth, same Bearer as JSON mode) returns **`text/event-stream`**: Server-Sent Events with **`data:`** lines of `{ "success": true, "conversations": [...] }` whenever that payload **changes** (polled on an **`intervalMs`** window, default **4000**, clamped **2000–30000**), plus comment keep-alives. Use **fetch** with `Authorization` and read the body as a stream (browser **EventSource** cannot send Bearer). Plain **GET `/api/chat/conversations`** (no `stream`) stays JSON. See **5.4d**.
 - **Chat conversations list (mobile)** – **GET `/api/chat/conversations`** (auth): returns **`conversations`**: every user who shares a **`messages`** thread with the current user, each with **`userId`**, **`name`**, **`profileImage`**, **`lastMessage`** (preview; media-only threads use short labels like `"Sent photos"`), **`lastMessageTime`** (ISO 8601), **`unreadCount`** (incoming unread from that peer), and **`isOnline`** (session-derived, same ~5 minute window as **GET `/api/profile/:id`**). Sorted by **`lastMessageTime`** descending. **`Cache-Control: no-store`**. See **5.4d** (GET `/api/chat/conversations`).
 - **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
 - **Premium dealers list — city, rating, tenure year** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`city`** (from **`user.city`**), **`ratingScore`** (average of received **`seller_rating`** scores, rounded like **`seller.rating.averageScore`** on **GET `/api/products/:id`**; **`0`** when the seller has no ratings), and **`firstPremiumDealerYear`** (calendar year of the earliest **`premium_dealers_packages.created_at`** for that user). See **5.4.3c**.
@@ -27,7 +28,7 @@
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history (all statuses). Added **GET `/api/mobile/points/purchase-history`** (auth): approved requests only — see **5.4.2**.
 - **Seller ratings (mobile)** – **POST `/api/mobile/seller-ratings`** (auth): rate another user (seller) with **`score`** (1–5), optional **`comment`**, optional **`tagIds`** (active preset tag UUIDs; stored in **`rating_tag_map`**). **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated; each row includes **`tagIds`**). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus paginated received ratings (each includes **`tagIds`**). Preset tag list: **GET `/api/rating-tags`** (no auth). See **5.4b**.
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
-- **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/conversations`** (inbox: peers + last message + unread + online), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
+- **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/conversations`** (inbox JSON or **`?stream=1`** SSE for live list), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece owner visibility** – `GET /api/products/:id` now returns **full collector-piece details for the owner** when `sellerId === logged-in user id` (Bearer token), even without a show-request. Non-owners still receive limited shape until their `collector_piece_show_request` is approved. See **5.2**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -90,7 +91,7 @@
 | GET    | `/api/rating-tags` | No   | List active seller-rating preset tags (`ratingTags`: `id`, `name`, `type`). Cached. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
 | POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery is via Supabase Realtime on `messages`. See **5.4d**. |
-| GET    | `/api/chat/conversations` | Yes  | List all chat peers for the current user with last message preview, timestamps (newest first), per-peer unread count, and online flag. See **5.4d**. |
+| GET    | `/api/chat/conversations` | Yes  | List chat peers (JSON) **or** live updates via **`?stream=1`** (SSE: same payload when it changes; optional **`intervalMs`**). See **5.4d**. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
@@ -1069,7 +1070,7 @@ These routes support send/save message, inbox list (conversations), history, med
 
 Mobile flow:
 1. Subscribe to `messages` table changes with Supabase Realtime (typically `INSERT` events where `recipient_id = currentUserId` or `sender_id = currentUserId`).
-2. Load or refresh the chat inbox with `GET /api/chat/conversations` (peers, last preview, unread counts, sort).
+2. Load the inbox with `GET /api/chat/conversations`, or open **`GET /api/chat/conversations?stream=1`** (SSE) for **server-pushed** list refreshes when **`lastMessage`**, **`lastMessageTime`**, **`unreadCount`**, or **`isOnline`** change (tunable **`intervalMs`**); still combine with Realtime for instant thread rows if desired.
 3. Send a message via `POST /api/chat/messages`.
 4. Receive realtime updates from Supabase subscription.
 
@@ -1247,9 +1248,21 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query params:** None.
+**Query params:**
 
-**Success (200):**
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `stream` | string | *(omit)* | Set to **`1`**, **`true`**, or **`sse`** to receive a **Server-Sent Events** stream instead of JSON (see **Live inbox stream (SSE)** below). |
+| `intervalMs` | number | `4000` | **SSE only:** milliseconds between server recomputes of the inbox (**2000**–**30000**). Lower = fresher `lastMessage` / `lastMessageTime` / `unreadCount` / `isOnline`, at higher DB load. |
+
+**Modes**
+
+1. **JSON (default)** — Omit `stream` (or use another value). One snapshot per request: `Content-Type: application/json`, body as below.
+2. **SSE** — `?stream=1` (same `Authorization: Bearer`). Response `Content-Type: text/event-stream; charset=utf-8`. The server recomputes the inbox every **`intervalMs`** and emits a **`data:`** line **only when** the JSON payload **changes** (so list fields update without the client polling JSON). Comment lines **`: keep-alive`** ~every **25s** help proxies keep the connection open.
+
+**Client note:** Browser **`EventSource`** cannot send a Bearer token — use **`fetch`** with `Authorization` and parse **`data:`** frames from the response body, or keep using **Supabase Realtime** on `messages` and call the JSON GET when events arrive.
+
+**Success (200) — JSON mode:**
 
 ```json
 {
@@ -1295,6 +1308,47 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 3. **Unauthorized**  
    Request without token  
    Expect: `401` with `{ "error": "Unauthorized" }`.
+4. **SSE stream**  
+   Request: `GET /api/chat/conversations?stream=1` with Bearer  
+   Expect: `200`, `Content-Type` includes `text/event-stream`, at least one `data:` line with JSON `{ "success": true, "conversations": … }`.
+
+---
+
+#### Live inbox stream (SSE) — `GET /api/chat/conversations?stream=1`
+
+Same authentication as JSON mode. Typical request:
+
+`GET /api/chat/conversations?stream=1&intervalMs=4000`  
+`Authorization: Bearer <session_token>`
+
+- **First `data:` event** arrives after the first successful load (may be immediate).
+- **Later `data:` events** only when the stringified `{ success, conversations }` **differs** from the previous emission (e.g. new message, read receipt, or presence flip).
+- **`intervalMs`** clamps between **2000** and **30000** (default **4000**): this is how often the server **checks** for changes, not how fast Postgres notifies (for sub-second message rows, prefer **Supabase Realtime** on `messages` in addition to or instead of a very low `intervalMs`).
+- **Hosting:** Long-lived streams may hit **platform max duration** (e.g. some serverless defaults). If the connection drops, reopen the stream or fall back to JSON polling / Realtime-driven refetches.
+
+**React Native / fetch sketch (Bearer + SSE):**
+
+```ts
+const res = await fetch(`${baseUrl}/api/chat/conversations?stream=1&intervalMs=3000`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+const reader = res.body!.getReader();
+const dec = new TextDecoder();
+let buf = "";
+for (;;) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  buf += dec.decode(value, { stream: true });
+  const parts = buf.split("\n\n");
+  buf = parts.pop() ?? "";
+  for (const block of parts) {
+    const line = block.split("\n").find((l) => l.startsWith("data:"));
+    if (!line) continue;
+    const json = JSON.parse(line.slice(5).trim());
+    if (json.success) setConversations(json.conversations);
+  }
+}
+```
 
 ---
 
@@ -3063,7 +3117,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
-  - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first).
+  - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first). For **live** list updates from the server without polling JSON yourself, use **`GET /api/chat/conversations?stream=1`** (SSE; see **5.4d**).
   - Chat realtime: subscribe to `messages` table via Supabase Realtime for incoming rows.
   - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` — includes `participantImage` for the peer’s avatar.
   - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
@@ -3128,7 +3182,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase Realtime on `messages`. See 5.4d. |
-| GET    | `/api/chat/conversations` | Yes  | List chat peers with last preview, unread counts, online flag; sorted by last message time desc. See 5.4d. |
+| GET    | `/api/chat/conversations` | Yes  | Inbox list (JSON) or **`?stream=1`** SSE live pushes when payload changes; optional **`intervalMs`**. See 5.4d. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
