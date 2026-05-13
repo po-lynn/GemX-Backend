@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
 - **Premium dealers list — city, rating, tenure year** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`city`** (from **`user.city`**), **`ratingScore`** (average of received **`seller_rating`** scores, rounded like **`seller.rating.averageScore`** on **GET `/api/products/:id`**; **`0`** when the seller has no ratings), and **`firstPremiumDealerYear`** (calendar year of the earliest **`premium_dealers_packages.created_at`** for that user). See **5.4.3c**.
 - **Profile premium dealer flag** – **GET `/api/profile`** and **GET `/api/profile/:id`** include **`isPremiumDealer`** (`true` when the user has an active, non-expired row in **`premium_dealers_packages`**; otherwise `false`). See **5.4** and **5.4a**.
 - **Premium dealers list from activation history** – **GET `/api/mobile/premium-dealers`** now sources data from the `premium_dealers_packages` table (joined with `user`) instead of legacy `user` columns. Response includes new fields **`startDate`** and **`autoRenew`**. See **5.4.3c**.
@@ -22,7 +23,7 @@
 - **Premium dealers public list** – **GET `/api/mobile/premium-dealers`** (no auth) returns each active dealer’s profile **`image`** URL (same field as **POST `/api/profile`** / `user.image`; `null` if unset), plus **`presence`**, **`status`**, and **`lastSeenAt`** from **`session`** (Supabase Postgres). See **5.4.3c**.
 - **Feature product with points (mobile)** – **POST `/api/mobile/products/:id/feature`** is re-added with a new points-based model. Body: `durationDays` (int, 1–365) and `points` (int, ≥ 0) — the pair must exactly match a configured tier from `GET /api/mobile/feature-pricing-tiers`. Points are atomically deducted and the product is marked featured for `durationDays`. Enforces the admin-configured homepage featured limit; returns `400` if the limit is full. Also returns `400` for invalid tier or insufficient balance. Response includes `productId`, `durationDays`, `pointsUsed`, `remainingPoints`. See **5.4.1a**.
 - **Premium dealer activate & status (mobile)** – Added **POST `/api/mobile/premium-dealers/activate`** (auth): spend points to activate premium dealer status. Body: `packageName` (must exactly match a package from `GET /api/mobile/premium-dealers/settings`). Atomically deducts `pointsRequired`, sets status active for `durationDays`. Returns `packageName`, `pointsUsed`, `remainingPoints`, `expiresAt`. Returns `400` if package not found or insufficient balance. Added **GET `/api/mobile/premium-dealers/status`** (auth): returns `{ active: false }` if no active status or expired; `{ active: true, packageName, expiresAt }` if active. See **5.4.3a** and **5.4.3b**.
-- **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history. See **5.4.2**.
+- **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `packageName`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history (all statuses). Added **GET `/api/mobile/points/purchase-history`** (auth): approved requests only — see **5.4.2**.
 - **Seller ratings (mobile)** – **POST `/api/mobile/seller-ratings`** (auth): rate another user (seller) with **`score`** (1–5), optional **`comment`**, optional **`tagIds`** (active preset tag UUIDs; stored in **`rating_tag_map`**). **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated; each row includes **`tagIds`**). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus paginated received ratings (each includes **`tagIds`**). Preset tag list: **GET `/api/rating-tags`** (no auth). See **5.4b**.
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
 - **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
@@ -72,7 +73,8 @@
 | POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit a credit point purchase request after transferring payment. Creates a pending request for admin approval. See **5.4.2**.                                                                       |
-| GET    | `/api/mobile/points/purchase-requests` | Yes  | List current user's own credit point purchase request history. See **5.4.2**.                                                                                                                        |
+| GET    | `/api/mobile/points/purchase-requests` | Yes  | List current user's own credit point purchase request history (all statuses). See **5.4.2**.                                                                                                         |
+| GET    | `/api/mobile/points/purchase-history` | Yes  | List current user's **approved** credit point purchase requests only (`point_purchase_request` where `status` is `"approved"`). See **5.4.2**.                                                         |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit a show-request for a collector-piece product. Body: `productId`, optional `message`. User info taken from session. See **5.4.4**.                                                              |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
@@ -2229,7 +2231,7 @@ The recommended top-up flow is:
 3. User submits **POST `/api/mobile/points/purchase-requests`** with the transfer details.
 4. Admin verifies the transfer and approves at `/admin/credit/purchase-requests`.
 5. Points are credited to the user's balance automatically on approval.
-6. User can track request status with **GET `/api/mobile/points/purchase-requests`**.
+6. User can track request status (pending / approved / rejected) with **GET `/api/mobile/points/purchase-requests`**, or load completed top-ups only with **GET `/api/mobile/points/purchase-history`**.
 
 ---
 
@@ -2399,6 +2401,45 @@ Returns the current user's own credit point purchase request history, newest fir
 
 - **401** – `{ "error": "Unauthorized" }`
 - **500** – `{ "error": "Failed to load purchase requests" }`
+
+---
+
+#### GET `/api/mobile/points/purchase-history`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the current user's **approved** credit point purchase requests from **`point_purchase_request`** (`status` `"approved"` only), ordered by **`createdAt`** descending. Use this for a wallet or “points bought” history; use **GET `/api/mobile/points/purchase-requests`** when the app needs pending and rejected rows as well.
+
+**Success (200):**
+
+```json
+{
+  "history": [
+    {
+      "id": "uuid-here",
+      "packageName": "Starter Pack",
+      "points": 100,
+      "price": 5000,
+      "currency": "mmk",
+      "status": "approved",
+      "transferredAmount": 5000,
+      "transferredName": "Ko Aung",
+      "transactionReference": "TXN-20240415-001",
+      "transferNote": null,
+      "adminNote": "Verified",
+      "createdAt": "2024-04-15T10:30:00.000Z",
+      "reviewedAt": "2024-04-15T14:00:00.000Z"
+    }
+  ]
+}
+```
+
+Each object in **`history`** uses the same field definitions as **GET `/api/mobile/points/purchase-requests`** (`requests[]`). Every row has **`status`** `"approved"`.
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to load purchase history" }`
 
 ---
 
