@@ -506,6 +506,66 @@ export async function getUserPremiumDealerStatus(
   return { packageName: row.premiumDealerPackageName, expiresAt: row.premiumDealerExpiresAt };
 }
 
+/**
+ * Full premium status for the "Become Premium" mobile screen.
+ * Returns the user's point balance, active status, expiry, days remaining, and autoRenew in two queries.
+ */
+export async function getMyPremiumStatus(userId: string): Promise<{
+  points: number
+  active: boolean
+  packageName?: string
+  expiresAt?: string
+  daysRemaining?: number
+  autoRenew?: boolean
+}> {
+  const [userRow] = await db
+    .select({
+      points: user.points,
+      premiumDealerPackageName: user.premiumDealerPackageName,
+      premiumDealerExpiresAt: user.premiumDealerExpiresAt,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+
+  if (!userRow) return { points: 0, active: false }
+
+  const now = new Date()
+  const isActive =
+    !!userRow.premiumDealerPackageName &&
+    !!userRow.premiumDealerExpiresAt &&
+    userRow.premiumDealerExpiresAt > now
+
+  if (!isActive) return { points: userRow.points, active: false }
+
+  const [pkgRow] = await db
+    .select({ autoRenew: premiumDealersPackage.autoRenew })
+    .from(premiumDealersPackage)
+    .where(
+      and(
+        eq(premiumDealersPackage.userId, userId),
+        eq(premiumDealersPackage.status, "active"),
+        gt(premiumDealersPackage.endDate, sql`now()`)
+      )
+    )
+    .orderBy(desc(premiumDealersPackage.createdAt))
+    .limit(1)
+
+  const daysRemaining = Math.max(
+    0,
+    Math.ceil((userRow.premiumDealerExpiresAt!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  )
+
+  return {
+    points: userRow.points,
+    active: true,
+    packageName: userRow.premiumDealerPackageName!,
+    expiresAt: userRow.premiumDealerExpiresAt!.toISOString(),
+    daysRemaining,
+    autoRenew: pkgRow?.autoRenew ?? false,
+  }
+}
+
 /** True when the user has at least one active, non-expired row in `premium_dealers_packages`. */
 export async function isUserActivePremiumDealer(userId: string): Promise<boolean> {
   const [row] = await db
@@ -751,6 +811,55 @@ export async function rejectPointPurchaseRequest(
     .where(eq(pointPurchaseRequest.id, requestId));
 
   return { success: true };
+}
+
+export type PremiumDealerSubscriptionRow = {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  packageName: string;
+  startDate: Date;
+  endDate: Date;
+  autoRenew: boolean;
+  status: string;
+  createdAt: Date;
+};
+
+export async function getPremiumDealerSubscriptionsPaginated(opts: {
+  page: number;
+  limit: number;
+  status?: "active" | "expired" | "cancelled";
+}): Promise<{ subscriptions: PremiumDealerSubscriptionRow[]; total: number }> {
+  const offset = (opts.page - 1) * opts.limit;
+  const whereClause = opts.status ? eq(premiumDealersPackage.status, opts.status) : undefined;
+
+  const rows = await db
+    .select({
+      id: premiumDealersPackage.id,
+      userId: premiumDealersPackage.userId,
+      userName: user.name,
+      userEmail: user.email,
+      packageName: premiumDealersPackage.packageName,
+      startDate: premiumDealersPackage.startDate,
+      endDate: premiumDealersPackage.endDate,
+      autoRenew: premiumDealersPackage.autoRenew,
+      status: premiumDealersPackage.status,
+      createdAt: premiumDealersPackage.createdAt,
+    })
+    .from(premiumDealersPackage)
+    .leftJoin(user, eq(premiumDealersPackage.userId, user.id))
+    .where(whereClause)
+    .orderBy(desc(premiumDealersPackage.createdAt))
+    .limit(opts.limit)
+    .offset(offset);
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(premiumDealersPackage)
+    .where(whereClause);
+
+  return { subscriptions: rows, total: countRows[0]?.count ?? 0 };
 }
 
 export async function getPointPurchaseRequestsPaginated(opts: {
