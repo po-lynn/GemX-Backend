@@ -23,6 +23,7 @@ import {
   ClipboardList,
   MessageSquare,
   Tags,
+  Crown,
 } from "lucide-react";
 
 type NavItem = {
@@ -61,6 +62,13 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: ClipboardList,
         color: "#f59e0b",
         isActive: (p) => p.startsWith("/admin/credit/purchase-requests"),
+      },
+      {
+        href: "/admin/credit/premium-dealer-subscriptions",
+        label: "Dealer Subscriptions",
+        icon: Crown,
+        color: "#f59e0b",
+        isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
       },
       {
         href: "/admin/credit/feature-settings",
