@@ -18,6 +18,8 @@ import {
   setUserPoints,
   approvePointPurchaseRequest,
   rejectPointPurchaseRequest,
+  deactivatePremiumDealerSubscription,
+  updatePremiumDealerSubscriptionExpiry,
 } from "@/features/points/db/points";
 import type {
   PremiumDealersSettings,
@@ -321,4 +323,42 @@ export async function setUserPointsAction(formData: FormData) {
   }
   await setUserPoints(userId, value);
   return { success: true, userId };
+}
+
+export async function deactivatePremiumDealerAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const subscriptionId = String(formData.get("subscriptionId") ?? "").trim();
+  if (!subscriptionId) return { error: "Subscription ID is required." };
+
+  const result = await deactivatePremiumDealerSubscription(subscriptionId);
+  if (!result.success) {
+    return {
+      error: result.reason === "not_found"
+        ? "Subscription not found."
+        : "Subscription is not active.",
+    };
+  }
+  return { success: true };
+}
+
+export async function updateSubscriptionExpiryAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const subscriptionId = String(formData.get("subscriptionId") ?? "").trim();
+  if (!subscriptionId) return { error: "Subscription ID is required." };
+
+  const rawDate = String(formData.get("newEndDate") ?? "").trim();
+  const parsed = rawDate ? new Date(rawDate) : null;
+  if (!parsed || isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+    return { error: "A valid future date is required." };
+  }
+
+  const result = await updatePremiumDealerSubscriptionExpiry(subscriptionId, parsed);
+  if (!result.success) return { error: "Subscription not found." };
+  return { success: true };
 }
