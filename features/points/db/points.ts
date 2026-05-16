@@ -862,6 +862,82 @@ export async function getPremiumDealerSubscriptionsPaginated(opts: {
   return { subscriptions: rows, total: countRows[0]?.count ?? 0 };
 }
 
+/**
+ * Manually deactivate an active premium dealer subscription.
+ * Sets status to 'cancelled' and clears the user cache fields atomically.
+ * Fails if the subscription is not found or is not currently active.
+ */
+export async function deactivatePremiumDealerSubscription(
+  subscriptionId: string
+): Promise<{ success: false; reason: "not_found" | "not_active" } | { success: true }> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        id: premiumDealersPackage.id,
+        userId: premiumDealersPackage.userId,
+        endDate: premiumDealersPackage.endDate,
+        status: premiumDealersPackage.status,
+      })
+      .from(premiumDealersPackage)
+      .where(eq(premiumDealersPackage.id, subscriptionId))
+      .limit(1);
+
+    if (!row) return { success: false, reason: "not_found" as const };
+    if (row.status !== "active") return { success: false, reason: "not_active" as const };
+
+    await tx
+      .update(premiumDealersPackage)
+      .set({ status: "cancelled" })
+      .where(eq(premiumDealersPackage.id, subscriptionId));
+
+    // Clear user cache only when this subscription's endDate still matches
+    // (guards against clearing a newer active subscription if somehow out of sync)
+    await tx
+      .update(user)
+      .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+      .where(and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate)));
+
+    return { success: true as const };
+  });
+}
+
+/**
+ * Update the expiry date of a premium dealer subscription.
+ * Also syncs user.premiumDealerExpiresAt when the subscription is currently active.
+ */
+export async function updatePremiumDealerSubscriptionExpiry(
+  subscriptionId: string,
+  newEndDate: Date
+): Promise<{ success: false; reason: "not_found" } | { success: true }> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        id: premiumDealersPackage.id,
+        userId: premiumDealersPackage.userId,
+        status: premiumDealersPackage.status,
+      })
+      .from(premiumDealersPackage)
+      .where(eq(premiumDealersPackage.id, subscriptionId))
+      .limit(1);
+
+    if (!row) return { success: false, reason: "not_found" as const };
+
+    await tx
+      .update(premiumDealersPackage)
+      .set({ endDate: newEndDate })
+      .where(eq(premiumDealersPackage.id, subscriptionId));
+
+    if (row.status === "active") {
+      await tx
+        .update(user)
+        .set({ premiumDealerExpiresAt: newEndDate })
+        .where(eq(user.id, row.userId));
+    }
+
+    return { success: true as const };
+  });
+}
+
 export async function getPointPurchaseRequestsPaginated(opts: {
   page: number;
   limit: number;

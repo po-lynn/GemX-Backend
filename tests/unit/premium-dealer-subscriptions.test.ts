@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { getPremiumDealerSubscriptionsPaginated } from "@/features/points/db/points"
+import {
+  getPremiumDealerSubscriptionsPaginated,
+  deactivatePremiumDealerSubscription,
+  updatePremiumDealerSubscriptionExpiry,
+} from "@/features/points/db/points"
 import { db } from "@/drizzle/db"
 
 vi.mock("drizzle-orm", () => ({
@@ -64,6 +68,7 @@ vi.mock("@/drizzle/schema/points-schema", () => ({
 vi.mock("@/drizzle/db", () => ({
   db: {
     select: vi.fn(),
+    transaction: vi.fn(),
   },
 }))
 
@@ -169,5 +174,117 @@ describe("getPremiumDealerSubscriptionsPaginated", () => {
     const result = await getPremiumDealerSubscriptionsPaginated({ page: 1, limit: 20 })
 
     expect(result.total).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Helpers for transaction-based mutation tests
+// ---------------------------------------------------------------------------
+
+function makeTx() {
+  const selectChain: Record<string, unknown> = {}
+  for (const m of ["from", "where", "limit"]) {
+    selectChain[m] = vi.fn().mockReturnValue(selectChain)
+  }
+  selectChain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+    Promise.resolve([]).then(resolve, reject)
+
+  const updateMock = vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    }),
+  })
+
+  return {
+    select: vi.fn().mockReturnValue(selectChain),
+    update: updateMock,
+    _selectChain: selectChain,
+  }
+}
+
+describe("deactivatePremiumDealerSubscription", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("returns not_found when subscription does not exist", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deactivatePremiumDealerSubscription("missing-id")
+
+    expect(result).toEqual({ success: false, reason: "not_found" })
+    expect(tx.update).not.toHaveBeenCalled()
+  })
+
+  it("returns not_active when subscription is already expired", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([{ id: "sub-1", userId: "user-1", endDate: END, status: "expired" }]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deactivatePremiumDealerSubscription("sub-1")
+
+    expect(result).toEqual({ success: false, reason: "not_active" })
+    expect(tx.update).not.toHaveBeenCalled()
+  })
+
+  it("sets status to cancelled and clears user cache on active subscription", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([{ id: "sub-1", userId: "user-1", endDate: END, status: "active" }]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const result = await deactivatePremiumDealerSubscription("sub-1")
+
+    expect(result).toEqual({ success: true })
+    expect(tx.update).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe("updatePremiumDealerSubscriptionExpiry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("returns not_found when subscription does not exist", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const newDate = new Date("2026-12-01T00:00:00.000Z")
+    const result = await updatePremiumDealerSubscriptionExpiry("missing-id", newDate)
+
+    expect(result).toEqual({ success: false, reason: "not_found" })
+    expect(tx.update).not.toHaveBeenCalled()
+  })
+
+  it("updates endDate on the subscription row", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([{ id: "sub-1", userId: "user-1", status: "active" }]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const newDate = new Date("2026-12-01T00:00:00.000Z")
+    const result = await updatePremiumDealerSubscriptionExpiry("sub-1", newDate)
+
+    expect(result).toEqual({ success: true })
+    expect(tx.update).toHaveBeenCalledTimes(2)
+  })
+
+  it("updates only subscription row when status is not active", async () => {
+    const tx = makeTx()
+    tx._selectChain.then = (resolve: (v: unknown) => unknown) =>
+      Promise.resolve([{ id: "sub-1", userId: "user-1", status: "expired" }]).then(resolve)
+    vi.mocked(db.transaction).mockImplementation(async (fn) => fn(tx as never))
+
+    const newDate = new Date("2026-12-01T00:00:00.000Z")
+    const result = await updatePremiumDealerSubscriptionExpiry("sub-1", newDate)
+
+    expect(result).toEqual({ success: true })
+    expect(tx.update).toHaveBeenCalledTimes(1)
   })
 })
