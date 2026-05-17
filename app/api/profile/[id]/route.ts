@@ -49,25 +49,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
-    const [{ products, total }, presence, isPremiumDealer] = await Promise.all([
-      getCachedProductsBySellerId(id, {
-        page,
-        limit,
-        search: search ?? undefined,
-        productType: productType ?? undefined,
-        categoryId: categoryId ?? undefined,
-        status: "active",
-        stoneCut: stoneCut ?? undefined,
-        shape: shape ?? undefined,
-        origin: origin ?? undefined,
-        laboratoryId: laboratoryId ?? undefined,
-        isCollectorPiece: isCollectorPiece === true ? true : undefined,
-        isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
-        isPromotion: isPromotion === true ? true : undefined,
-      }),
-      getPublicProfilePresence(id),
-      isUserActivePremiumDealer(id),
-    ])
+    const { products, total } = await getCachedProductsBySellerId(id, {
+      page,
+      limit,
+      search: search ?? undefined,
+      productType: productType ?? undefined,
+      categoryId: categoryId ?? undefined,
+      status: "active",
+      stoneCut: stoneCut ?? undefined,
+      shape: shape ?? undefined,
+      origin: origin ?? undefined,
+      laboratoryId: laboratoryId ?? undefined,
+      isCollectorPiece: isCollectorPiece === true ? true : undefined,
+      isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
+      isPromotion: isPromotion === true ? true : undefined,
+    })
+    const presence = await getPublicProfilePresence(id)
+    const isPremiumDealer = await isUserActivePremiumDealer(id)
 
     const profile = {
       id: user.id,

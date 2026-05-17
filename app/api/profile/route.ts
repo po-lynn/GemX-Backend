@@ -61,21 +61,19 @@ export async function GET(request: NextRequest) {
     const user = await getUserById(userId)
     if (!user) return jsonError("Profile not found", 404)
 
-    const [{ products, total }, isPremiumDealer] = await Promise.all([
-      getCachedProductsBySellerId(userId, {
-        page,
-        limit,
-        search: search ?? undefined,
-        productType: productType ?? undefined,
-        categoryId: categoryId ?? undefined,
-        status: "active",
-        stoneCut: stoneCut ?? undefined,
-        shape: shape ?? undefined,
-        origin: origin ?? undefined,
-        laboratoryId: laboratoryId ?? undefined,
-      }),
-      isUserActivePremiumDealer(userId),
-    ])
+    const { products, total } = await getCachedProductsBySellerId(userId, {
+      page,
+      limit,
+      search: search ?? undefined,
+      productType: productType ?? undefined,
+      categoryId: categoryId ?? undefined,
+      status: "active",
+      stoneCut: stoneCut ?? undefined,
+      shape: shape ?? undefined,
+      origin: origin ?? undefined,
+      laboratoryId: laboratoryId ?? undefined,
+    })
+    const isPremiumDealer = await isUserActivePremiumDealer(userId)
 
     const profile = {
       id: user.id,

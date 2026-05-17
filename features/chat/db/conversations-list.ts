@@ -85,27 +85,25 @@ export async function getChatConversationsForUser(
 
   const peerIds = [...new Set(latestRows.map((r) => r.peerId))];
 
-  const [profiles, unreadRows, presenceMap] = await Promise.all([
-    db
-      .select({ id: user.id, name: user.name, image: user.image })
-      .from(user)
-      .where(inArray(user.id, peerIds)),
-    db
-      .select({
-        senderId: messages.senderId,
-        unread: sql<number>`count(*)::int`,
-      })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.recipientId, currentUserId),
-          eq(messages.isRead, false),
-          inArray(messages.senderId, peerIds)
-        )
+  const profiles = await db
+    .select({ id: user.id, name: user.name, image: user.image })
+    .from(user)
+    .where(inArray(user.id, peerIds));
+  const unreadRows = await db
+    .select({
+      senderId: messages.senderId,
+      unread: sql<number>`count(*)::int`,
+    })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.recipientId, currentUserId),
+        eq(messages.isRead, false),
+        inArray(messages.senderId, peerIds)
       )
-      .groupBy(messages.senderId),
-    getPublicProfilePresenceMap(peerIds),
-  ]);
+    )
+    .groupBy(messages.senderId);
+  const presenceMap = await getPublicProfilePresenceMap(peerIds);
 
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const unreadByPeer = new Map<string, number>();

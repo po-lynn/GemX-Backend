@@ -862,6 +862,23 @@ export async function getPremiumDealerSubscriptionsPaginated(opts: {
   return { subscriptions: rows, total: countRows[0]?.count ?? 0 };
 }
 
+export async function getPremiumDealerSubscriptionCounts(): Promise<{
+  all: number;
+  active: number;
+  expired: number;
+  cancelled: number;
+}> {
+  const [row] = await db
+    .select({
+      all: sql<number>`count(*)::int`,
+      active: sql<number>`count(*) filter (where ${premiumDealersPackage.status} = 'active')::int`,
+      expired: sql<number>`count(*) filter (where ${premiumDealersPackage.status} = 'expired')::int`,
+      cancelled: sql<number>`count(*) filter (where ${premiumDealersPackage.status} = 'cancelled')::int`,
+    })
+    .from(premiumDealersPackage);
+  return row ?? { all: 0, active: 0, expired: 0, cancelled: 0 };
+}
+
 /**
  * Manually deactivate an active premium dealer subscription.
  * Sets status to 'cancelled' and clears the user cache fields atomically.
