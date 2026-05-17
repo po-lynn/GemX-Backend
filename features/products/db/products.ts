@@ -836,6 +836,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportUrl: input.certReportUrl ?? null,
     additionalMemos: input.additionalMemos ?? null,
     status: input.isCollectorPiece === true ? "pending" : (input.status ?? "active"),
+    moderationStatus: input.moderationStatus ?? "pending",
     isFeatured: input.isFeatured ?? false,
     featured: input.featured ?? 0,
     featuredDurationDays:

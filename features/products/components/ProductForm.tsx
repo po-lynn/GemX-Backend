@@ -89,6 +89,12 @@ function FormSection({
 }
 
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+
+const MODERATION_STATUS_OPTIONS = [
+  { value: "pending" as const, label: "Pending" },
+  { value: "approved" as const, label: "Approved" },
+  { value: "rejected" as const, label: "Rejected" },
+]
 import type { CategoryRow } from "@/features/categories/db/categories"
 
 type Props = {
@@ -203,6 +209,12 @@ export function ProductForm({
   const [status, setStatus] = useState<"pending" | "active" | "archive" | "sold" | "hidden">(
     (product?.status as "pending" | "active" | "archive" | "sold" | "hidden") ?? "active"
   )
+  const [moderationStatus, setModerationStatus] = useState<
+    "pending" | "approved" | "rejected"
+  >(product?.moderationStatus ?? "pending")
+  useEffect(() => {
+    setModerationStatus(product?.moderationStatus ?? "pending")
+  }, [product?.id, product?.moderationStatus])
   const [imageUrlsList, setImageUrlsList] = useState<string[]>(product?.imageUrls ?? [])
   const [videoUrlsList, setVideoUrlsList] = useState<string[]>(product?.videoUrls ?? [])
   const [uploadingImages, setUploadingImages] = useState(false)
@@ -512,6 +524,14 @@ export function ProductForm({
                     {status}
                   </div>
                 </div>
+                <div>
+                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">
+                    Moderation
+                  </div>
+                  <div className="mt-1 text-lg font-semibold capitalize text-[var(--form-foreground)]">
+                    {moderationStatus}
+                  </div>
+                </div>
                 {isEdit && product?.sku && (
                   <div>
                     <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">SKU</div>
@@ -697,6 +717,31 @@ export function ProductForm({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="moderationStatus" className="text-sm font-medium">
+                Moderation status
+              </label>
+              <select
+                id="moderationStatus"
+                name="moderationStatus"
+                value={moderationStatus}
+                onChange={(e) =>
+                  setModerationStatus(
+                    e.target.value as "pending" | "approved" | "rejected"
+                  )
+                }
+                className={inputClass}
+              >
+                {MODERATION_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-[var(--form-muted-foreground)]">
+                Admin review state. Separate from listing status (active, sold, etc.) in the toolbar.
+              </p>
             </div>
           </FormSection>
 
