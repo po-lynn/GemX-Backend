@@ -22,7 +22,7 @@ function createConnection(): ReturnType<typeof postgres> {
     // If you see "Prerendering" hang, use Session mode (5432) for that env (see README).
     const isTransactionPooler = url.includes(":6543/")
     const client = postgres(url, {
-      max: 1,
+      max: isTransactionPooler ? 3 : 10,
       ssl: "require",
       connect_timeout: isTransactionPooler ? 5 : 10,
       idle_timeout: isTransactionPooler ? 60 : 120,
