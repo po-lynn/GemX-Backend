@@ -12,10 +12,12 @@ export async function GET(_request: NextRequest) {
   try {
     const settings = await getPremiumDealersSettings()
     return jsonCached({
-      premiumDealerPackages: settings.packages.map((p) => ({
+      premiumDealerPackages: settings.packages.map((p, i) => ({
         name: p.name,
         pointsRequired: p.pointsRequired,
         durationDays: p.durationDays,
+        // Second package is recommended when there are 2+ packages (matches design intent)
+        recommended: settings.packages.length >= 2 && i === 1,
       })),
     })
   } catch (e) {

@@ -6,7 +6,7 @@ import {
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -982,4 +982,122 @@ export async function getPointPurchaseRequestsPaginated(opts: {
     .where(whereClause)
 
   return { requests: rows, total: countRows[0]?.count ?? 0 };
+}
+
+export type AutoRenewalResult = {
+  renewed: number;
+  expired: number;
+  failed: number;
+};
+
+/**
+ * Process expired premium dealer subscriptions:
+ * - auto_renew=true + sufficient points → deduct points, create new subscription, mark old expired
+ * - auto_renew=true + insufficient points → mark expired, clear user cache fields, count as failed
+ * - auto_renew=false → mark expired, clear user cache fields
+ * Returns counts for monitoring/logging.
+ */
+export async function processAutoRenewals(): Promise<AutoRenewalResult> {
+  const expiredRows = await db
+    .select({
+      id: premiumDealersPackage.id,
+      userId: premiumDealersPackage.userId,
+      packageName: premiumDealersPackage.packageName,
+      endDate: premiumDealersPackage.endDate,
+      autoRenew: premiumDealersPackage.autoRenew,
+    })
+    .from(premiumDealersPackage)
+    .where(
+      and(
+        eq(premiumDealersPackage.status, "active"),
+        lte(premiumDealersPackage.endDate, sql`now()`)
+      )
+    );
+
+  if (expiredRows.length === 0) return { renewed: 0, expired: 0, failed: 0 };
+
+  const settings = await getPremiumDealersSettings();
+  const packagesByName = new Map(settings.packages.map((p) => [p.name, p]));
+
+  let renewed = 0;
+  let expired = 0;
+  let failed = 0;
+
+  for (const row of expiredRows) {
+    const pkg = row.autoRenew ? packagesByName.get(row.packageName) : undefined;
+
+    if (pkg) {
+      const cost = Math.max(0, Math.floor(pkg.pointsRequired));
+      const newStart = new Date();
+      const newExpiry = new Date(newStart.getTime() + pkg.durationDays * 24 * 60 * 60 * 1000);
+
+      const didRenew = await db.transaction(async (tx) => {
+        // Mark old subscription expired
+        await tx
+          .update(premiumDealersPackage)
+          .set({ status: "expired" })
+          .where(eq(premiumDealersPackage.id, row.id));
+
+        // Attempt point deduction
+        const [updatedUser] = await tx
+          .update(user)
+          .set({ points: sql`${user.points} - ${cost}` })
+          .where(and(eq(user.id, row.userId), gte(user.points, cost)))
+          .returning({ points: user.points });
+
+        if (!updatedUser) {
+          // Insufficient points — clear user cache and do not renew
+          await tx
+            .update(user)
+            .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+            .where(
+              and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
+            );
+          return false;
+        }
+
+        // Insert new subscription
+        await tx.insert(premiumDealersPackage).values({
+          userId: row.userId,
+          packageName: pkg.name,
+          startDate: newStart,
+          endDate: newExpiry,
+          autoRenew: true,
+          status: "active",
+        });
+
+        // Update user cache fields
+        await tx
+          .update(user)
+          .set({ premiumDealerPackageName: pkg.name, premiumDealerExpiresAt: newExpiry })
+          .where(eq(user.id, row.userId));
+
+        return true;
+      });
+
+      if (didRenew) {
+        renewed++;
+      } else {
+        failed++;
+      }
+    } else {
+      // No auto-renew or package no longer configured — just expire
+      await db.transaction(async (tx) => {
+        await tx
+          .update(premiumDealersPackage)
+          .set({ status: "expired" })
+          .where(eq(premiumDealersPackage.id, row.id));
+
+        await tx
+          .update(user)
+          .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+          .where(
+            and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
+          );
+      });
+      expired++;
+    }
+  }
+
+  return { renewed, expired, failed };
 }

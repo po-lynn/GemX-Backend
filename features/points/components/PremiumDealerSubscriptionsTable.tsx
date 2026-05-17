@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Ban, CalendarClock } from "lucide-react"
+import { CalendarClock, Ban, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,48 +12,230 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  AdminTableShell,
-  AdminStatusBadge,
-  AdminEmptyRow,
-  adminTH,
-  adminTHCenter,
-  adminTR,
-  adminTD,
-  adminTDMuted,
-} from "@/components/admin/admin-ui"
+import { ListViewCard } from "@/components/admin/list-view"
+import { StatusPill } from "@/components/admin/list-view/StatusPill"
+import { DaysRing } from "@/components/admin/list-view/DaysRing"
+import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
 import type { PremiumDealerSubscriptionRow } from "@/features/points/db/points"
 import {
   deactivatePremiumDealerAction,
   updateSubscriptionExpiryAction,
 } from "@/features/points/actions/points"
 
+// ─── Helpers ──────────────────────────────────────────────
 function daysRemaining(endDate: Date): number {
-  return Math.max(
-    0,
-    Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  )
+  return Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 }
 
 function toDateInputValue(date: Date): string {
   return new Date(date).toISOString().slice(0, 10)
 }
 
-type Props = {
-  subscriptions: PremiumDealerSubscriptionRow[]
+function fmtDate(d: Date): string {
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
 }
 
-export function PremiumDealerSubscriptionsTable({ subscriptions }: Props) {
+function getInitials(name: string | null): string {
+  if (!name) return "?"
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
+function getHue(str: string): number {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 6
+  return h + 1
+}
+
+function getPkgTier(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes("elite") || n.includes("gold")) return "elite"
+  if (n.includes("pro") || n.includes("premium")) return "pro"
+  if (n.includes("trial") || n.includes("free")) return "trial"
+  if (n.includes("enterprise")) return "enterprise"
+  return "basic"
+}
+
+// ─── Row type extended with derived fields ─────────────────
+type Row = PremiumDealerSubscriptionRow & {
+  daysLeft: number
+  tier: string
+  initials: string
+  hue: number
+}
+
+// ─── Detail drawer ────────────────────────────────────────
+function DetailDrawer({
+  row,
+  onClose,
+  onDeactivate,
+  onSetExpiry,
+  isPending,
+}: {
+  row: Row
+  onClose: () => void
+  onDeactivate: (id: string) => void
+  onSetExpiry: (row: Row) => void
+  isPending: boolean
+}) {
+  return (
+    <>
+      <div className="lv-drawer-backdrop" onClick={onClose} />
+      <aside className="lv-drawer" role="dialog" aria-label="Subscription detail">
+        <header className="lv-drawer-head">
+          <span className="lv-avatar" data-hue={row.hue}>
+            {row.initials}
+          </span>
+          <div>
+            <div className="lv-drawer-title">{row.userName ?? "Unknown"}</div>
+            <div className="lv-drawer-sub">{row.userEmail ?? "—"}</div>
+          </div>
+          <div className="lv-drawer-actions">
+            <button className="lv-drawer-close" onClick={onClose} aria-label="Close">
+              <X />
+            </button>
+          </div>
+        </header>
+
+        <div className="lv-drawer-body">
+          <section>
+            <h3 className="lv-drawer-section-h">Subscription</h3>
+            <dl className="lv-kv">
+              <dt>Package</dt>
+              <dd>
+                <span className="lv-pkg">
+                  <span className="lv-pkg-swatch" data-tier={row.tier}>
+                    {row.packageName[0]}
+                  </span>
+                  <span className="lv-pkg-name">{row.packageName}</span>
+                </span>
+              </dd>
+              <dt>Status</dt>
+              <dd><StatusPill status={row.status} /></dd>
+              <dt>Start date</dt>
+              <dd className="lv-kv-mono">{fmtDate(row.startDate)}</dd>
+              <dt>Expiry date</dt>
+              <dd className="lv-kv-mono">{fmtDate(row.endDate)}</dd>
+              <dt>Days remaining</dt>
+              <dd>
+                {row.status === "active"
+                  ? row.daysLeft < 0
+                    ? <span style={{ color: "var(--lv-danger)" }}>Expired {Math.abs(row.daysLeft)}d ago</span>
+                    : `${row.daysLeft} days`
+                  : "—"}
+              </dd>
+              <dt>Auto-renew</dt>
+              <dd>{row.autoRenew ? "Enabled" : "Disabled"}</dd>
+            </dl>
+          </section>
+
+          <section>
+            <h3 className="lv-drawer-section-h">Activity</h3>
+            <div className="lv-timeline">
+              <div className="lv-timeline-item">
+                <span className="lv-timeline-dot" />
+                <span className="lv-timeline-line" />
+                <div className="lv-timeline-meta">
+                  <span className="lv-timeline-title">Subscription started · {row.packageName}</span>
+                  <span className="lv-timeline-when">{fmtDate(row.startDate)}</span>
+                </div>
+              </div>
+              {row.status === "cancelled" && (
+                <div className="lv-timeline-item">
+                  <span className="lv-timeline-dot" style={{ background: "var(--lv-danger)" }} />
+                  <div className="lv-timeline-meta">
+                    <span className="lv-timeline-title">Subscription cancelled</span>
+                    <span className="lv-timeline-when">{fmtDate(row.endDate)}</span>
+                  </div>
+                </div>
+              )}
+              {row.status === "expired" && (
+                <div className="lv-timeline-item">
+                  <span className="lv-timeline-dot" style={{ background: "var(--lv-warn)" }} />
+                  <div className="lv-timeline-meta">
+                    <span className="lv-timeline-title">Subscription expired</span>
+                    <span className="lv-timeline-when">{fmtDate(row.endDate)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {row.status === "active" && (
+          <footer className="lv-drawer-foot">
+            <button
+              className="lv-rowbtn"
+              disabled={isPending}
+              onClick={() => { onSetExpiry(row); onClose() }}
+            >
+              <CalendarClock style={{ width: 14, height: 14 }} /> Set Expiry
+            </button>
+            <button
+              className="lv-rowbtn lv-danger"
+              disabled={isPending}
+              onClick={() => { onDeactivate(row.id); onClose() }}
+            >
+              <Ban style={{ width: 14, height: 14 }} /> Deactivate
+            </button>
+          </footer>
+        )}
+      </aside>
+    </>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────
+const BASE = "/admin/credit/premium-dealer-subscriptions"
+
+function buildPageHref(page: number, status: string): string {
+  const p = new URLSearchParams()
+  p.set("page", String(page))
+  if (status !== "all") p.set("status", status)
+  return `${BASE}?${p.toString()}`
+}
+
+function buildViewHref(view: string): string {
+  const p = new URLSearchParams()
+  if (view !== "all") p.set("status", view)
+  p.set("page", "1")
+  return `${BASE}?${p.toString()}`
+}
+
+type Props = {
+  subscriptions: PremiumDealerSubscriptionRow[]
+  views?: ViewTab[]
+  activeView?: string
+  page: number
+  pageSize: number
+  total: number
+}
+
+export function PremiumDealerSubscriptionsTable({
+  subscriptions,
+  views,
+  activeView,
+  page,
+  pageSize,
+  total,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  // Deactivate dialog state
+  // Deactivate dialog
   const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null)
   const [deactivateError, setDeactivateError] = useState<string | null>(null)
   const [deactivating, setDeactivating] = useState(false)
 
-  // Set expiry dialog state
-  const [expiryTarget, setExpiryTarget] = useState<PremiumDealerSubscriptionRow | null>(null)
+  // Set expiry dialog
+  const [expiryTarget, setExpiryTarget] = useState<Row | null>(null)
   const [expiryDate, setExpiryDate] = useState("")
   const [expiryError, setExpiryError] = useState<string | null>(null)
   const [updatingExpiry, setUpdatingExpiry] = useState(false)
@@ -84,7 +266,7 @@ export function PremiumDealerSubscriptionsTable({ subscriptions }: Props) {
     }
   }
 
-  function openSetExpiry(row: PremiumDealerSubscriptionRow) {
+  function openSetExpiry(row: Row) {
     setExpiryTarget(row)
     setExpiryDate(toDateInputValue(row.endDate))
     setExpiryError(null)
@@ -114,91 +296,217 @@ export function PremiumDealerSubscriptionsTable({ subscriptions }: Props) {
 
   const today = toDateInputValue(new Date())
 
+  // Augment rows with derived fields
+  const rows: Row[] = subscriptions.map((s) => ({
+    ...s,
+    daysLeft: daysRemaining(s.endDate),
+    tier: getPkgTier(s.packageName),
+    initials: getInitials(s.userName),
+    hue: getHue(s.userId),
+  }))
+
+  // Column definitions
+  const columnDefs: ColumnDef<Row>[] = [
+    {
+      id: "user",
+      label: "User",
+      width: 260,
+      sortable: true,
+      render: (r) => (
+        <div className="lv-cell-user">
+          <span className="lv-avatar" data-hue={r.hue}>
+            {r.initials}
+          </span>
+          <div className="lv-cell-user-meta">
+            <span className="lv-cell-name">{r.userName ?? "—"}</span>
+            <span className="lv-cell-sub">{r.userEmail ?? "—"}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "packageName",
+      label: "Package",
+      width: 160,
+      sortable: true,
+      render: (r) => (
+        <span className="lv-pkg">
+          <span className="lv-pkg-swatch" data-tier={r.tier}>
+            {r.packageName[0]}
+          </span>
+          <span className="lv-pkg-name">{r.packageName}</span>
+        </span>
+      ),
+    },
+    {
+      id: "startDate",
+      label: "Start",
+      width: 110,
+      sortable: true,
+      render: (r) => (
+        <span className="lv-cell-mono">{fmtDate(r.startDate)}</span>
+      ),
+    },
+    {
+      id: "endDate",
+      label: "Expiry",
+      width: 110,
+      sortable: true,
+      render: (r) => (
+        <span className="lv-cell-mono">{fmtDate(r.endDate)}</span>
+      ),
+    },
+    {
+      id: "daysLeft",
+      label: "Days left",
+      width: 110,
+      sortable: true,
+      render: (r) =>
+        r.status === "active" ? (
+          <DaysRing daysLeft={r.daysLeft} totalDays={365} />
+        ) : (
+          <span style={{ color: "var(--lv-text-4)", fontSize: 13 }}>—</span>
+        ),
+    },
+    {
+      id: "autoRenew",
+      label: "Auto-renew",
+      width: 110,
+      sortable: true,
+      render: (r) =>
+        r.autoRenew ? (
+          <span className="lv-status active" style={{ background: "var(--lv-accent-soft)", color: "var(--lv-accent)" }}>
+            Yes
+          </span>
+        ) : (
+          <span className="lv-status cancelled">No</span>
+        ),
+    },
+    {
+      id: "status",
+      label: "Status",
+      width: 110,
+      sortable: true,
+      render: (r) => <StatusPill status={r.status} />,
+    },
+  ]
+
+  const filterDefs: FilterDef[] = [
+    {
+      id: "status",
+      label: "Status",
+      type: "multi",
+      options: [
+        { value: "active",    label: "Active" },
+        { value: "expired",   label: "Expired" },
+        { value: "cancelled", label: "Cancelled" },
+        { value: "pending",   label: "Pending" },
+      ],
+    },
+    {
+      id: "autoRenew",
+      label: "Auto-renew",
+      type: "multi",
+      options: [
+        { value: "true",  label: "Enabled" },
+        { value: "false", label: "Disabled" },
+      ],
+    },
+  ]
+
+  const groupOptions: GroupOption[] = [
+    { id: "status",    label: "Status" },
+    { id: "packageName", label: "Package" },
+  ]
+
   return (
     <>
-      <AdminTableShell>
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
-              <th className={adminTH}>User</th>
-              <th className={adminTH}>Package</th>
-              <th className={adminTH}>Start Date</th>
-              <th className={adminTH}>Expiry Date</th>
-              <th className={adminTHCenter}>Days Left</th>
-              <th className={adminTHCenter}>Auto-Renew</th>
-              <th className={adminTHCenter}>Status</th>
-              <th className={adminTHCenter}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subscriptions.length === 0 ? (
-              <AdminEmptyRow colSpan={8} message="No premium dealer subscriptions found." />
-            ) : (
-              subscriptions.map((row) => {
-                const isActive = row.status === "active"
-                const days = isActive ? daysRemaining(row.endDate) : null
-                return (
-                  <tr key={row.id} className={adminTR}>
-                    <td className={adminTD}>
-                      <div className="font-medium text-slate-800">{row.userName ?? "—"}</div>
-                      <div className="text-xs text-slate-400">{row.userEmail ?? "—"}</div>
-                    </td>
-                    <td className={adminTD}>{row.packageName}</td>
-                    <td className={adminTDMuted}>
-                      {new Date(row.startDate).toLocaleDateString()}
-                    </td>
-                    <td className={adminTDMuted}>
-                      {new Date(row.endDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-center font-mono text-slate-700">
-                      {days != null ? days : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-500">
-                      {row.autoRenew ? "Yes" : "No"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <AdminStatusBadge status={row.status} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {isActive ? (
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={isPending}
-                            onClick={() => openSetExpiry(row)}
-                            className="h-7 gap-1 bg-blue-50 px-2.5 text-xs font-medium text-blue-700 ring-1 ring-blue-200/60 hover:bg-blue-100 hover:text-blue-800"
-                          >
-                            <CalendarClock className="size-3.5" />
-                            Set Expiry
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={isPending}
-                            onClick={() => openDeactivate(row.id)}
-                            className="h-7 gap-1 bg-red-50 px-2.5 text-xs font-medium text-red-700 ring-1 ring-red-200/60 hover:bg-red-100 hover:text-red-800"
-                          >
-                            <Ban className="size-3.5" />
-                            Deactivate
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </AdminTableShell>
+      <ListViewCard
+        rows={rows}
+        columnDefs={columnDefs}
+        views={views}
+        activeView={activeView}
+        buildViewHref={buildViewHref}
+        filterDefs={filterDefs}
+        groupOptions={groupOptions}
+        defaultSort={{ id: "startDate", dir: "desc" }}
+        getSortValue={(r, colId) => {
+          switch (colId) {
+            case "user":      return r.userName ?? ""
+            case "packageName": return r.packageName
+            case "startDate": return r.startDate.getTime()
+            case "endDate":   return r.endDate.getTime()
+            case "daysLeft":  return r.daysLeft
+            case "autoRenew": return r.autoRenew ? 1 : 0
+            case "status":    return r.status
+            default:          return ""
+          }
+        }}
+        rowActions={(r) =>
+          r.status === "active" ? (
+            <>
+              <button
+                className="lv-rowbtn"
+                disabled={isPending}
+                onClick={() => openSetExpiry(r)}
+                title="Set expiry date"
+              >
+                <CalendarClock style={{ width: 13, height: 13 }} /> Set Expiry
+              </button>
+              <button
+                className="lv-rowbtn lv-danger"
+                disabled={isPending}
+                onClick={() => openDeactivate(r.id)}
+                title="Deactivate subscription"
+              >
+                <Ban style={{ width: 13, height: 13 }} /> Deactivate
+              </button>
+            </>
+          ) : (
+            <span style={{ color: "var(--lv-text-4)", fontSize: 12 }}>—</span>
+          )
+        }
+        renderDrawer={(r, onClose) => (
+          <DetailDrawer
+            row={r}
+            onClose={onClose}
+            onDeactivate={openDeactivate}
+            onSetExpiry={openSetExpiry}
+            isPending={isPending}
+          />
+        )}
+        renderBulkActions={(_selectedRows, onClear) => (
+          <>
+            <button
+              className="lv-bulkbtn lv-bulk-danger"
+              disabled={isPending}
+              onClick={() => {
+                // Bulk deactivate: deactivate first selected active one for now
+                // Full bulk deactivate would loop through server actions
+                onClear()
+              }}
+            >
+              <Ban style={{ width: 13, height: 13 }} /> Deactivate selected
+            </button>
+          </>
+        )}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        buildPageHref={(p) => buildPageHref(p, activeView ?? "all")}
+        onExport={(fmt) => {
+          // Export logic can be wired later
+          console.log("Export as", fmt)
+        }}
+        emptyMessage="No premium dealer subscriptions found. Try adjusting your filters."
+      />
 
       {/* Deactivate confirmation dialog */}
       <Dialog
         open={deactivateTarget !== null}
-        onOpenChange={(v) => { if (!deactivating && !v) setDeactivateTarget(null) }}
+        onOpenChange={(v) => {
+          if (!deactivating && !v) setDeactivateTarget(null)
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -237,14 +545,15 @@ export function PremiumDealerSubscriptionsTable({ subscriptions }: Props) {
       {/* Set expiry date dialog */}
       <Dialog
         open={expiryTarget !== null}
-        onOpenChange={(v) => { if (!updatingExpiry && !v) setExpiryTarget(null) }}
+        onOpenChange={(v) => {
+          if (!updatingExpiry && !v) setExpiryTarget(null)
+        }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-base">Set Expiry Date</DialogTitle>
             <DialogDescription>
-              Update when this premium dealer subscription expires.
-              Must be a future date.
+              Update when this premium dealer subscription expires. Must be a future date.
             </DialogDescription>
           </DialogHeader>
           <input

@@ -1,19 +1,13 @@
 import Link from "next/link"
+import { ChevronRight, Download } from "lucide-react"
 import { connection } from "next/server"
-import { Button } from "@/components/ui/button"
-import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import { getPremiumDealerSubscriptionsPaginated } from "@/features/points/db/points"
+import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
+import type { ViewTab } from "@/components/admin/list-view"
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "active", "expired", "cancelled"] as const
 type StatusFilter = (typeof STATUS_FILTERS)[number]
-
-function buildLink(page: number, status: StatusFilter) {
-  const p = new URLSearchParams()
-  p.set("page", String(page))
-  if (status !== "all") p.set("status", status)
-  return `/admin/credit/premium-dealer-subscriptions?${p.toString()}`
-}
 
 type Props = {
   searchParams: Promise<{ page?: string; status?: string }>
@@ -27,80 +21,60 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
     ? (params.status as StatusFilter)
     : "all"
 
-  const { subscriptions, total } = await getPremiumDealerSubscriptionsPaginated({
-    page,
-    limit: PAGE_SIZE,
-    status: status === "all" ? undefined : status,
-  })
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // Fetch current page + total for each status (for tab counts)
+  const [current, allCount, activeCount, expiredCount, cancelledCount] = await Promise.all([
+    getPremiumDealerSubscriptionsPaginated({
+      page,
+      limit: PAGE_SIZE,
+      status: status === "all" ? undefined : status,
+    }),
+    getPremiumDealerSubscriptionsPaginated({ page: 1, limit: 1 }),
+    getPremiumDealerSubscriptionsPaginated({ page: 1, limit: 1, status: "active" }),
+    getPremiumDealerSubscriptionsPaginated({ page: 1, limit: 1, status: "expired" }),
+    getPremiumDealerSubscriptionsPaginated({ page: 1, limit: 1, status: "cancelled" }),
+  ])
+
+  const views: ViewTab[] = [
+    { id: "all",       label: "All",       count: allCount.total },
+    { id: "active",    label: "Active",    count: activeCount.total },
+    { id: "expired",   label: "Expired",   count: expiredCount.total },
+    { id: "cancelled", label: "Cancelled", count: cancelledCount.total },
+  ]
 
   return (
-    <div className="space-y-5 py-2">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="py-2">
+      <div className="lv-pagehead">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+          <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin">Admin</Link>
+            <ChevronRight />
+            <Link href="/admin/credit">Settings</Link>
+            <ChevronRight />
+            <span className="lv-here">Dealer Subscriptions</span>
+          </nav>
+          <h1 className="lv-h1">
             Premium Dealer Subscriptions
+            <span className="lv-h1-count">{allCount.total} total</span>
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            View subscription history, deactivate active subscriptions, or manually set expiry dates
+          <p className="lv-subhead">
+            View subscription history, deactivate active subscriptions, or manually set expiry dates.
           </p>
         </div>
-        <span className="text-sm text-slate-500">
-          {total.toLocaleString()} subscription{total !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* Status filter tabs */}
-      <div className="flex flex-wrap gap-1.5">
-        {STATUS_FILTERS.map((s) => (
-          <Button
-            key={s}
-            asChild
-            size="sm"
-            variant={status === s ? "default" : "outline"}
-            className="h-8 text-xs capitalize"
-          >
-            <Link href={buildLink(1, s)}>{s}</Link>
-          </Button>
-        ))}
-      </div>
-
-      <PremiumDealerSubscriptionsTable subscriptions={subscriptions} />
-
-      {/* Pagination */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">
-          Page {page} of {totalPages} · {total.toLocaleString()} total
-        </p>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            className="h-8 text-xs"
-            asChild={page > 1}
-          >
-            {page > 1 ? (
-              <Link href={buildLink(page - 1, status)}>← Prev</Link>
-            ) : (
-              <span>← Prev</span>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            className="h-8 text-xs"
-            asChild={page < totalPages}
-          >
-            {page < totalPages ? (
-              <Link href={buildLink(page + 1, status)}>Next →</Link>
-            ) : (
-              <span>Next →</span>
-            )}
-          </Button>
+        <div className="lv-pagehead-actions">
+          <button className="lv-export-btn">
+            <Download /> Export Excel
+          </button>
         </div>
       </div>
+
+      <PremiumDealerSubscriptionsTable
+        subscriptions={current.subscriptions}
+        views={views}
+        activeView={status}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={current.total}
+      />
     </div>
   )
 }
