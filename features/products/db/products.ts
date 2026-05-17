@@ -73,6 +73,7 @@ export async function getAdminProductsFromDb(opts: {
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
   status?: "pending" | "active" | "archive" | "sold" | "hidden"
+  moderationStatus?: "pending" | "approved" | "rejected"
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: ProductIdentification
@@ -141,6 +142,9 @@ export async function getAdminProductsFromDb(opts: {
     opts.productType ? eq(product.productType, opts.productType) : undefined,
     categoryCondition,
     opts.status ? eq(product.status, opts.status) : undefined,
+    opts.moderationStatus
+      ? eq(product.moderationStatus, opts.moderationStatus)
+      : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.metal ? eq(product.metal, opts.metal) : undefined,
     opts.identification ? eq(product.identification, opts.identification) : undefined,
@@ -366,6 +370,7 @@ export async function getProductsBySellerId(
     productType?: "loose_stone" | "jewellery"
     categoryId?: string | null
     status?: "pending" | "active" | "archive" | "sold" | "hidden"
+    moderationStatus?: "pending" | "approved" | "rejected"
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
     identification?: ProductIdentification
@@ -430,6 +435,9 @@ export async function getProductsBySellerId(
     opts.productType ? eq(product.productType, opts.productType) : undefined,
     categoryConditionSeller,
     opts.status ? eq(product.status, opts.status) : undefined,
+    opts.moderationStatus
+      ? eq(product.moderationStatus, opts.moderationStatus)
+      : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.metal ? eq(product.metal, opts.metal) : undefined,
     opts.identification ? eq(product.identification, opts.identification) : undefined,

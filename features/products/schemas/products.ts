@@ -37,6 +37,8 @@ export const adminProductsSearchSchema = z.object({
   productType: z.enum(["loose_stone", "jewellery"]).optional(),
   categoryId: optionalUuid,
   status: productStatusSchema.optional(),
+  /** Admin review state: `pending`, `approved`, `rejected`. Used on GET /api/products/mine (and admin/public list when passed). */
+  moderationStatus: productModerationSchema.optional(),
   stoneCut: z.enum(["Faceted", "Cabochon"]).optional(),
   metal: z.enum(["Gold", "Silver", "Other"]).optional(),
   identification: productIdentificationSchema.optional(),

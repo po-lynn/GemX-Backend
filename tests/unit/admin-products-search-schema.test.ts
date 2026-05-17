@@ -22,6 +22,17 @@ describe("adminProductsSearchSchema", () => {
     expect(out.status).toBe("active")
   })
 
+  it("accepts valid moderationStatus", () => {
+    const out = adminProductsSearchSchema.parse({ moderationStatus: "approved" })
+    expect(out.moderationStatus).toBe("approved")
+  })
+
+  it("rejects invalid moderationStatus", () => {
+    expect(() =>
+      adminProductsSearchSchema.parse({ moderationStatus: "unknown" })
+    ).toThrow()
+  })
+
   it("accepts valid optional categoryId UUID", () => {
     const uuid = "a1b2c3d4-e5f6-4789-a012-345678901234"
     const out = adminProductsSearchSchema.parse({ categoryId: uuid })
