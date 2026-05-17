@@ -36,7 +36,7 @@ import type {
 } from "./types"
 
 // ─── Popover hook ─────────────────────────────────────────
-function usePopover(ref: RefObject<HTMLDivElement>) {
+function usePopover(ref: RefObject<HTMLDivElement | null>) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
     if (!open) return
