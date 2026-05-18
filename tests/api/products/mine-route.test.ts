@@ -78,6 +78,20 @@ describe("GET /api/products/mine", () => {
     )
   })
 
+  it("allows moderationStatus filter for owner", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-123", role: "user" },
+    } as never)
+    const req = new Request(
+      "http://localhost/api/products/mine?moderationStatus=pending"
+    )
+    await GET(req as NextRequest)
+    expect(getCachedProductsBySellerId).toHaveBeenCalledWith(
+      "user-123",
+      expect.objectContaining({ moderationStatus: "pending" })
+    )
+  })
+
   it("returns 500 when getCachedProductsBySellerId throws", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },

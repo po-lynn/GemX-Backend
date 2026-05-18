@@ -7,6 +7,7 @@
 ## Recent changes
 
 - **Premium dealer auto-renew** – **POST `/api/mobile/premium-dealers/activate`** `autoRenew` field now triggers automatic renewal: a daily server-side cron job (`POST /api/cron/renew-premium-dealers`) deducts `pointsRequired` and creates a new subscription row on expiry; if the user has insufficient points the subscription expires without renewal. **GET `/api/mobile/premium-dealers/status`** now returns `points` (always), `daysRemaining`, and `autoRenew` alongside the existing `active`/`packageName`/`expiresAt` fields. **GET `/api/mobile/premium-dealers/settings`** now includes `recommended` (boolean; `true` for the second package when 2+ packages exist). See **5.4.3**, **5.4.3a**, and **5.4.3b**.
+- **My products — filter by moderation status** – **GET `/api/products/mine`** accepts optional query **`moderationStatus`**: `pending`, `approved`, or `rejected` (admin review state). Omit to return all moderation states. Each product includes **`moderationStatus`**. Combine with **`status`** (listing lifecycle) and other filters. See **5.3** and **5.1** (Search and filter).
 - **Chat conversations — live SSE** – **GET `/api/chat/conversations?stream=1`** (auth, same Bearer as JSON mode) returns **`text/event-stream`**: Server-Sent Events with **`data:`** lines of `{ "success": true, "conversations": [...] }` whenever that payload **changes** (polled on an **`intervalMs`** window, default **4000**, clamped **2000–30000**), plus comment keep-alives. Use **fetch** with `Authorization` and read the body as a stream (browser **EventSource** cannot send Bearer). Plain **GET `/api/chat/conversations`** (no `stream`) stays JSON. See **5.4d**.
 - **Chat conversations list (mobile)** – **GET `/api/chat/conversations`** (auth): returns **`conversations`**: every user who shares a **`messages`** thread with the current user, each with **`userId`**, **`name`**, **`profileImage`**, **`lastMessage`** (preview; media-only threads use short labels like `"Sent photos"`), **`lastMessageTime`** (ISO 8601), **`unreadCount`** (incoming unread from that peer), and **`isOnline`** (session-derived, same ~5 minute window as **GET `/api/profile/:id`**). Sorted by **`lastMessageTime`** descending. **`Cache-Control: no-store`**. See **5.4d** (GET `/api/chat/conversations`).
 - **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
@@ -107,7 +108,7 @@
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
-| GET    | `/api/products/mine`   | Yes  | List current user’s products. All statuses by default. Seller-scoped: collector-piece rows are returned for owner (no public masking). Same query params as list all.                                                                                                                    |
+| GET    | `/api/products/mine`   | Yes  | List current user’s products. All listing statuses by default; optional **`moderationStatus`** (`pending` \| `approved` \| `rejected`). Same other query params as list all. See **5.3**.                                                                                                                    |
 | GET    | `/api/profile`         | Yes  | Get current user profile (includes **`isPremiumDealer`**) and their products (optional query: page, limit, filters).                                                                                                                      |
 | POST   | `/api/profile`         | Yes  | Update current user profile fields (`name`, `address`, `image`). See **5.4c**. |
 | GET    | `/api/profile/:id`     | No   | Get a public seller profile (includes **`isPremiumDealer`**) and their active products (optional query: page, limit, filters).                                                                                                            |
@@ -615,7 +616,8 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `search`            | string  | -       | Search term. Matches **product title**, **seller name**, **seller phone**, and **seller email** (case-insensitive partial match). |
 | `productType`       | string  | -       | Filter by product type: `loose_stone` or `jewellery`.                                                                             |
 | `categoryId`        | string  | -       | Filter by category (UUID from GET /api/categories).                                                                               |
-| `status`            | string  | -       | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`.                                        |
+| `status`            | string  | -       | Filter by **listing** status: `pending`, `active`, `archive`, `sold`, `hidden`. Public list defaults to `active`. **GET /api/products/mine** returns all listing statuses when omitted. |
+| `moderationStatus`  | string  | -       | Filter by **admin review** state: `pending`, `approved`, `rejected`. **GET /api/products/mine** only (seller’s own listings). Omit to include all. |
 | `stoneCut`          | string  | -       | Filter by cut: `Faceted` or `Cabochon`.                                                                                           |
 | `metal`             | string  | -       | Filter by metal: `Gold`, `Silver`, `Other` (typically jewellery only).                                                             |
 | `identification`    | string  | -       | Filter by identification: `Natural`, `Heat Treated`, `Treatments`, `Others`.                                                       |
@@ -684,7 +686,17 @@ GET /api/products/mine?stoneCut=Faceted&status=active
 Authorization: Bearer <session_token>
 ```
 
-**7. Filter by metal or identification**
+**7. My products — filter by moderation status (seller)**
+
+```
+GET /api/products/mine?moderationStatus=pending
+GET /api/products/mine?moderationStatus=approved&status=active
+Authorization: Bearer <session_token>
+```
+
+Use **`moderationStatus`** for admin review tabs (e.g. “Awaiting approval”, “Approved”, “Rejected”). This is separate from **`status`** (whether the listing is active, sold, hidden, etc.).
+
+**8. Filter by metal or identification**
 
 ```
 GET /api/products?metal=Gold
@@ -838,12 +850,21 @@ To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. All are optional. My products returns **all statuses** by default (seller sees full list); use `status` to filter. For collector pieces, this endpoint is owner-scoped (`sellerId = logged-in user id`), so owner listings are returned directly (no public masking).
+**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, **`moderationStatus`**, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. All are optional.
+
+| Param | Values | Notes |
+| ----- | ------ | ----- |
+| `status` | `pending`, `active`, `archive`, `sold`, `hidden` | **Listing** lifecycle. Omit = all listing statuses (seller sees full inventory). |
+| `moderationStatus` | `pending`, `approved`, `rejected` | **Admin review** state. Omit = all moderation states. Use for “my listings awaiting approval” vs “approved” tabs. |
+
+For collector pieces, this endpoint is owner-scoped (`sellerId = logged-in user id`), so owner listings are returned directly (no public masking).
 
 **Examples:**
 
 - `GET /api/products/mine?page=1&limit=20`
 - `GET /api/products/mine?status=active&stoneCut=Cabochon` (with Bearer token)
+- `GET /api/products/mine?moderationStatus=pending` — listings awaiting admin approval
+- `GET /api/products/mine?moderationStatus=approved&status=active` — approved and currently active
 - `GET /api/products/mine?isCollectorPiece=true` (with Bearer token)
 
 **Success (200):** Same shape as “List all products”: `{ "products": [...], "total": n }` but only the logged-in user’s products.
@@ -3121,7 +3142,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products; response **`profile`** includes **`isPremiumDealer`**.
   - **Seller ratings:** Load preset tag options with `GET /api/rating-tags` (cache locally). After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional", "tagIds": ["<uuid>", ...] }` (`tagIds` optional; each id must be active in **GET `/api/rating-tags`**). List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20` (each item includes `tagIds`).
 4. **My products**
-  - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all statuses by default.
+  - List: `GET /api/products/mine?page=1&limit=20` (same optional query params as browse, including `moderationStatus`, `isCollectorPiece`, `isPrivilegeAssist`; with Bearer token). Returns all listing statuses by default; filter with `?moderationStatus=pending` \| `approved` \| `rejected`.
 5. **Profile**
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token). Response **`profile`** includes **`isPremiumDealer`**.
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
@@ -3206,7 +3227,7 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
 | GET    | `/api/products/:id`    | No†  | Get one product (includes `seller` details with `image` + `rating`). **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
-| GET    | `/api/products/mine`   | Yes  | List my products (all statuses by default; same query params as list all). Collector pieces are owner-visible (not public-masked).                                   |
+| GET    | `/api/products/mine`   | Yes  | List my products (all listing statuses by default; optional `moderationStatus`). Collector pieces are owner-visible (not public-masked). See 5.3.                                   |
 | GET    | `/api/profile`         | Yes  | Get profile and own products (includes **`isPremiumDealer`**; optional query params)                                                        |
 | GET    | `/api/profile/:id`     | No   | Get public seller profile and active products (includes **`isPremiumDealer`**; optional query params)                                       |
 | POST   | `/api/products`        | Yes  | Create product                                                                                              |
