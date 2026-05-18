@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { canAdminManageUsers } from "@/features/users/permissions/users"
 import {

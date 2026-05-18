@@ -49,7 +49,6 @@ import {
   Phone,
   Plus,
   Search,
-  Send,
   Smile,
   Square,
   Star,
@@ -709,7 +708,8 @@ export function ChatDashboard({
       cancelled = true
       videoStreamRef.current?.getTracks().forEach((t) => t.stop())
       videoStreamRef.current = null
-      if (videoRef.current) videoRef.current.srcObject = null
+      const vid = videoRef.current
+      if (vid) vid.srcObject = null
     }
   }, [videoOpen])
 
