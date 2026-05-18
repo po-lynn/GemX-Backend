@@ -18,6 +18,9 @@ import {
   setUserPoints,
   approvePointPurchaseRequest,
   rejectPointPurchaseRequest,
+  resetPointPurchaseRequestToPending,
+  overrideApprovePointPurchaseRequest,
+  overrideRejectPointPurchaseRequest,
   deactivatePremiumDealerSubscription,
   updatePremiumDealerSubscriptionExpiry,
 } from "@/features/points/db/points";
@@ -304,6 +307,41 @@ export async function rejectPointPurchaseRequestAction(formData: FormData) {
 
   const result = await rejectPointPurchaseRequest(requestId, session.user.id, adminNote);
   if (!result.success) return { error: result.reason === "not_found" ? "Request not found." : "Request is not pending." };
+  return { success: true };
+}
+
+export async function resetPointPurchaseRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  if (!requestId) return { error: "Request ID is required." };
+
+  const result = await resetPointPurchaseRequestToPending(requestId);
+  if (!result.success) return { error: "Request not found." };
+  return { success: true };
+}
+
+export async function overrideApprovePointPurchaseRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
+  if (!requestId) return { error: "Request ID is required." };
+
+  const result = await overrideApprovePointPurchaseRequest(requestId, session.user.id, adminNote);
+  if (!result.success) return { error: result.reason === "not_found" ? "Request not found." : "Request is already approved." };
+  return { success: true };
+}
+
+export async function overrideRejectPointPurchaseRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) return { error: "Unauthorized" };
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const adminNote = String(formData.get("adminNote") ?? "").trim() || null;
+  if (!requestId) return { error: "Request ID is required." };
+
+  const result = await overrideRejectPointPurchaseRequest(requestId, session.user.id, adminNote);
+  if (!result.success) return { error: result.reason === "not_found" ? "Request not found." : "Request is already rejected." };
   return { success: true };
 }
 

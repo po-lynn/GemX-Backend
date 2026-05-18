@@ -22,12 +22,9 @@ export type FilterOption = {
   count?: number
 }
 
-export type FilterDef = {
-  id: string
-  label: string
-  type: "multi"
-  options: FilterOption[]
-}
+export type FilterDef =
+  | { id: string; label: string; type: "multi"; options: FilterOption[] }
+  | { id: string; label: string; type: "daterange" }
 
 export type SortState = {
   id: string

@@ -754,6 +754,7 @@ export type PointPurchaseRequestRow = {
   id: string;
   userId: string;
   userName: string | null;
+  userPhone: string | null;
   userEmail: string | null;
   packageName: string;
   points: number;
@@ -804,6 +805,67 @@ export async function rejectPointPurchaseRequest(
     .limit(1);
   if (!existing) return { success: false, reason: "not_found" };
   if (existing.status !== "pending") return { success: false, reason: "not_pending" };
+
+  await db
+    .update(pointPurchaseRequest)
+    .set({ status: "rejected", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+    .where(eq(pointPurchaseRequest.id, requestId));
+
+  return { success: true };
+}
+
+export async function resetPointPurchaseRequestToPending(
+  requestId: string
+): Promise<{ success: false; reason: "not_found" } | { success: true }> {
+  const [existing] = await db
+    .select({ id: pointPurchaseRequest.id })
+    .from(pointPurchaseRequest)
+    .where(eq(pointPurchaseRequest.id, requestId))
+    .limit(1);
+  if (!existing) return { success: false, reason: "not_found" };
+
+  await db
+    .update(pointPurchaseRequest)
+    .set({ status: "pending", adminNote: null, reviewedByAdminId: null, reviewedAt: null })
+    .where(eq(pointPurchaseRequest.id, requestId));
+
+  return { success: true };
+}
+
+export async function overrideApprovePointPurchaseRequest(
+  requestId: string,
+  adminId: string,
+  adminNote?: string | null
+): Promise<{ success: false; reason: "not_found" | "already_approved" } | { success: true; pointsAdded: number }> {
+  const [existing] = await db
+    .select({ id: pointPurchaseRequest.id, userId: pointPurchaseRequest.userId, points: pointPurchaseRequest.points, status: pointPurchaseRequest.status })
+    .from(pointPurchaseRequest)
+    .where(eq(pointPurchaseRequest.id, requestId))
+    .limit(1);
+  if (!existing) return { success: false, reason: "not_found" };
+  if (existing.status === "approved") return { success: false, reason: "already_approved" };
+
+  await db
+    .update(pointPurchaseRequest)
+    .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+    .where(eq(pointPurchaseRequest.id, requestId));
+
+  await creditUserPoints(existing.userId, existing.points);
+  return { success: true, pointsAdded: existing.points };
+}
+
+export async function overrideRejectPointPurchaseRequest(
+  requestId: string,
+  adminId: string,
+  adminNote?: string | null
+): Promise<{ success: false; reason: "not_found" | "already_rejected" } | { success: true }> {
+  const [existing] = await db
+    .select({ id: pointPurchaseRequest.id, status: pointPurchaseRequest.status })
+    .from(pointPurchaseRequest)
+    .where(eq(pointPurchaseRequest.id, requestId))
+    .limit(1);
+  if (!existing) return { success: false, reason: "not_found" };
+  if (existing.status === "rejected") return { success: false, reason: "already_rejected" };
 
   await db
     .update(pointPurchaseRequest)
@@ -971,6 +1033,7 @@ export async function getPointPurchaseRequestsPaginated(opts: {
       id: pointPurchaseRequest.id,
       userId: pointPurchaseRequest.userId,
       userName: user.name,
+      userPhone: user.phone,
       userEmail: user.email,
       packageName: pointPurchaseRequest.packageName,
       points: pointPurchaseRequest.points,
@@ -999,6 +1062,23 @@ export async function getPointPurchaseRequestsPaginated(opts: {
     .where(whereClause)
 
   return { requests: rows, total: countRows[0]?.count ?? 0 };
+}
+
+export async function getPointPurchaseRequestCounts(): Promise<{
+  all: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}> {
+  const [row] = await db
+    .select({
+      all:      sql<number>`count(*)::int`,
+      pending:  sql<number>`count(*) filter (where ${pointPurchaseRequest.status} = 'pending')::int`,
+      approved: sql<number>`count(*) filter (where ${pointPurchaseRequest.status} = 'approved')::int`,
+      rejected: sql<number>`count(*) filter (where ${pointPurchaseRequest.status} = 'rejected')::int`,
+    })
+    .from(pointPurchaseRequest);
+  return row ?? { all: 0, pending: 0, approved: 0, rejected: 0 };
 }
 
 export type AutoRenewalResult = {

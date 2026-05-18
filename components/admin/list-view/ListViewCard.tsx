@@ -56,6 +56,87 @@ function usePopover(ref: RefObject<HTMLDivElement | null>) {
   return { open, setOpen }
 }
 
+// ─── Date range helpers ────────────────────────────────────
+function drFrom(vals: string[]): string {
+  return vals.find((v) => v.startsWith("from:"))?.substring(5) ?? ""
+}
+function drTo(vals: string[]): string {
+  return vals.find((v) => v.startsWith("to:"))?.substring(3) ?? ""
+}
+function drFmt(iso: string): string {
+  if (!iso) return ""
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  })
+}
+
+// ─── DateRangeGroup ────────────────────────────────────────
+function DateRangeGroup({
+  def,
+  value,
+  onChange,
+}: {
+  def: FilterDef & { type: "daterange" }
+  value: string[] | undefined
+  onChange: (v: string[]) => void
+}) {
+  const [open, setOpen] = useState(true)
+  const vals = value ?? []
+  const from = drFrom(vals)
+  const to   = drTo(vals)
+  const active = !!(from || to)
+
+  function setFrom(d: string) {
+    const next = vals.filter((v) => !v.startsWith("from:"))
+    onChange(d ? [...next, `from:${d}`] : next)
+  }
+  function setTo(d: string) {
+    const next = vals.filter((v) => !v.startsWith("to:"))
+    onChange(d ? [...next, `to:${d}`] : next)
+  }
+
+  return (
+    <div>
+      <button className="lv-filter-section-btn" onClick={() => setOpen((o) => !o)}>
+        <span className={`lv-filter-section-caret ${open ? "lv-open" : "lv-closed"}`}>
+          <ChevronDown />
+        </span>
+        {def.label}
+        {active && <span className="lv-filter-count">1</span>}
+      </button>
+      {open && (
+        <div className="lv-daterange">
+          <div className="lv-daterange-row">
+            <label className="lv-daterange-label">From</label>
+            <input
+              type="date"
+              className="lv-daterange-input"
+              value={from}
+              max={to || undefined}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </div>
+          <div className="lv-daterange-row">
+            <label className="lv-daterange-label">To</label>
+            <input
+              type="date"
+              className="lv-daterange-input"
+              value={to}
+              min={from || undefined}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </div>
+          {active && (
+            <button className="lv-daterange-clear" onClick={() => onChange([])}>
+              Clear dates
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── FilterGroup ──────────────────────────────────────────
 function FilterGroup({
   def,
@@ -67,6 +148,10 @@ function FilterGroup({
   onChange: (v: string[]) => void
 }) {
   const [open, setOpen] = useState(true)
+
+  if (def.type === "daterange") {
+    return <DateRangeGroup def={def} value={value} onChange={onChange} />
+  }
   const selected = value ?? []
   function toggle(v: string) {
     onChange(
@@ -503,6 +588,10 @@ type ListViewCardProps<T extends { id: string }> = {
   defaultSort?: SortState
   /** fn that returns a sort key for a row given the sort column id */
   getSortValue?: (row: T, colId: string) => string | number
+  /** override filter matching for a specific filter id; return null to fall back to default string match */
+  filterRow?: (row: T, filterId: string, selectedValues: string[]) => boolean | null
+  /** override group key for a specific groupBy id; return null to fall back to default string lookup */
+  getGroupKey?: (row: T, groupBy: string) => string | null
 
   // Row actions (rendered in the hover actions column)
   rowActions?: (row: T, disabled: boolean) => ReactNode
@@ -533,6 +622,8 @@ export function ListViewCard<T extends { id: string }>({
   groupOptions = [],
   defaultSort,
   getSortValue,
+  filterRow,
+  getGroupKey,
   rowActions,
   renderDrawer,
   renderBulkActions,
@@ -567,12 +658,16 @@ export function ListViewCard<T extends { id: string }>({
     for (const [key, vals] of Object.entries(filters)) {
       if (!vals || vals.length === 0) continue
       result = result.filter((r) => {
+        if (filterRow) {
+          const custom = filterRow(r, key, vals)
+          if (custom !== null) return custom
+        }
         const rv = (r as Record<string, unknown>)[key]
         return typeof rv === "string" && vals.includes(rv)
       })
     }
     return result
-  }, [rows, query, filters])
+  }, [rows, query, filters, filterRow])
 
   const sorted = useMemo(() => {
     if (!sortBy) return filtered
@@ -591,7 +686,10 @@ export function ListViewCard<T extends { id: string }>({
     if (!groupBy) return sorted
     const groups = new Map<string, T[]>()
     sorted.forEach((r) => {
-      const key = String((r as Record<string, unknown>)[groupBy] ?? "other")
+      const custom = getGroupKey?.(r, groupBy)
+      const key = custom !== null && custom !== undefined
+        ? custom
+        : String((r as Record<string, unknown>)[groupBy] ?? "other")
       const bucket = groups.get(key) ?? []
       bucket.push(r)
       groups.set(key, bucket)
@@ -608,7 +706,7 @@ export function ListViewCard<T extends { id: string }>({
       if (!collapsedGroups[key]) out.push(...items)
     }
     return out
-  }, [sorted, groupBy, groupOptions, collapsedGroups])
+  }, [sorted, groupBy, groupOptions, collapsedGroups, getGroupKey])
 
   // Active filter chips
   const activeChips: Array<{ defId: string; value: string; defLabel: string; valueLabel: string }> = []
@@ -616,21 +714,30 @@ export function ListViewCard<T extends { id: string }>({
     if (!vals || vals.length === 0) continue
     const def = filterDefs.find((d) => d.id === defId)
     if (!def) continue
-    for (const v of vals) {
-      const opt = def.options.find((o) => o.value === v)
-      activeChips.push({
-        defId,
-        value: v,
-        defLabel: def.label,
-        valueLabel: opt?.label ?? v,
-      })
+    if (def.type === "daterange") {
+      const from = drFrom(vals)
+      const to   = drTo(vals)
+      if (!from && !to) continue
+      const label = from && to
+        ? `${drFmt(from)} – ${drFmt(to)}`
+        : from ? `From ${drFmt(from)}` : `Until ${drFmt(to)}`
+      activeChips.push({ defId, value: "__daterange__", defLabel: def.label, valueLabel: label })
+    } else {
+      for (const v of vals) {
+        const opt = def.options.find((o) => o.value === v)
+        activeChips.push({ defId, value: v, defLabel: def.label, valueLabel: opt?.label ?? v })
+      }
     }
   }
   const hasActive = activeChips.length > 0 || !!groupBy || !!sortBy
 
   function removeChip(defId: string, value: string) {
     const next = { ...filters }
-    next[defId] = (next[defId] ?? []).filter((v) => v !== value)
+    if (value === "__daterange__") {
+      delete next[defId]
+    } else {
+      next[defId] = (next[defId] ?? []).filter((v) => v !== value)
+    }
     setFilters(next)
   }
 

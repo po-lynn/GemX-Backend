@@ -109,3 +109,6 @@ Premium delare list
 become delare 
 point purchase process
 my escrow list
+
+
+Create a custom slash command called /performance-optimization that analyzes code for database query issues, algorithm efficiency, memory management, and caching opportunities.

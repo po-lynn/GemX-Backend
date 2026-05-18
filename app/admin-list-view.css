@@ -960,6 +960,11 @@
 .lv-bulkbtn:hover { background: rgba(255,255,255,0.10); }
 .lv-bulkbtn.lv-bulk-danger { color: #FCA5A5; }
 .lv-bulkbtn.lv-bulk-danger:hover { background: rgba(239,68,68,0.18); color: #fff; }
+.lv-bulkbtn.approve { color: #6EE7B7; }
+.lv-bulkbtn.approve:hover { background: rgba(16,185,129,0.18); color: #fff; }
+.lv-bulkbtn.reject  { color: #FCA5A5; }
+.lv-bulkbtn.reject:hover  { background: rgba(239,68,68,0.18); color: #fff; }
+.lv-bulkbtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Detail drawer ───────────────────────────────────── */
 .lv-drawer-backdrop {
@@ -1077,3 +1082,239 @@
 .lv-empty-ico svg { width: 22px; height: 22px; color: var(--lv-text-3); }
 .lv-empty-t { font-size: 13px; font-weight: 600; color: var(--lv-text); margin: 0 0 4px; }
 .lv-empty-s { font-size: 13px; color: var(--lv-text-3); margin: 0; }
+
+/* ── Date range filter ───────────────────────────────── */
+.lv-daterange {
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lv-daterange-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lv-daterange-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--lv-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: 32px;
+  flex-shrink: 0;
+}
+.lv-daterange-input {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  font-family: var(--font-mono, monospace);
+  color: var(--lv-text);
+  background: var(--lv-panel);
+  border: 1px solid var(--lv-border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color .15s;
+}
+.lv-daterange-input:focus { border-color: var(--lv-accent); }
+.lv-daterange-clear {
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--lv-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.lv-daterange-clear:hover { text-decoration: underline; }
+
+/* ── CPR (Credit Purchase Requests) additions ────────── */
+
+/* Extra status pill variants */
+.lv-status.approved { color: #047857; background: #ECFDF5; }
+.lv-status.rejected { color: #B91C1C; background: #FEF2F2; }
+
+/* Approve / Reject row button variants */
+.lv-rowbtn.approve {
+  color: #047857;
+  border-color: rgba(4, 120, 87, 0.25);
+  background: #F0FDF4;
+}
+.lv-rowbtn.approve:hover { background: #DCFCE7; }
+.lv-rowbtn.reject {
+  color: #B91C1C;
+  border-color: rgba(185, 28, 28, 0.25);
+  background: #FEF2F2;
+}
+.lv-rowbtn.reject:hover { background: #FEE2E2; }
+
+/* Amount column — emphasise mismatches */
+.cpr-amount {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.cpr-amount-main { font-weight: 600; color: var(--lv-text); font-size: 13px; }
+.cpr-amount-sub {
+  font-size: 10.5px;
+  color: var(--lv-text-3);
+  font-family: var(--font-mono, monospace);
+}
+.cpr-amount.mismatch .cpr-amount-main { color: #B45309; }
+.cpr-amount.mismatch .cpr-amount-sub { color: #B45309; }
+.cpr-amount.mismatch .cpr-amount-sub::before { content: '⚠ '; }
+
+/* Transfer name — "Differs" badge */
+.cpr-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--lv-text-2);
+  max-width: 100%;
+}
+.cpr-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cpr-name-warn {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #FFF7ED;
+  color: #B45309;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Reference chip — monospace with subtle bg */
+.cpr-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  color: var(--lv-text-2);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--lv-panel-2);
+  border: 1px solid var(--lv-border);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cpr-ref-copy {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cpr-ref-copy:hover { opacity: 0.85; }
+
+/* Note cell */
+.cpr-note {
+  display: inline-block;
+  max-width: 100%;
+  font-size: 12.5px;
+  color: var(--lv-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cpr-note.empty { color: var(--lv-text-4); font-style: italic; }
+
+/* Drawer — payment summary card */
+.cpr-paycard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--lv-border);
+  border-radius: 10px;
+  background: var(--lv-panel-2);
+  margin-bottom: 12px;
+}
+.cpr-paycard-cell { display: flex; flex-direction: column; gap: 2px; }
+.cpr-paycard-cell-right { align-items: flex-end; text-align: right; }
+.cpr-paycard-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--lv-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cpr-paycard-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--lv-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.cpr-paycard-value.mismatch { color: #B45309; }
+.cpr-paycard-value.match    { color: #047857; }
+.cpr-paycard-foot {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px dashed var(--lv-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.cpr-paycard-foot.match    { color: #047857; }
+.cpr-paycard-foot.mismatch { color: #B45309; }
+
+/* Drawer — approve / reject decision bar */
+.cpr-decision {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.cpr-btn-approve {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #047857;
+  color: #fff;
+  border: 1px solid #047857;
+  transition: background .15s;
+}
+.cpr-btn-approve:hover:not(:disabled) { background: #065F46; }
+.cpr-btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+.cpr-btn-reject {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  color: #B91C1C;
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  transition: background .15s;
+}
+.cpr-btn-reject:hover:not(:disabled) { background: #FEF2F2; }
+.cpr-btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }

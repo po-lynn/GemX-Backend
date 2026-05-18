@@ -97,3 +97,61 @@ See `docs/` for domain-specific documentation:
 - `TECHNICAL-PRODUCTS.md` — Product logic and algorithms
 - `TDD.md` — Testing conventions
 - `REQUIREMENTS.md` — Feature specifications
+
+## After Every Change — REQUIRED
+
+After completing any code change, generate ALL applicable outputs below **before marking the task done**. Never skip based on change size — a one-line fix can still break a collaborator's assumption.
+
+### 1. Technical Doc → `docs/technical/<name>.md`
+
+Document the internals for the engineering team:
+- **What changed** and why (include the file paths touched)
+- **Data flow** — how data moves through the feature (schema → query → route → client)
+- **Schema impact** — if any Drizzle schema changed, document old vs new shape and migration generated
+- **Auth & permissions** — which auth context is required (session, bearer, admin, public)
+- **Edge cases & known limitations**
+
+### 2. Unit Tests → `tests/unit/<name>.test.ts` or `tests/api/<name>.test.ts`
+
+Write tests using Vitest. Place in the correct folder:
+- `tests/unit/` — pure functions, Zod schemas, formatters, db query helpers
+- `tests/api/` — API route handlers (mock auth + Drizzle)
+- `tests/component/` — React components with jsdom
+- `tests/integration/` — multi-layer flows
+
+Requirements:
+- Cover happy path, edge cases, and error states
+- Mock Drizzle queries with `vi.mock`, mock Better Auth session/bearer as needed
+- Each test has a comment explaining what behavior it validates
+- Run `npm run test` and confirm all tests pass before finishing
+
+### 3. Collaborator Guide → `docs/guides/<feature>.md`
+
+Step-by-step for other developers to use or extend the feature:
+- Prerequisites (env vars needed, dependencies to install)
+- How to use the feature end-to-end with code examples
+- How to extend it (add a new field, add a new endpoint, etc.)
+- Common errors and how to fix them
+
+### 4. API Docs → `docs/api/<route>.md` *(only if an API route changed)*
+
+Required when any file under `app/api/` is created or modified:
+- **Endpoint:** method + full path
+- **Auth:** session cookie / bearer token / admin session / public
+- **Request:** headers, path params, query params, body (include Zod schema reference)
+- **Response:** success shape + all error codes with messages
+- **Example:** working `curl` command + example JSON response
+- **Mobile flag:** note if this is consumed by the mobile app (`/api/mobile/*`)
+
+---
+
+## Docs
+
+See `docs/` for domain-specific documentation:
+- `MOBILE-API.md` — Mobile/public API contract
+- `TECHNICAL-PRODUCTS.md` — Product logic and algorithms
+- `TDD.md` — Testing conventions
+- `REQUIREMENTS.md` — Feature specifications
+- `docs/technical/` — Per-change technical notes (auto-generated)
+- `docs/guides/` — Collaborator step-by-step guides (auto-generated)
+- `docs/api/` — Per-route API reference (auto-generated)

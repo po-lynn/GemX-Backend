@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Premium dealer auto-renew** – **POST `/api/mobile/premium-dealers/activate`** `autoRenew` field now triggers automatic renewal: a daily server-side cron job (`POST /api/cron/renew-premium-dealers`) deducts `pointsRequired` and creates a new subscription row on expiry; if the user has insufficient points the subscription expires without renewal. **GET `/api/mobile/premium-dealers/status`** now returns `points` (always), `daysRemaining`, and `autoRenew` alongside the existing `active`/`packageName`/`expiresAt` fields. **GET `/api/mobile/premium-dealers/settings`** now includes `recommended` (boolean; `true` for the second package when 2+ packages exist). See **5.4.3**, **5.4.3a**, and **5.4.3b**.
 - **Chat conversations — live SSE** – **GET `/api/chat/conversations?stream=1`** (auth, same Bearer as JSON mode) returns **`text/event-stream`**: Server-Sent Events with **`data:`** lines of `{ "success": true, "conversations": [...] }` whenever that payload **changes** (polled on an **`intervalMs`** window, default **4000**, clamped **2000–30000**), plus comment keep-alives. Use **fetch** with `Authorization` and read the body as a stream (browser **EventSource** cannot send Bearer). Plain **GET `/api/chat/conversations`** (no `stream`) stays JSON. See **5.4d**.
 - **Chat conversations list (mobile)** – **GET `/api/chat/conversations`** (auth): returns **`conversations`**: every user who shares a **`messages`** thread with the current user, each with **`userId`**, **`name`**, **`profileImage`**, **`lastMessage`** (preview; media-only threads use short labels like `"Sent photos"`), **`lastMessageTime`** (ISO 8601), **`unreadCount`** (incoming unread from that peer), and **`isOnline`** (session-derived, same ~5 minute window as **GET `/api/profile/:id`**). Sorted by **`lastMessageTime`** descending. **`Cache-Control: no-store`**. See **5.4d** (GET `/api/chat/conversations`).
 - **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
@@ -1756,12 +1757,14 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
     {
       "name": "Basic Package",
       "pointsRequired": 100,
-      "durationDays": 30
+      "durationDays": 30,
+      "recommended": false
     },
     {
       "name": "Standard Package",
       "pointsRequired": 250,
-      "durationDays": 30
+      "durationDays": 30,
+      "recommended": true
     }
   ]
 }
@@ -1773,6 +1776,7 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
 | `name` | string | Package display name. Pass this to `POST /api/mobile/premium-dealers/activate`. |
 | `pointsRequired` | number | Points deducted from the user's balance to activate this package. |
 | `durationDays` | number | How many days the premium dealer status stays active after activation. |
+| `recommended` | boolean | `true` for the second package when there are 2+ packages (highlight this option in the UI). |
 
 **Errors:**
 
@@ -1800,7 +1804,7 @@ Spend points to activate the user's premium dealer status for the selected packa
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `packageName` | string | Yes | Exact package name from `GET /api/mobile/premium-dealers/settings`. Max 120 chars. |
-| `autoRenew` | boolean | Yes | Whether this activation should be marked for automatic renewal in activation history. |
+| `autoRenew` | boolean | Yes | When `true`, the daily cron job automatically renews this subscription on expiry by deducting `pointsRequired` again. If the user has insufficient points at renewal time, the subscription expires and is not renewed. |
 
 **Business rules:**
 
@@ -1840,29 +1844,35 @@ Spend points to activate the user's premium dealer status for the selected packa
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-Returns the current user's active premium dealer status. Use this on app load or on the premium dealer screen to show the user whether they have an active package and when it expires.
+Returns the current user's point balance, active premium dealer status, expiry, days remaining, and auto-renew flag. Use this on the "Become Premium" screen to bootstrap the full page state.
 
 **Success (200) — no active status:**
 
 ```json
-{ "active": false }
+{ "points": 850, "active": false }
 ```
 
 **Success (200) — active:**
 
 ```json
 {
+  "points": 750,
   "active": true,
   "packageName": "Basic Package",
-  "expiresAt": "2026-05-16T10:00:00.000Z"
+  "expiresAt": "2026-05-16T10:00:00.000Z",
+  "daysRemaining": 13,
+  "autoRenew": true
 }
 ```
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| `points` | number | Current user's point balance. Always present. |
 | `active` | boolean | `true` if the user has a non-expired premium dealer status. |
 | `packageName` | string \| undefined | Name of the active package. Present only when `active: true`. |
 | `expiresAt` | string \| undefined | ISO 8601 expiry timestamp. Present only when `active: true`. |
+| `daysRemaining` | number \| undefined | Days until expiry (minimum 0). Present only when `active: true`. |
+| `autoRenew` | boolean \| undefined | Whether the active subscription will auto-renew. Present only when `active: true`. |
 
 **Errors:**
 
