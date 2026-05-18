@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, type ReactNode } from "react"
 import { ChevronDown, ArrowUp, ArrowDown } from "lucide-react"
-import type { ColumnDef, SortState, GroupOption, GroupRow, ActiveFilters } from "./types"
+import type { ColumnDef, SortState, GroupOption, GroupRow } from "./types"
 
 function SortDualIcon() {
   return (
@@ -40,8 +40,8 @@ export function ListViewTable<T extends { id: string }>({
   onSortBy,
   selected,
   onSelected,
-  groupBy,
-  groupOptions,
+  groupBy: _groupBy,
+  groupOptions: _groupOptions,
   collapsedGroups,
   onCollapsedGroups,
   onOpenRow,

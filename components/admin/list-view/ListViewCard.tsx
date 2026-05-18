@@ -696,7 +696,6 @@ export function ListViewCard<T extends { id: string }>({
     })
     const out: Array<T | GroupRow> = []
     for (const [key, items] of groups) {
-      const opt = groupOptions.find((o) => o.id === groupBy)
       out.push({
         __group: true,
         key,

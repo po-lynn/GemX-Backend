@@ -6,7 +6,7 @@ import {
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lte, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
