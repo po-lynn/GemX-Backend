@@ -705,7 +705,7 @@ export function ListViewCard<T extends { id: string }>({
       if (!collapsedGroups[key]) out.push(...items)
     }
     return out
-  }, [sorted, groupBy, groupOptions, collapsedGroups, getGroupKey])
+  }, [sorted, groupBy, collapsedGroups, getGroupKey])
 
   // Active filter chips
   const activeChips: Array<{ defId: string; value: string; defLabel: string; valueLabel: string }> = []

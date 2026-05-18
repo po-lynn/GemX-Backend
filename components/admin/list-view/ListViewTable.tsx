@@ -40,8 +40,6 @@ export function ListViewTable<T extends { id: string }>({
   onSortBy,
   selected,
   onSelected,
-  groupBy: _groupBy,
-  groupOptions: _groupOptions,
   collapsedGroups,
   onCollapsedGroups,
   onOpenRow,
