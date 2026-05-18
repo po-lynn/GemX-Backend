@@ -48,6 +48,9 @@ export type PremiumDealersSettings = {
 export type PointPurchasePackage = {
   name: string;
   points: number;
+  bonus?: number;       // extra free points on top of base
+  popular?: boolean;    // highlights this tier with a badge in the app
+  enabled?: boolean;    // controls visibility in the mobile app
   priceMmk?: number | null;
   priceUsd?: number | null;
   priceKrw?: number | null;
@@ -64,6 +67,8 @@ export type PaymentMethod = {
   accountName: string;   // name on the receiving account
   phoneNumber: string;   // account phone number
   instructions?: string; // optional extra info (e.g. reference format)
+  type?: 'kbz' | 'aya' | 'wave' | 'cb' | 'other'; // drives icon color gradient in UI
+  enabled?: boolean;     // controls visibility in the mobile app
 };
 
 export type PaymentMethodsSettings = {
@@ -128,9 +133,15 @@ function parsePointPurchasePackagesJson(raw: string): PointPurchasePackage[] {
         typeof o.description === "string" && o.description.trim()
           ? o.description.trim().slice(0, 500)
           : undefined;
+      const bonus = Math.max(0, Math.floor(Number(o.bonus) || 0));
+      const popular = typeof o.popular === "boolean" ? o.popular : undefined;
+      const enabled = typeof o.enabled === "boolean" ? o.enabled : undefined;
       out.push({
         name,
         points,
+        ...(bonus > 0 ? { bonus } : {}),
+        ...(popular ? { popular } : {}),
+        ...(enabled !== undefined ? { enabled } : {}),
         ...(priceMmk != null ? { priceMmk } : {}),
         ...(priceUsd != null ? { priceUsd } : {}),
         ...(priceKrw != null ? { priceKrw } : {}),
@@ -159,8 +170,18 @@ function parsePaymentMethodsJson(raw: string): PaymentMethod[] {
         typeof o.instructions === "string" && o.instructions.trim()
           ? o.instructions.trim().slice(0, 500)
           : undefined;
+      const BANK_TYPES = ["kbz", "aya", "wave", "cb", "other"] as const;
+      const type = BANK_TYPES.includes(o.type as (typeof BANK_TYPES)[number])
+        ? (o.type as PaymentMethod["type"])
+        : undefined;
+      const enabled = typeof o.enabled === "boolean" ? o.enabled : undefined;
       if (!name) continue;
-      out.push({ name, accountName, phoneNumber, ...(instructions ? { instructions } : {}) });
+      out.push({
+        name, accountName, phoneNumber,
+        ...(instructions ? { instructions } : {}),
+        ...(type ? { type } : {}),
+        ...(enabled !== undefined ? { enabled } : {}),
+      });
     }
     return out;
   } catch {

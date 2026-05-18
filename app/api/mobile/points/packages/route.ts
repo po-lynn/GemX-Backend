@@ -13,8 +13,8 @@ export async function GET(_request: NextRequest) {
     const settings = await getPointPurchasePackagesSettings()
     const paymentMethods = await getPaymentMethods()
     return jsonCached({
-      pointPackages: settings.packages,
-      paymentMethods,
+      pointPackages: settings.packages.filter((p) => p.enabled !== false),
+      paymentMethods: paymentMethods.filter((m) => m.enabled !== false),
     })
   } catch (e) {
     console.error("GET /api/mobile/points/packages:", e)

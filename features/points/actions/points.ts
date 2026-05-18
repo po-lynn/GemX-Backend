@@ -200,14 +200,22 @@ export async function saveCreditSettingsAction(formData: FormData) {
       if (!Array.isArray(parsed)) return [];
       return parsed
         .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
-        .map((o) => ({
-          name: String(o.name ?? "").trim().slice(0, 100),
-          accountName: String(o.accountName ?? "").trim().slice(0, 200),
-          phoneNumber: String(o.phoneNumber ?? "").trim().slice(0, 50),
-          ...(typeof o.instructions === "string" && o.instructions.trim()
-            ? { instructions: o.instructions.trim().slice(0, 500) }
-            : {}),
-        }))
+        .map((o) => {
+          const BANK_TYPES = ["kbz", "aya", "wave", "cb", "other"] as const;
+          const type = BANK_TYPES.includes(o.type as (typeof BANK_TYPES)[number])
+            ? (o.type as (typeof BANK_TYPES)[number])
+            : undefined;
+          return {
+            name: String(o.name ?? "").trim().slice(0, 100),
+            accountName: String(o.accountName ?? "").trim().slice(0, 200),
+            phoneNumber: String(o.phoneNumber ?? "").trim().slice(0, 50),
+            ...(typeof o.instructions === "string" && o.instructions.trim()
+              ? { instructions: o.instructions.trim().slice(0, 500) }
+              : {}),
+            ...(type ? { type } : {}),
+            ...(typeof o.enabled === "boolean" ? { enabled: o.enabled } : {}),
+          };
+        })
         .filter((m) => m.name);
     } catch { return []; }
   })();
@@ -230,9 +238,13 @@ export async function saveCreditSettingsAction(formData: FormData) {
           const n = Math.floor(Number(v));
           return Number.isFinite(n) && n >= 0 ? n : undefined;
         };
+        const bonus = Math.max(0, Math.floor(Number(o.bonus) || 0));
         return {
           name: String(o.name ?? "Package").trim().slice(0, 200) || "Package",
           points: Math.max(1, Math.floor(Number(o.points) || 1)),
+          ...(bonus > 0 ? { bonus } : {}),
+          ...(typeof o.popular === "boolean" ? { popular: o.popular } : {}),
+          ...(typeof o.enabled === "boolean" ? { enabled: o.enabled } : {}),
           ...(optPrice(o.priceMmk) != null ? { priceMmk: optPrice(o.priceMmk) } : {}),
           ...(optPrice(o.priceUsd) != null ? { priceUsd: optPrice(o.priceUsd) } : {}),
           ...(optPrice(o.priceKrw) != null ? { priceKrw: optPrice(o.priceKrw) } : {}),

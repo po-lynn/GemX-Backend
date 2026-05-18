@@ -9,13 +9,7 @@ export default async function AdminCreditPage() {
 
   
   return (
-    <div className="container my-6 max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Point Packages</h1>
-        <p className="text-muted-foreground text-sm">
-          Configure default points for new users, payment methods, and purchasable packages.
-        </p>
-      </div>
+    <div className="container my-6 max-w-7xl">
       <CreditSettingsForm
         defaultRegistrationPoints={management.defaultRegistrationPoints}
         paymentMethods={management.paymentMethods}
