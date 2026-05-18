@@ -704,11 +704,11 @@ export function ChatDashboard({
         setError("Could not access camera or microphone for video preview.")
       }
     })()
+    const vid = videoRef.current
     return () => {
       cancelled = true
       videoStreamRef.current?.getTracks().forEach((t) => t.stop())
       videoStreamRef.current = null
-      const vid = videoRef.current
       if (vid) vid.srcObject = null
     }
   }, [videoOpen])
