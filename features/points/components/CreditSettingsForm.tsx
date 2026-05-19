@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Gift, CreditCard, Package, Plus, Trash2, Info } from "lucide-react";
+import { Gift, CreditCard, Package, Plus, Trash2, Info, Star, Shield, Eye } from "lucide-react";
 import { saveCreditSettingsAction } from "@/features/points/actions/points";
-import type { PaymentMethod, PointPurchasePackage } from "@/features/points/db/points";
+import type {
+  PaymentMethod,
+  PointPurchasePackage,
+  FeaturePricingTier,
+  PremiumDealerPackage,
+} from "@/features/points/db/points";
 import { cn } from "@/lib/utils";
 
 // ─── Internal state types ─────────────────────────────────────────────────────
@@ -34,12 +39,30 @@ type PkgState = {
   description?: string;
 };
 
-type Tab = "defaults" | "methods" | "packages";
+type FeatTierState = {
+  _id: string;
+  durationDays: number;
+  points: number;
+  badge?: string;
+  enabled: boolean;
+};
+
+type DealerPkgState = {
+  _id: string;
+  name: string;
+  pointsRequired: number;
+  durationDays: number;
+  enabled: boolean;
+};
+
+type Tab = "defaults" | "methods" | "packages" | "features" | "dealers";
 
 type Props = {
   defaultRegistrationPoints: number;
   paymentMethods: PaymentMethod[];
   packages: PointPurchasePackage[];
+  featureSettings: { homeFeaturedLimit: number; pricingTiers: FeaturePricingTier[] };
+  dealerPackages: PremiumDealerPackage[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,6 +70,14 @@ type Props = {
 function fmtNum(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
+
+const DURATION_OPTIONS = [
+  { days: 1, label: "1 Day" },
+  { days: 3, label: "3 Days" },
+  { days: 7, label: "7 Days" },
+  { days: 14, label: "14 Days" },
+  { days: 30, label: "30 Days" },
+];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -118,6 +149,8 @@ const TILE_COLORS: Record<string, string> = {
   green: "bg-emerald-50 text-emerald-700",
   blue: "bg-blue-50 text-blue-700",
   purple: "bg-violet-50 text-violet-700",
+  amber: "bg-amber-50 text-amber-700",
+  pink: "bg-pink-50 text-pink-700",
 };
 
 function IconTile({
@@ -296,7 +329,7 @@ function MethodsTab({
               </span>
             </span>
             {!x.enabled && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
                 off
               </span>
             )}
@@ -567,10 +600,7 @@ function PackagesTab({
                   value={p.points}
                   onChange={(e) =>
                     update({
-                      points: Math.max(
-                        1,
-                        Math.floor(Number(e.target.value) || 1)
-                      ),
+                      points: Math.max(1, Math.floor(Number(e.target.value) || 1)),
                     })
                   }
                 />
@@ -584,10 +614,7 @@ function PackagesTab({
                   value={p.bonus ?? 0}
                   onChange={(e) =>
                     update({
-                      bonus: Math.max(
-                        0,
-                        Math.floor(Number(e.target.value) || 0)
-                      ),
+                      bonus: Math.max(0, Math.floor(Number(e.target.value) || 0)),
                     })
                   }
                 />
@@ -608,10 +635,7 @@ function PackagesTab({
                       const v =
                         e.target.value === ""
                           ? null
-                          : Math.max(
-                              0,
-                              Math.floor(Number(e.target.value) || 0)
-                            );
+                          : Math.max(0, Math.floor(Number(e.target.value) || 0));
                       update({ priceMmk: v });
                     }}
                   />
@@ -647,10 +671,7 @@ function PackagesTab({
                     const v =
                       e.target.value === ""
                         ? null
-                        : Math.max(
-                            0,
-                            Math.floor(Number(e.target.value) || 0)
-                          );
+                        : Math.max(0, Math.floor(Number(e.target.value) || 0));
                     update({ priceUsd: v });
                   }}
                 />
@@ -672,10 +693,7 @@ function PackagesTab({
                     const v =
                       e.target.value === ""
                         ? null
-                        : Math.max(
-                            0,
-                            Math.floor(Number(e.target.value) || 0)
-                          );
+                        : Math.max(0, Math.floor(Number(e.target.value) || 0));
                     update({ priceKrw: v });
                   }}
                 />
@@ -694,8 +712,7 @@ function PackagesTab({
                   Mark as popular
                 </span>
                 <span className="text-[13px] text-slate-400 block mt-0.5">
-                  Highlights this tier with a badge in the app. Only one
-                  allowed.
+                  Highlights this tier with a badge in the app. Only one allowed.
                 </span>
               </span>
             </label>
@@ -721,12 +738,474 @@ function PackagesTab({
   );
 }
 
+// ─── Features tab ─────────────────────────────────────────────────────────────
+
+function FeaturesTab({
+  featTiers,
+  setFeatTiers,
+  selected,
+  setSelected,
+  featLimit,
+  setFeatLimit,
+}: {
+  featTiers: FeatTierState[];
+  setFeatTiers: React.Dispatch<React.SetStateAction<FeatTierState[]>>;
+  selected: string | null;
+  setSelected: (id: string | null) => void;
+  featLimit: number;
+  setFeatLimit: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  const f = featTiers.find((x) => x._id === selected) ?? null;
+
+  const addTier = () => {
+    const id = "_f" + Date.now();
+    setFeatTiers((prev) => [
+      ...prev,
+      { _id: id, durationDays: 1, points: 100, badge: undefined, enabled: true },
+    ]);
+    setSelected(id);
+  };
+
+  const removeTier = () => {
+    if (!f) return;
+    const remaining = featTiers.filter((x) => x._id !== f._id);
+    setFeatTiers(remaining);
+    setSelected(remaining[0]?._id ?? null);
+  };
+
+  const update = (patch: Partial<FeatTierState>) => {
+    if (!f) return;
+    setFeatTiers((prev) =>
+      prev.map((x) => (x._id === f._id ? { ...x, ...patch } : x))
+    );
+  };
+
+  const durLabel = (days: number) =>
+    DURATION_OPTIONS.find((d) => d.days === days)?.label ?? `${days} Days`;
+  const perDayRate =
+    f && f.durationDays > 0 ? (f.points / f.durationDays).toFixed(1) : "—";
+
+  return (
+    <div
+      className="grid min-h-full flex-1"
+      style={{ gridTemplateColumns: "240px 1fr" }}
+    >
+      {/* Master list */}
+      <ul className="list-none m-0 p-2 border-r border-slate-100 bg-slate-50/60 flex flex-col gap-0.5">
+        {featTiers.map((x) => (
+          <li
+            key={x._id}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer select-none",
+              selected === x._id
+                ? "bg-white shadow-[0_0_0_1px_#DFE3EB,0_1px_2px_rgba(15,20,35,0.04)]"
+                : "hover:bg-white"
+            )}
+            onClick={() => setSelected(x._id)}
+          >
+            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-[12px] font-bold font-mono min-w-[36px] text-center flex-shrink-0">
+              {x.durationDays}d
+            </span>
+            <span className="flex flex-col flex-1 min-w-0">
+              <span className="text-[14px] font-semibold text-slate-800 truncate">
+                {durLabel(x.durationDays)}
+              </span>
+              <span className="text-[12px] text-slate-400 font-mono truncate">
+                {fmtNum(x.points)} pts
+              </span>
+            </span>
+            {x.badge && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 flex-shrink-0 truncate max-w-[64px]">
+                {x.badge}
+              </span>
+            )}
+            {!x.enabled && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
+                off
+              </span>
+            )}
+          </li>
+        ))}
+        <li
+          className="flex items-center gap-1.5 px-2.5 py-2 mt-1 rounded-lg cursor-pointer text-[13.5px] font-medium text-slate-400 border border-dashed border-slate-200 hover:text-violet-700 hover:border-violet-400 hover:bg-white transition-colors select-none"
+          onClick={addTier}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add option
+        </li>
+      </ul>
+
+      {/* Detail */}
+      {f ? (
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-3 px-[22px] py-4 border-b border-slate-100">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-[28px] font-bold text-violet-700 leading-none tracking-tight font-mono">
+                {fmtNum(f.points)}
+              </span>
+              <span className="text-[14px] text-slate-400 font-semibold">
+                pts · {durLabel(f.durationDays)}
+              </span>
+              {f.badge && (
+                <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                  {f.badge}
+                </span>
+              )}
+            </div>
+            <div className="flex-1" />
+            <div className="flex items-center gap-2 px-3 py-1 border border-slate-200 rounded-full flex-shrink-0">
+              <span className="text-[13px] text-slate-500">
+                {f.enabled ? "Live" : "Hidden"}
+              </span>
+              <Toggle on={f.enabled} onChange={(v) => update({ enabled: v })} />
+            </div>
+          </div>
+
+          <div className="p-[22px]">
+            <div className="grid grid-cols-2 gap-3">
+              <div className={fieldCls}>
+                <span className={labelCls}>Duration</span>
+                <select
+                  className={inputCls}
+                  value={f.durationDays}
+                  onChange={(e) =>
+                    update({ durationDays: Number(e.target.value) })
+                  }
+                >
+                  {DURATION_OPTIONS.map((d) => (
+                    <option key={d.days} value={d.days}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={fieldCls}>
+                <span className={labelCls}>Points cost</span>
+                <div className="relative">
+                  <input
+                    className={cn(inputCls, "pr-12 font-mono")}
+                    type="number"
+                    min={0}
+                    value={f.points}
+                    onChange={(e) =>
+                      update({
+                        points: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+                      })
+                    }
+                  />
+                  <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded pointer-events-none">
+                    pts
+                  </span>
+                </div>
+              </div>
+              <div className={fieldCls}>
+                <span className={labelCls}>Badge label</span>
+                <input
+                  className={inputCls}
+                  placeholder="Optional — e.g. Best Value"
+                  value={f.badge ?? ""}
+                  onChange={(e) =>
+                    update({ badge: e.target.value || undefined })
+                  }
+                  maxLength={50}
+                />
+                <span className="text-[13px] text-slate-400">
+                  Shown next to this option in the seller flow.
+                </span>
+              </div>
+              <div className={fieldCls}>
+                <span className={labelCls}>Per-day rate</span>
+                <div className="relative">
+                  <input
+                    className={cn(inputCls, "pr-[70px] font-mono bg-slate-50")}
+                    readOnly
+                    value={perDayRate}
+                  />
+                  <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium pointer-events-none">
+                    pts/day
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature product limit */}
+            <div className="mt-3.5 flex gap-2.5 items-start p-3 rounded-[10px] border border-slate-200 bg-slate-50">
+              <IconTile color="purple">
+                <Eye className="w-3.5 h-3.5" />
+              </IconTile>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold text-slate-800">
+                  Feature product limit
+                </div>
+                <div className="text-[13px] text-slate-400 mt-0.5">
+                  Max number of featured products on the homepage at once. Applies
+                  across all durations.
+                </div>
+              </div>
+              <div className="flex items-stretch border border-slate-200 rounded-lg overflow-hidden bg-white flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setFeatLimit((n) => Math.max(1, n - 1))}
+                  className="flex w-8 items-center justify-center border-r border-slate-200 text-slate-600 hover:bg-slate-50 text-base leading-none"
+                  aria-label="Decrease"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  className="w-12 text-center text-[14px] font-semibold text-slate-900 bg-transparent outline-none border-0 font-mono"
+                  value={featLimit}
+                  onChange={(e) =>
+                    setFeatLimit(
+                      Math.min(100, Math.max(1, Math.floor(Number(e.target.value) || 1)))
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => setFeatLimit((n) => Math.min(100, n + 1))}
+                  className="flex w-8 items-center justify-center border-l border-slate-200 text-slate-600 hover:bg-slate-50 text-base leading-none"
+                  aria-label="Increase"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-[18px] pt-3.5 border-t border-slate-100 flex">
+              <button
+                type="button"
+                onClick={removeTier}
+                className="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-md text-[13px] font-medium text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete this option
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center p-8 text-sm text-slate-400">
+          Select an option or add one
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Dealers tab ──────────────────────────────────────────────────────────────
+
+function DealersTab({
+  dealerPkgs,
+  setDealerPkgs,
+  selected,
+  setSelected,
+}: {
+  dealerPkgs: DealerPkgState[];
+  setDealerPkgs: React.Dispatch<React.SetStateAction<DealerPkgState[]>>;
+  selected: string | null;
+  setSelected: (id: string | null) => void;
+}) {
+  const d = dealerPkgs.find((x) => x._id === selected) ?? null;
+
+  const addDealer = () => {
+    const id = "_d" + Date.now();
+    setDealerPkgs((prev) => [
+      ...prev,
+      { _id: id, name: "New Package", pointsRequired: 100, durationDays: 30, enabled: true },
+    ]);
+    setSelected(id);
+  };
+
+  const removeDealer = () => {
+    if (!d) return;
+    const remaining = dealerPkgs.filter((x) => x._id !== d._id);
+    setDealerPkgs(remaining);
+    setSelected(remaining[0]?._id ?? null);
+  };
+
+  const update = (patch: Partial<DealerPkgState>) => {
+    if (!d) return;
+    setDealerPkgs((prev) =>
+      prev.map((x) => (x._id === d._id ? { ...x, ...patch } : x))
+    );
+  };
+
+  const perDayRate =
+    d && d.durationDays > 0
+      ? (d.pointsRequired / d.durationDays).toFixed(1)
+      : "—";
+
+  return (
+    <div
+      className="grid min-h-full flex-1"
+      style={{ gridTemplateColumns: "240px 1fr" }}
+    >
+      {/* Master list */}
+      <ul className="list-none m-0 p-2 border-r border-slate-100 bg-slate-50/60 flex flex-col gap-0.5">
+        {dealerPkgs.map((x) => (
+          <li
+            key={x._id}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer select-none",
+              selected === x._id
+                ? "bg-white shadow-[0_0_0_1px_#DFE3EB,0_1px_2px_rgba(15,20,35,0.04)]"
+                : "hover:bg-white"
+            )}
+            onClick={() => setSelected(x._id)}
+          >
+            <span className="bg-pink-50 text-pink-700 px-2 py-1 rounded-md text-[13px] font-bold font-mono min-w-[52px] text-center flex-shrink-0">
+              {fmtNum(x.pointsRequired)}
+            </span>
+            <span className="flex flex-col flex-1 min-w-0">
+              <span className="text-[14px] font-semibold text-slate-800 truncate">
+                {x.name}
+              </span>
+              <span className="text-[12px] text-slate-400 font-mono truncate">
+                {x.durationDays} days
+              </span>
+            </span>
+            {!x.enabled && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 flex-shrink-0">
+                off
+              </span>
+            )}
+          </li>
+        ))}
+        <li
+          className="flex items-center gap-1.5 px-2.5 py-2 mt-1 rounded-lg cursor-pointer text-[13.5px] font-medium text-slate-400 border border-dashed border-slate-200 hover:text-violet-700 hover:border-violet-400 hover:bg-white transition-colors select-none"
+          onClick={addDealer}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add package
+        </li>
+      </ul>
+
+      {/* Detail */}
+      {d ? (
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-3 px-[22px] py-4 border-b border-slate-100">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[28px] font-bold text-violet-700 leading-none tracking-tight font-mono">
+                {fmtNum(d.pointsRequired)}
+              </span>
+              <span className="text-[14px] text-slate-400 font-semibold">
+                pts · {d.durationDays} days
+              </span>
+            </div>
+            <div className="flex-1" />
+            <div className="flex items-center gap-2 px-3 py-1 border border-slate-200 rounded-full flex-shrink-0">
+              <span className="text-[13px] text-slate-500">
+                {d.enabled ? "Live" : "Hidden"}
+              </span>
+              <Toggle on={d.enabled} onChange={(v) => update({ enabled: v })} />
+            </div>
+          </div>
+
+          <div className="p-[22px]">
+            <div className="grid grid-cols-2 gap-3">
+              <div className={fieldCls}>
+                <span className={labelCls}>Package name</span>
+                <input
+                  className={inputCls}
+                  value={d.name}
+                  onChange={(e) => update({ name: e.target.value })}
+                  placeholder="e.g. Basic Package"
+                  maxLength={120}
+                />
+              </div>
+              <div />
+              <div className={fieldCls}>
+                <span className={labelCls}>Points required</span>
+                <div className="relative">
+                  <input
+                    className={cn(inputCls, "pr-12 font-mono")}
+                    type="number"
+                    min={0}
+                    value={d.pointsRequired}
+                    onChange={(e) =>
+                      update({
+                        pointsRequired: Math.max(
+                          0,
+                          Math.floor(Number(e.target.value) || 0)
+                        ),
+                      })
+                    }
+                  />
+                  <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded pointer-events-none">
+                    pts
+                  </span>
+                </div>
+              </div>
+              <div className={fieldCls}>
+                <span className={labelCls}>Duration</span>
+                <div className="relative">
+                  <input
+                    className={cn(inputCls, "pr-16 font-mono")}
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={d.durationDays}
+                    onChange={(e) =>
+                      update({
+                        durationDays: Math.min(
+                          3650,
+                          Math.max(1, Math.floor(Number(e.target.value) || 30))
+                        ),
+                      })
+                    }
+                  />
+                  <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded pointer-events-none">
+                    days
+                  </span>
+                </div>
+              </div>
+              <div className={fieldCls}>
+                <span className={labelCls}>Per-day rate</span>
+                <div className="relative">
+                  <input
+                    className={cn(inputCls, "pr-[70px] font-mono bg-slate-50")}
+                    readOnly
+                    value={perDayRate}
+                  />
+                  <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium pointer-events-none">
+                    pts/day
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-[18px] pt-3.5 border-t border-slate-100 flex">
+              <button
+                type="button"
+                onClick={removeDealer}
+                className="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-md text-[13px] font-medium text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete this package
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center p-8 text-sm text-slate-400">
+          Select a package or add one
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function CreditSettingsForm({
   defaultRegistrationPoints,
   paymentMethods: initialMethods,
   packages: initialPackages,
+  featureSettings: initialFeatureSettings,
+  dealerPackages: initialDealerPackages,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("packages");
@@ -769,6 +1248,35 @@ export function CreditSettingsForm({
     packages[0]?._id ?? null
   );
 
+  const [featTiers, setFeatTiers] = useState<FeatTierState[]>(() =>
+    initialFeatureSettings.pricingTiers.map((t, i) => ({
+      _id: `f${i}`,
+      durationDays: t.durationDays,
+      points: t.points,
+      badge: t.badge,
+      enabled: t.enabled ?? true,
+    }))
+  );
+  const [selectedFeat, setSelectedFeat] = useState<string | null>(
+    featTiers[0]?._id ?? null
+  );
+  const [featLimit, setFeatLimit] = useState(
+    initialFeatureSettings.homeFeaturedLimit
+  );
+
+  const [dealerPkgs, setDealerPkgs] = useState<DealerPkgState[]>(() =>
+    initialDealerPackages.map((p, i) => ({
+      _id: `d${i}`,
+      name: p.name,
+      pointsRequired: p.pointsRequired,
+      durationDays: p.durationDays,
+      enabled: p.enabled ?? true,
+    }))
+  );
+  const [selectedDealer, setSelectedDealer] = useState<string | null>(
+    dealerPkgs[0]?._id ?? null
+  );
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -778,15 +1286,20 @@ export function CreditSettingsForm({
     formData.set("defaultRegistrationPoints", String(defaultPts));
     formData.set(
       "paymentMethodsJson",
-      JSON.stringify(
-        methods.map(({ _id: _unused, ...rest }) => rest)
-      )
+      JSON.stringify(methods.map(({ _id: _unused, ...rest }) => rest))
     );
     formData.set(
       "packagesJson",
-      JSON.stringify(
-        packages.map(({ _id: _unused, ...rest }) => rest)
-      )
+      JSON.stringify(packages.map(({ _id: _unused, ...rest }) => rest))
+    );
+    formData.set(
+      "featureTiersJson",
+      JSON.stringify(featTiers.map(({ _id: _unused, ...rest }) => rest))
+    );
+    formData.set("homeFeaturedLimit", String(featLimit));
+    formData.set(
+      "dealerPackagesJson",
+      JSON.stringify(dealerPkgs.map(({ _id: _unused, ...rest }) => rest))
     );
 
     const result = await saveCreditSettingsAction(formData);
@@ -869,6 +1382,28 @@ export function CreditSettingsForm({
             title="Point Packages"
             sub={`${packages.length} tier${packages.length === 1 ? "" : "s"}`}
           />
+          <RailTab
+            active={tab === "features"}
+            onClick={() => setTab("features")}
+            icon={
+              <IconTile color="amber">
+                <Star className="w-3.5 h-3.5" />
+              </IconTile>
+            }
+            title="Feature Settings"
+            sub={`${featTiers.length} option${featTiers.length === 1 ? "" : "s"} · max ${featLimit}`}
+          />
+          <RailTab
+            active={tab === "dealers"}
+            onClick={() => setTab("dealers")}
+            icon={
+              <IconTile color="pink">
+                <Shield className="w-3.5 h-3.5" />
+              </IconTile>
+            }
+            title="Premium Dealers"
+            sub={`${dealerPkgs.length} package${dealerPkgs.length === 1 ? "" : "s"}`}
+          />
 
           <div className="mt-auto pt-2">
             <div className="flex gap-2.5 p-3 rounded-[9px] bg-violet-50 text-violet-700">
@@ -905,6 +1440,24 @@ export function CreditSettingsForm({
               setPackages={setPackages}
               selected={selectedPkg}
               setSelected={setSelectedPkg}
+            />
+          )}
+          {tab === "features" && (
+            <FeaturesTab
+              featTiers={featTiers}
+              setFeatTiers={setFeatTiers}
+              selected={selectedFeat}
+              setSelected={setSelectedFeat}
+              featLimit={featLimit}
+              setFeatLimit={setFeatLimit}
+            />
+          )}
+          {tab === "dealers" && (
+            <DealersTab
+              dealerPkgs={dealerPkgs}
+              setDealerPkgs={setDealerPkgs}
+              selected={selectedDealer}
+              setSelected={setSelectedDealer}
             />
           )}
         </section>

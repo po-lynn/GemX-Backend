@@ -16,8 +16,6 @@ import {
   Globe,
   Newspaper,
   FileText,
-  BadgeCheck,
-  HandCoins,
   ShieldCheck,
   ShoppingBag,
   ClipboardList,
@@ -69,23 +67,6 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: Crown,
         color: "#f59e0b",
         isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
-      },
-      {
-        href: "/admin/credit/feature-settings",
-        label: "Feature Settings",
-        icon: BadgeCheck,
-        color: "#10b981",
-        isActive: (p) =>
-          p === "/admin/credit/feature-settings" ||
-          p === "/admin/credit/feature-settings/",
-      },
-      {
-        href: "/admin/credit/feature-settings/premium-dealers",
-        label: "Premium Dealers",
-        icon: HandCoins,
-        color: "#eab308",
-        isActive: (p) =>
-          p.startsWith("/admin/credit/feature-settings/premium-dealers"),
       },
       {
         href: "/admin/settings/escrow-service",

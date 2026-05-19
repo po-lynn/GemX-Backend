@@ -257,6 +257,47 @@ export async function saveCreditSettingsAction(formData: FormData) {
     return { error: "Invalid packages JSON." };
   }
   await savePointPurchasePackagesSettings({ packages });
+
+  // Save feature settings if provided
+  const rawTiers = formData.get("featureTiersJson");
+  const rawLimit = formData.get("homeFeaturedLimit");
+  if (rawTiers != null) {
+    try {
+      const parsed = JSON.parse(String(rawTiers)) as unknown;
+      if (Array.isArray(parsed)) {
+        const tiers = parsed
+          .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+          .map((o) => ({
+            durationDays: Math.min(365, Math.max(1, Math.floor(Number(o.durationDays) || 1))),
+            points: Math.max(0, Math.floor(Number(o.points) || 0)),
+            ...(typeof o.badge === "string" && o.badge.trim() ? { badge: o.badge.trim().slice(0, 50) } : {}),
+            ...(typeof o.enabled === "boolean" ? { enabled: o.enabled } : {}),
+          }));
+        const limit = rawLimit != null ? Math.min(100, Math.max(1, Math.floor(Number(rawLimit) || 5))) : 5;
+        await saveFeatureSettings({ homeFeaturedLimit: limit, pricingTiers: tiers });
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Save premium dealer packages if provided
+  const rawDealers = formData.get("dealerPackagesJson");
+  if (rawDealers != null) {
+    try {
+      const parsed = JSON.parse(String(rawDealers)) as unknown;
+      if (Array.isArray(parsed)) {
+        const dealerPackages = parsed
+          .filter((x): x is Record<string, unknown> => x != null && typeof x === "object")
+          .map((o) => ({
+            name: String(o.name ?? "Package").trim().slice(0, 120) || "Package",
+            pointsRequired: Math.max(0, Math.floor(Number(o.pointsRequired) || 0)),
+            durationDays: Math.min(3650, Math.max(1, Math.floor(Number(o.durationDays) || 30))),
+            ...(typeof o.enabled === "boolean" ? { enabled: o.enabled } : {}),
+          }));
+        await savePremiumDealersSettings({ packages: dealerPackages });
+      }
+    } catch { /* ignore */ }
+  }
+
   return { success: true };
 }
 

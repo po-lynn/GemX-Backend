@@ -38,6 +38,7 @@ export type PremiumDealerPackage = {
   pointsRequired: number;
   /** How many days the premium dealer status stays active after activation */
   durationDays: number;
+  enabled?: boolean;
 };
 
 export type PremiumDealersSettings = {
@@ -98,7 +99,8 @@ function parsePremiumDealerPackagesJson(raw: string): PremiumDealerPackage[] {
           : "Package";
       const pointsRequired = Math.max(0, Math.floor(Number(o.pointsRequired) || 0));
       const durationDays = Math.min(3650, Math.max(1, Math.floor(Number(o.durationDays) || 30)));
-      out.push({ name, pointsRequired, durationDays });
+      const enabled = typeof o.enabled === "boolean" ? o.enabled : undefined;
+      out.push({ name, pointsRequired, durationDays, ...(enabled !== undefined ? { enabled } : {}) });
     }
     return out.length > 0 ? out : DEFAULT_PREMIUM_DEALER_PACKAGES.map((p) => ({ ...p }));
   } catch {
@@ -194,6 +196,7 @@ export type FeaturePricingTier = {
   points: number;
   /** e.g. "Best Value" — shown next to points */
   badge?: string;
+  enabled?: boolean;
 };
 
 export type FeatureSettings = {
@@ -220,7 +223,8 @@ function parseFeatureTiersJson(raw: string): FeaturePricingTier[] {
       const points = Math.max(0, Math.floor(Number(o.points) || 0));
       const badge =
         typeof o.badge === "string" && o.badge.trim() ? o.badge.trim().slice(0, 50) : undefined;
-      out.push({ durationDays, points, badge });
+      const enabled = typeof o.enabled === "boolean" ? o.enabled : undefined;
+      out.push({ durationDays, points, ...(badge ? { badge } : {}), ...(enabled !== undefined ? { enabled } : {}) });
     }
     return out.length > 0 ? out : DEFAULT_FEATURE_TIERS;
   } catch {
@@ -378,6 +382,7 @@ export async function saveFeatureSettings(s: FeatureSettings): Promise<void> {
     durationDays: Math.min(365, Math.max(1, Math.floor(t.durationDays) || 1)),
     points: Math.max(0, Math.floor(t.points) || 0),
     ...(t.badge?.trim() ? { badge: t.badge.trim().slice(0, 50) } : {}),
+    ...(typeof t.enabled === "boolean" ? { enabled: t.enabled } : {}),
   }));
   await upsertInt(FEATURED_PRODUCT_HOME_LIMIT_KEY, limit);
   await upsertText(FEATURE_PRICING_TIERS_JSON_KEY, JSON.stringify(tiers));
@@ -405,6 +410,7 @@ export async function savePremiumDealersSettings(s: PremiumDealersSettings): Pro
     name: p.name?.trim() ? p.name.trim().slice(0, 120) : "Package",
     pointsRequired: Math.max(0, Math.floor(p.pointsRequired) || 0),
     durationDays: Math.min(3650, Math.max(1, Math.floor(Number(p.durationDays) || 30))),
+    ...(typeof p.enabled === "boolean" ? { enabled: p.enabled } : {}),
   }));
   await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, JSON.stringify(packages));
   await db.delete(pointSetting).where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY));
