@@ -1,7 +1,8 @@
 import { NextRequest, connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { jsonError, jsonUncached } from "@/lib/api";
-import { upsertPushToken, removePushToken } from "@/features/push/db/push-tokens";
+import { registerDeviceBodySchema } from "@/features/notifications/schemas/device";
+import { removeUserDevice, upsertUserDevice } from "@/features/notifications/db/user-devices";
 
 export async function POST(request: NextRequest) {
   await connection();
@@ -10,16 +11,21 @@ export async function POST(request: NextRequest) {
     if (!session) return jsonError("Unauthorized", 401);
 
     const body = await request.json();
-    const token = typeof body?.token === "string" ? body.token.trim() : "";
-    if (!token) return jsonError("token is required", 400);
+    const parsed = registerDeviceBodySchema.safeParse(body);
+    if (!parsed.success) return jsonError("token is required", 400);
 
-    const platform =
-      body?.platform === "android" || body?.platform === "ios" ? body.platform : undefined;
+    const { token, platform, deviceId, deviceName, deviceModel, osVersion, appVersion } =
+      parsed.data;
 
-    await upsertPushToken({
+    await upsertUserDevice({
       userId: session.user.id,
-      token,
-      platform,
+      fcmToken: token,
+      platform: platform ?? null,
+      deviceId: deviceId ?? null,
+      deviceName: deviceName ?? null,
+      deviceModel: deviceModel ?? null,
+      osVersion: osVersion ?? null,
+      appVersion: appVersion ?? null,
     });
 
     return jsonUncached({ success: true });
@@ -39,7 +45,7 @@ export async function DELETE(request: NextRequest) {
     const token = typeof body?.token === "string" ? body.token.trim() : "";
     if (!token) return jsonError("token is required", 400);
 
-    await removePushToken(session.user.id, token);
+    await removeUserDevice(session.user.id, token);
     return jsonUncached({ success: true });
   } catch (err) {
     console.error("DELETE /api/push/register:", err);

@@ -1,137 +1,30 @@
 "use server";
 
-import { env } from "@/data/env/server";
-import { getAllPushTokens, getPushTokensByUserIds } from "@/features/push/db/push-tokens";
+import {
+  sendPushNotificationToAll,
+  sendPushNotificationToUserIds,
+} from "@/features/notifications/services/send-push-notification";
+import type { PushNotificationPayload } from "@/features/notifications/types";
 
-let firebaseAdmin: typeof import("firebase-admin") | null = null;
-/** After a bad PEM or init error, skip retries until process restart (avoids log spam on every message). */
-let firebaseAdminInitSkipped = false;
-
-/**
- * Service account `private_key` from JSON is often pasted into `.env` with:
- * - outer quotes, JSON-escaped newlines (`\n`), BOM, or doubled quoting from copy/paste.
- * We do not pre-validate PEM shape (that caused false "Push disabled"); Firebase parses the key.
- */
-function normalizeFirebasePrivateKey(raw: string): string {
-  let k = raw.trim().replace(/^\uFEFF/, "");
-  for (let i = 0; i < 3; i++) {
-    if (
-      (k.startsWith('"') && k.endsWith('"')) ||
-      (k.startsWith("'") && k.endsWith("'"))
-    ) {
-      k = k.slice(1, -1).trim();
-    } else {
-      break;
-    }
-  }
-  if (k.startsWith('"') && k.endsWith('"')) {
-    try {
-      k = JSON.parse(k) as string;
-    } catch {
-      /* keep k */
-    }
-  }
-  k = k.trim().replace(/^\uFEFF/, "");
-  k = k.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\n");
-  k = k.replace(/\\"/g, '"');
-  return k;
-}
-
-async function getFirebaseAdmin(): Promise<typeof import("firebase-admin") | null> {
-  if (firebaseAdminInitSkipped) return null;
-  if (firebaseAdmin) return firebaseAdmin;
-  const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = env;
-  if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
-    return null;
-  }
-  try {
-    const admin = (await import("firebase-admin")).default;
-    if (admin.apps.length > 0) {
-      firebaseAdmin = admin;
-      return admin;
-    }
-    const privateKey = normalizeFirebasePrivateKey(FIREBASE_PRIVATE_KEY);
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: FIREBASE_PROJECT_ID,
-        clientEmail: FIREBASE_CLIENT_EMAIL,
-        privateKey,
-      }),
-    });
-    firebaseAdmin = admin;
-    return admin;
-  } catch (e) {
-    firebaseAdminInitSkipped = true;
-    console.error(
-      "Firebase Admin init failed (push disabled until restart). Fix FIREBASE_PRIVATE_KEY PEM / newlines.",
-      e
-    );
-    return null;
-  }
-}
-
-export type PushPayload = {
-  title: string;
-  body?: string;
-  /** Custom data for the app (e.g. articleId, screen). */
-  data?: Record<string, string>;
-};
-
-async function sendPushToTokens(
-  tokenStrings: string[],
-  payload: PushPayload
-): Promise<{ sent: number; failed: number }> {
-  if (tokenStrings.length === 0) return { sent: 0, failed: 0 };
-
-  const admin = await getFirebaseAdmin();
-  if (!admin) {
-    console.warn("Push skipped: FCM not configured (set FIREBASE_* env)");
-    return { sent: 0, failed: tokenStrings.length };
-  }
-
-  const message: import("firebase-admin/messaging").MulticastMessage = {
-    tokens: tokenStrings,
-    notification: {
-      title: payload.title,
-      body: payload.body ?? "",
-    },
-    data: payload.data
-      ? Object.fromEntries(Object.entries(payload.data).map(([k, v]) => [k, String(v)]))
-      : undefined,
-    android: { priority: "high" as const },
-    apns: { payload: { aps: { sound: "default" } } },
-  };
-
-  try {
-    const result = await admin.messaging().sendEachForMulticast(message);
-    return { sent: result.successCount, failed: result.failureCount };
-  } catch (e) {
-    console.error("FCM send failed:", e);
-    return { sent: 0, failed: tokenStrings.length };
-  }
-}
+/** @deprecated Use PushNotificationPayload from @/features/notifications/types */
+export type PushPayload = PushNotificationPayload;
 
 /**
- * Send push notification to all mobile app users (anyone with a registered push token).
+ * Send push notification to all mobile app users (anyone with a registered device).
  * No-op if FCM is not configured or there are no tokens.
  */
-export async function sendPushToMobileUsers(payload: PushPayload): Promise<{ sent: number; failed: number }> {
-  const tokens = await getAllPushTokens();
-  const tokenStrings = tokens.map((t) => t.token).filter(Boolean);
-  return sendPushToTokens(tokenStrings, payload);
+export async function sendPushToMobileUsers(
+  payload: PushPayload
+): Promise<{ sent: number; failed: number }> {
+  const result = await sendPushNotificationToAll(payload);
+  return { sent: result.sent, failed: result.failed };
 }
 
-/** Send push notification to specific users by user id (e.g. requester approval result). */
+/** Send push notification to specific users by user id. */
 export async function sendPushToUserIds(
   userIds: string[],
   payload: PushPayload
 ): Promise<{ sent: number; failed: number }> {
-  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
-  if (uniqueUserIds.length === 0) return { sent: 0, failed: 0 };
-  const tokensByUser = await getPushTokensByUserIds(uniqueUserIds);
-  const tokenStrings = Object.values(tokensByUser)
-    .flat()
-    .map((t) => t.token)
-    .filter(Boolean);
-  return sendPushToTokens(Array.from(new Set(tokenStrings)), payload);
+  const result = await sendPushNotificationToUserIds(userIds, payload);
+  return { sent: result.sent, failed: result.failed };
 }

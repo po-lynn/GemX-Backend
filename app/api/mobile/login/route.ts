@@ -1,5 +1,7 @@
 // app/api/mobile/login/route.ts
 import { auth } from "@/lib/auth";
+import { mobileDevicePayloadSchema } from "@/features/notifications/schemas/device";
+import { handleAuthDeviceAndNotifications } from "@/features/notifications/services/register-device-on-auth";
 
 function normalizeMyanmarPhone(input: string) {
   let p = String(input || "").trim();
@@ -43,6 +45,21 @@ export async function POST(req: Request) {
     const result = await auth.api.signInEmail({
       body: { email, password },
     });
+
+    const userId =
+      result && typeof result === "object" && "user" in result
+        ? (result.user as { id?: string })?.id
+        : undefined;
+
+    if (userId) {
+      const deviceParse = mobileDevicePayloadSchema.safeParse(body);
+      const device = deviceParse.success ? deviceParse.data : undefined;
+      void handleAuthDeviceAndNotifications({
+        userId,
+        event: "login",
+        device,
+      });
+    }
 
     return Response.json(result, { status: 200 });
   } catch {

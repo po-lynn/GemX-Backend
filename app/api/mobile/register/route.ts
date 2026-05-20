@@ -1,6 +1,8 @@
 // app/api/mobile/register/route.ts
 import { auth } from "@/lib/auth";
 import { creditDefaultRegistrationPointsToUser } from "@/features/points/db/points";
+import { mobileDevicePayloadSchema } from "@/features/notifications/schemas/device";
+import { handleAuthDeviceAndNotifications } from "@/features/notifications/services/register-device-on-auth";
 import { db } from "@/drizzle/db";
 import { user as userTable } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -92,7 +94,17 @@ export async function POST(req: Request) {
           .where(eq(userTable.id, u.id));
       }
       if (u?.id) {
-        await creditDefaultRegistrationPointsToUser(u.id)
+        await creditDefaultRegistrationPointsToUser(u.id);
+      }
+      if (u?.id) {
+        const deviceParse = mobileDevicePayloadSchema.safeParse(body);
+        const device = deviceParse.success ? deviceParse.data : undefined;
+        void handleAuthDeviceAndNotifications({
+          userId: u.id,
+          userName: name,
+          event: "register",
+          device,
+        });
       }
       // Sign-up payload still has defaultRole until refetched; expose correct role to clients.
       responseBody = {
