@@ -5,7 +5,9 @@ export const FCM_DATA_KEYS = {
   type: "type",
   screen: "screen",
   articleId: "articleId",
+  articleTitle: "articleTitle",
   newsId: "newsId",
+  newsTitle: "newsTitle",
   productId: "productId",
   link: "link",
 } as const;
@@ -44,18 +46,32 @@ export function buildNavigationData(input: NavigationDataInput): Record<string, 
   return data;
 }
 
-export function buildArticleNotificationData(articleId: string): Record<string, string> {
-  return buildNavigationData({
+export function buildArticleNotificationData(
+  articleId: string,
+  articleTitle?: string
+): Record<string, string> {
+  const data = buildNavigationData({
     screen: "article",
     articleId,
     link: `/articles/${articleId}`,
   });
+  if (articleTitle?.trim()) {
+    data[FCM_DATA_KEYS.articleTitle] = articleTitle.trim();
+  }
+  return data;
 }
 
-export function buildNewsNotificationData(newsId: string): Record<string, string> {
-  return buildNavigationData({
+export function buildNewsNotificationData(
+  newsId: string,
+  newsTitle?: string
+): Record<string, string> {
+  const data = buildNavigationData({
     screen: "news",
     newsId,
     link: `/news/${newsId}`,
   });
+  if (newsTitle?.trim()) {
+    data[FCM_DATA_KEYS.newsTitle] = newsTitle.trim();
+  }
+  return data;
 }

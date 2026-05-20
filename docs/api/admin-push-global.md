@@ -62,4 +62,4 @@ When admin publishes content in the panel:
 | Event | `data` keys |
 |-------|-------------|
 | Article published | `screen=article`, `type=article`, `articleId`, `link` |
-| News published | `screen=news`, `type=news`, `newsId`, `link` |
+| News published | `screen=news`, `type=news`, `newsId`, `newsTitle`, `link` |

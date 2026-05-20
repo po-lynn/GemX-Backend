@@ -2,6 +2,7 @@
 
 import { getFirebaseAdmin } from "@/features/notifications/firebase/admin";
 import { createPushError, normalizeFirebaseError } from "@/features/notifications/errors";
+import { notificationLogger } from "@/features/notifications/logger";
 import type { PushNotificationPayload, TopicPushResult } from "@/features/notifications/types";
 
 function stringifyData(data?: Record<string, string>): Record<string, string> | undefined {
@@ -13,17 +14,38 @@ function stringifyData(data?: Record<string, string>): Record<string, string> | 
   );
 }
 
+function absoluteUrl(path: string): string {
+  const base = (
+    process.env.NEXT_PUBLIC_SERVER_URL ??
+    process.env.AUTH_URL ??
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
+  return path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 function buildTopicMessage(
   topic: string,
   payload: PushNotificationPayload
 ): import("firebase-admin/messaging").Message {
+  const data = stringifyData(payload.data);
+  const link = data?.link ? absoluteUrl(data.link) : undefined;
+
   return {
     topic,
     notification: {
       title: payload.title,
       body: payload.body ?? "",
     },
-    data: stringifyData(payload.data),
+    data,
+    webpush: link
+      ? {
+          notification: {
+            title: payload.title,
+            body: payload.body ?? "",
+          },
+          fcmOptions: { link },
+        }
+      : undefined,
     android: {
       priority: "high",
       notification: {
@@ -65,7 +87,7 @@ export async function sendPushToTopic(
 
   const admin = await getFirebaseAdmin();
   if (!admin) {
-    console.warn("Topic push skipped: FCM not configured (set FIREBASE_* env)");
+    notificationLogger.warn("Topic push skipped: FCM not configured (set FIREBASE_* env)");
     return {
       success: false,
       error: createPushError(
@@ -77,10 +99,14 @@ export async function sendPushToTopic(
 
   try {
     const messageId = await admin.messaging().send(buildTopicMessage(trimmedTopic, payload));
+    notificationLogger.info("FCM topic message sent", { topic: trimmedTopic, messageId });
     return { success: true, messageId, topic: trimmedTopic };
   } catch (e) {
     const error = normalizeFirebaseError(e);
-    console.error(`FCM topic send failed [${trimmedTopic}]:`, error.message, error.cause ?? "");
+    notificationLogger.error(`FCM topic send failed [${trimmedTopic}]`, {
+      message: error.message,
+      cause: error.cause,
+    });
     return { success: false, error };
   }
 }

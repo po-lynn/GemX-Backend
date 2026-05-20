@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { AppSpeedInsights } from "@/components/app-speed-insights";
+import { GlobalPushProvider } from "@/components/notifications/GlobalPushProvider";
 import { Analytics } from '@vercel/analytics/next';
 import "./globals.css";
 const geistSans = Geist({
@@ -36,7 +37,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
       >
-        <Suspense fallback={null}>{children}</Suspense>
+        <GlobalPushProvider>
+          <Suspense fallback={null}>{children}</Suspense>
+        </GlobalPushProvider>
         {/* usePathname() is dynamic; must be inside Suspense for Cache Components / prerender */}
         <Suspense fallback={null}>
           <AppSpeedInsights />

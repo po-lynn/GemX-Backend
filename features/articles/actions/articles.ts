@@ -14,7 +14,7 @@ import {
   deleteArticleInDb,
   getArticleById,
 } from "@/features/articles/db/articles";
-import { sendPushToMobileUsers } from "@/features/push/send-push";
+import { sendArticlePublishedNotification } from "@/features/notifications/services/global-push";
 
 function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
@@ -60,11 +60,9 @@ export async function createArticleAction(formData: FormData) {
     publishDate,
   });
   if (parsed.data.status === "published") {
-    sendPushToMobileUsers({
-      title: "New article",
-      body: parsed.data.title,
-      data: { articleId, screen: "article" },
-    }).catch((e) => console.error("Push notification failed:", e));
+    sendArticlePublishedNotification({ articleId, title: parsed.data.title }).catch((e) =>
+      console.error("Global article push failed:", e)
+    );
   }
   return { success: true, articleId };
 }
@@ -106,11 +104,9 @@ export async function updateArticleAction(formData: FormData) {
   await updateArticleInDb(articleId, updates);
   if (updates.status === "published" && previous?.status !== "published") {
     const articleTitle = updates.title ?? previous?.title ?? "New article";
-    sendPushToMobileUsers({
-      title: "New article",
-      body: articleTitle,
-      data: { articleId, screen: "article" },
-    }).catch((e) => console.error("Push notification failed:", e));
+    sendArticlePublishedNotification({ articleId, title: articleTitle }).catch((e) =>
+      console.error("Global article push failed:", e)
+    );
   }
   return { success: true, articleId };
 }

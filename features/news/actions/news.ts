@@ -12,7 +12,9 @@ import {
   createNewsInDb,
   updateNewsInDb,
   deleteNewsInDb,
+  getNewsById,
 } from "@/features/news/db/news";
+import { sendNewsPublishedNotification } from "@/features/notifications/services/global-push";
 
 function emptyToNull<T>(v: T): T | null | undefined {
   return v === "" ? null : (v ?? undefined);
@@ -44,6 +46,11 @@ export async function createNewsAction(formData: FormData) {
     status: parsed.data.status,
     publish: publishDate,
   });
+  if (parsed.data.status === "published") {
+    sendNewsPublishedNotification({ newsId, title: parsed.data.title }).catch((e) =>
+      console.error("Global news push failed:", e)
+    );
+  }
   return { success: true, newsId };
 }
 
@@ -72,7 +79,14 @@ export async function updateNewsAction(formData: FormData) {
         ? new Date(publishRaw)
         : null;
   const updates: Parameters<typeof updateNewsInDb>[1] = { ...rest, publish };
+  const previous = await getNewsById(newsId);
   await updateNewsInDb(newsId, updates);
+  if (updates.status === "published" && previous?.status !== "published") {
+    const newsTitle = updates.title ?? previous?.title ?? "New news";
+    sendNewsPublishedNotification({ newsId, title: newsTitle }).catch((e) =>
+      console.error("Global news push failed:", e)
+    );
+  }
   return { success: true, newsId };
 }
 

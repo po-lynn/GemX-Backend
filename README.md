@@ -56,7 +56,7 @@ Full feature spec (Mobile, Admin, Additional): [docs/REQUIREMENTS.md](docs/REQUI
 1. Push your repo and import the project in [vercel.com](https://vercel.com).
 2. **Settings → Environment Variables** – add `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` (your production URL). Redeploy.
 
-**Push notifications (optional):** To send push to mobile app users when a new article is published, run `npm run db:push` (adds `push_device_token` table) and set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` in Vercel (from Firebase Console → Service accounts). Mobile app registers token via **POST /api/push/register**; see [docs/MOBILE-API.md](docs/MOBILE-API.md).
+**Push notifications (optional):** Set server `FIREBASE_*` (Admin SDK) and `NEXT_PUBLIC_FIREBASE_*` + `NEXT_PUBLIC_FIREBASE_VAPID_KEY` for web push (see `.env.example`). The web app auto-subscribes to FCM topic `global` on load; publishing an article sends `articleId` + `articleTitle` to all subscribers. Mobile: subscribe to topic `global` on startup or use **POST /api/push/register** for user-targeted pushes. See [docs/guides/web-push-global-topic.md](docs/guides/web-push-global-topic.md) and [docs/MOBILE-API.md](docs/MOBILE-API.md).
 
 **Env files:** **`.env.local`** is for **local development only** (gitignored; never used by Vercel or Supabase). Copy **`.env.example`** to **`.env.local`** and set DATABASE_URL, AUTH_SECRET, AUTH_URL, etc. **Vercel** uses its own env (Project → Settings → Environment Variables); **Supabase** is just the database and doesn’t read env files.
 

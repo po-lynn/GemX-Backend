@@ -32,7 +32,7 @@ export async function sendArticlePublishedNotification(
   return sendGlobalPushNotification({
     title: "New article",
     body: input.title,
-    data: buildArticleNotificationData(input.articleId),
+    data: buildArticleNotificationData(input.articleId, input.title),
   });
 }
 
@@ -43,7 +43,7 @@ export async function sendNewsPublishedNotification(
   return sendGlobalPushNotification({
     title: "New news",
     body: input.title,
-    data: buildNewsNotificationData(input.newsId),
+    data: buildNewsNotificationData(input.newsId, input.title),
   });
 }
 
