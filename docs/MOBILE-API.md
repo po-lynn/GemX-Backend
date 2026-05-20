@@ -92,7 +92,9 @@
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller (each rating includes **`tagIds`**). Query: `page`, `limit`. See **5.4b**. |
 | GET    | `/api/rating-tags` | No   | List active seller-rating preset tags (`ratingTags`: `id`, `name`, `type`). Cached. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
-| POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery is via Supabase Realtime on `messages`. See **5.4d**. |
+| POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime via Supabase; **FCM push** to receiver (unless they are viewing this chat). See **5.4d**. |
+| PUT    | `/api/chat/viewing` | Yes  | Heartbeat: user is on chat screen with `peerId` (suppresses push for that thread). Repeat every ~30s. See **5.4d**. |
+| DELETE | `/api/chat/viewing` | Yes  | User left chat screen (resume push). See **5.4d**. |
 | GET    | `/api/chat/conversations` | Yes  | List chat peers (JSON) **or** live updates via **`?stream=1`** (SSE: same payload when it changes; optional **`intervalMs`**). See **5.4d**. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
@@ -1203,6 +1205,27 @@ function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) 
 5. **Invalid recipient**  
    Unknown/archived recipient id  
    Expect: `404`.
+
+**Push notification (receiver):** After a successful send, the server notifies the **recipient only** via FCM (all tokens in **POST `/api/push/register`**). Skipped if the recipient has called **PUT `/api/chat/viewing`** with `peerId` = sender within the last ~90 seconds. Tap payload:
+
+| FCM `data` key | Description |
+| -------------- | ----------- |
+| `screen` | `chat` |
+| `type` | `chat_message` |
+| `senderId` | Open 1:1 chat with this user |
+| `conversationId` | Stable thread id |
+| `messageId` | Saved message UUID |
+| `link` | `/chat/{senderId}` |
+
+Notification title = sender name; body = message preview.
+
+#### PUT `/api/chat/viewing`
+
+**Auth:** Required. Body: `{ "peerId": "<otherUserId>" }`. Call when entering a chat thread and every **~30s** while it stays open so incoming messages do not trigger push.
+
+#### DELETE `/api/chat/viewing`
+
+**Auth:** Required. Call when leaving the chat screen.
 
 ---
 

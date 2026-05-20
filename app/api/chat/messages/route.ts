@@ -6,7 +6,7 @@ import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
 import { messages, messageTypeEnum } from "@/drizzle/schema/chat-schema";
 import { jsonError, jsonUncached } from "@/lib/api";
-import { sendPushToUserIds } from "@/features/push/send-push";
+import { sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
 
 const messageTypeValues = messageTypeEnum.enumValues;
 
@@ -24,6 +24,18 @@ const bodySchema = z
     message: "content, fileUrl, or imageUrls is required",
   });
 
+function messagePreview(saved: {
+  content: string;
+  imageUrls: string[] | null;
+  messageType: string;
+}): string {
+  if (saved.content?.trim()) return saved.content;
+  if (saved.imageUrls?.length) return "Sent photos";
+  if (saved.messageType === "audio") return "Sent a voice message";
+  if (saved.messageType === "file") return "Sent a file";
+  return "New message";
+}
+
 /**
  * POST /api/chat/messages
  * Save one chat message. Mobile clients receive it in realtime via Supabase Realtime
@@ -39,6 +51,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return jsonError("Invalid input", 400);
 
     const senderId = session.user.id;
+    const senderName = session.user.name ?? null;
     const { recipientId, content, fileUrl, imageUrls, tempId } = parsed.data;
     if (senderId === recipientId) return jsonError("Cannot send message to yourself", 400);
 
@@ -89,21 +102,13 @@ export async function POST(request: NextRequest) {
 
     if (!saved) return jsonError("Failed to save message", 500);
 
-    // Supabase Realtime cannot reliably expose "online/offline" server-side in this app.
-    // We still trigger push so recipients get notified when app is backgrounded.
-    await sendPushToUserIds([recipientId], {
-      title: "New message",
-      body: (saved.content || (saved.imageUrls?.length ? "Sent photos" : "") || "Sent you a file").slice(
-        0,
-        120
-      ),
-      data: {
-        type: "chat_message",
-        senderId,
-        recipientId,
-        messageId: saved.id,
-      },
-    });
+    void sendChatMessageNotification({
+      messageId: saved.id,
+      senderId,
+      recipientId,
+      senderName,
+      preview: messagePreview(saved),
+    }).catch((e) => console.error("Chat push notification failed:", e));
 
     return jsonUncached({
       success: true,
@@ -117,4 +122,3 @@ export async function POST(request: NextRequest) {
     return jsonError("Failed to send message", 500);
   }
 }
-

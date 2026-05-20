@@ -12,6 +12,9 @@ export function parseNotificationData(
     newsId: data.newsId,
     newsTitle: data.newsTitle,
     productId: data.productId,
+    senderId: data.senderId,
+    conversationId: data.conversationId,
+    messageId: data.messageId,
     link: data.link,
   };
 }
@@ -29,6 +32,9 @@ export function resolveNotificationPath(payload: NotificationNavigationPayload):
   }
   if (payload.screen === "product" && payload.productId) {
     return `/products/${payload.productId}`;
+  }
+  if (payload.screen === "chat" && payload.senderId) {
+    return `/chat/${payload.senderId}`;
   }
   if (payload.link?.startsWith("/")) {
     return payload.link;

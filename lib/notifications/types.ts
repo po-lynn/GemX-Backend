@@ -8,6 +8,9 @@ export type NotificationNavigationPayload = {
   newsId?: string;
   newsTitle?: string;
   productId?: string;
+  senderId?: string;
+  conversationId?: string;
+  messageId?: string;
   link?: string;
 };
 
