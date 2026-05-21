@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
@@ -1399,7 +1398,7 @@ export function ProductForm({
                       </div>
                       <div className="pd-gems-empty-title">No gemstones yet</div>
                       <div className="pd-gems-empty-sub">
-                        Click "Add gemstone" to add specifications in a pop-up dialog.
+                        Click &quot;Add gemstone&quot; to add specifications in a pop-up dialog.
                       </div>
                       <button type="button" className="pd-btn" onClick={openAddGemstoneDialog}>
                         + Add first gemstone
