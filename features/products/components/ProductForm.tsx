@@ -1,10 +1,10 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -16,77 +16,40 @@ import {
 import { createProductAction, updateProductAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
-import { FormActionBar } from "@/features/products/components/FormActionBar"
 import { formatDate } from "@/lib/formatters"
-import { cn } from "@/lib/utils"
-import type { LucideIcon } from "lucide-react"
 import {
+  AlertTriangle,
+  Archive,
   Award,
   BadgeDollarSign,
-  FileText,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   Eye,
+  Play,
+  FileText,
   Gem,
   History,
-  Image as ImageIcon,
+  Info,
   Layers,
   Package,
   Pencil,
+  Save,
   Sparkles,
+  Star,
   StickyNote,
   Trash2,
   Upload,
   Video,
   X,
 } from "lucide-react"
-
-const inputClass =
-  "flex h-10 w-full rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] transition-shadow placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0 focus:border-[var(--form-focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+import type { CategoryRow } from "@/features/categories/db/categories"
+import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
+import type { OriginOption } from "@/features/origin/db/origin"
+import type { FeaturePricingTier } from "@/features/points/db/points"
 
 const MAX_PRODUCT_IMAGES = 10
 const MAX_PRODUCT_VIDEOS = 5
-
-/** Nested blocks inside the main form shell (reference: soft shadow cards) */
-const formNestedCardClass =
-  "rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-6 shadow-[var(--form-section-shadow)] md:p-7"
-/** Purple circle + white icon (Feature Settings–style section headers) */
-const formSectionIconClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--form-primary)] text-[var(--form-primary-foreground)] shadow-sm"
-
-function FormSection({
-  title,
-  description,
-  icon: Icon,
-  children,
-}: {
-  title: string
-  description?: string
-  /** Optional section icon (Lucide), shown beside the title */
-  icon?: LucideIcon
-  children: React.ReactNode
-}) {
-  return (
-    <section className={formNestedCardClass}>
-      <div className="mb-5">
-        <div className="flex items-start gap-3">
-          {Icon ? (
-            <div className={formSectionIconClass} aria-hidden>
-              <Icon className="h-5 w-5" strokeWidth={2} />
-            </div>
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
-              {title}
-            </h2>
-            {description && (
-              <p className="mt-1 text-sm text-[var(--form-muted-foreground)]">{description}</p>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="space-y-5">{children}</div>
-    </section>
-  )
-}
 
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
 
@@ -95,24 +58,27 @@ const MODERATION_STATUS_OPTIONS = [
   { value: "approved" as const, label: "Approved" },
   { value: "rejected" as const, label: "Rejected" },
 ]
-import type { CategoryRow } from "@/features/categories/db/categories"
 
-type Props = {
-  mode: "create" | "edit"
-  product?: ProductForEdit | null
-  categories: CategoryRow[]
-}
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "active", label: "Active" },
+  { value: "archive", label: "Archive" },
+  { value: "sold", label: "Sold" },
+  { value: "hidden", label: "Hidden" },
+]
 
-import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
-import type { OriginOption } from "@/features/origin/db/origin"
-import type { FeaturePricingTier } from "@/features/points/db/points"
-
-type LabProps = {
-  mode: "create" | "edit"
-  product?: ProductForEdit | null
-  laboratories?: LaboratoryOption[] | null
-  origins?: OriginOption[] | null
-  featurePricingTiers?: FeaturePricingTier[] | null
+function getGemHue(categoryName?: string | null): number {
+  const n = (categoryName ?? "").toLowerCase()
+  if (n.includes("ruby") || n.includes("garnet") || n.includes("spinel")) return 0
+  if (n.includes("sapphire")) return 220
+  if (n.includes("emerald")) return 140
+  if (n.includes("amethyst")) return 270
+  if (n.includes("topaz") || n.includes("citrine")) return 40
+  if (n.includes("aqua") || n.includes("aquamarine")) return 195
+  if (n.includes("tourmaline") || n.includes("jade")) return 150
+  if (n.includes("diamond")) return 210
+  if (n.includes("pearl")) return 200
+  return 260
 }
 
 function parseDimensions(value: string | null | undefined): [string, string, string] {
@@ -130,46 +96,225 @@ function isPdfUrl(url: string): boolean {
   }
 }
 
+
 function CertificateViewer({ url, onRemove }: { url: string; onRemove: () => void }) {
   const isPdf = isPdfUrl(url)
   return (
-    <div className="rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)]/30 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--form-input-border)] px-3 py-2">
-        <span className="text-sm font-medium text-[var(--form-foreground)]">
-          Certificate {isPdf ? "(PDF)" : "(image)"}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={onRemove}
-        >
-          <X className="h-4 w-4 mr-1" />
-          Remove
-        </Button>
+    <div className="pd-cert">
+      <div className="pd-cert-ico"><FileText size={18} /></div>
+      <div className="pd-cert-meta">
+        <div className="pd-cert-name">Certificate {isPdf ? "(PDF)" : "(image)"}</div>
+        <div className="pd-cert-sub">{isPdf ? "PDF document" : "Image file"} · uploaded</div>
       </div>
-      <div className="min-h-[280px] max-h-[480px] flex items-center justify-center bg-[var(--form-bg)]">
-        {isPdf ? (
-          <iframe
-            src={url}
-            title="Certificate PDF"
-            className="w-full h-[400px] min-h-[360px] border-0"
-          />
-        ) : (
-          <div className="relative w-full min-h-[280px] max-h-[420px] flex-1">
-            <Image
-              src={url}
-              alt="Certificate"
-              fill
-              className="object-contain"
-              unoptimized={url.startsWith("blob:") || url.startsWith("data:")}
-            />
-          </div>
-        )}
+      <button
+        type="button"
+        className="pd-btn"
+        onClick={() => window.open(url, "_blank")}
+        aria-label="View certificate"
+      >
+        <Eye size={13} /> View
+      </button>
+      <button
+        type="button"
+        className="pd-btn"
+        onClick={onRemove}
+        aria-label="Remove certificate"
+      >
+        <X size={13} /> Remove
+      </button>
+    </div>
+  )
+}
+
+function ImageViewer({
+  images,
+  initialIndex,
+  onClose,
+}: {
+  images: string[]
+  initialIndex: number
+  onClose: () => void
+}) {
+  const [idx, setIdx] = useState(initialIndex)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const stripRef = useRef<HTMLDivElement>(null)
+
+  const prev = useCallback(() => setIdx((i) => Math.max(0, i - 1)), [])
+  const next = useCallback(() => setIdx((i) => Math.min(images.length - 1, i + 1)), [images.length])
+
+  useEffect(() => {
+    closeRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const el = stripRef.current?.children[idx] as HTMLElement | undefined
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+  }, [idx])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft") prev()
+      if (e.key === "ArrowRight") next()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose, prev, next])
+
+  return (
+    <div
+      className="pd-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image viewer"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <button ref={closeRef} className="pd-viewer-close" onClick={onClose} aria-label="Close viewer">
+        <X size={18} />
+      </button>
+      <span className="pd-viewer-counter">{idx + 1} / {images.length}</span>
+
+      <div className="pd-viewer-stage">
+        <button
+          className="pd-viewer-nav prev"
+          onClick={prev}
+          disabled={idx === 0}
+          aria-label="Previous image"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={images[idx]}
+          className="pd-viewer-img"
+          src={images[idx]}
+          alt={`Product image ${idx + 1} of ${images.length}`}
+        />
+        <button
+          className="pd-viewer-nav next"
+          onClick={next}
+          disabled={idx === images.length - 1}
+          aria-label="Next image"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
+      <div ref={stripRef} className="pd-viewer-strip" role="list" aria-label="All images">
+        {images.map((url, i) => (
+          <button
+            key={url}
+            role="listitem"
+            className={`pd-viewer-strip-thumb${i === idx ? " active" : ""}`}
+            onClick={() => setIdx(i)}
+            aria-label={`View image ${i + 1}`}
+            aria-current={i === idx ? "true" : undefined}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" />
+          </button>
+        ))}
       </div>
     </div>
   )
+}
+
+function VideoViewer({
+  videos,
+  initialIndex,
+  onClose,
+}: {
+  videos: string[]
+  initialIndex: number
+  onClose: () => void
+}) {
+  const [idx, setIdx] = useState(initialIndex)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const prev = useCallback(() => setIdx((i) => Math.max(0, i - 1)), [])
+  const next = useCallback(() => setIdx((i) => Math.min(videos.length - 1, i + 1)), [videos.length])
+
+  useEffect(() => { closeRef.current?.focus() }, [])
+
+  useEffect(() => {
+    videoRef.current?.load()
+    videoRef.current?.play().catch(() => {})
+  }, [idx])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft") prev()
+      if (e.key === "ArrowRight") next()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose, prev, next])
+
+  return (
+    <div
+      className="pd-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Video viewer"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <button ref={closeRef} className="pd-viewer-close" onClick={onClose} aria-label="Close viewer">
+        <X size={18} />
+      </button>
+      <span className="pd-viewer-counter">Video {idx + 1} / {videos.length}</span>
+
+      <div className="pd-viewer-stage">
+        {videos.length > 1 && (
+          <button className="pd-viewer-nav prev" onClick={prev} disabled={idx === 0} aria-label="Previous video">
+            <ChevronLeft size={20} />
+          </button>
+        )}
+        <video
+          key={videos[idx]}
+          ref={videoRef}
+          className="pd-viewer-video"
+          src={videos[idx]}
+          controls
+          playsInline
+          preload="metadata"
+        />
+        {videos.length > 1 && (
+          <button className="pd-viewer-nav next" onClick={next} disabled={idx === videos.length - 1} aria-label="Next video">
+            <ChevronRight size={20} />
+          </button>
+        )}
+      </div>
+
+      {videos.length > 1 && (
+        <div className="pd-viewer-strip" role="list" aria-label="All videos">
+          {videos.map((_, i) => (
+            <button
+              key={i}
+              role="listitem"
+              className={`pd-viewer-strip-thumb pd-viewer-strip-video${i === idx ? " active" : ""}`}
+              onClick={() => setIdx(i)}
+              aria-label={`Video ${i + 1}`}
+              aria-current={i === idx ? "true" : undefined}
+            >
+              <Play size={16} />
+              <span>{i + 1}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type Props = {
+  mode: "create" | "edit"
+  product?: ProductForEdit | null
+  categories: CategoryRow[]
+  laboratories?: LaboratoryOption[] | null
+  origins?: OriginOption[] | null
+  featurePricingTiers?: FeaturePricingTier[] | null
 }
 
 export function ProductForm({
@@ -179,60 +324,44 @@ export function ProductForm({
   laboratories,
   origins,
   featurePricingTiers,
-}: Props & LabProps) {
+}: Props) {
   const router = useRouter()
+  const isEdit = mode === "edit"
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  const isEdit = mode === "edit"
+  const [dirty, setDirty] = useState(false)
 
   const [productType, setProductType] = useState<"loose_stone" | "jewellery">(
     product?.productType ?? "loose_stone"
   )
-  const [dimensionsPart1, setDimensionsPart1] = useState(() =>
-    parseDimensions(product?.dimensions)[0]
-  )
-  const [dimensionsPart2, setDimensionsPart2] = useState(() =>
-    parseDimensions(product?.dimensions)[1]
-  )
-  const [dimensionsPart3, setDimensionsPart3] = useState(() =>
-    parseDimensions(product?.dimensions)[2]
-  )
-  useEffect(() => {
-    const [p1, p2, p3] = parseDimensions(product?.dimensions)
-    setDimensionsPart1(p1)
-    setDimensionsPart2(p2)
-    setDimensionsPart3(p3)
-  }, [product?.dimensions])
-  const categoryOptions = categories.filter((c) => c.type === productType)
-  const stoneOptions = categories.filter((c) => c.type === "loose_stone")
   const [status, setStatus] = useState<"pending" | "active" | "archive" | "sold" | "hidden">(
     (product?.status as "pending" | "active" | "archive" | "sold" | "hidden") ?? "active"
   )
-  const [moderationStatus, setModerationStatus] = useState<
-    "pending" | "approved" | "rejected"
-  >(product?.moderationStatus ?? "pending")
-  useEffect(() => {
-    setModerationStatus(product?.moderationStatus ?? "pending")
-  }, [product?.id, product?.moderationStatus])
+  const [moderationStatus, setModerationStatus] = useState<"pending" | "approved" | "rejected">(
+    product?.moderationStatus ?? "pending"
+  )
+  const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false)
+  const [isCollectorPiece, setIsCollectorPiece] = useState(product?.isCollectorPiece ?? false)
+  const [isPrivilegeAssist, setIsPrivilegeAssist] = useState(product?.isPrivilegeAssist ?? false)
+  const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
+  const [isNegotiable, setIsNegotiable] = useState(product?.isNegotiable ?? false)
+
   const [imageUrlsList, setImageUrlsList] = useState<string[]>(product?.imageUrls ?? [])
   const [videoUrlsList, setVideoUrlsList] = useState<string[]>(product?.videoUrls ?? [])
   const [uploadingImages, setUploadingImages] = useState(false)
   const [uploadingVideos, setUploadingVideos] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadFileCount, setUploadFileCount] = useState(0)
+  const [uploadMediaType, setUploadMediaType] = useState<"image" | "video">("image")
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [viewerIdx, setViewerIdx] = useState<number | null>(null)
+  const [videoViewerIdx, setVideoViewerIdx] = useState<number | null>(null)
   const [certReportUrl, setCertReportUrl] = useState(product?.certReportUrl ?? "")
   const [uploadingCertificate, setUploadingCertificate] = useState(false)
-  useEffect(() => {
-    setImageUrlsList(product?.imageUrls ?? [])
-    setVideoUrlsList(product?.videoUrls ?? [])
-  }, [product?.imageUrls, product?.videoUrls])
-  useEffect(() => {
-    setCertReportUrl(product?.certReportUrl ?? "")
-  }, [product?.certReportUrl])
 
-  const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
-  const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false)
+  const [notesTab, setNotesTab] = useState<"description" | "extra">("description")
+
   const featuredPointsDefault =
     typeof (product as { featured?: unknown } | null | undefined)?.featured === "number"
       ? (product as { featured: number }).featured
@@ -242,113 +371,47 @@ export function ProductForm({
     const byPoints = pricingTiers.find((t) => t.points === featuredPointsDefault)
     return byPoints ? `${byPoints.durationDays}:${byPoints.points}` : ""
   })
+
+  const [dimensionsPart1, setDimensionsPart1] = useState(() => parseDimensions(product?.dimensions)[0])
+  const [dimensionsPart2, setDimensionsPart2] = useState(() => parseDimensions(product?.dimensions)[1])
+  const [dimensionsPart3, setDimensionsPart3] = useState(() => parseDimensions(product?.dimensions)[2])
+
+  const categoryOptions = categories.filter((c) => c.type === productType)
+  const stoneOptions = categories.filter((c) => c.type === "loose_stone")
+
+  // Gem hue for themed accents
+  const currentCategory = categories.find((c) => c.id === product?.categoryId)
+  const gemHue = getGemHue(currentCategory?.name)
+
+  useEffect(() => {
+    const [p1, p2, p3] = parseDimensions(product?.dimensions)
+    setDimensionsPart1(p1)
+    setDimensionsPart2(p2)
+    setDimensionsPart3(p3)
+  }, [product?.dimensions])
+
+  useEffect(() => {
+    setModerationStatus(product?.moderationStatus ?? "pending")
+  }, [product?.id, product?.moderationStatus])
+
+  useEffect(() => {
+    setImageUrlsList(product?.imageUrls ?? [])
+    setVideoUrlsList(product?.videoUrls ?? [])
+  }, [product?.imageUrls, product?.videoUrls])
+
+  useEffect(() => {
+    setCertReportUrl(product?.certReportUrl ?? "")
+  }, [product?.certReportUrl])
+
   useEffect(() => {
     setIsPromotion(product?.isPromotion ?? false)
   }, [product?.id, product?.isPromotion])
+
   useEffect(() => {
     setIsFeatured(product?.isFeatured ?? false)
   }, [product?.id, product?.isFeatured])
 
-  function handleUploadMedia(type: "image" | "video", files: FileList | null) {
-    if (!files?.length) return
-    setUploadError(null)
-    const maxCount = type === "image" ? MAX_PRODUCT_IMAGES : MAX_PRODUCT_VIDEOS
-    const currentList = type === "image" ? imageUrlsList : videoUrlsList
-    const currentCount = currentList.length
-    if (currentCount >= maxCount) {
-      setUploadError(
-        type === "image"
-          ? `Maximum ${MAX_PRODUCT_IMAGES} images. You have ${currentCount}.`
-          : `Maximum ${MAX_PRODUCT_VIDEOS} videos. You have ${currentCount}.`
-      )
-      return
-    }
-    const slotsLeft = maxCount - currentCount
-    if (files.length > slotsLeft) {
-      setUploadError(
-        type === "image"
-          ? `Maximum ${MAX_PRODUCT_IMAGES} images. You have ${currentCount}. Add up to ${slotsLeft} more.`
-          : `Maximum ${MAX_PRODUCT_VIDEOS} videos. You have ${currentCount}. Add up to ${slotsLeft} more.`
-      )
-      return
-    }
-    setUploadProgress(0)
-    if (type === "image") setUploadingImages(true)
-    else setUploadingVideos(true)
-    const formData = new FormData()
-    formData.set("type", type)
-    for (let i = 0; i < files.length; i++) formData.append("files", files[i])
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", "/api/upload/product-media")
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        setUploadProgress(Math.round((e.loaded / e.total) * 100))
-      }
-    })
-    xhr.addEventListener("load", () => {
-      try {
-        const data = JSON.parse(xhr.responseText || "{}")
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const urls = (data.urls as string[]) ?? []
-          if (type === "image") setImageUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_IMAGES))
-          else setVideoUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_VIDEOS))
-        } else {
-          setUploadError(data.error || `Upload failed (${xhr.status})`)
-        }
-      } catch {
-        setUploadError("Upload failed")
-      } finally {
-        setUploadingImages(false)
-        setUploadingVideos(false)
-        setUploadProgress(0)
-      }
-    })
-    xhr.addEventListener("error", () => {
-      setUploadError("Upload failed")
-      setUploadingImages(false)
-      setUploadingVideos(false)
-      setUploadProgress(0)
-    })
-    xhr.addEventListener("abort", () => {
-      setUploadingImages(false)
-      setUploadingVideos(false)
-      setUploadProgress(0)
-    })
-    xhr.send(formData)
-  }
-
-  function handleUploadCertificate(files: FileList | null) {
-    if (!files?.length) return
-    const file = files[0]
-    setUploadError(null)
-    setUploadingCertificate(true)
-    const formData = new FormData()
-    formData.set("file", file)
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", "/api/upload/certificate")
-    xhr.addEventListener("load", () => {
-      try {
-        const data = JSON.parse(xhr.responseText || "{}")
-        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
-          setCertReportUrl(data.url)
-        } else {
-          setUploadError(data.error || `Upload failed (${xhr.status})`)
-        }
-      } catch {
-        setUploadError("Upload failed")
-      } finally {
-        setUploadingCertificate(false)
-      }
-    })
-    xhr.addEventListener("error", () => {
-      setUploadError("Upload failed")
-      setUploadingCertificate(false)
-    })
-    xhr.addEventListener("abort", () => setUploadingCertificate(false))
-    xhr.send(formData)
-  }
-
-  /** Form state: all string for inputs; maps to JewelleryGemstoneItem when submitting. */
+  // ── Gemstone dialog ──
   type FormGemstoneEntry = {
     categoryId: string
     weightCarat: string
@@ -361,20 +424,10 @@ export function ProductForm({
     transparency: string
     comment: string
     inclusions: string
-    categoryName?: string
   }
   const emptyGemstone = (): FormGemstoneEntry => ({
-    categoryId: "",
-    weightCarat: "",
-    pieceCount: "",
-    dimensions: "",
-    color: "",
-    shape: "",
-    origin: "",
-    cut: "",
-    transparency: "",
-    comment: "",
-    inclusions: "",
+    categoryId: "", weightCarat: "", pieceCount: "", dimensions: "",
+    color: "", shape: "", origin: "", cut: "", transparency: "", comment: "", inclusions: "",
   })
   const [jewelleryGemstones, setJewelleryGemstones] = useState<FormGemstoneEntry[]>(
     (product?.jewelleryGemstones ?? []).map((g) => ({
@@ -394,7 +447,7 @@ export function ProductForm({
   const [gemstoneDialogOpen, setGemstoneDialogOpen] = useState(false)
   const [gemstoneDialogMode, setGemstoneDialogMode] = useState<"add" | "edit" | "view">("add")
   const [gemstoneDialogIndex, setGemstoneDialogIndex] = useState<number | null>(null)
-  const [gemstoneDialogForm, setGemstoneDialogForm] = useState<FormGemstoneEntry>(() => emptyGemstone())
+  const [gemstoneDialogForm, setGemstoneDialogForm] = useState<FormGemstoneEntry>(emptyGemstone)
 
   function openAddGemstoneDialog() {
     setGemstoneDialogForm(emptyGemstone())
@@ -423,9 +476,101 @@ export function ProductForm({
       )
     }
     setGemstoneDialogOpen(false)
+    setDirty(true)
   }
   function handleRemoveGemstone(index: number) {
     setJewelleryGemstones((prev) => prev.filter((_, i) => i !== index))
+    setDirty(true)
+  }
+
+  // ── Media upload ──
+  function handleUploadMedia(type: "image" | "video", files: FileList | null) {
+    if (!files?.length) return
+    setUploadError(null)
+    const maxCount = type === "image" ? MAX_PRODUCT_IMAGES : MAX_PRODUCT_VIDEOS
+    const currentList = type === "image" ? imageUrlsList : videoUrlsList
+    const currentCount = currentList.length
+    if (currentCount >= maxCount) {
+      setUploadError(`Maximum ${maxCount} ${type}s. You have ${currentCount}.`)
+      return
+    }
+    const slotsLeft = maxCount - currentCount
+    if (files.length > slotsLeft) {
+      setUploadError(`Maximum ${maxCount} ${type}s. Add up to ${slotsLeft} more.`)
+      return
+    }
+    setUploadProgress(0)
+    setUploadFileCount(files.length)
+    setUploadMediaType(type)
+    if (type === "image") setUploadingImages(true)
+    else setUploadingVideos(true)
+    const formData = new FormData()
+    formData.set("type", type)
+    for (let i = 0; i < files.length; i++) formData.append("files", files[i])
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/api/upload/product-media")
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100))
+    })
+    xhr.addEventListener("load", () => {
+      try {
+        const data = JSON.parse(xhr.responseText || "{}")
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const urls = (data.urls as string[]) ?? []
+          if (type === "image") setImageUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_IMAGES))
+          else setVideoUrlsList((prev) => [...prev, ...urls].slice(0, MAX_PRODUCT_VIDEOS))
+          setDirty(true)
+        } else {
+          setUploadError(data.error || `Upload failed (${xhr.status})`)
+        }
+      } catch {
+        setUploadError("Upload failed")
+      } finally {
+        setUploadingImages(false)
+        setUploadingVideos(false)
+        setUploadProgress(0)
+      }
+    })
+    xhr.addEventListener("error", () => {
+      setUploadError("Upload failed")
+      setUploadingImages(false)
+      setUploadingVideos(false)
+      setUploadProgress(0)
+    })
+    xhr.addEventListener("abort", () => {
+      setUploadingImages(false)
+      setUploadingVideos(false)
+      setUploadProgress(0)
+    })
+    xhr.send(formData)
+  }
+
+  function handleUploadCertificate(files: FileList | null) {
+    if (!files?.length) return
+    setUploadError(null)
+    setUploadingCertificate(true)
+    const formData = new FormData()
+    formData.set("file", files[0])
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/api/upload/certificate")
+    xhr.addEventListener("load", () => {
+      try {
+        const data = JSON.parse(xhr.responseText || "{}")
+        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+          setCertReportUrl(data.url)
+          setDirty(true)
+        } else {
+          setUploadError(data.error || `Upload failed (${xhr.status})`)
+        }
+      } catch {
+        setUploadError("Upload failed")
+      } finally {
+        setUploadingCertificate(false)
+      }
+    })
+    xhr.addEventListener("error", () => { setUploadError("Upload failed"); setUploadingCertificate(false) })
+    xhr.addEventListener("abort", () => setUploadingCertificate(false))
+    xhr.send(formData)
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -469,6 +614,7 @@ export function ProductForm({
         return
       }
 
+      setDirty(false)
       router.push("/admin/products")
       router.refresh()
     } catch {
@@ -478,982 +624,178 @@ export function ProductForm({
     }
   }
 
-  const breadcrumbs: { href: string; label: string }[] = isEdit
-    ? [
-        { href: "/admin/products", label: "Products" },
-        { href: `/admin/products/${product?.id}/edit`, label: product?.title ? (product.title.length > 40 ? product.title.slice(0, 40) + "…" : product.title) : "Edit" },
-      ]
-    : [
-        { href: "/admin/products", label: "Products" },
-        { href: "/admin/products/new", label: "New Product" },
-      ]
+  const titleInitials = (product?.title || (isEdit ? "??" : "NP"))
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 2)
+    .toUpperCase()
 
-  const recordTitle = isEdit ? (product?.title ?? "Product") : "New Product"
-  const [notesTab, setNotesTab] = useState<"notes" | "extra">("notes")
-
+  // ── Render ──
   return (
-    <Card className="odoo-form overflow-hidden rounded-3xl border border-[var(--form-shell-border)] bg-[var(--form-bg)] shadow-[var(--form-shadow-elevated)]">
-      <FormActionBar
-        breadcrumbs={breadcrumbs}
-        currentStatus={status}
-        onStatusChange={(value) => setStatus(value as typeof status)}
-        saveLabel="Save"
-        saveLoading={loading}
-        discardHref="/admin/products"
-        formId="product-form"
-      />
-      <div className="grid grid-cols-1 pt-6 md:pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:gap-x-8">
-        {/* Left pane: form content — top spacing below Save/Discard comes from grid pt-* */}
-        <div className="min-w-0">
-          <div className="px-8 pb-8 pt-3">
-            {/* Hero: record title + key metrics in a soft card */}
-            <div className={formNestedCardClass}>
-              <h1 className="text-2xl font-bold tracking-tight text-[var(--form-foreground)] sm:text-3xl">
-                {recordTitle}
-              </h1>
-              <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">Price</div>
-                  <div className="mt-1 text-lg font-semibold text-[var(--form-foreground)]">
-                    {product?.price != null ? `${product.currency} ${product.price}` : "—"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">Status</div>
-                  <div className="mt-1 text-lg font-semibold capitalize text-[var(--form-foreground)]">
-                    {status}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">
-                    Moderation
-                  </div>
-                  <div className="mt-1 text-lg font-semibold capitalize text-[var(--form-foreground)]">
-                    {moderationStatus}
-                  </div>
-                </div>
-                {isEdit && product?.sku && (
-                  <div>
-                    <div className="text-xs font-medium uppercase tracking-wider text-[var(--form-muted-foreground)]">SKU</div>
-                    <div className="mt-1 font-mono text-sm font-semibold text-[var(--form-foreground)]">
-                      {product.sku}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="pd-host">
+      {/* ─── Top bar ─────────────────────────────────────────────── */}
+      <div className="pd-topbar">
+        <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+          <Link href="/admin/products">Products</Link>
+          <ChevronRight size={11} style={{ opacity: 0.5 }} />
+          <span className="pd-here">
+            {isEdit ? (product?.title || "Edit Product") : "New Product"}
+          </span>
+        </nav>
+        <div className="pd-topbar-spacer" />
+      </div>
 
-          <form id="product-form" onSubmit={handleSubmit} className="flex flex-col gap-8 px-8 pb-8">
-            {isEdit && (
-              <input
-                type="hidden"
-                name="productId"
-                value={product?.id ?? ""}
-              />
-            )}
-            <input type="hidden" name="status" value={status} />
+      {/* ─── Save bar ────────────────────────────────────────────── */}
+      <div className="pd-savebar" style={{ top: 56 }}>
+        {dirty ? (
+          <span className="pd-savebar-dirty">
+            <span className="pd-savebar-dirty-dot" />
+            Unsaved changes
+          </span>
+        ) : isEdit && product?.updatedAt ? (
+          <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>
+            Saved · {formatDate(product.updatedAt)}
+          </span>
+        ) : null}
+        <span style={{ flex: 1 }} />
+        <Link href="/admin/products" className="pd-btn">Discard</Link>
+        <button
+          type="submit"
+          form="product-form"
+          className="pd-btn pd-btn-primary"
+          disabled={loading}
+        >
+          <Save size={13} />
+          {loading ? "Saving…" : "Save changes"}
+        </button>
+      </div>
 
-            {/* Featured, Collector Piece, Privilege Assist, Promotion */}
-            <div className="-mt-2 space-y-4 rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-5 shadow-[var(--form-section-shadow)]">
-              <div className="flex items-center gap-3 border-b border-[var(--form-section-border)] pb-4">
-                <div className={formSectionIconClass} aria-hidden>
-                  <Sparkles className="h-5 w-5" strokeWidth={2} />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
-                    Visibility & promotion
-                  </h2>
-                  <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
-                    Featured listing, collector piece, privilege assist, and promotion flags
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="isFeatured"
-                    checked={isFeatured}
-                    onChange={(e) => setIsFeatured(e.target.checked)}
-                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                  />
-                  <span className="text-sm font-medium text-[var(--form-foreground)]">Featured</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="isCollectorPiece"
-                    defaultChecked={product?.isCollectorPiece ?? false}
-                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                  />
-                  <span className="text-sm font-medium text-[var(--form-foreground)]">Collector Piece</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="isPrivilegeAssist"
-                    defaultChecked={product?.isPrivilegeAssist ?? false}
-                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                  />
-                  <span className="text-sm font-medium text-[var(--form-foreground)]">Privilege Assist</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="isPromotion"
-                    checked={isPromotion}
-                    onChange={(e) => setIsPromotion(e.target.checked)}
-                    className="size-4 rounded border-[var(--form-input-border)] text-[var(--form-primary)] focus:ring-2 focus:ring-[var(--form-focus-ring)]"
-                  />
-                  <span className="text-sm font-medium text-[var(--form-foreground)]">Promotion</span>
-                </label>
-              </div>
-              {isFeatured && (
-                <div className="grid gap-3 sm:max-w-md">
-                  <label htmlFor="featuredTier" className="text-sm font-medium text-[var(--form-foreground)]">
-                    Feature duration and point cost
-                  </label>
-                  {pricingTiers.length > 0 ? (
-                    <>
-                      <select
-                        id="featuredTier"
-                        value={selectedFeatureTier}
-                        onChange={(e) => setSelectedFeatureTier(e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="">Select duration and points</option>
-                        {pricingTiers.map((tier, i) => (
-                          <option
-                            key={`${tier.durationDays}-${tier.points}-${i}`}
-                            value={`${tier.durationDays}:${tier.points}`}
-                          >
-                            {tier.durationDays} day{tier.durationDays > 1 ? "s" : ""} - {tier.points} points
-                            {tier.badge ? ` (${tier.badge})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="hidden"
-                        name="featureDurationDays"
-                        value={selectedFeatureTier ? Number(selectedFeatureTier.split(":")[0]) : 0}
-                      />
-                      <input
-                        type="hidden"
-                        name="featured"
-                        value={selectedFeatureTier ? Number(selectedFeatureTier.split(":")[1]) : featuredPointsDefault}
-                      />
-                    </>
-                  ) : (
-                    <input
-                      id="featured"
-                      name="featured"
-                      type="number"
-                      min={0}
-                      step={1}
-                      defaultValue={featuredPointsDefault}
-                      placeholder="e.g. 100"
-                      className={inputClass}
-                    />
-                  )}
-                </div>
-              )}
-              {!isFeatured && <input type="hidden" name="featured" value={0} />}
-              {isPromotion && (
-                <div
-                  role="status"
-                  className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--form-foreground)]"
-                >
-                  <p className="font-medium text-amber-900 dark:text-amber-100">For promotion</p>
-                  <p className="mt-1 text-[var(--form-muted-foreground)]">
-                    This listing is flagged as a promotion item. 
-                  </p>
-                </div>
-              )}
-            </div>
+      {/* ─── Two-column grid ─────────────────────────────────────── */}
+      <div className="pd-grid">
 
-            <FormSection
-            title="Basic Info"
-            description="Core product identification and description"
-            icon={Package}
-          >
-            <div className="space-y-2">
-              <label htmlFor="title" className="text-sm font-medium">
-                Title *
-              </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                maxLength={200}
-                defaultValue={product?.title ?? ""}
-                placeholder="Product title"
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="identification" className="text-sm font-medium">
-                Identification *
-              </label>
-              <select
-                id="identification"
-                name="identification"
-                required
-                defaultValue={
-                  product?.identification &&
-                  PRODUCT_IDENTIFICATION_OPTIONS.includes(
-                    product.identification as (typeof PRODUCT_IDENTIFICATION_OPTIONS)[number]
-                  )
-                    ? product.identification
-                    : "Natural"
-                }
-                className={inputClass}
-              >
-                <option value="">Select…</option>
-                {PRODUCT_IDENTIFICATION_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="moderationStatus" className="text-sm font-medium">
-                Moderation status
-              </label>
-              <select
-                id="moderationStatus"
-                name="moderationStatus"
-                value={moderationStatus}
-                onChange={(e) =>
-                  setModerationStatus(
-                    e.target.value as "pending" | "approved" | "rejected"
-                  )
-                }
-                className={inputClass}
-              >
-                {MODERATION_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-[var(--form-muted-foreground)]">
-                Admin review state. Separate from listing status (active, sold, etc.) in the toolbar.
-              </p>
-            </div>
-          </FormSection>
+        {/* ══════ MAIN COLUMN ══════ */}
+        <form
+          id="product-form"
+          className="pd-main"
+          onSubmit={handleSubmit}
+          onInput={() => setDirty(true)}
+        >
+          {/* ── Hidden inputs ── */}
+          {isEdit && <input type="hidden" name="productId" value={product?.id ?? ""} />}
+          <input type="hidden" name="status" value={status} />
+          <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
+          <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
+          <input type="hidden" name="certReportUrl" value={certReportUrl} />
+          <input
+            type="hidden"
+            name="dimensions"
+            value={[dimensionsPart1, dimensionsPart2, dimensionsPart3].filter(Boolean).join(" × ")}
+          />
+          {!isFeatured && <input type="hidden" name="featured" value={0} />}
+          {!isPromotion && <input type="hidden" name="promotionComparePrice" value="" />}
 
-          <FormSection
-            title="Pricing"
-            description="Price, currency, and negotiation options"
-            icon={BadgeDollarSign}
-          >
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <label htmlFor="price" className="text-sm font-medium">
-                  Price *
-                </label>
-                <input
-                  id="price"
-                  name="price"
-                  type="text"
-                  required
-                  inputMode="decimal"
-                  defaultValue={product?.price ?? ""}
-                  placeholder="0.00"
-                  className={inputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="currency" className="text-sm font-medium">
-                  Currency
-                </label>
-                <select
-                  id="currency"
-                  name="currency"
-                  defaultValue={product?.currency ?? "USD"}
-                  className={inputClass}
-                >
-                  <option value="USD">USD</option>
-                  <option value="MMK">MMK</option>
-                </select>
-              </div>
-              <div className="flex items-end gap-2 pb-2">
-                <input
-                  id="isNegotiable"
-                  name="isNegotiable"
-                  type="checkbox"
-                  defaultChecked={product?.isNegotiable ?? false}
-                  className="size-4 rounded border-input"
-                />
-                <label htmlFor="isNegotiable" className="text-sm font-medium">
-                  Negotiable
-                </label>
-              </div>
-            </div>
-            {isPromotion ? (
-              <div className="space-y-2 border-t border-[var(--form-section-border)] pt-4">
-                <label htmlFor="promotionComparePrice" className="text-sm font-medium">
-                  Original price before discount
-                </label>
-                <input
-                  id="promotionComparePrice"
-                  name="promotionComparePrice"
-                  type="text"
-                  inputMode="decimal"
-                  defaultValue={product?.promotionComparePrice ?? ""}
-                  placeholder="e.g. original price before discount"
-                  className={`${inputClass} max-w-xs`}
-                />
-                <p className="text-xs text-[var(--form-muted-foreground)]">
-                  Enter a price <span className="font-medium">above</span> the sale price. The admin products table shows{" "}
-                  <span className="font-medium">Save …</span> as the difference (compare at − sale).
-                </p>
-              </div>
-            ) : (
-              <input type="hidden" name="promotionComparePrice" value="" />
-            )}
-          </FormSection>
-
-          <FormSection
-            title="Product Type & Category"
-            description={
-              productType === "jewellery"
-                ? "Category (e.g. Necklace, Necklace Set, Ring), metal, then add each gemstone type below with full specs."
-                : "Product type (loose stone or jewellery) and category"
-            }
-            icon={Layers}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="productType" className="text-sm font-medium">
-                  Product type *
-                </label>
-                <select
-                  id="productType"
-                  name="productType"
-                  value={productType}
-                  onChange={(e) =>
-                    setProductType(e.target.value as "loose_stone" | "jewellery")
-                  }
-                  className={inputClass}
-                  required
-                >
-                  <option value="loose_stone">Loose stone</option>
-                  <option value="jewellery">Jewellery</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="categoryId" className="text-sm font-medium">
-                  Category *
-                </label>
-                <select
-                  id="categoryId"
-                  name="categoryId"
-                  key={productType}
-                  defaultValue={product?.categoryId ?? ""}
-                  className={inputClass}
-                  required
-                >
-                  <option value="">
-                    {productType === "loose_stone"
-                      ? "Select stone category"
-                      : "Select jewellery category"}
-                  </option>
-                  {categoryOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {productType === "loose_stone" && (
-                <div className="space-y-2">
-                  <label htmlFor="stoneCut" className="text-sm font-medium">
-                    Cut
-                  </label>
-                  <select
-                    id="stoneCut"
-                    name="stoneCut"
-                    defaultValue={product?.stoneCut ?? ""}
-                    className={inputClass}
-                  >
-                    <option value="">Select cut</option>
-                    <option value="Faceted">Faceted</option>
-                    <option value="Cabochon">Cabochon</option>
-                  </select>
+          {/* ── Hero card (edit only) ── */}
+          {isEdit && product && (
+            <div
+              className="pd-headcard"
+              style={{ "--gem-hue": gemHue } as React.CSSProperties}
+            >
+              <div className="pd-head-row">
+                <div className="pd-hero-thumb">
+                  <span>{titleInitials}</span>
                 </div>
-              )}
-              {productType === "jewellery" && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="metal" className="text-sm font-medium">
-                      Metal
-                    </label>
-                    <select
-                      id="metal"
-                      name="metal"
-                      defaultValue={product?.metal ?? ""}
-                      className={inputClass}
-                    >
-                      <option value="">Select metal</option>
-                      <option value="Gold">Gold</option>
-                      <option value="Silver">Silver</option>
-                      <option value="Other">Other</option>
-                    </select>
+                <div className="pd-head-text">
+                  <div className="pd-head-eyebrow">
+                    {product.productType === "jewellery" ? "Jewellery" : "Loose stone"}
+                    {product.sku ? ` · ${product.sku}` : ""}
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <label className="text-sm font-medium">Gemstones in this piece</label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Add every stone type (Ruby, Emerald, Sapphire, Pearl, etc.). Click Add gemstone to open the form in a dialog; view, edit, or delete from the list below.
-                        </p>
-                      </div>
-                      <Button type="button" variant="outline" size="sm" onClick={openAddGemstoneDialog}>
-                        Add gemstone
-                      </Button>
-                    </div>
-                    {jewelleryGemstones.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-border bg-muted/5 p-6 text-center">
-                        <p className="text-muted-foreground text-sm">No gemstones added yet.</p>
-                        <p className="text-muted-foreground text-xs mt-1">
-                          Click &quot;Add gemstone&quot; to add specifications in a pop-up dialog.
-                        </p>
-                        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={openAddGemstoneDialog}>
-                          Add gemstone
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-border overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border bg-muted/30">
-                              <th className="px-4 py-2.5 text-left font-medium">Stone</th>
-                              <th className="px-4 py-2.5 text-left font-medium">Weight (ct)</th>
-                              <th className="px-4 py-2.5 text-left font-medium">Pieces</th>
-                              <th className="px-4 py-2.5 text-right font-medium w-36">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {jewelleryGemstones.map((row, i) => {
-                              const stoneName = row.categoryId
-                                ? stoneOptions.find((c) => c.id === row.categoryId)?.name ?? "—"
-                                : "—"
-                              return (
-                                <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/10">
-                                  <td className="px-4 py-2.5 font-medium">{stoneName}</td>
-                                  <td className="px-4 py-2.5 text-muted-foreground">{row.weightCarat || "—"}</td>
-                                  <td className="px-4 py-2.5 text-muted-foreground">{row.pieceCount || "—"}</td>
-                                  <td className="px-4 py-2.5 text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => openViewGemstoneDialog(i)}
-                                        aria-label={`View ${stoneName}`}
-                                      >
-                                        <Eye className="size-4" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => openEditGemstoneDialog(i)}
-                                        aria-label={`Edit ${stoneName}`}
-                                      >
-                                        <Pencil className="size-4" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                        onClick={() => handleRemoveGemstone(i)}
-                                        aria-label={`Delete ${stoneName}`}
-                                      >
-                                        <Trash2 className="size-4" />
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                  <h1 className="pd-head-h">{product.title}</h1>
+                  <div className="pd-head-pills">
+                    <span className={`pd-head-pill p-${status}`}>
+                      <span className="pd-pill-dot" /> {status}
+                    </span>
+                    <span className={`pd-head-pill p-${moderationStatus}`}>
+                      <span className="pd-pill-dot" /> {moderationStatus}
+                    </span>
+                    {product.identification && (
+                      <span className="pd-head-pill">{product.identification}</span>
+                    )}
+                    {isFeatured && (
+                      <span className="pd-head-pill p-featured">
+                        <Star size={9} /> Featured
+                      </span>
+                    )}
+                    {isCollectorPiece && (
+                      <span className="pd-head-pill p-collector">
+                        <Gem size={9} /> Collector
+                      </span>
                     )}
                   </div>
-                </>
-              )}
+                </div>
+              </div>
+              <div className="pd-head-stats">
+                <div>
+                  <div className="pd-head-stat-l">Price</div>
+                  <div className="pd-head-stat-v">
+                    {product.price ?? "—"}
+                    {product.price && <small>{product.currency}</small>}
+                  </div>
+                </div>
+                <div>
+                  <div className="pd-head-stat-l">Weight</div>
+                  <div className="pd-head-stat-v">
+                    {product.weightCarat
+                      ? parseFloat(product.weightCarat).toFixed(2)
+                      : "—"}
+                    {product.weightCarat && <small>ct</small>}
+                  </div>
+                </div>
+                <div>
+                  <div className="pd-head-stat-l">SKU</div>
+                  <div
+                    className="pd-head-stat-v"
+                    style={{ fontSize: 13, fontFamily: "var(--font-mono, monospace)" }}
+                  >
+                    {product.sku || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="pd-head-stat-l">Type</div>
+                  <div className="pd-head-stat-v" style={{ fontSize: 13 }}>
+                    {product.productType === "jewellery" ? "Jewellery" : "Loose stone"}
+                  </div>
+                </div>
+              </div>
             </div>
-          </FormSection>
-
-          {productType === "jewellery" && (
-            <Dialog open={gemstoneDialogOpen} onOpenChange={setGemstoneDialogOpen}>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>
-                    {gemstoneDialogMode === "add"
-                      ? "Add gemstone"
-                      : gemstoneDialogMode === "edit"
-                        ? "Edit gemstone"
-                        : "Gemstone details"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {gemstoneDialogMode === "view"
-                      ? "View-only. Use Edit from the list to change."
-                      : "Stone type, weight, and specifications for this gemstone in the piece."}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="overflow-y-auto max-h-[min(70vh,28rem)] pr-1 -mr-1">
-                <div className="grid gap-3 py-2 sm:grid-cols-2">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-medium">Stone type</label>
-                    <select
-                      className={inputClass}
-                      value={gemstoneDialogForm.categoryId}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, categoryId: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    >
-                      <option value="">Select</option>
-                      {stoneOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Weight (ct) *</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="e.g. 0.5"
-                      className={inputClass}
-                      value={gemstoneDialogForm.weightCarat}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, weightCarat: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Pieces</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="e.g. 37"
-                      className={inputClass}
-                      value={gemstoneDialogForm.pieceCount}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, pieceCount: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Dimensions</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 8.2 x 6.1 mm"
-                      className={inputClass}
-                      value={gemstoneDialogForm.dimensions}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, dimensions: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Color *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Pigeon Blood Red"
-                      className={inputClass}
-                      value={gemstoneDialogForm.color}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, color: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Shape</label>
-                    <select
-                      className={inputClass}
-                      value={gemstoneDialogForm.shape}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, shape: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    >
-                      <option value="">Select</option>
-                      {SHAPES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-medium">Origin *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mogok, Myanmar"
-                      className={inputClass}
-                      value={gemstoneDialogForm.origin}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, origin: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Cut</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mixed cut, brilliant/step"
-                      className={inputClass}
-                      value={gemstoneDialogForm.cut}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, cut: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Transparency</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Transparent"
-                      className={inputClass}
-                      value={gemstoneDialogForm.transparency}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, transparency: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-medium">Comment</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. No indication of thermal treatment, FTIR-tested"
-                      className={inputClass}
-                      value={gemstoneDialogForm.comment}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, comment: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <label className="text-xs font-medium">Inclusions (magnification)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rutiles, feathers, solids, zoning"
-                      className={inputClass}
-                      value={gemstoneDialogForm.inclusions}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((prev) => ({ ...prev, inclusions: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                </div>
-                </div>
-                <DialogFooter className="gap-2 sm:gap-0 shrink-0">
-                  {gemstoneDialogMode === "view" ? (
-                    <Button type="button" variant="outline" onClick={() => setGemstoneDialogOpen(false)}>
-                      Close
-                    </Button>
-                  ) : (
-                    <>
-                      <Button type="button" variant="outline" onClick={() => setGemstoneDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleSaveGemstoneDialog}
-                        disabled={
-                          !gemstoneDialogForm.categoryId ||
-                          gemstoneDialogForm.weightCarat.trim() === "" ||
-                          gemstoneDialogForm.color.trim() === "" ||
-                          gemstoneDialogForm.origin.trim() === ""
-                        }
-                      >
-                        {gemstoneDialogMode === "add" ? "Add" : "Save"}
-                      </Button>
-                    </>
-                  )}
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           )}
 
-          <FormSection
-            title="Specifications"
-            description={
-              productType === "jewellery"
-                ? "Total weight of the piece (gemstone specs are set per stone above)"
-                : "Physical attributes and gemology details"
-            }
-            icon={Gem}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              {productType === "jewellery" && (
-                <div className="space-y-2">
-                  <label htmlFor="totalWeightGrams" className="text-sm font-medium">
-                    Total weight (g)
-                  </label>
-                  <input
-                    id="totalWeightGrams"
-                    name="totalWeightGrams"
-                    type="text"
-                    inputMode="decimal"
-                    defaultValue={product?.totalWeightGrams ?? ""}
-                    placeholder="e.g. 28.48 (metal + stones)"
-                    className={inputClass}
-                  />
+          {/* ── Images & videos ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="purple">
+                <Upload size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Images &amp; videos</div>
+                <div className="pd-sec-sub">
+                  <strong>{imageUrlsList.length}</strong> images ·{" "}
+                  <strong>{videoUrlsList.length}</strong> videos · max {MAX_PRODUCT_IMAGES} images,{" "}
+                  {MAX_PRODUCT_VIDEOS} videos
                 </div>
-              )}
-              <div className="space-y-2">
-                <label htmlFor="weightCarat" className="text-sm font-medium">
-                  {productType === "jewellery"
-                    ? "Total gem weight (ct)"
-                    : "Weight (carat) *"}
-                </label>
-                <input
-                  id="weightCarat"
-                  name="weightCarat"
-                  type="text"
-                  required={productType === "loose_stone"}
-                  inputMode="decimal"
-                  defaultValue={product?.weightCarat ?? ""}
-                  placeholder={productType === "jewellery" ? "e.g. 30.09 (stones only)" : "e.g. 2.5"}
-                  className={inputClass}
-                />
               </div>
-              {productType === "loose_stone" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Dimensions</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="dimensionsPart1"
-                        type="text"
-                        inputMode="decimal"
-                        maxLength={50}
-                        value={dimensionsPart1}
-                        onChange={(e) => setDimensionsPart1(e.target.value)}
-                        placeholder="e.g. 8.2"
-                        className={inputClass}
-                      />
-                      <span className="shrink-0 text-muted-foreground" aria-hidden>
-                        ×
-                      </span>
-                      <input
-                        id="dimensionsPart2"
-                        type="text"
-                        inputMode="decimal"
-                        maxLength={50}
-                        value={dimensionsPart2}
-                        onChange={(e) => setDimensionsPart2(e.target.value)}
-                        placeholder="e.g. 6.1"
-                        className={inputClass}
-                      />
-                      <span className="shrink-0 text-muted-foreground" aria-hidden>
-                        ×
-                      </span>
-                      <input
-                        id="dimensionsPart3"
-                        type="text"
-                        inputMode="decimal"
-                        maxLength={50}
-                        value={dimensionsPart3}
-                        onChange={(e) => setDimensionsPart3(e.target.value)}
-                        placeholder="e.g. 4.0"
-                        className={inputClass}
-                      />
-                      <span className="shrink-0 text-muted-foreground" aria-hidden>mm</span>
-                    </div>
-                    <input
-                      type="hidden"
-                      name="dimensions"
-                      value={[dimensionsPart1, dimensionsPart2, dimensionsPart3].filter(Boolean).join(" × ") || ""}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="shape" className="text-sm font-medium">
-                      Shape
-                    </label>
-                    <select
-                      id="shape"
-                      name="shape"
-                      defaultValue={product?.shape ?? ""}
-                      className={inputClass}
-                    >
-                      <option value="">Select shape</option>
-                      {SHAPES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-              {productType === "loose_stone" && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="color" className="text-sm font-medium">
-                      Color *
-                    </label>
-                    <input
-                      id="color"
-                      name="color"
-                      type="text"
-                      required
-                      maxLength={100}
-                      defaultValue={product?.color ?? ""}
-                      placeholder="e.g. Pigeon Blood Red"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="origin" className="text-sm font-medium">
-                      Origin *
-                    </label>
-                    <select
-                      id="origin"
-                      name="origin"
-                      required
-                      defaultValue={product?.origin ?? ""}
-                      className={inputClass}
-                    >
-                      <option value="">Select origin</option>
-                      {(origins ?? []).map((o) => (
-                        <option key={o.id} value={o.name}>
-                          {o.name}
-                          {o.country ? ` (${o.country})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="Certification"
-            description="Lab reports and authenticity documentation"
-            icon={Award}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="laboratoryId" className="text-sm font-medium">
-                  Laboratory
-                </label>
-                <select
-                  id="laboratoryId"
-                  name="laboratoryId"
-                  key={productType}
-                  defaultValue={product?.laboratoryId ?? ""}
-                  className={inputClass}
-                >
-                  <option value="">
-                    Select laboratory name
-                  </option>
-                  {(laboratories ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">Certificate</span>
-                  <label
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-2 text-sm font-medium text-[var(--form-foreground)]",
-                      uploadingCertificate
-                        ? "cursor-not-allowed opacity-60 pointer-events-none"
-                        : "cursor-pointer hover:bg-[var(--form-muted)]"
-                    )}
-                  >
-                    <FileText className="h-4 w-4" />
-                    {uploadingCertificate ? "Uploading…" : "Upload certificate"}
-                    <input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-                      className="sr-only"
-                      disabled={uploadingCertificate}
-                      onChange={(e) => {
-                        handleUploadCertificate(e.target.files)
-                        e.target.value = ""
-                      }}
-                    />
-                  </label>
-                </div>
-                <input type="hidden" name="certReportUrl" value={certReportUrl} />
-                <p className="text-xs text-[var(--form-muted-foreground)]">
-                  PDF or image (JPEG, PNG, WebP, GIF). Max 10 MB.
-                </p>
-                {certReportUrl ? (
-                  <CertificateViewer
-                    url={certReportUrl}
-                    onRemove={() => setCertReportUrl("")}
-                  />
-                ) : null}
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="additionalMemos" className="text-sm font-medium">
-                  Additional Memos
-                </label>
-                <textarea
-                  id="additionalMemos"
-                  name="additionalMemos"
-                  rows={4}
-                  maxLength={5000}
-                  defaultValue={product?.additionalMemos ?? ""}
-                  placeholder="Internal notes, certificate clarifications, or reminders (optional)…"
-                  className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
-                />
-              </div>
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="Images"
-            description={`Product photos. Upload files (max ${MAX_PRODUCT_IMAGES}).`}
-            icon={ImageIcon}
-          >
-            <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">
-                  Upload images <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_IMAGES})</span>
-                </span>
+              <div className="pd-sec-tools">
                 <label
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
+                  className={`pd-btn${
                     uploadingImages || imageUrlsList.length >= MAX_PRODUCT_IMAGES
-                      ? "cursor-not-allowed opacity-60 pointer-events-none"
-                      : "cursor-pointer hover:bg-[var(--form-muted)]"
-                  )}
+                      ? " disabled"
+                      : ""
+                  }`}
+                  style={
+                    uploadingImages || imageUrlsList.length >= MAX_PRODUCT_IMAGES
+                      ? { opacity: 0.5, pointerEvents: "none" }
+                      : {}
+                  }
                 >
-                  <Upload className="h-4 w-4" />
-                  Upload images {imageUrlsList.length > 0 && `(${imageUrlsList.length}/${MAX_PRODUCT_IMAGES})`}
+                  <Upload size={13} /> Upload image
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/gif"
@@ -1466,182 +808,930 @@ export function ProductForm({
                     }}
                   />
                 </label>
-                {uploadingImages && (
-                  <span className="text-sm text-[var(--form-muted-foreground)]">Uploading…</span>
-                )}
               </div>
-              {uploadingImages && (
-                <div className="space-y-1">
-                  <div className="h-2 w-full rounded-full bg-[var(--form-muted)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[var(--form-primary)] transition-[width] duration-200"
-                      style={{ width: `${uploadProgress}%` }}
+            </div>
+            <div className="pd-sec-body" style={{ gap: 10 }}>
+              <div
+                className="pd-media-strip"
+                style={{ "--gem-hue": gemHue } as React.CSSProperties}
+              >
+                {imageUrlsList.map((url, idx) => (
+                  <div
+                    key={`${url}-${idx}`}
+                    className={`pd-media-thumb${idx === 0 ? " is-primary" : ""}`}
+                  >
+                    <span className={`pd-media-badge${idx > 0 ? " muted" : ""}`}>
+                      {idx === 0 ? "1 · Cover" : idx + 1}
+                    </span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={`Product ${idx + 1}`}
+                      onClick={() => setViewerIdx(idx)}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        zIndex: 1,
+                        cursor: "zoom-in",
+                      }}
                     />
-                  </div>
-                  <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
-                </div>
-              )}
-              {imageUrlsList.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {imageUrlsList.map((url, idx) => (
-                    <div
-                      key={`${url}-${idx}`}
-                      className="relative group rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)] overflow-hidden aspect-square"
-                    >
-                      <Image
-                        src={url}
-                        alt={`Product ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        unoptimized={url.startsWith("blob:") || url.startsWith("data:")}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='12'%3EInvalid%3C/text%3E%3C/svg%3E"
-                        }}
-                      />
+                    <div className="pd-media-actions">
                       <button
                         type="button"
+                        title="View"
+                        onClick={() => setViewerIdx(idx)}
+                      >
+                        <Eye size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Remove"
                         onClick={() =>
                           setImageUrlsList((prev) => prev.filter((_, i) => i !== idx))
                         }
-                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                        aria-label="Remove image"
                       >
-                        <X className="h-4 w-4" />
+                        <X size={11} />
                       </button>
                     </div>
-                  ))}
+                  </div>
+                ))}
+                {videoUrlsList.map((url, idx) => (
+                  <div key={`video-${url}-${idx}`} className="pd-media-thumb pd-media-thumb-video">
+                    <span className="pd-media-badge muted">{idx + 1} · MP4</span>
+                    <div className="pd-media-video-play" onClick={() => setVideoViewerIdx(idx)}>
+                      <Play size={18} />
+                    </div>
+                    <div className="pd-media-actions">
+                      <button type="button" title="Play" onClick={() => setVideoViewerIdx(idx)}>
+                        <Play size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Remove"
+                        onClick={() => setVideoUrlsList((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {imageUrlsList.length < MAX_PRODUCT_IMAGES && (
+                  <label className="pd-media-add">
+                    <Upload size={18} />
+                    <span>Add image</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      multiple
+                      className="sr-only"
+                      disabled={uploadingImages || imageUrlsList.length >= MAX_PRODUCT_IMAGES}
+                      onChange={(e) => {
+                        handleUploadMedia("image", e.target.files)
+                        e.target.value = ""
+                      }}
+                    />
+                  </label>
+                )}
+                {videoUrlsList.length < MAX_PRODUCT_VIDEOS && (
+                  <label className="pd-media-add video">
+                    <Video size={18} />
+                    <span>Add video</span>
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime"
+                      multiple
+                      className="sr-only"
+                      disabled={uploadingVideos || videoUrlsList.length >= MAX_PRODUCT_VIDEOS}
+                      onChange={(e) => {
+                        handleUploadMedia("video", e.target.files)
+                        e.target.value = ""
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Upload progress */}
+              {(uploadingImages || uploadingVideos) && (
+                <div className="pd-upload-card">
+                  <div className="pd-upload-card-head">
+                    <div className="pd-upload-card-ico">
+                      <Upload size={14} />
+                    </div>
+                    <div className="pd-upload-card-text">
+                      <span className="pd-upload-card-label">
+                        Uploading {uploadFileCount} {uploadMediaType}{uploadFileCount !== 1 ? "s" : ""}
+                      </span>
+                      <span className="pd-upload-card-sub">
+                        Please wait, do not close this page
+                      </span>
+                    </div>
+                    <span className="pd-upload-card-pct">{uploadProgress}%</span>
+                  </div>
+                  <div className="pd-upload-card-track">
+                    <div className="pd-upload-card-fill" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                </div>
+              )}
+
+              <div className="pd-media-foot">
+                <span>
+                  {imageUrlsList.length}/{MAX_PRODUCT_IMAGES} images ·{" "}
+                  {videoUrlsList.length}/{MAX_PRODUCT_VIDEOS} videos
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Visibility & promotion ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="purple">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Visibility</div>
+                <div className="pd-sec-sub">
+                  Featured placement, collector piece, and privilege assist flags
+                </div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-toggles">
+                {/* Featured */}
+                <label
+                  htmlFor="ft-featured"
+                  className={`pd-toggle${isFeatured ? " on" : ""}`}
+                >
+                  <input
+                    id="ft-featured"
+                    type="checkbox"
+                    name="isFeatured"
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="pd-toggle-chk">
+                    <Check size={10} />
+                  </span>
+                  <div className="pd-toggle-text">
+                    <span className="pd-toggle-label">Featured listing</span>
+                    <span className="pd-toggle-sub">Boost on homepage &amp; search</span>
+                  </div>
+                </label>
+
+                {/* Collector */}
+                <label
+                  htmlFor="ft-collector"
+                  className={`pd-toggle${isCollectorPiece ? " on" : ""}`}
+                >
+                  <input
+                    id="ft-collector"
+                    type="checkbox"
+                    name="isCollectorPiece"
+                    checked={isCollectorPiece}
+                    onChange={(e) => setIsCollectorPiece(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="pd-toggle-chk">
+                    <Check size={10} />
+                  </span>
+                  <div className="pd-toggle-text">
+                    <span className="pd-toggle-label">Collector piece</span>
+                    <span className="pd-toggle-sub">Curated for serious buyers</span>
+                  </div>
+                </label>
+
+                {/* Privilege */}
+                <label
+                  htmlFor="ft-privilege"
+                  className={`pd-toggle${isPrivilegeAssist ? " on" : ""}`}
+                >
+                  <input
+                    id="ft-privilege"
+                    type="checkbox"
+                    name="isPrivilegeAssist"
+                    checked={isPrivilegeAssist}
+                    onChange={(e) => setIsPrivilegeAssist(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="pd-toggle-chk">
+                    <Check size={10} />
+                  </span>
+                  <div className="pd-toggle-text">
+                    <span className="pd-toggle-label">Privilege Assist</span>
+                    <span className="pd-toggle-sub">Premium concierge support</span>
+                  </div>
+                </label>
+
+                {/* Promotion */}
+                <label
+                  htmlFor="ft-promotion"
+                  className={`pd-toggle${isPromotion ? " on" : ""}`}
+                >
+                  <input
+                    id="ft-promotion"
+                    type="checkbox"
+                    name="isPromotion"
+                    checked={isPromotion}
+                    onChange={(e) => setIsPromotion(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="pd-toggle-chk">
+                    <Check size={10} />
+                  </span>
+                  <div className="pd-toggle-text">
+                    <span className="pd-toggle-label">Promotion</span>
+                    <span className="pd-toggle-sub">Flag as a promotional item</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Feature duration */}
+              {isFeatured && (
+                <div className="pd-field" style={{ maxWidth: 380 }}>
+                  <label className="pd-label">
+                    Feature duration{" "}
+                    <span className="pd-label-hint">points cost shown</span>
+                  </label>
+                  {pricingTiers.length > 0 ? (
+                    <>
+                      <select
+                        className="pd-select"
+                        value={selectedFeatureTier}
+                        onChange={(e) => setSelectedFeatureTier(e.target.value)}
+                      >
+                        <option value="">Select duration and points</option>
+                        {pricingTiers.map((tier, i) => (
+                          <option
+                            key={`${tier.durationDays}-${tier.points}-${i}`}
+                            value={`${tier.durationDays}:${tier.points}`}
+                          >
+                            {tier.durationDays} day{tier.durationDays > 1 ? "s" : ""} —{" "}
+                            {tier.points} points
+                            {tier.badge ? ` (${tier.badge})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="hidden"
+                        name="featureDurationDays"
+                        value={
+                          selectedFeatureTier
+                            ? Number(selectedFeatureTier.split(":")[0])
+                            : 0
+                        }
+                      />
+                      <input
+                        type="hidden"
+                        name="featured"
+                        value={
+                          selectedFeatureTier
+                            ? Number(selectedFeatureTier.split(":")[1])
+                            : featuredPointsDefault
+                        }
+                      />
+                    </>
+                  ) : (
+                    <input
+                      className="pd-input mono"
+                      type="number"
+                      min={0}
+                      step={1}
+                      name="featured"
+                      defaultValue={featuredPointsDefault}
+                      placeholder="e.g. 100"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Promotion compare price */}
+              {isPromotion && (
+                <div className="pd-field" style={{ maxWidth: 380 }}>
+                  <label className="pd-label">Original price before discount</label>
+                  <input
+                    className="pd-input mono"
+                    name="promotionComparePrice"
+                    type="text"
+                    inputMode="decimal"
+                    defaultValue={product?.promotionComparePrice ?? ""}
+                    placeholder="e.g. original price before discount"
+                  />
                 </div>
               )}
             </div>
-          </FormSection>
+          </section>
 
-          <FormSection
-            title="Videos"
-            description={`Product videos. Upload files (max ${MAX_PRODUCT_VIDEOS}).`}
-            icon={Video}
-          >
-            <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">
-                  Upload videos <span className="text-[var(--form-muted-foreground)] font-normal">(max {MAX_PRODUCT_VIDEOS})</span>
-                </span>
-                <label
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3 py-1.5 text-sm font-medium text-[var(--form-foreground)]",
-                    uploadingVideos || videoUrlsList.length >= MAX_PRODUCT_VIDEOS
-                      ? "cursor-not-allowed opacity-60 pointer-events-none"
-                      : "cursor-pointer hover:bg-[var(--form-muted)]"
+          {/* ── Basic info ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="blue">
+                <Package size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Basic info</div>
+                <div className="pd-sec-sub">Core product identification and description</div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-field">
+                <label htmlFor="title" className="pd-label">
+                  Title <span className="req">*</span>
+                </label>
+                <input
+                  id="title"
+                  name="title"
+                  type="text"
+                  required
+                  maxLength={200}
+                  defaultValue={product?.title ?? ""}
+                  placeholder="Product title"
+                  className="pd-input"
+                />
+              </div>
+              <div className="pd-row" style={{ "--cols": 2 } as React.CSSProperties}>
+                <div className="pd-field">
+                  <label htmlFor="identification" className="pd-label">
+                    Identification <span className="req">*</span>
+                  </label>
+                  <select
+                    id="identification"
+                    name="identification"
+                    required
+                    defaultValue={
+                      product?.identification &&
+                      PRODUCT_IDENTIFICATION_OPTIONS.includes(
+                        product.identification as (typeof PRODUCT_IDENTIFICATION_OPTIONS)[number]
+                      )
+                        ? product.identification
+                        : "Natural"
+                    }
+                    className="pd-select"
+                  >
+                    <option value="">Select…</option>
+                    {PRODUCT_IDENTIFICATION_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="pd-field">
+                  <label htmlFor="moderationStatus" className="pd-label">
+                    Moderation status
+                  </label>
+                  <select
+                    id="moderationStatus"
+                    name="moderationStatus"
+                    value={moderationStatus}
+                    onChange={(e) =>
+                      setModerationStatus(e.target.value as "pending" | "approved" | "rejected")
+                    }
+                    className="pd-select"
+                  >
+                    {MODERATION_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pd-hint">Separate from listing status in sidebar</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Pricing ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="emer">
+                <BadgeDollarSign size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Pricing</div>
+                <div className="pd-sec-sub">Price, currency, and negotiation options</div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-currency-row">
+                <div className="pd-field">
+                  <label htmlFor="price" className="pd-label">
+                    Price <span className="req">*</span>
+                  </label>
+                  <input
+                    id="price"
+                    name="price"
+                    type="text"
+                    required
+                    inputMode="decimal"
+                    defaultValue={product?.price ?? ""}
+                    placeholder="0.00"
+                    className="pd-input mono"
+                  />
+                </div>
+                <div className="pd-field">
+                  <label htmlFor="currency" className="pd-label">Currency</label>
+                  <select
+                    id="currency"
+                    name="currency"
+                    defaultValue={product?.currency ?? "USD"}
+                    className="pd-select"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="MMK">MMK</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                  <label
+                    htmlFor="isNegotiable"
+                    className={`pd-negotiable${isNegotiable ? " on" : ""}`}
+                  >
+                    <input
+                      id="isNegotiable"
+                      type="checkbox"
+                      name="isNegotiable"
+                      checked={isNegotiable}
+                      onChange={(e) => setIsNegotiable(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <span className="pd-toggle-chk">
+                      <Check size={10} />
+                    </span>
+                    Negotiable
+                  </label>
+                </div>
+              </div>
+
+
+            </div>
+          </section>
+
+          {/* ── Product type & category ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="blue">
+                <Layers size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Product type &amp; category</div>
+                <div className="pd-sec-sub">
+                  {productType === "jewellery"
+                    ? "Category, metal, then add each gemstone below with full specs"
+                    : "Product type (loose stone or jewellery) and category"}
+                </div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-row" style={{ "--cols": 3 } as React.CSSProperties}>
+                <div className="pd-field">
+                  <label htmlFor="productType" className="pd-label">
+                    Product type <span className="req">*</span>
+                  </label>
+                  <select
+                    id="productType"
+                    name="productType"
+                    value={productType}
+                    onChange={(e) =>
+                      setProductType(e.target.value as "loose_stone" | "jewellery")
+                    }
+                    className="pd-select"
+                    required
+                  >
+                    <option value="loose_stone">Loose stone</option>
+                    <option value="jewellery">Jewellery</option>
+                  </select>
+                </div>
+                <div className="pd-field">
+                  <label htmlFor="categoryId" className="pd-label">
+                    Category <span className="req">*</span>
+                  </label>
+                  <select
+                    id="categoryId"
+                    name="categoryId"
+                    key={productType}
+                    defaultValue={product?.categoryId ?? ""}
+                    className="pd-select"
+                    required
+                  >
+                    <option value="">
+                      {productType === "loose_stone"
+                        ? "Select stone category"
+                        : "Select jewellery category"}
+                    </option>
+                    {categoryOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {productType === "loose_stone" ? (
+                  <div className="pd-field">
+                    <label htmlFor="stoneCut" className="pd-label">Cut</label>
+                    <select
+                      id="stoneCut"
+                      name="stoneCut"
+                      defaultValue={product?.stoneCut ?? ""}
+                      className="pd-select"
+                    >
+                      <option value="">Select cut</option>
+                      <option value="Faceted">Faceted</option>
+                      <option value="Cabochon">Cabochon</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="pd-field">
+                    <label htmlFor="metal" className="pd-label">Metal</label>
+                    <select
+                      id="metal"
+                      name="metal"
+                      defaultValue={product?.metal ?? ""}
+                      className="pd-select"
+                    >
+                      <option value="">Select metal</option>
+                      <option value="Gold">Gold</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Gemstones (jewellery only) */}
+              {productType === "jewellery" && (
+                <div className="pd-gems">
+                  <div className="pd-gems-head">
+                    <div className="pd-gems-headtext">
+                      <div className="pd-gems-title">
+                        Gemstones in this piece
+                        {jewelleryGemstones.length > 0 && (
+                          <span className="pd-gems-count">{jewelleryGemstones.length}</span>
+                        )}
+                      </div>
+                      <div className="pd-gems-sub">
+                        {jewelleryGemstones.length === 0
+                          ? "Add every stone type — opens a dialog with full specs"
+                          : <>
+                              <strong>{jewelleryGemstones.length}</strong> stone
+                              {jewelleryGemstones.length !== 1 ? "s" : ""}
+                            </>}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="pd-btn pd-btn-primary"
+                      onClick={openAddGemstoneDialog}
+                      style={{ flexShrink: 0 }}
+                    >
+                      + Add gemstone
+                    </button>
+                  </div>
+
+                  {jewelleryGemstones.length === 0 ? (
+                    <div className="pd-gems-empty">
+                      <div className="pd-gems-empty-ico">
+                        <Gem size={18} />
+                      </div>
+                      <div className="pd-gems-empty-title">No gemstones yet</div>
+                      <div className="pd-gems-empty-sub">
+                        Click "Add gemstone" to add specifications in a pop-up dialog.
+                      </div>
+                      <button type="button" className="pd-btn" onClick={openAddGemstoneDialog}>
+                        + Add first gemstone
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pd-gems-list">
+                      {jewelleryGemstones.map((row, i) => {
+                        const stoneName = row.categoryId
+                          ? stoneOptions.find((c) => c.id === row.categoryId)?.name ?? "—"
+                          : "—"
+                        return (
+                          <div key={i} className="pd-gem">
+                            <div className="pd-gem-main">
+                              <div className="pd-gem-name">{stoneName}</div>
+                              <div className="pd-gem-specs">
+                                {[
+                                  row.weightCarat ? `${row.weightCarat} ct` : null,
+                                  row.color || null,
+                                  row.shape || null,
+                                  row.origin || null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </div>
+                            </div>
+                            <div className="pd-gem-actions">
+                              <button
+                                type="button"
+                                title="View"
+                                onClick={() => openViewGemstoneDialog(i)}
+                                aria-label={`View ${stoneName}`}
+                              >
+                                <Eye size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Edit"
+                                onClick={() => openEditGemstoneDialog(i)}
+                                aria-label={`Edit ${stoneName}`}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Remove"
+                                className="pd-danger"
+                                onClick={() => handleRemoveGemstone(i)}
+                                aria-label={`Delete ${stoneName}`}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Specifications ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="amber">
+                <Gem size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Specifications</div>
+                <div className="pd-sec-sub">
+                  {productType === "jewellery"
+                    ? "Total weight of the piece — gemstone specs are set per stone above"
+                    : "Physical attributes and gemology details"}
+                </div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-row" style={{ "--cols": 2 } as React.CSSProperties}>
+                {productType === "jewellery" && (
+                  <div className="pd-field">
+                    <label htmlFor="totalWeightGrams" className="pd-label">
+                      Total weight (g)
+                    </label>
+                    <div className="pd-input-suffix">
+                      <input
+                        id="totalWeightGrams"
+                        name="totalWeightGrams"
+                        type="text"
+                        inputMode="decimal"
+                        defaultValue={product?.totalWeightGrams ?? ""}
+                        placeholder="e.g. 28.48"
+                        className="pd-input mono"
+                      />
+                      <span className="pd-sfx">g</span>
+                    </div>
+                  </div>
+                )}
+                <div className="pd-field">
+                  <label htmlFor="weightCarat" className="pd-label">
+                    {productType === "jewellery" ? "Total gem weight (ct)" : "Weight (carat)"}
+                    {productType === "loose_stone" && <span className="req"> *</span>}
+                  </label>
+                  <div className="pd-input-suffix">
+                    <input
+                      id="weightCarat"
+                      name="weightCarat"
+                      type="text"
+                      required={productType === "loose_stone"}
+                      inputMode="decimal"
+                      defaultValue={product?.weightCarat ?? ""}
+                      placeholder={productType === "jewellery" ? "e.g. 30.09" : "e.g. 2.5"}
+                      className="pd-input mono"
+                    />
+                    <span className="pd-sfx">ct</span>
+                  </div>
+                </div>
+                {productType === "loose_stone" && (
+                  <div className="pd-field">
+                    <label className="pd-label">
+                      Dimensions <span className="pd-label-hint">W × H × D in mm</span>
+                    </label>
+                    <div className="pd-dim-group">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart1}
+                        onChange={(e) => setDimensionsPart1(e.target.value)}
+                        placeholder="8.2"
+                        className="pd-input mono"
+                      />
+                      <span className="pd-dim-x">×</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart2}
+                        onChange={(e) => setDimensionsPart2(e.target.value)}
+                        placeholder="6.1"
+                        className="pd-input mono"
+                      />
+                      <span className="pd-dim-x">×</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        maxLength={50}
+                        value={dimensionsPart3}
+                        onChange={(e) => setDimensionsPart3(e.target.value)}
+                        placeholder="4.0"
+                        className="pd-input mono"
+                      />
+                      <span style={{ fontSize: 11, color: "var(--lv-text-3)" }}>mm</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {productType === "loose_stone" && (
+                <div className="pd-row" style={{ "--cols": 3 } as React.CSSProperties}>
+                  <div className="pd-field">
+                    <label htmlFor="shape" className="pd-label">Shape</label>
+                    <select
+                      id="shape"
+                      name="shape"
+                      defaultValue={product?.shape ?? ""}
+                      className="pd-select"
+                    >
+                      <option value="">Select shape</option>
+                      {SHAPES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="pd-field">
+                    <label htmlFor="color" className="pd-label">
+                      Color <span className="req">*</span>
+                    </label>
+                    <input
+                      id="color"
+                      name="color"
+                      type="text"
+                      required
+                      maxLength={100}
+                      defaultValue={product?.color ?? ""}
+                      placeholder="e.g. Pigeon Blood Red"
+                      className="pd-input"
+                    />
+                  </div>
+                  <div className="pd-field">
+                    <label htmlFor="origin" className="pd-label">
+                      Origin <span className="req">*</span>
+                    </label>
+                    <select
+                      id="origin"
+                      name="origin"
+                      required
+                      defaultValue={product?.origin ?? ""}
+                      className="pd-select"
+                    >
+                      <option value="">Select origin</option>
+                      {(origins ?? []).map((o) => (
+                        <option key={o.id} value={o.name}>
+                          {o.name}
+                          {o.country ? ` (${o.country})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Certification ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="rose">
+                <Award size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Certification</div>
+                <div className="pd-sec-sub">Lab reports and authenticity documentation</div>
+              </div>
+              <div className="pd-sec-tools">
+                <label
+                  className={`pd-btn${uploadingCertificate ? " disabled" : ""}`}
+                  style={uploadingCertificate ? { opacity: 0.6, pointerEvents: "none" } : {}}
                 >
-                  <Video className="h-4 w-4" />
-                  Upload videos {videoUrlsList.length > 0 && `(${videoUrlsList.length}/${MAX_PRODUCT_VIDEOS})`}
+                  <FileText size={13} />
+                  {uploadingCertificate ? "Uploading…" : "Upload certificate"}
                   <input
                     type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
-                    multiple
+                    accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
                     className="sr-only"
-                    disabled={uploadingVideos || videoUrlsList.length >= MAX_PRODUCT_VIDEOS}
+                    disabled={uploadingCertificate}
                     onChange={(e) => {
-                      handleUploadMedia("video", e.target.files)
+                      handleUploadCertificate(e.target.files)
                       e.target.value = ""
                     }}
                   />
                 </label>
-                {uploadingVideos && (
-                  <span className="text-sm text-[var(--form-muted-foreground)]">Uploading…</span>
-                )}
               </div>
-              {uploadingVideos && (
-                <div className="space-y-1">
-                  <div className="h-2 w-full rounded-full bg-[var(--form-muted)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[var(--form-primary)] transition-[width] duration-200"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-[var(--form-muted-foreground)]">{uploadProgress}%</p>
-                </div>
-              )}
-              {videoUrlsList.length > 0 && (
-                <div className="space-y-4">
-                  {videoUrlsList.map((url, idx) => (
-                    <div
-                      key={`${url}-${idx}`}
-                      className="relative group rounded-lg border border-[var(--form-input-border)] bg-[var(--form-muted)] overflow-hidden"
-                    >
-                      <video
-                        src={url}
-                        controls
-                        className="w-full max-h-[280px] bg-black"
-                        preload="metadata"
-                        playsInline
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVideoUrlsList((prev) => prev.filter((_, i) => i !== idx))
-                        }
-                        className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
-                        aria-label="Remove video"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          </FormSection>
+            <div className="pd-sec-body">
+              <div className="pd-row" style={{ "--cols": 2 } as React.CSSProperties}>
+                <div className="pd-field">
+                  <label htmlFor="laboratoryId" className="pd-label">Laboratory</label>
+                  <select
+                    id="laboratoryId"
+                    name="laboratoryId"
+                    key={productType}
+                    defaultValue={product?.laboratoryId ?? ""}
+                    className="pd-select"
+                  >
+                    <option value="">Select laboratory</option>
+                    {(laboratories ?? []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="pd-field">
+                  <label className="pd-label">Certificate</label>
+                  {certReportUrl ? (
+                    <CertificateViewer
+                      url={certReportUrl}
+                      onRemove={() => setCertReportUrl("")}
+                    />
+                  ) : (
+                    <span className="pd-hint">No certificate uploaded yet.</span>
+                  )}
+                </div>
+              </div>
+              <div className="pd-field">
+                <label htmlFor="additionalMemos" className="pd-label">
+                  Additional memos{" "}
+                  <span className="pd-label-hint">Internal — not visible to buyers</span>
+                </label>
+                <textarea
+                  id="additionalMemos"
+                  name="additionalMemos"
+                  rows={4}
+                  maxLength={5000}
+                  defaultValue={product?.additionalMemos ?? ""}
+                  placeholder="Internal notes, certificate clarifications, or reminders…"
+                  className="pd-textarea"
+                />
+              </div>
+            </div>
+          </section>
 
-            {/* Notes / Extra Info tabs */}
-            <div className={formNestedCardClass}>
-              <div className="mb-4 flex items-center gap-3">
-                <div className={formSectionIconClass} aria-hidden>
-                  <StickyNote className="h-5 w-5" strokeWidth={2} />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
-                    Notes &amp; extra info
-                  </h2>
-                  <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
-                    Listing description and optional extra details
-                  </p>
-                </div>
+          {/* ── Notes & description ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="slate">
+                <StickyNote size={16} />
               </div>
-              <div className="flex gap-1 border-b border-[var(--form-border)]">
-                <button
-                  type="button"
-                  onClick={() => setNotesTab("notes")}
-                  className={cn(
-                    "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                    notesTab === "notes"
-                      ? "border-[var(--form-primary)] text-[var(--form-foreground)]"
-                      : "-mb-px border-transparent text-[var(--form-muted-foreground)] hover:text-[var(--form-foreground)]"
-                  )}
-                >
-                  Description
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNotesTab("extra")}
-                  className={cn(
-                    "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                    notesTab === "extra"
-                      ? "border-[var(--form-primary)] text-[var(--form-foreground)]"
-                      : "-mb-px border-transparent text-[var(--form-muted-foreground)] hover:text-[var(--form-foreground)]"
-                  )}
-                >
-                  Extra Info
-                </button>
+              <div>
+                <div className="pd-sec-title">Notes &amp; description</div>
+                <div className="pd-sec-sub">Listing copy and optional extra details shown to buyers</div>
               </div>
-              <div className="pt-4">
-                {/* Keep textarea in DOM on both tabs so Save from "Extra Info" still posts description */}
-                <div className={cn("space-y-2", notesTab !== "notes" && "hidden")}>
-                  <label htmlFor="productDescription" className="text-sm font-medium">
+              <div className="pd-sec-tools">
+                <div className="pd-tabs">
+                  <button
+                    type="button"
+                    className={`pd-tab${notesTab === "description" ? " on" : ""}`}
+                    onClick={() => setNotesTab("description")}
+                  >
                     Description
+                  </button>
+                  <button
+                    type="button"
+                    className={`pd-tab${notesTab === "extra" ? " on" : ""}`}
+                    onClick={() => setNotesTab("extra")}
+                  >
+                    Extra info
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="pd-sec-body">
+              {/* Always render description textarea (even when tab is "extra") so it submits */}
+              <div className={notesTab !== "description" ? "hidden" : undefined}>
+                <div className="pd-field">
+                  <label htmlFor="productDescription" className="pd-label">
+                    Description{" "}
+                    <span className="pd-label-hint">Shown on the listing · max 5,000 chars</span>
                   </label>
                   <textarea
                     id="productDescription"
@@ -1650,91 +1740,336 @@ export function ProductForm({
                     maxLength={5000}
                     defaultValue={product?.description ?? ""}
                     placeholder="Describe the product, condition, provenance, or anything buyers should know…"
-                    className="w-full resize-y rounded-lg border border-[var(--form-input-border)] bg-[var(--form-bg)] px-3.5 py-2.5 text-sm text-[var(--form-foreground)] placeholder:text-[var(--form-muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--form-focus-ring)] focus:ring-offset-0"
+                    className="pd-textarea"
+                    style={{ minHeight: 130 }}
                   />
-                  <p className="text-xs text-[var(--form-muted-foreground)]">
-                    Shown on the listing. Max 5,000 characters.
-                  </p>
                 </div>
-                {notesTab === "extra" && (
-                  <p className="text-sm text-[var(--form-muted-foreground)]">
-                    Additional structured fields can be added here later. Use the Description tab for
-                    listing text.
-                  </p>
+              </div>
+              {notesTab === "extra" && (
+                <p className="pd-hint">
+                  Additional structured fields can be added here. Use the Description tab for
+                  listing text.
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* ── Errors ── */}
+          {(error || uploadError) && (
+            <div className="pd-error">{error || uploadError}</div>
+          )}
+        </form>
+
+        {/* ══════ SIDEBAR ══════ */}
+        <div className="pd-side">
+          {/* Status card */}
+          <div className="pd-sidecard">
+            <div className="pd-sidecard-head">
+              <div className="pd-sidecard-icon">
+                <Info size={13} />
+              </div>
+              <div>
+                <div className="pd-sidecard-title">Status</div>
+                <div className="pd-sidecard-sub">Listing &amp; review state</div>
+              </div>
+            </div>
+            <div className="pd-sidecard-body">
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div className="pd-kv">
+                  <span className="pd-kv-label">Listing</span>
+                  <select
+                    className="pd-kv-select"
+                    value={status}
+                    onChange={(e) => {
+                      setStatus(e.target.value as typeof status)
+                      setDirty(true)
+                    }}
+                  >
+                    {STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="pd-kv">
+                  <span className="pd-kv-label">Moderation</span>
+                  <span className={`lv-status ${moderationStatus}`}>{moderationStatus}</span>
+                </div>
+                {product?.sku && (
+                  <div className="pd-kv">
+                    <span className="pd-kv-label">SKU</span>
+                    <span className="pd-kv-mono">{product.sku}</span>
+                  </div>
+                )}
+                {isEdit && product?.createdAt && (
+                  <div className="pd-kv">
+                    <span className="pd-kv-label">Created</span>
+                    <span style={{ fontSize: 11.5, color: "var(--lv-text-2)" }}>
+                      {formatDate(product.createdAt)}
+                    </span>
+                  </div>
+                )}
+                {isEdit && product?.updatedAt && (
+                  <div className="pd-kv">
+                    <span className="pd-kv-label">Updated</span>
+                    <span style={{ fontSize: 11.5, color: "var(--lv-text-2)" }}>
+                      {formatDate(product.updatedAt)}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
+          </div>
 
-            {(error || uploadError) && (
-              <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {error || uploadError}
-              </p>
-            )}
-          </form>
-        </div>
-
-        {/* Right pane: auto change log (status & price on save) */}
-        <aside className="hidden lg:flex lg:min-w-0 lg:flex-col rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-sidebar-bg)] pb-8 pt-3 shadow-[var(--form-shadow)] mt-3">
-          <div className="shrink-0 border-b border-[var(--form-border)] px-4 pb-4 pt-5 md:px-5 md:pt-6">
-            <div className="flex items-start gap-3">
-              <div className={formSectionIconClass} aria-hidden>
-                <History className="h-5 w-5" strokeWidth={2} />
+          {/* Change log */}
+          {isEdit && product?.changeLog && product.changeLog.length > 0 && (
+            <div className="pd-sidecard">
+              <div className="pd-sidecard-head">
+                <div
+                  className="pd-sidecard-icon"
+                  style={{ background: "#DBEAFE", color: "#1D4ED8" }}
+                >
+                  <History size={13} />
+                </div>
+                <div>
+                  <div className="pd-sidecard-title">Change log</div>
+                  <div className="pd-sidecard-sub">Status &amp; price history</div>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-semibold tracking-tight text-[var(--form-foreground)]">
-                  Change log
-                </h2>
-                <p className="mt-0.5 text-sm text-[var(--form-muted-foreground)]">
-                  Listing status and price changes are saved with the date when you click Save.
-                </p>
+              <div className="pd-sidecard-body">
+                <div className="pd-activity">
+                  {product.changeLog.map((entry) => {
+                    const at =
+                      typeof entry.createdAt === "string"
+                        ? new Date(entry.createdAt)
+                        : entry.createdAt
+                    return (
+                      <div key={entry.id} className="pd-activity-item">
+                        <span className="pd-activity-line" />
+                        <span className="pd-activity-dot" />
+                        <div>
+                          <div className="pd-activity-title">
+                            {entry.changeType === "status" ? "Status" : "Price"}:{" "}
+                            <span style={{ color: "var(--lv-text-3)" }}>{entry.oldValue}</span>
+                            {" → "}
+                            <strong>{entry.newValue}</strong>
+                          </div>
+                          <div className="pd-activity-when">{formatDate(at)}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="max-h-[min(60vh,32rem)] flex-1 overflow-y-auto px-4 pb-2 pt-5 md:px-5">
-            {isEdit && product?.changeLog && product.changeLog.length > 0 ? (
-              <ul className="space-y-3">
-                {product.changeLog.map((entry) => {
-                  const at =
-                    typeof entry.createdAt === "string"
-                      ? new Date(entry.createdAt)
-                      : entry.createdAt
-                  return (
-                    <li
-                      key={entry.id}
-                      className="rounded-2xl border border-[var(--form-section-border)] bg-[var(--form-section-bg)] p-3 shadow-[var(--form-section-shadow)]"
-                    >
-                      <time
-                        className="text-xs font-medium text-[var(--form-muted-foreground)]"
-                        dateTime={at.toISOString()}
-                      >
-                        {formatDate(at)}
-                      </time>
-                      <div className="mt-1.5 text-sm font-medium text-[var(--form-foreground)]">
-                        {entry.changeType === "status" ? "Listing status" : "Price"}
-                      </div>
-                      <div className="mt-0.5 break-words text-sm text-[var(--form-muted-foreground)]">
-                        <span>{entry.oldValue}</span>
-                        <span className="mx-1.5" aria-hidden>
-                          →
-                        </span>
-                        <span className="font-medium text-[var(--form-foreground)]">
-                          {entry.newValue}
-                        </span>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-[var(--form-muted-foreground)]">
-                {isEdit
-                  ? "No status or price changes recorded yet. Update status or price and save to add an entry."
-                  : "Change log appears after the product is created and you save status or price changes."}
-              </p>
-            )}
-          </div>
-        </aside>
+          )}
+
+          {/* Danger zone */}
+          {isEdit && (
+            <div className="pd-sidecard">
+              <div className="pd-sidecard-head">
+                <div
+                  className="pd-sidecard-icon"
+                  style={{ background: "#FEF2F2", color: "#B91C1C" }}
+                >
+                  <AlertTriangle size={13} />
+                </div>
+                <div>
+                  <div className="pd-sidecard-title">Danger zone</div>
+                  <div className="pd-sidecard-sub">Irreversible actions</div>
+                </div>
+              </div>
+              <div
+                className="pd-sidecard-body"
+                style={{ display: "flex", flexDirection: "column", gap: 8 }}
+              >
+                <button
+                  type="button"
+                  className="pd-danger-btn"
+                  onClick={() => {
+                    setStatus("archive")
+                    setDirty(true)
+                  }}
+                >
+                  <Archive size={14} /> Archive listing
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </Card>
+
+      {/* ── Gemstone dialog ── */}
+      {productType === "jewellery" && (
+        <Dialog open={gemstoneDialogOpen} onOpenChange={setGemstoneDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {gemstoneDialogMode === "add"
+                  ? "Add gemstone"
+                  : gemstoneDialogMode === "edit"
+                    ? "Edit gemstone"
+                    : "Gemstone details"}
+              </DialogTitle>
+              <DialogDescription>
+                {gemstoneDialogMode === "view"
+                  ? "View-only. Use Edit to change."
+                  : "Stone type, weight, and specifications."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[min(70vh,28rem)] overflow-y-auto pr-1 -mr-1">
+              <div className="grid gap-3 py-2 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-medium">Stone type</label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.categoryId}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, categoryId: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  >
+                    <option value="">Select</option>
+                    {stoneOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {(
+                  [
+                    { key: "weightCarat", label: "Weight (ct) *", placeholder: "e.g. 0.5", inputMode: "decimal" },
+                    { key: "pieceCount",  label: "Pieces",        placeholder: "e.g. 37",  inputMode: "numeric" },
+                    { key: "dimensions",  label: "Dimensions",    placeholder: "e.g. 8.2 x 6.1 mm" },
+                    { key: "color",       label: "Color *",       placeholder: "e.g. Pigeon Blood Red" },
+                    { key: "cut",         label: "Cut",           placeholder: "e.g. Mixed cut" },
+                    { key: "transparency",label: "Transparency",  placeholder: "e.g. Transparent" },
+                  ] as { key: keyof FormGemstoneEntry; label: string; placeholder: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }[]
+                ).map(({ key, label, placeholder, inputMode }) => (
+                  <div key={key} className="space-y-1.5">
+                    <label className="text-xs font-medium">{label}</label>
+                    <input
+                      type="text"
+                      inputMode={inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]}
+                      placeholder={placeholder}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                      value={gemstoneDialogForm[key]}
+                      onChange={(e) =>
+                        setGemstoneDialogForm((p) => ({ ...p, [key]: e.target.value }))
+                      }
+                      disabled={gemstoneDialogMode === "view"}
+                    />
+                  </div>
+                ))}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium">Shape</label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.shape}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, shape: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  >
+                    <option value="">Select</option>
+                    {SHAPES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-medium">Origin *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mogok, Myanmar"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.origin}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, origin: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-medium">Comment</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. No indication of thermal treatment"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.comment}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, comment: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-medium">Inclusions (magnification)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Rutiles, feathers, solids, zoning"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.inclusions}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, inclusions: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="shrink-0 gap-2 sm:gap-0">
+              {gemstoneDialogMode === "view" ? (
+                <Button type="button" variant="outline" onClick={() => setGemstoneDialogOpen(false)}>
+                  Close
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setGemstoneDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveGemstoneDialog}
+                    disabled={
+                      !gemstoneDialogForm.categoryId ||
+                      gemstoneDialogForm.weightCarat.trim() === "" ||
+                      gemstoneDialogForm.color.trim() === "" ||
+                      gemstoneDialogForm.origin.trim() === ""
+                    }
+                  >
+                    {gemstoneDialogMode === "add" ? "Add" : "Save"}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {viewerIdx !== null && imageUrlsList.length > 0 && (
+        <ImageViewer
+          images={imageUrlsList}
+          initialIndex={viewerIdx}
+          onClose={() => setViewerIdx(null)}
+        />
+      )}
+
+      {videoViewerIdx !== null && videoUrlsList.length > 0 && (
+        <VideoViewer
+          videos={videoUrlsList}
+          initialIndex={videoViewerIdx}
+          onClose={() => setVideoViewerIdx(null)}
+        />
+      )}
+    </div>
   )
 }

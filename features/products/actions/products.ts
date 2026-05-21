@@ -19,7 +19,7 @@ import {
 } from "@/features/products/db/products"
 import { db } from "@/drizzle/db"
 import { product, productAdminChangeLog } from "@/drizzle/schema/product-schema"
-import { eq } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
 
 export async function setProductModeration(formData: FormData) {
@@ -379,4 +379,36 @@ export async function deleteProductAction(formData: FormData) {
 
   revalidateProductsCache(parsed.data.productId)
   return { success: true }
+}
+
+export async function bulkSetProductModeration(
+  ids: string[],
+  moderationStatus: "pending" | "approved" | "rejected"
+) {
+  if (!ids.length) return { error: "No products selected" }
+
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session || !canAdminManageProducts(session.user.role)) {
+    return { error: "Unauthorized" }
+  }
+
+  await db.update(product).set({ moderationStatus }).where(inArray(product.id, ids))
+  revalidateProductsCache()
+  return { success: true, count: ids.length }
+}
+
+export async function bulkSetProductStatus(
+  ids: string[],
+  status: "pending" | "active" | "archive" | "sold" | "hidden"
+) {
+  if (!ids.length) return { error: "No products selected" }
+
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session || !canAdminManageProducts(session.user.role)) {
+    return { error: "Unauthorized" }
+  }
+
+  await db.update(product).set({ status }).where(inArray(product.id, ids))
+  revalidateProductsCache()
+  return { success: true, count: ids.length }
 }

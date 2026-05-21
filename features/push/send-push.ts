@@ -29,4 +29,7 @@ export async function sendPushToUserIds(
   return { sent: result.sent, failed: result.failed };
 }
 
-export { sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
+import { sendChatMessageNotification as _sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
+export async function sendChatMessageNotification(...args: Parameters<typeof _sendChatMessageNotification>) {
+  return _sendChatMessageNotification(...args);
+}

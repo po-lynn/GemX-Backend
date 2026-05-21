@@ -2,6 +2,7 @@ import { cacheTag, revalidateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
+  getAdminProductCountsFromDb,
   getProductById,
   getProductsBySellerId,
 } from "../products"
@@ -82,6 +83,12 @@ export async function getCachedProductsBySellerId(
   "use cache"
   cacheTag(getProductsGlobalTag())
   return getProductsBySellerId(sellerId, opts)
+}
+
+export async function getAdminProductCounts() {
+  "use cache"
+  cacheTag(getProductsGlobalTag())
+  return getAdminProductCountsFromDb()
 }
 
 /** Invalidate products cache (use in Route Handlers or Server Actions). */

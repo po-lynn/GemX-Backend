@@ -26,7 +26,7 @@ type Props<T extends { id: string }> = {
   collapsedGroups: Record<string, boolean>
   onCollapsedGroups: (cg: Record<string, boolean>) => void
   onOpenRow: (row: T) => void
-  rowActions: (row: T, disabled: boolean) => ReactNode
+  rowActions?: (row: T, disabled: boolean) => ReactNode
   emptyMessage?: string
   // pre-grouped rows (group headers interleaved with data rows)
   renderedRows: Array<T | GroupRow>
@@ -63,7 +63,7 @@ export function ListViewTable<T extends { id: string }>({
   // Column widths (resizable)
   const [widths, setWidths] = useState<Record<string, number>>(() => {
     const w: Record<string, number> = {}
-    columnDefs.forEach((c) => { w[c.id] = c.width ?? 140 })
+    columnDefs.forEach((c) => { if (!c.flex) w[c.id] = c.width ?? 140 })
     return w
   })
   const resizingRef = useRef<{ colId: string; startX: number; startW: number } | null>(null)
@@ -117,9 +117,9 @@ export function ListViewTable<T extends { id: string }>({
         <colgroup>
           <col style={{ width: 44 }} />
           {visibleCols.map((c) => (
-            <col key={c.id} style={{ width: widths[c.id] ?? c.width ?? 140 }} />
+            <col key={c.id} style={c.flex ? undefined : { width: widths[c.id] ?? c.width ?? 140 }} />
           ))}
-          <col style={{ width: 200 }} />
+          {rowActions && <col style={{ width: 200 }} />}
         </colgroup>
 
         <thead>
@@ -170,7 +170,7 @@ export function ListViewTable<T extends { id: string }>({
                 </th>
               )
             })}
-            <th className="lv-col-actions">Actions</th>
+            {rowActions && <th className="lv-col-actions">Actions</th>}
           </tr>
         </thead>
 
@@ -261,15 +261,17 @@ export function ListViewTable<T extends { id: string }>({
                     {c.render(row)}
                   </td>
                 ))}
-                <td
-                  className="lv-col-actions"
-                  style={{ overflow: "visible" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="lv-row-actions">
-                    {rowActions(row, false)}
-                  </div>
-                </td>
+                {rowActions && (
+                  <td
+                    className="lv-col-actions"
+                    style={{ overflow: "visible" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="lv-row-actions">
+                      {rowActions(row, false)}
+                    </div>
+                  </td>
+                )}
               </tr>
             )
           })}

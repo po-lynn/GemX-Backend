@@ -1,162 +1,90 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { Suspense } from "react"
-import { Plus } from "lucide-react"
-import { getAdminProducts } from "@/features/products/db/cache/products"
-import {
-  ProductFilters,
-  ProductsSearchInput,
-  ProductsTable,
-} from "@/features/products/components"
-import { Button } from "@/components/ui/button"
-import {
-  adminProductsSearchSchema,
-  ADMIN_PRODUCTS_PAGE_SIZE,
-} from "@/features/products/schemas/products"
-import { getAllCategories } from "@/features/categories/db/categories"
-import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
-import { getAllOrigins } from "@/features/origin/db/origin"
+import { ChevronRight, Plus, Download } from "lucide-react"
+import { getAdminProducts, getAdminProductCounts } from "@/features/products/db/cache/products"
+import { ProductsListView } from "@/features/products/components/ProductsListView"
+import type { ViewTab } from "@/components/admin/list-view"
+
+const PAGE_SIZE = 25
+const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as const
+type View = (typeof VIEWS)[number]
 
 type Props = {
-  searchParams: Promise<{
-    page?: string; search?: string; productType?: string; categoryId?: string
-    status?: string; stoneCut?: string; shape?: string; origin?: string
-    laboratoryId?: string; createdFrom?: string; createdTo?: string
-    sortBy?: string; sortOrder?: string; isFeatured?: string
-    isCollectorPiece?: string; isPrivilegeAssist?: string; isPromotion?: string
-  }>
+  searchParams: Promise<{ page?: string; view?: string }>
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
   await connection()
   const params = await searchParams
-  const parsed = adminProductsSearchSchema.parse({
-    page: params.page,
-    search: params.search,
-    productType: params.productType,
-    categoryId: params.categoryId,
-    status: params.status,
-    stoneCut: params.stoneCut,
-    shape: params.shape,
-    origin: params.origin,
-    laboratoryId: params.laboratoryId,
-    createdFrom: params.createdFrom?.trim() || undefined,
-    createdTo: params.createdTo?.trim() || undefined,
-    sortBy: params.sortBy,
-    sortOrder: params.sortOrder,
-    isFeatured: params.isFeatured,
-    isCollectorPiece: params.isCollectorPiece,
-    isPrivilegeAssist: params.isPrivilegeAssist,
-    isPromotion: params.isPromotion,
-  })
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
+  const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
+    ? (params.view as View)
+    : "all"
 
-  const categories = await getAllCategories()
-  const origins = await getAllOrigins()
-  const laboratories = await getAllLaboratories()
+  const counts = await getAdminProductCounts()
 
-  const limit = ADMIN_PRODUCTS_PAGE_SIZE
+  // Map view tab to DB filter params
+  const viewFilter = {
+    all:       {},
+    pending:   { moderationStatus: "pending" as const },
+    featured:  { isFeatured: true },
+    collector: { isCollectorPiece: true },
+    sold:      { status: "sold" as const },
+    drafts:    { status: "hidden" as const },
+  }[view]
+
   const { products, total } = await getAdminProducts({
-    page: parsed.page,
-    limit,
-    search: parsed.search || undefined,
-    productType: parsed.productType ?? undefined,
-    categoryId: parsed.categoryId ?? undefined,
-    status: parsed.status ?? undefined,
-    stoneCut: parsed.stoneCut ?? undefined,
-    shape: parsed.shape ?? undefined,
-    origin: (parsed.origin?.trim() && parsed.origin) || undefined,
-    laboratoryId: parsed.laboratoryId ?? undefined,
-    createdFrom: parsed.createdFrom ?? undefined,
-    createdTo: parsed.createdTo ?? undefined,
-    sortBy: parsed.sortBy ?? undefined,
-    sortOrder: parsed.sortOrder ?? undefined,
-    isFeatured: parsed.isFeatured ?? undefined,
-    isCollectorPiece: parsed.isCollectorPiece ?? undefined,
-    isPrivilegeAssist: parsed.isPrivilegeAssist ?? undefined,
-    isPromotion: parsed.isPromotion ?? undefined,
+    page,
+    limit: PAGE_SIZE,
+    ...viewFilter,
   })
 
-  const totalPages = Math.ceil(total / limit)
-  const filters = {
-    search: parsed.search ?? "",
-    productType: parsed.productType ?? "",
-    categoryId: parsed.categoryId ?? "",
-    status: parsed.status ?? "",
-    stoneCut: parsed.stoneCut ?? "",
-    shape: parsed.shape ?? "",
-    origin: parsed.origin ?? "",
-    laboratoryId: parsed.laboratoryId ?? "",
-    createdFrom: parsed.createdFrom ?? "",
-    createdTo: parsed.createdTo ?? "",
-    sortBy: parsed.sortBy ?? "createdAt",
-    sortOrder: parsed.sortOrder ?? "desc",
-    isFeatured: parsed.isFeatured === true ? "true" : "",
-    isCollectorPiece: parsed.isCollectorPiece === true ? "true" : "",
-    isPrivilegeAssist: parsed.isPrivilegeAssist === true ? "true" : "",
-    isPromotion: parsed.isPromotion === true ? "true" : "",
-  }
+  const views: ViewTab[] = [
+    { id: "all",       label: "All",       count: counts.all },
+    { id: "pending",   label: "Pending",   count: counts.pending },
+    { id: "featured",  label: "Featured",  count: counts.featured },
+    { id: "collector", label: "Collector", count: counts.collector },
+    { id: "sold",      label: "Sold",      count: counts.sold },
+    { id: "drafts",    label: "Drafts",    count: counts.drafts },
+  ]
 
   return (
-    <div className="gem-theme space-y-5 py-2">
-      {/* Page header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="py-2">
+      <div className="lv-pagehead">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Products</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Gemstones &amp; jewellery — manage listings, moderation, and status
+          <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin">Admin</Link>
+            <ChevronRight />
+            <Link href="/admin/products">Catalog</Link>
+            <ChevronRight />
+            <span className="lv-here">Products</span>
+          </nav>
+          <h1 className="lv-h1">
+            Products
+            <span className="lv-h1-count">{counts.all.toLocaleString()} total</span>
+          </h1>
+          <p className="lv-subhead">
+            Gemstones &amp; jewellery — manage listings, moderation, and visibility.
           </p>
         </div>
-        <Button asChild size="sm" className="shrink-0 shadow-sm">
-          <Link href="/admin/products/new">
-            <Plus className="mr-1.5 size-4" />
-            New Product
+        <div className="lv-pagehead-actions">
+          <button className="lv-export-btn">
+            <Download /> Export Excel
+          </button>
+          <Link href="/admin/products/new" className="lv-new-btn">
+            <Plus /> New Product
           </Link>
-        </Button>
-      </div>
-
-      {/* Table card: search bar + table together */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/60">
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
-          <Suspense fallback={null}>
-            <ProductsSearchInput defaultValue={filters.search} />
-          </Suspense>
-          <Suspense fallback={null}>
-            <ProductFilters
-              categories={categories}
-              origins={origins}
-              laboratories={laboratories}
-              productType={filters.productType}
-              categoryId={filters.categoryId}
-              status={filters.status}
-              stoneCut={filters.stoneCut}
-              shape={filters.shape}
-              origin={filters.origin}
-              laboratoryId={filters.laboratoryId}
-              createdFrom={filters.createdFrom}
-              createdTo={filters.createdTo}
-              isFeatured={filters.isFeatured === "true"}
-              isCollectorPiece={filters.isCollectorPiece === "true"}
-              isPrivilegeAssist={filters.isPrivilegeAssist === "true"}
-              isPromotion={filters.isPromotion === "true"}
-            />
-          </Suspense>
-          <span className="ml-auto text-xs text-slate-400">
-            {total.toLocaleString()} product{total !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {/* Table (no extra shell since we're already in the card) */}
-        <div className="overflow-x-auto">
-          <ProductsTable
-            products={products}
-            page={parsed.page}
-            totalPages={totalPages}
-            total={total}
-            filters={filters}
-          />
         </div>
       </div>
+
+      <ProductsListView
+        products={products}
+        views={views}
+        activeView={view}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+      />
     </div>
   )
 }

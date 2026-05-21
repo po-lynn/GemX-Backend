@@ -4,6 +4,7 @@ export type ColumnDef<T> = {
   id: string
   label: string
   width?: number
+  flex?: boolean
   sortable?: boolean
   align?: "left" | "right" | "center"
   toggleable?: boolean

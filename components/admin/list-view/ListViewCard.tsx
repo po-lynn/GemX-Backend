@@ -70,21 +70,17 @@ function drFmt(iso: string): string {
   })
 }
 
-// ─── DateRangeGroup ────────────────────────────────────────
-function DateRangeGroup({
-  def,
+// ─── DateRangePaneContent ──────────────────────────────────
+function DateRangePaneContent({
   value,
   onChange,
 }: {
-  def: FilterDef & { type: "daterange" }
   value: string[] | undefined
   onChange: (v: string[]) => void
 }) {
-  const [open, setOpen] = useState(true)
   const vals = value ?? []
   const from = drFrom(vals)
   const to   = drTo(vals)
-  const active = !!(from || to)
 
   function setFrom(d: string) {
     const next = vals.filter((v) => !v.startsWith("from:"))
@@ -96,105 +92,166 @@ function DateRangeGroup({
   }
 
   return (
-    <div>
-      <button className="lv-filter-section-btn" onClick={() => setOpen((o) => !o)}>
-        <span className={`lv-filter-section-caret ${open ? "lv-open" : "lv-closed"}`}>
-          <ChevronDown />
-        </span>
-        {def.label}
-        {active && <span className="lv-filter-count">1</span>}
-      </button>
-      {open && (
-        <div className="lv-daterange">
-          <div className="lv-daterange-row">
-            <label className="lv-daterange-label">From</label>
-            <input
-              type="date"
-              className="lv-daterange-input"
-              value={from}
-              max={to || undefined}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </div>
-          <div className="lv-daterange-row">
-            <label className="lv-daterange-label">To</label>
-            <input
-              type="date"
-              className="lv-daterange-input"
-              value={to}
-              min={from || undefined}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </div>
-          {active && (
-            <button className="lv-daterange-clear" onClick={() => onChange([])}>
-              Clear dates
-            </button>
-          )}
-        </div>
-      )}
+    <div className="lv-daterange" style={{ padding: "4px 14px 10px" }}>
+      <div className="lv-daterange-row">
+        <label className="lv-daterange-label">From</label>
+        <input
+          type="date"
+          className="lv-daterange-input"
+          value={from}
+          max={to || undefined}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+      </div>
+      <div className="lv-daterange-row">
+        <label className="lv-daterange-label">To</label>
+        <input
+          type="date"
+          className="lv-daterange-input"
+          value={to}
+          min={from || undefined}
+          onChange={(e) => setTo(e.target.value)}
+        />
+      </div>
     </div>
   )
 }
 
-// ─── FilterGroup ──────────────────────────────────────────
-function FilterGroup({
-  def,
-  value,
-  onChange,
+// ─── FilterPanel (two-pane) ────────────────────────────────
+function FilterPanel({
+  filterDefs,
+  filters,
+  setFilters,
+  onClose,
 }: {
-  def: FilterDef
-  value: string[] | undefined
-  onChange: (v: string[]) => void
+  filterDefs: FilterDef[]
+  filters: ActiveFilters
+  setFilters: (v: ActiveFilters) => void
+  onClose: () => void
 }) {
-  const [open, setOpen] = useState(true)
+  const [activeId, setActiveId] = useState(filterDefs[0]?.id ?? "")
+  const def = filterDefs.find((d) => d.id === activeId)
 
-  if (def.type === "daterange") {
-    return <DateRangeGroup def={def} value={value} onChange={onChange} />
+  const totalSelected = Object.values(filters).reduce((sum, v) => {
+    if (!v || v.length === 0) return sum
+    const isDR = v.some((x) => x.startsWith("from:") || x.startsWith("to:"))
+    return sum + (isDR ? 1 : v.length)
+  }, 0)
+
+  function toggleOption(defId: string, value: string) {
+    const cur = filters[defId] ?? []
+    setFilters({
+      ...filters,
+      [defId]: cur.includes(value) ? cur.filter((x) => x !== value) : [...cur, value],
+    })
   }
-  const selected = value ?? []
-  function toggle(v: string) {
-    onChange(
-      selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]
-    )
+
+  function selectAll() {
+    if (!def || def.type === "daterange") return
+    setFilters({ ...filters, [def.id]: def.options.map((o) => o.value) })
   }
+
+  function clearDef(defId: string) {
+    const next = { ...filters }
+    delete next[defId]
+    setFilters(next)
+  }
+
+  function defCount(defId: string) {
+    const vals = filters[defId]
+    if (!vals || vals.length === 0) return 0
+    return vals.some((x) => x.startsWith("from:") || x.startsWith("to:")) ? 1 : vals.length
+  }
+
   return (
-    <div>
-      <button
-        className="lv-filter-section-btn"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className={`lv-filter-section-caret ${open ? "lv-open" : "lv-closed"}`}>
-          <ChevronDown />
-        </span>
-        {def.label}
-        {selected.length > 0 && (
-          <span className="lv-filter-count">{selected.length}</span>
-        )}
-      </button>
-      {open &&
-        def.options.map((o) => {
-          const on = selected.includes(o.value)
+    <div className="lv-filter-panel">
+      <nav className="lv-filter-nav" aria-label="Filter categories">
+        <div className="lv-filter-nav-head">Filter by</div>
+        {filterDefs.map((d) => {
+          const count = defCount(d.id)
           return (
             <button
-              key={o.value}
-              className="lv-filter-option"
-              onClick={() => toggle(o.value)}
+              key={d.id}
+              className={`lv-filter-nav-item${activeId === d.id ? " active" : ""}`}
+              onClick={() => setActiveId(d.id)}
             >
-              <span className={`lv-filter-check${on ? " lv-filter-on" : ""}`}>
-                {on && (
-                  <span className="lv-filter-check-ico">
-                    <Check />
-                  </span>
-                )}
-              </span>
-              {o.label}
-              {typeof o.count === "number" && (
-                <span className="lv-filter-option-count">{o.count}</span>
-              )}
+              <span className="lv-filter-nav-label">{d.label}</span>
+              {count > 0 && <span className="lv-filter-nav-badge">{count}</span>}
+              <ChevronRight className="lv-filter-nav-arrow" />
             </button>
           )
         })}
+      </nav>
+
+      <div className="lv-filter-pane">
+        {def && def.type === "daterange" ? (
+          <>
+            <div className="lv-filter-pane-head">
+              <span className="lv-filter-pane-title">{def.label}</span>
+              {defCount(def.id) > 0 && (
+                <div className="lv-filter-pane-actions">
+                  <button onClick={() => clearDef(def.id)}>Clear</button>
+                </div>
+              )}
+            </div>
+            <DateRangePaneContent
+              value={filters[def.id]}
+              onChange={(v) => setFilters({ ...filters, [def.id]: v })}
+            />
+          </>
+        ) : def ? (
+          <>
+            <div className="lv-filter-pane-head">
+              <span className="lv-filter-pane-title">
+                {def.label}
+                {(filters[def.id]?.length ?? 0) > 0 && (
+                  <span className="lv-filter-pane-sel">
+                    {filters[def.id]!.length}/{def.options.length} selected
+                  </span>
+                )}
+              </span>
+              <div className="lv-filter-pane-actions">
+                <button onClick={selectAll}>Select all</button>
+                {(filters[def.id]?.length ?? 0) > 0 && (
+                  <>
+                    <span className="lv-filter-pane-sep" />
+                    <button onClick={() => clearDef(def.id)}>Clear</button>
+                  </>
+                )}
+              </div>
+            </div>
+            {def.options.map((o) => {
+              const on = (filters[def.id] ?? []).includes(o.value)
+              return (
+                <button
+                  key={o.value}
+                  className="lv-filter-option"
+                  onClick={() => toggleOption(def.id, o.value)}
+                >
+                  <span className={`lv-filter-check${on ? " lv-filter-on" : ""}`}>
+                    {on && <span className="lv-filter-check-ico"><Check /></span>}
+                  </span>
+                  {o.label}
+                  {typeof o.count === "number" && (
+                    <span className="lv-filter-option-count">{o.count}</span>
+                  )}
+                </button>
+              )
+            })}
+          </>
+        ) : null}
+      </div>
+
+      <div className="lv-filter-foot">
+        <span className="lv-filter-foot-status">
+          {totalSelected > 0
+            ? `${totalSelected} filter${totalSelected !== 1 ? "s" : ""} applied`
+            : "No filters applied"}
+        </span>
+        <button className="lv-filter-done-btn" onClick={onClose}>
+          Done
+        </button>
+      </div>
     </div>
   )
 }
@@ -281,38 +338,14 @@ function Toolbar<T>({
           )}
           <ChevronDown />
         </button>
-        {filterPop.open && (
-          <div className="lv-popover lv-pop-left lv-pop-wide" role="menu">
-            <div className="lv-popover-head">Filter by</div>
-            {filterDefs.map((def) => (
-              <FilterGroup
-                key={def.id}
-                def={def}
-                value={filters[def.id]}
-                onChange={(v) =>
-                  setFilters({ ...filters, [def.id]: v })
-                }
-              />
-            ))}
-            <div className="lv-popover-foot">
-              <button
-                className="lv-tbtn"
-                onClick={() => setFilters({})}
-              >
-                Clear filters
-              </button>
-              <button
-                className="lv-tbtn"
-                style={{
-                  background: "var(--lv-accent)",
-                  color: "#fff",
-                  borderColor: "transparent",
-                }}
-                onClick={() => filterPop.setOpen(false)}
-              >
-                Done
-              </button>
-            </div>
+        {filterPop.open && filterDefs.length > 0 && (
+          <div className="lv-popover lv-pop-left lv-pop-filter" role="menu">
+            <FilterPanel
+              filterDefs={filterDefs}
+              filters={filters}
+              setFilters={setFilters}
+              onClose={() => filterPop.setOpen(false)}
+            />
           </div>
         )}
       </div>
@@ -595,6 +628,8 @@ type ListViewCardProps<T extends { id: string }> = {
 
   // Row actions (rendered in the hover actions column)
   rowActions?: (row: T, disabled: boolean) => ReactNode
+  // Called when a row is clicked (use instead of renderDrawer for navigation)
+  onRowClick?: (row: T) => void
   // Slide-out drawer (rendered when a row is clicked)
   renderDrawer?: (row: T, onClose: () => void) => ReactNode
   // Bulk actions bar content (receives selected rows)
@@ -625,6 +660,7 @@ export function ListViewCard<T extends { id: string }>({
   filterRow,
   getGroupKey,
   rowActions,
+  onRowClick,
   renderDrawer,
   renderBulkActions,
   page = 1,
@@ -868,8 +904,8 @@ export function ListViewCard<T extends { id: string }>({
           groupOptions={groupOptions}
           collapsedGroups={collapsedGroups}
           onCollapsedGroups={setCollapsedGroups}
-          onOpenRow={setOpenRow}
-          rowActions={rowActions ?? (() => null)}
+          onOpenRow={onRowClick ?? setOpenRow}
+          rowActions={rowActions}
           emptyMessage={emptyMessage}
           renderedRows={renderedRows}
         />

@@ -1154,3 +1154,24 @@ export async function deleteProductInDb(id: string): Promise<boolean> {
 
   return !!deleted
 }
+
+export async function getAdminProductCountsFromDb(): Promise<{
+  all: number
+  pending: number
+  featured: number
+  collector: number
+  sold: number
+  drafts: number
+}> {
+  const [row] = await db
+    .select({
+      all:       sql<number>`count(*)::int`,
+      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending')::int`,
+      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true)::int`,
+      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true)::int`,
+      sold:      sql<number>`count(*) filter (where ${product.status} = 'sold')::int`,
+      drafts:    sql<number>`count(*) filter (where ${product.status} = 'hidden')::int`,
+    })
+    .from(product)
+  return row ?? { all: 0, pending: 0, featured: 0, collector: 0, sold: 0, drafts: 0 }
+}
