@@ -2,11 +2,13 @@ import { ReactNode, Suspense } from "react"
 import AdminNavbarClient from "@/components/admin/AdminNavbarClient"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminSidebarSheet } from "@/components/admin/AdminSidebarSheet"
+import { AdminChatNotificationProvider } from "@/features/chat/context/admin-chat-notification-context"
 
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
+    <AdminChatNotificationProvider>
     <div className="admin-premium min-h-screen bg-[var(--admin-main-bg)]">
       {/* Desktop sidebar */}
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block md:w-72">
@@ -60,5 +62,6 @@ export default async function AdminLayout({
         </main>
       </div>
     </div>
+    </AdminChatNotificationProvider>
   )
 }
