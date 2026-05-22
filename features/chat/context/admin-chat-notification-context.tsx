@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -75,7 +76,7 @@ export function AdminChatNotificationProvider({ children }: Props) {
     if (!userId || !isAdmin) return;
     try {
       const next = await fetchUnreadCounts();
-      setUnread(next);
+      startTransition(() => setUnread(next));
     } catch (e) {
       chatRealtimeLogger.warn("Unread refresh failed", {
         error: e instanceof Error ? e.message : String(e),
@@ -94,7 +95,10 @@ export function AdminChatNotificationProvider({ children }: Props) {
   useEffect(() => {
     if (!userId || !isAdmin) return;
     void ensureChatNotificationPermission();
-    void refreshUnread();
+    const timer = window.setTimeout(() => {
+      void refreshUnread();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [userId, isAdmin, refreshUnread]);
 
   useEffect(() => {
