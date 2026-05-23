@@ -67,8 +67,8 @@ async function mutateTopicSubscription(
       success: false,
       error: createPushError(
         "FCM_SEND_FAILED",
-        firstError?.message ?? `Failed to ${action} token to topic ${topic}`,
-        firstError?.code
+        firstError?.error.message ?? `Failed to ${action} token to topic ${topic}`,
+        firstError?.error.code
       ),
     };
   } catch (e) {
