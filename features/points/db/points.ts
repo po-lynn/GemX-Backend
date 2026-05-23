@@ -27,7 +27,6 @@ const POINT_EXPIRY_DAYS = "point_expiry_days";
 const FEATURED_PRODUCT_HOME_LIMIT_KEY = "featured_product_home_limit";
 const FEATURE_PRICING_TIERS_JSON_KEY = "feature_pricing_tiers_json";
 const PREMIUM_DEALERS_PACKAGES_JSON_KEY = "premium_dealers_packages_json";
-const LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY = "escrow_service_packages_json";
 const POINT_PURCHASE_PACKAGES_JSON_KEY = "point_purchase_packages_json";
 const PAYMENT_METHODS_JSON_KEY = "payment_methods_json";
 /** @deprecated use PAYMENT_METHODS_JSON_KEY */
@@ -389,19 +388,8 @@ export async function saveFeatureSettings(s: FeatureSettings): Promise<void> {
 }
 
 export async function getPremiumDealersSettings(): Promise<PremiumDealersSettings> {
-  const map = await getSettingsBatch([
-    PREMIUM_DEALERS_PACKAGES_JSON_KEY,
-    LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY,
-  ]);
-  const newRow = map.get(PREMIUM_DEALERS_PACKAGES_JSON_KEY);
-  const legacyRow = map.get(LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY);
-  const raw = newRow?.valueText ?? legacyRow?.valueText ?? "";
-
-  // One-time migration path: if only legacy key exists, copy it to new key.
-  if (!newRow && legacyRow?.valueText) {
-    await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, legacyRow.valueText);
-  }
-
+  const map = await getSettingsBatch([PREMIUM_DEALERS_PACKAGES_JSON_KEY]);
+  const raw = map.get(PREMIUM_DEALERS_PACKAGES_JSON_KEY)?.valueText ?? "";
   return { packages: parsePremiumDealerPackagesJson(raw) };
 }
 
@@ -413,7 +401,6 @@ export async function savePremiumDealersSettings(s: PremiumDealersSettings): Pro
     ...(typeof p.enabled === "boolean" ? { enabled: p.enabled } : {}),
   }));
   await upsertText(PREMIUM_DEALERS_PACKAGES_JSON_KEY, JSON.stringify(packages));
-  await db.delete(pointSetting).where(eq(pointSetting.key, LEGACY_ESCROW_SERVICE_PACKAGES_JSON_KEY));
 }
 
 export async function getPointPurchasePackagesSettings(): Promise<PointPurchasePackagesSettings> {

@@ -332,6 +332,7 @@ export function ProductForm({
 }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
+  const formRef = useRef<HTMLFormElement>(null)
 
   const [loading, setLoading] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -623,6 +624,25 @@ export function ProductForm({
           ? "The product listing has been updated."
           : "The new listing is now live.",
       })
+      if (!isEdit) {
+        formRef.current?.reset()
+        setProductType("loose_stone")
+        setStatus("active")
+        setModerationStatus("pending")
+        setIsFeatured(false)
+        setIsCollectorPiece(false)
+        setIsPrivilegeAssist(false)
+        setIsPromotion(false)
+        setIsNegotiable(false)
+        setImageUrlsList([])
+        setVideoUrlsList([])
+        setCertReportUrl("")
+        setSelectedFeatureTier("")
+        setDimensionsPart1("")
+        setDimensionsPart2("")
+        setDimensionsPart3("")
+        setJewelleryGemstones([])
+      }
       router.push("/admin/products")
       router.refresh()
     } catch {
@@ -700,6 +720,7 @@ export function ProductForm({
 
         {/* ══════ MAIN COLUMN ══════ */}
         <form
+          ref={formRef}
           id="product-form"
           className="pd-main"
           onSubmit={handleSubmit}

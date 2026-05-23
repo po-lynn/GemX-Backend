@@ -52,7 +52,6 @@ function UserAvatar({ imageUrl, name }: { imageUrl: string | null | undefined; n
 
 const ROLE_STYLE: Record<string, string> = {
   admin: "bg-violet-50 text-violet-700 ring-violet-200/60",
-  escrow: "bg-sky-50 text-sky-700 ring-sky-200/60",
   user: "bg-slate-100 text-slate-600 ring-slate-200/60",
 }
 

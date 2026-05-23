@@ -2,7 +2,6 @@ import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
-import { escrowServiceRequest } from "@/drizzle/schema/escrow-service-request-schema"
 import { pointPurchaseRequest } from "@/drizzle/schema/points-schema"
 import { count, eq } from "drizzle-orm"
 import Link from "next/link"
@@ -18,7 +17,6 @@ import {
   FlaskConical,
   Globe,
   Eye,
-  ShieldCheck,
   MessageSquare,
   type LucideIcon,
 } from "lucide-react"
@@ -32,15 +30,11 @@ async function getStats() {
     .select({ total: count() })
     .from(collectorPieceShowRequest)
     .where(eq(collectorPieceShowRequest.status, "pending"))
-  const [{ total: pendingEscrow }] = await db
-    .select({ total: count() })
-    .from(escrowServiceRequest)
-    .where(eq(escrowServiceRequest.status, "pending"))
   const [{ total: pendingPoints }] = await db
     .select({ total: count() })
     .from(pointPurchaseRequest)
     .where(eq(pointPurchaseRequest.status, "pending"))
-  return { totalProducts, activeProducts, totalUsers, pendingCollector, pendingEscrow, pendingPoints }
+  return { totalProducts, activeProducts, totalUsers, pendingCollector, pendingPoints }
 }
 
 type QuickAction = {
@@ -61,7 +55,6 @@ const quickActions: QuickAction[] = [
   { href: "/admin/credit", label: "Credit", icon: ShoppingBag, color: "#8b5cf6" },
   { href: "/admin/messages", label: "Messages", icon: MessageSquare, color: "#a855f7" },
   { href: "/admin/collector-piece-show-requests", label: "Collector", icon: Eye, color: "#06b6d4" },
-  { href: "/admin/escrow-service-requests", label: "Escrow", icon: ShieldCheck, color: "#14b8a6" },
   { href: "/admin/chat-dashboard", label: "Chat", icon: MessageSquare, color: "#0ea5e9" },
 ]
 
@@ -71,11 +64,10 @@ export default async function AdminPage() {
     activeProducts,
     totalUsers,
     pendingCollector,
-    pendingEscrow,
     pendingPoints,
   } = await getStats()
 
-  const pendingRequests = pendingCollector + pendingEscrow
+  const pendingRequests = pendingCollector
 
   return (
     <div className="space-y-8 py-2">
@@ -160,7 +152,7 @@ export default async function AdminPage() {
             </div>
             <div className="mt-0.5 text-sm font-medium text-foreground/80">Pending Requests</div>
             <div className="mt-1.5 text-xs text-muted-foreground">
-              {pendingCollector} collector · {pendingEscrow} escrow
+              {pendingCollector} collector requests
             </div>
           </div>
         </Link>

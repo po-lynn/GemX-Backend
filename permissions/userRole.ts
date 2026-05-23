@@ -12,10 +12,4 @@ export const user = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
-/** Staff with access limited to escrow service request management only. */
-export const escrow = ac.newRole({
-  ...userAc.statements,
-  user: [...userAc.statements.user, "list"],
-})
-
 export const admin = ac.newRole(adminAc.statements)

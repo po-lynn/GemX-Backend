@@ -32,14 +32,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Escrow role: access limited to escrow service requests section only
-  if (
-    role === "escrow" &&
-    pathname.startsWith("/admin/escrow-service-requests")
-  ) {
-    return NextResponse.next()
-  }
-
   return NextResponse.redirect(new URL("/", request.url))
 }
 

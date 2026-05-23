@@ -134,10 +134,7 @@ export async function updateUserAction(formData: FormData) {
   }
   const { userId, ...rest } = parsed.data;
   const data: UpdateUserInput = { ...rest };
-  if (
-    rest.role === "user" ||
-    rest.role === "escrow"
-  ) {
+  if (rest.role === "user") {
     data.verified = rest.verified === true;
   }
   if (rest.archived !== undefined) {

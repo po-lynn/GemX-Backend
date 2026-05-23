@@ -10,6 +10,8 @@ export type CategoryRow = {
   image: string | null
   slug: string
   sortOrder: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 export async function getCategoriesByType(
@@ -24,6 +26,8 @@ export async function getCategoriesByType(
       image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
     })
     .from(category)
     .where(eq(category.type, type))
@@ -42,6 +46,8 @@ export async function getAllCategories(): Promise<CategoryRow[]> {
       image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
     })
     .from(category)
     .orderBy(asc(category.type), asc(category.sortOrder), asc(category.name))
@@ -59,6 +65,8 @@ export async function getCategoryById(id: string): Promise<CategoryRow | null> {
       image: category.image,
       slug: category.slug,
       sortOrder: category.sortOrder,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
     })
     .from(category)
     .where(eq(category.id, id))

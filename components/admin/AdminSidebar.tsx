@@ -95,13 +95,7 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: Eye,
         color: "#06b6d4",
       },
-      {
-        href: "/admin/escrow-service-requests",
-        label: "Escrow Requests",
-        icon: ShieldCheck,
-        color: "#14b8a6",
-      },
-      { href: "/admin/categories", label: "Categories", icon: FolderTree, color: "#f97316" },
+{ href: "/admin/categories", label: "Categories", icon: FolderTree, color: "#f97316" },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare, color: "#a855f7" },
       {
         href: "/admin/chat-dashboard",
