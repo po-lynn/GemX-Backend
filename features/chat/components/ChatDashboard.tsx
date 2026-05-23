@@ -10,6 +10,12 @@ import {
   useState,
 } from "react"
 import { createClient } from "@supabase/supabase-js"
+import { createMessagesRealtimeService } from "@/features/chat/realtime/messages-realtime-service"
+import { useAdminChatNotifications } from "@/features/chat/context/admin-chat-notification-context"
+import {
+  normalizeChatMessageRow,
+  type ChatMessage,
+} from "@/features/chat/types/message"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -64,20 +70,6 @@ type ChatUser = {
   image?: string | null
   /** Latest activity on a non-expired session (ISO); admin chat presence proxy. */
   lastSessionAt?: string | null
-}
-
-type ChatMessage = {
-  id: string
-  senderId: string
-  recipientId: string
-  content: string
-  fileUrl: string | null
-  imageUrls?: string[] | null
-  messageType: "text" | "image" | "audio" | "file"
-  isRead: boolean
-  starred?: boolean
-  editedAt?: string | null
-  createdAt: string
 }
 
 type Props = {
@@ -275,35 +267,6 @@ function buildForwardPayload(targetUserId: string, m: ChatMessage): Record<strin
   }
 }
 
-function normalizeChatRow(raw: Record<string, unknown>): ChatMessage {
-  const imageUrlsRaw = raw.image_urls ?? raw.imageUrls
-  const imageUrls =
-    Array.isArray(imageUrlsRaw)
-      ? imageUrlsRaw.filter((u): u is string => typeof u === "string")
-      : null
-  const mt = raw.message_type ?? raw.messageType
-  return {
-    id: String(raw.id),
-    senderId: String(raw.sender_id ?? raw.senderId),
-    recipientId: String(raw.recipient_id ?? raw.recipientId),
-    content: String(raw.content ?? ""),
-    fileUrl: (raw.file_url ?? raw.fileUrl) as string | null,
-    imageUrls,
-    messageType:
-      mt === "image" || mt === "audio" || mt === "file" || mt === "text"
-        ? mt
-        : "text",
-    isRead: Boolean(raw.is_read ?? raw.isRead),
-    starred: Boolean(raw.starred),
-    editedAt: raw.edited_at
-      ? String(raw.edited_at)
-      : raw.editedAt
-        ? String(raw.editedAt)
-        : null,
-    createdAt: String(raw.created_at ?? raw.createdAt),
-  }
-}
-
 function messageTypeFromMime(mime: string): ChatMessage["messageType"] {
   if (mime.startsWith("image/")) return "image"
   if (mime.startsWith("audio/")) return "audio"
@@ -358,6 +321,8 @@ export function ChatDashboard({
   initialPeerId,
 }: Props) {
   usePresenceRerenderTicker(10_000)
+  const { setActiveConversationPeerId, refreshUnread: refreshGlobalUnread } =
+    useAdminChatNotifications()
 
   const dialogPickUsers = contactPickerUsers ?? users
 
@@ -438,10 +403,11 @@ export function ChatDashboard({
         }))
         return sortConversationsForSidebar(next)
       })
+      void refreshGlobalUnread()
     } catch {
       /* ignore */
     }
-  }, [selectedUserId])
+  }, [selectedUserId, refreshGlobalUnread])
 
   useEffect(() => {
     void refreshUnreadCounts()
@@ -518,6 +484,34 @@ export function ChatDashboard({
   useEffect(() => {
     setUnreadDividerIndex(null)
   }, [selectedUserId])
+
+  /** Tell global notification layer + mobile push which thread is open. */
+  useEffect(() => {
+    setActiveConversationPeerId(selectedUserId || null)
+    if (!selectedUserId) {
+      void fetch("/api/chat/viewing", { method: "DELETE", credentials: "include" })
+      return () => setActiveConversationPeerId(null)
+    }
+    void fetch("/api/chat/viewing", {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ peerId: selectedUserId }),
+    })
+    const heartbeat = setInterval(() => {
+      void fetch("/api/chat/viewing", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peerId: selectedUserId }),
+      })
+    }, 30_000)
+    return () => {
+      clearInterval(heartbeat)
+      setActiveConversationPeerId(null)
+      void fetch("/api/chat/viewing", { method: "DELETE", credentials: "include" })
+    }
+  }, [selectedUserId, setActiveConversationPeerId])
 
   useEffect(() => {
     if (!initialPeerId) return
@@ -736,11 +730,8 @@ export function ChatDashboard({
   }, [phoneOpen])
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!supabaseUrl || !supabaseAnonKey) return
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const service = createMessagesRealtimeService(currentUserId)
+    if (!service) return
 
     let unreadSyncTimer: ReturnType<typeof setTimeout> | null = null
     const scheduleUnreadSync = () => {
@@ -751,9 +742,7 @@ export function ChatDashboard({
       }, 200)
     }
 
-    /** Merge a realtime message row into `conversations` (sidebar) immediately — no page refresh. */
-    const handleInsert = (raw: Record<string, unknown>) => {
-      const row = normalizeChatRow(raw)
+    const handleInsert = (row: ChatMessage) => {
       const other =
         row.senderId === currentUserId ? row.recipientId : row.senderId
       if (processedRealtimeIds.current.has(row.id)) return
@@ -777,11 +766,10 @@ export function ChatDashboard({
 
       setMessages((prev) => {
         if (prev.some((m) => m.id === row.id)) return prev
-        const next = [...prev, row].sort(
+        return [...prev, row].sort(
           (a, b) =>
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         )
-        return next
       })
 
       if (
@@ -802,92 +790,48 @@ export function ChatDashboard({
       }
     }
 
-    const handleUpdate = (payload: {
-      new: Record<string, unknown>
-      old: Record<string, unknown>
-    }) => {
-      const n = normalizeChatRow(payload.new)
-      const wasRead = Boolean(payload.old.is_read ?? payload.old.isRead)
-      const nowRead = Boolean(payload.new.is_read ?? payload.new.isRead)
-      if (n.recipientId !== currentUserId) return
-      if (nowRead && !wasRead) {
-        if (n.senderId === selectedUserId) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === n.id ? { ...m, isRead: true } : m))
-          )
-        }
-        scheduleUnreadSync()
-      }
+    const unsubscribe = service.subscribe(
+      {
+        onInsert: handleInsert,
+        onUpdate: (n, old) => {
+          const wasRead = Boolean(old.is_read ?? old.isRead)
+          if (n.recipientId !== currentUserId) return
+          if (n.isRead && !wasRead) {
+            if (n.senderId === selectedUserId) {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === n.id ? { ...m, isRead: true } : m))
+              )
+            }
+            scheduleUnreadSync()
+          }
+        },
+        onDelete: (o) => {
+          const recipientId = String(o.recipient_id ?? o.recipientId ?? "")
+          const wasRead = Boolean(o.is_read ?? o.isRead)
+          if (recipientId !== currentUserId || wasRead) return
+          scheduleUnreadSync()
+        },
+      },
+      { includeOutbound: true }
+    )
+
+    return () => {
+      if (unreadSyncTimer) clearTimeout(unreadSyncTimer)
+      unsubscribe()
     }
+  }, [
+    currentUserId,
+    selectedUserId,
+    patchConversationFromMessage,
+    refreshUnreadCounts,
+  ])
 
-    const handleDelete = (payload: { old: Record<string, unknown> }) => {
-      const o = payload.old
-      const recipientId = String(o.recipient_id ?? o.recipientId ?? "")
-      const wasRead = Boolean(o.is_read ?? o.isRead)
-      if (recipientId !== currentUserId || wasRead) return
-      scheduleUnreadSync()
-    }
+  useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseAnonKey) return
 
-    const inbound = supabase
-      .channel(`chat-dash-in-${currentUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `recipient_id=eq.${currentUserId}`,
-        },
-        (payload) => handleInsert(payload.new as Record<string, unknown>)
-      )
-      .subscribe()
-
-    const outbound = supabase
-      .channel(`chat-dash-out-${currentUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `sender_id=eq.${currentUserId}`,
-        },
-        (payload) => handleInsert(payload.new as Record<string, unknown>)
-      )
-      .subscribe()
-
-    const readUpdates = supabase
-      .channel(`chat-dash-read-${currentUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-          filter: `recipient_id=eq.${currentUserId}`,
-        },
-        (payload) =>
-          handleUpdate({
-            new: payload.new as Record<string, unknown>,
-            old: (payload.old ?? {}) as Record<string, unknown>,
-          })
-      )
-      .subscribe()
-
-    const incomingDeletes = supabase
-      .channel(`chat-dash-del-in-${currentUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "messages",
-          filter: `recipient_id=eq.${currentUserId}`,
-        },
-        (payload) =>
-          handleDelete({ old: (payload.old ?? {}) as Record<string, unknown> })
-      )
-      .subscribe()
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
     /** Live peer presence from Better Auth rows (enable Realtime replication for `public.session` in Supabase). */
     const peerIdsForPresence = users.map((u) => u.id)
@@ -966,23 +910,11 @@ export function ChatDashboard({
     )
 
     return () => {
-      if (unreadSyncTimer) clearTimeout(unreadSyncTimer)
-      supabase.removeChannel(inbound)
-      supabase.removeChannel(outbound)
-      supabase.removeChannel(readUpdates)
-      supabase.removeChannel(incomingDeletes)
       sessionChannels.forEach((ch) => {
         supabase.removeChannel(ch)
       })
     }
-  }, [
-    currentUserId,
-    selectedUserId,
-    users,
-    presencePeerIds,
-    patchConversationFromMessage,
-    refreshUnreadCounts,
-  ])
+  }, [currentUserId, users, presencePeerIds])
 
   async function sendMessage(body: {
     content?: string

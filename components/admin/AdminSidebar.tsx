@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAdminChatNotifications } from "@/features/chat/context/admin-chat-notification-context";
 
 import {
   LayoutDashboard,
@@ -119,6 +120,7 @@ const navGroups: (NavItem | NavGroup)[] = [
 
 export function AdminSidebar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const { totalUnread } = useAdminChatNotifications();
 
   function isActive(href: string, custom?: (p: string) => boolean) {
     if (custom) return custom(pathname);
@@ -147,7 +149,12 @@ export function AdminSidebar({ className }: { className?: string }) {
         >
           <Icon className="h-5 w-5" style={{ color: nav.color }} />
         </span>
-        <span>{nav.label}</span>
+        <span className="min-w-0 flex-1 truncate">{nav.label}</span>
+        {nav.href === "/admin/chat-dashboard" && totalUnread > 0 ? (
+          <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+            {totalUnread > 99 ? "99+" : totalUnread}
+          </span>
+        ) : null}
       </Link>
     );
   }

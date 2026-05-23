@@ -54,9 +54,23 @@ async function mutateTopicSubscription(
     }
 
     if (response.failureCount === 0) {
-      return { success: true as const, topic, successCount: response.successCount, failureCount: response.failureCount };
+      return {
+        success: true,
+        topic,
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+      };
     }
-    return { success: false as const, error: createPushError("FCM_SEND_FAILED", `${response.failureCount} token(s) failed for topic ${topic}`) };
+
+    const firstError = response.errors?.[0];
+    return {
+      success: false,
+      error: createPushError(
+        "FCM_SEND_FAILED",
+        firstError?.message ?? `Failed to ${action} token to topic ${topic}`,
+        firstError?.code
+      ),
+    };
   } catch (e) {
     const error = normalizeFirebaseError(e);
     notificationLogger.error(`FCM topic ${action} failed`, { topic, error: error.message });
