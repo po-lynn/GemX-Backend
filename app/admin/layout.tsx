@@ -2,6 +2,7 @@ import { ReactNode, Suspense } from "react"
 import AdminNavbarClient from "@/components/admin/AdminNavbarClient"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminSidebarSheet } from "@/components/admin/AdminSidebarSheet"
+import { Toaster } from "sonner"
 
 export default async function AdminLayout({
   children,
@@ -44,6 +45,8 @@ export default async function AdminLayout({
             <AdminNavbarClient />
           </div>
         </header>
+
+        <Toaster position="top-right" richColors />
 
         {/* IMPORTANT: no mx-auto centering */}
         <main className="w-full px-3 py-5 md:px-10">

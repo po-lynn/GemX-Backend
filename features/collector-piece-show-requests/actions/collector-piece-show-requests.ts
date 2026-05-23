@@ -5,7 +5,10 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { sendPushToUserIds } from "@/features/push/send-push"
-import { approveCollectorPieceShowRequestInDb } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+import {
+  approveCollectorPieceShowRequestInDb,
+  rejectCollectorPieceShowRequestInDb,
+} from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 
 export async function approveCollectorPieceShowRequestAction(formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -31,6 +34,22 @@ export async function approveCollectorPieceShowRequestAction(formData: FormData)
       link,
     },
   }).catch((e) => console.error("Collector piece approval push failed:", e))
+
+  revalidatePath("/admin/collector-piece-show-requests")
+  return { success: true, requestId: result.requestId, alreadyProcessed: !!result.alreadyProcessed }
+}
+
+export async function rejectCollectorPieceShowRequestAction(formData: FormData) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" }
+  }
+
+  const requestId = String(formData.get("requestId") ?? "").trim()
+  if (!requestId) return { error: "Invalid request id" }
+
+  const result = await rejectCollectorPieceShowRequestInDb(requestId)
+  if (!result.ok) return { error: "Request not found" }
 
   revalidatePath("/admin/collector-piece-show-requests")
   return { success: true, requestId: result.requestId, alreadyProcessed: !!result.alreadyProcessed }

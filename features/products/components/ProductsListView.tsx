@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Check, X, Archive } from "lucide-react"
+import { toast } from "sonner"
 import { formatDate } from "@/lib/formatters"
 import { ListViewCard } from "@/components/admin/list-view"
 import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
@@ -135,13 +136,25 @@ export function ProductsListView({
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const isPending = pendingAction !== null
 
-  async function runBulk(action: string, fn: () => Promise<unknown>, onClear: () => void) {
+  async function runBulk(action: string, fn: () => Promise<unknown>, onClear: () => void, count?: number) {
     if (isPending) return
     setPendingAction(action)
     try {
       await fn()
       onClear()
       router.refresh()
+      const n = count ?? 1
+      const successMap: Record<string, { title: string; description: string }> = {
+        approve: { title: `${n} product${n > 1 ? "s" : ""} approved`,  description: "Moderation status set to approved." },
+        reject:  { title: `${n} product${n > 1 ? "s" : ""} rejected`,  description: "Moderation status set to rejected." },
+        archive: { title: `${n} product${n > 1 ? "s" : ""} archived`,  description: "Listing removed from the active view." },
+      }
+      const msg = successMap[action] ?? { title: `${n} product${n > 1 ? "s" : ""} updated`, description: "" }
+      toast.success(msg.title, { description: msg.description })
+    } catch {
+      toast.error("Bulk action failed", {
+        description: "Please try again or refresh the page.",
+      })
     } finally {
       setPendingAction(null)
     }
@@ -404,21 +417,21 @@ export function ProductsListView({
             <button
               className="lv-bulkbtn"
               disabled={isPending}
-              onClick={() => runBulk("approve", () => bulkSetProductModeration(ids, "approved"), onClear)}
+              onClick={() => runBulk("approve", () => bulkSetProductModeration(ids, "approved"), onClear, ids.length)}
             >
               <Check /> {pendingAction === "approve" ? "Approving…" : "Approve"}
             </button>
             <button
               className="lv-bulkbtn"
               disabled={isPending}
-              onClick={() => runBulk("reject", () => bulkSetProductModeration(ids, "rejected"), onClear)}
+              onClick={() => runBulk("reject", () => bulkSetProductModeration(ids, "rejected"), onClear, ids.length)}
             >
               <X /> {pendingAction === "reject" ? "Rejecting…" : "Reject"}
             </button>
             <button
               className="lv-bulkbtn"
               disabled={isPending}
-              onClick={() => runBulk("archive", () => bulkSetProductStatus(ids, "archive"), onClear)}
+              onClick={() => runBulk("archive", () => bulkSetProductStatus(ids, "archive"), onClear, ids.length)}
             >
               <Archive /> {pendingAction === "archive" ? "Archiving…" : "Archive"}
             </button>

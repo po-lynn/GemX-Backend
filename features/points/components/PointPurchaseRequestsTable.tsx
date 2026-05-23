@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CheckCircle, XCircle, X, Copy, Check, RotateCcw } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -461,7 +462,14 @@ export function PointPurchaseRequestsTable({
         form.set("requestId", r.id)
         await approvePointPurchaseRequestAction(form)
       }
+      toast.success(`${pending.length} purchase request${pending.length > 1 ? "s" : ""} approved`, {
+        description: "Point balances will be credited to the buyers.",
+      })
       startTransition(() => router.refresh())
+    } catch {
+      toast.error("Bulk approve failed", {
+        description: "Please try again or refresh the page.",
+      })
     } finally {
       setBulkApproving(false)
     }
@@ -479,6 +487,7 @@ export function PointPurchaseRequestsTable({
     if (!bulkRejectIds.length) return
     setBulkRejectError(null)
     setBulkRejecting(true)
+    const count = bulkRejectIds.length
     try {
       for (const id of bulkRejectIds) {
         const form = new FormData()
@@ -487,9 +496,15 @@ export function PointPurchaseRequestsTable({
         await rejectPointPurchaseRequestAction(form)
       }
       setBulkRejectIds([])
+      toast.success(`${count} purchase request${count > 1 ? "s" : ""} rejected`, {
+        description: "The selected requests have been declined.",
+      })
       startTransition(() => router.refresh())
     } catch (e) {
       setBulkRejectError(e instanceof Error ? e.message : "An unexpected error occurred.")
+      toast.error("Bulk reject failed", {
+        description: "Please try again or refresh the page.",
+      })
     } finally {
       setBulkRejecting(false)
     }

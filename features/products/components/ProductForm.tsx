@@ -16,6 +16,7 @@ import { createProductAction, updateProductAction } from "@/features/products/ac
 import type { ProductForEdit } from "@/features/products/db/products"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { formatDate } from "@/lib/formatters"
+import { toast } from "sonner"
 import {
   AlertTriangle,
   Archive,
@@ -33,6 +34,7 @@ import {
   Layers,
   Package,
   Pencil,
+  Plus,
   Save,
   Sparkles,
   Star,
@@ -314,6 +316,8 @@ type Props = {
   laboratories?: LaboratoryOption[] | null
   origins?: OriginOption[] | null
   featurePricingTiers?: FeaturePricingTier[] | null
+  backHref?: string | null
+  backLabel?: string | null
 }
 
 export function ProductForm({
@@ -323,11 +327,12 @@ export function ProductForm({
   laboratories,
   origins,
   featurePricingTiers,
+  backHref,
+  backLabel = "Back",
 }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
 
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [dirty, setDirty] = useState(false)
 
@@ -574,7 +579,6 @@ export function ProductForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null)
     setLoading(true)
 
     const form = e.currentTarget
@@ -608,16 +612,23 @@ export function ProductForm({
         : await createProductAction(formData)
 
       if (result?.error) {
-        setError(result.error)
+        toast.error("Failed to save product", { description: result.error })
         setLoading(false)
         return
       }
 
       setDirty(false)
+      toast.success(isEdit ? "Changes saved" : "Product created", {
+        description: isEdit
+          ? "The product listing has been updated."
+          : "The new listing is now live.",
+      })
       router.push("/admin/products")
       router.refresh()
     } catch {
-      setError("Something went wrong. Please try again.")
+      toast.error("Failed to save product", {
+        description: "An unexpected error occurred. Please try again.",
+      })
     } finally {
       setLoading(false)
     }
@@ -634,6 +645,17 @@ export function ProductForm({
       {/* ─── Top bar ─────────────────────────────────────────────── */}
       <div className="pd-topbar">
         <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+          {backHref && (
+            <>
+              <Link
+                href={backHref}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+              >
+                ← {backLabel}
+              </Link>
+              <ChevronRight size={11} style={{ opacity: 0.5 }} />
+            </>
+          )}
           <Link href="/admin/products">Products</Link>
           <ChevronRight size={11} style={{ opacity: 0.5 }} />
           <span className="pd-here">
@@ -641,6 +663,11 @@ export function ProductForm({
           </span>
         </nav>
         <div className="pd-topbar-spacer" />
+        {isEdit && (
+          <Link href="/admin/products/new" className="pd-btn">
+            <Plus size={13} /> New product
+          </Link>
+        )}
       </div>
 
       {/* ─── Save bar ────────────────────────────────────────────── */}
@@ -1754,8 +1781,8 @@ export function ProductForm({
           </section>
 
           {/* ── Errors ── */}
-          {(error || uploadError) && (
-            <div className="pd-error">{error || uploadError}</div>
+          {uploadError && (
+            <div className="pd-error">{uploadError}</div>
           )}
         </form>
 

@@ -7,13 +7,23 @@ import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import { getFeatureSettings } from "@/features/points/db/points"
 
-type Props = {
-  params: Promise<{ id: string }>
+const BACK_ROUTES: Record<string, { href: string; label: string }> = {
+  "collector-requests": {
+    href: "/admin/collector-piece-show-requests",
+    label: "Collector Requests",
+  },
 }
 
-export default async function AdminProductsEditPage({ params }: Props) {
+type Props = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
+}
+
+export default async function AdminProductsEditPage({ params, searchParams }: Props) {
   await connection()
   const { id } = await params
+  const { from } = await searchParams
+  const back = from ? (BACK_ROUTES[from] ?? null) : null
   const product = await getCachedProduct(id)
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
@@ -32,6 +42,8 @@ export default async function AdminProductsEditPage({ params }: Props) {
         laboratories={laboratories}
         origins={origins}
         featurePricingTiers={featureSettings.pricingTiers}
+        backHref={back?.href}
+        backLabel={back?.label}
       />
     </div>
   )
