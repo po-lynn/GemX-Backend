@@ -17,7 +17,7 @@ const client =
   globalForDb.dbClient ??
   postgres(env.DATABASE_URL, {
     ssl: "require",
-    max: isPooler ? 1 : 5,
+    max: isPooler ? 10 : 5,
     prepare: false,
     fetch_types: false,
     connect_timeout: 10,

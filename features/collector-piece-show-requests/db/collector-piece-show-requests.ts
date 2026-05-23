@@ -112,24 +112,15 @@ export async function getCollectorPieceShowRequestsKPIs(): Promise<CollectorPiec
       totalPending: sql<number>`count(*) filter (where ${collectorPieceShowRequest.status} = 'pending')::int`,
       approvedCount: sql<number>`count(*) filter (where ${collectorPieceShowRequest.status} = 'approved')::int`,
       totalCount: sql<number>`count(*)::int`,
+      highValuePending: sql<number>`count(*) filter (where ${collectorPieceShowRequest.status} = 'pending' and ${product.price}::numeric >= 20000000)::int`,
     })
     .from(collectorPieceShowRequest)
-
-  const [hvStats] = await db
-    .select({ highValuePending: sql<number>`count(*)::int` })
-    .from(collectorPieceShowRequest)
-    .innerJoin(product, eq(product.id, collectorPieceShowRequest.productId))
-    .where(
-      and(
-        eq(collectorPieceShowRequest.status, "pending"),
-        gte(product.price, "20000000"),
-      )
-    )
+    .leftJoin(product, eq(product.id, collectorPieceShowRequest.productId))
 
   return {
     totalPending: stats?.totalPending ?? 0,
     approvedCount: stats?.approvedCount ?? 0,
-    highValuePending: hvStats?.highValuePending ?? 0,
+    highValuePending: stats?.highValuePending ?? 0,
     totalCount: stats?.totalCount ?? 0,
   }
 }
