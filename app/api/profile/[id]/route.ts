@@ -77,6 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       presence: presence.presence,
       status: presence.status,
       lastSeenAt: presence.lastSeenAt,
+      verified: user.verified,
       isPremiumDealer,
     }
 
