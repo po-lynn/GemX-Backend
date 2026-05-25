@@ -608,6 +608,8 @@ export async function getActivePremiumDealers(): Promise<
     ratingScore: number
     /** Calendar year of the earliest `premium_dealers_packages.created_at` for this user. */
     firstPremiumDealerYear: number
+    /** Earliest `premium_dealers_packages.start_date` for this user (first premium activation). */
+    premiumSinceDate: Date
     packageName: string
     startDate: Date
     expiresAt: Date
@@ -631,6 +633,11 @@ export async function getActivePremiumDealers(): Promise<
         from ${premiumDealersPackage}
         where ${premiumDealersPackage.userId} = ${user.id}
       )`.as("first_premium_dealer_year"),
+      premiumSinceDate: sql<Date>`(
+        select min(${premiumDealersPackage.startDate})
+        from ${premiumDealersPackage}
+        where ${premiumDealersPackage.userId} = ${user.id}
+      )`.as("premium_since_date"),
       packageName: premiumDealersPackage.packageName,
       startDate: premiumDealersPackage.startDate,
       expiresAt: premiumDealersPackage.endDate,
@@ -653,6 +660,8 @@ export async function getActivePremiumDealers(): Promise<
     city: r.city,
     ratingScore: Number(r.ratingScore ?? 0),
     firstPremiumDealerYear: Number(r.firstPremiumDealerYear),
+    // SQL subquery min(timestamp) may return a string from the driver, not a Date.
+    premiumSinceDate: new Date(r.premiumSinceDate as Date | string),
     packageName: r.packageName,
     startDate: r.startDate,
     expiresAt: r.expiresAt,
