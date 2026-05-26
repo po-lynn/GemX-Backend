@@ -3,6 +3,10 @@ import { jsonError, jsonUncached } from "@/lib/api"
 import { getActivePremiumDealers } from "@/features/points/db/points"
 import { getPublicProfilePresenceMap } from "@/features/users/db/profile-presence"
 
+function toIso8601(value: Date | string): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString()
+}
+
 /**
  * GET /api/mobile/premium-dealers
  * Public endpoint — returns all users with currently active (non-expired) premium dealer status.
@@ -30,9 +34,10 @@ export async function GET(_request: NextRequest) {
           city: d.city,
           ratingScore: d.ratingScore,
           firstPremiumDealerYear: d.firstPremiumDealerYear,
+          premiumSinceDate: toIso8601(d.premiumSinceDate),
           packageName: d.packageName,
-          startDate: d.startDate.toISOString(),
-          expiresAt: d.expiresAt.toISOString(),
+          startDate: toIso8601(d.startDate),
+          expiresAt: toIso8601(d.expiresAt),
           autoRenew: d.autoRenew,
           presence: p.presence,
           status: p.status,

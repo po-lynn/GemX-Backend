@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
       dateOfBirth: user.dateOfBirth,
       points: user.points,
       emailVerified: user.emailVerified,
+      verified: user.verified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       isPremiumDealer,
