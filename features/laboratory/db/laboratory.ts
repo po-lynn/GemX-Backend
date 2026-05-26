@@ -8,6 +8,8 @@ export type LaboratoryOption = {
   address: string;
   phone: string;
   precaution: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 export type LaboratoryForEdit = LaboratoryOption;
@@ -20,6 +22,8 @@ export async function getAllLaboratories(): Promise<LaboratoryOption[]> {
       address: laboratory.address,
       phone: laboratory.phone,
       precaution: laboratory.precaution,
+      createdAt: laboratory.createdAt,
+      updatedAt: laboratory.updatedAt,
     })
     .from(laboratory)
     .orderBy(laboratory.name);
@@ -35,6 +39,8 @@ export async function getLaboratoryById(
       address: laboratory.address,
       phone: laboratory.phone,
       precaution: laboratory.precaution,
+      createdAt: laboratory.createdAt,
+      updatedAt: laboratory.updatedAt,
     })
     .from(laboratory)
     .where(eq(laboratory.id, id))

@@ -7,6 +7,8 @@ export type RatingTagRow = {
   name: string
   type: "positive" | "neutral" | "negative"
   isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type RatingTagForEdit = RatingTagRow
@@ -37,6 +39,8 @@ export async function getAllRatingTags(): Promise<RatingTagRow[]> {
       name: ratingTag.name,
       type: ratingTag.type,
       isActive: ratingTag.isActive,
+      createdAt: ratingTag.createdAt,
+      updatedAt: ratingTag.updatedAt,
     })
     .from(ratingTag)
     .orderBy(asc(ratingTag.type), asc(ratingTag.name))
@@ -49,6 +53,8 @@ export async function getRatingTagById(id: string): Promise<RatingTagForEdit | n
       name: ratingTag.name,
       type: ratingTag.type,
       isActive: ratingTag.isActive,
+      createdAt: ratingTag.createdAt,
+      updatedAt: ratingTag.updatedAt,
     })
     .from(ratingTag)
     .where(eq(ratingTag.id, id))

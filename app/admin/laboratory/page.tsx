@@ -1,32 +1,50 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChevronRight, Plus, Download } from "lucide-react"
 import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
-import { LaboratoryTable } from "@/features/laboratory/components"
+import { LaboratoryListView } from "@/features/laboratory/components/LaboratoryListView"
+import type { ViewTab } from "@/components/admin/list-view"
 
 export default async function AdminLaboratoryPage() {
   await connection()
   const laboratories = await getCachedLaboratories()
 
+  const views: ViewTab[] = [
+    { id: "all", label: "All", count: laboratories.length },
+  ]
+
   return (
-    <div className="space-y-5 py-2">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="py-2">
+      <div className="lv-pagehead">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Laboratory</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Manage certification laboratories — GIA, AGS, and others
+          <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin">Admin</Link>
+            <ChevronRight />
+            <span className="lv-here">Laboratory</span>
+          </nav>
+          <h1 className="lv-h1">
+            Laboratory
+            <span className="lv-h1-count">{laboratories.length} total</span>
+          </h1>
+          <p className="lv-subhead">
+            Certification laboratories — GIA, AGS, and others — used on gemstone and diamond product certificates.
           </p>
         </div>
-        <Button asChild size="sm" className="shrink-0 shadow-sm">
-          <Link href="/admin/laboratory/new">
-            <Plus className="mr-1.5 size-4" />
-            New Laboratory
+        <div className="lv-pagehead-actions">
+          <button className="lv-export-btn">
+            <Download /> Export Excel
+          </button>
+          <Link href="/admin/laboratory/new" className="lv-new-btn">
+            <Plus /> New laboratory
           </Link>
-        </Button>
+        </div>
       </div>
 
-      <LaboratoryTable laboratories={laboratories} />
+      <LaboratoryListView
+        laboratories={laboratories}
+        views={views}
+        activeView="all"
+      />
     </div>
   )
 }

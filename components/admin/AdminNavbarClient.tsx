@@ -1,24 +1,37 @@
 // src/app/admin/AdminNavbarClient.tsx
 "use client"
 
+import { useSyncExternalStore } from "react"
 import { authClient } from "@/lib/auth-client"
 import { UserProfileMenu } from "@/components/admin/user-profile-menu"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 
+const Skeleton = () => (
+  <div className="ml-auto flex items-center gap-2">
+    <div className="h-8 w-8 rounded-lg bg-accent/20 animate-pulse" />
+    <div className="h-8 w-24 rounded-lg bg-accent/20 animate-pulse" />
+  </div>
+)
+
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
+}
+
 export default function AdminNavbarClient() {
   const router = useRouter()
   const { data: session, error } = authClient.useSession()
+  const mounted = useIsMounted()
+
   const user = session?.user
 
-  if (!session && !error) {
-    return (
-      <div className="ml-auto flex items-center gap-2">
-        <div className="h-8 w-8 rounded-lg bg-accent/20 animate-pulse" />
-        <div className="h-8 w-24 rounded-lg bg-accent/20 animate-pulse" />
-      </div>
-    )
+  if (!mounted || (!session && !error)) {
+    return <Skeleton />
   }
 
   return (

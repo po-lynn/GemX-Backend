@@ -1,32 +1,73 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChevronRight, Plus, Download } from "lucide-react"
 import { getCachedOrigins } from "@/features/origin/db/cache/origin"
-import { OriginTable } from "@/features/origin/components"
+import { OriginListView } from "@/features/origin/components/OriginListView"
+import type { ViewTab } from "@/components/admin/list-view"
 
-export default async function AdminOriginPage() {
+const VIEWS = ["all", "myanmar", "other"] as const
+type View = (typeof VIEWS)[number]
+
+type Props = {
+  searchParams: Promise<{ view?: string }>
+}
+
+export default async function AdminOriginPage({ searchParams }: Props) {
   await connection()
-  const origins = await getCachedOrigins()
+  const params = await searchParams
+  const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
+    ? (params.view as View)
+    : "all"
+
+  const allOrigins = await getCachedOrigins()
+
+  const myanmarCount = allOrigins.filter((o) => o.country === "Myanmar").length
+  const otherCount   = allOrigins.filter((o) => o.country !== "Myanmar").length
+
+  const origins =
+    view === "myanmar" ? allOrigins.filter((o) => o.country === "Myanmar")
+    : view === "other" ? allOrigins.filter((o) => o.country !== "Myanmar")
+    : allOrigins
+
+  const views: ViewTab[] = [
+    { id: "all",     label: "All",     count: allOrigins.length },
+    { id: "myanmar", label: "Myanmar", count: myanmarCount },
+    { id: "other",   label: "Other",   count: otherCount },
+  ]
 
   return (
-    <div className="space-y-5 py-2">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="py-2">
+      <div className="lv-pagehead">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Origin</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Manage gem origins — Myanmar, Sri Lanka, Colombia, and more
+          <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin">Admin</Link>
+            <ChevronRight />
+            <span className="lv-here">Origin</span>
+          </nav>
+          <h1 className="lv-h1">
+            Origin
+            <span className="lv-h1-count">{allOrigins.length} total</span>
+          </h1>
+          <p className="lv-subhead">
+            Gem origins — Myanmar (Mogok, Mong Hsu) and international — used on product certificates.
           </p>
         </div>
-        <Button asChild size="sm" className="shrink-0 shadow-sm">
-          <Link href="/admin/origin/new">
-            <Plus className="mr-1.5 size-4" />
-            New Origin
+        <div className="lv-pagehead-actions">
+          <button className="lv-export-btn">
+            <Download /> Export Excel
+          </button>
+          <Link href="/admin/origin/new" className="lv-new-btn">
+            <Plus /> New origin
           </Link>
-        </Button>
+        </div>
       </div>
 
-      <OriginTable origins={origins} />
+      <OriginListView
+        origins={origins}
+        allOrigins={allOrigins}
+        views={views}
+        activeView={view}
+      />
     </div>
   )
 }

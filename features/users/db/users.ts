@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { and, eq, asc, ilike, or, sql } from "drizzle-orm";
+import { and, eq, asc, ilike, or, sql, inArray } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -68,16 +68,70 @@ export async function getAllUsersFromDb(opts?: {
   return rows;
 }
 
-/** List users with pagination. Optional search and filters (country, state, city). */
+export type UserStats = {
+  total: number;
+  active: number;
+  verified: number;
+  totalPoints: number;
+  newThisWeek: number;
+  dealers: number;
+};
+
+export async function getUserStatsFromDb(): Promise<UserStats> {
+  const [row] = await db
+    .select({
+      total:       sql<number>`count(*)::int`,
+      active:      sql<number>`sum(case when ${user.archived} = false then 1 else 0 end)::int`,
+      verified:    sql<number>`sum(case when ${user.verified} = true and ${user.emailVerified} = true then 1 else 0 end)::int`,
+      totalPoints: sql<number>`coalesce(sum(${user.points}), 0)::int`,
+      newThisWeek: sql<number>`count(*) filter (where ${user.createdAt} > now() - interval '7 days')::int`,
+      dealers:     sql<number>`sum(case when ${user.archived} = false and ${user.role} in ('dealer','seller') then 1 else 0 end)::int`,
+    })
+    .from(user);
+  return {
+    total:       row?.total       ?? 0,
+    active:      row?.active      ?? 0,
+    verified:    row?.verified    ?? 0,
+    totalPoints: row?.totalPoints ?? 0,
+    newThisWeek: row?.newThisWeek ?? 0,
+    dealers:     row?.dealers     ?? 0,
+  };
+}
+
+export type ViewCounts = {
+  all: number; pending: number; dealers: number;
+  buyers: number; admins: number; archived: number;
+};
+
+export async function getViewCountsFromDb(): Promise<ViewCounts> {
+  const [row] = await db
+    .select({
+      all:      sql<number>`sum(case when ${user.archived} = false then 1 else 0 end)::int`,
+      pending:  sql<number>`sum(case when ${user.archived} = false and ${user.emailVerified} = false then 1 else 0 end)::int`,
+      dealers:  sql<number>`sum(case when ${user.archived} = false and ${user.role} in ('dealer','seller') then 1 else 0 end)::int`,
+      buyers:   sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'buyer' then 1 else 0 end)::int`,
+      admins:   sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'admin' then 1 else 0 end)::int`,
+      archived: sql<number>`sum(case when ${user.archived} = true  then 1 else 0 end)::int`,
+    })
+    .from(user);
+  return {
+    all:      row?.all      ?? 0,
+    pending:  row?.pending  ?? 0,
+    dealers:  row?.dealers  ?? 0,
+    buyers:   row?.buyers   ?? 0,
+    admins:   row?.admins   ?? 0,
+    archived: row?.archived ?? 0,
+  };
+}
+
+/** List users with pagination. Optional search and view filter. */
 export async function getUsersPaginatedFromDb(options: {
   page: number;
   limit: number;
   search?: string;
-  country?: string;
-  state?: string;
-  city?: string;
+  view?: string;
 }): Promise<{ users: UserRow[]; total: number }> {
-  const { page, limit, search, country, state, city } = options;
+  const { page, limit, search, view } = options;
   const searchTrim = search?.trim();
   const searchCondition = searchTrim
     ? or(
@@ -88,15 +142,17 @@ export async function getUsersPaginatedFromDb(options: {
         ilike(user.country ?? "", `%${searchTrim}%`)
       )
     : undefined;
-  const countryCondition = country?.trim() ? eq(user.country, country.trim()) : undefined;
-  const stateCondition = state?.trim() ? eq(user.state, state.trim()) : undefined;
-  const cityCondition = city?.trim() ? eq(user.city, city.trim()) : undefined;
-  const conditions = [
-    searchCondition,
-    countryCondition,
-    stateCondition,
-    cityCondition,
-  ].filter(Boolean);
+  const viewCondition = (() => {
+    switch (view) {
+      case "pending":  return and(eq(user.archived, false), eq(user.emailVerified, false));
+      case "dealers":  return and(eq(user.archived, false), inArray(user.role, ["dealer", "seller"]));
+      case "buyers":   return and(eq(user.archived, false), eq(user.role, "buyer"));
+      case "admins":   return and(eq(user.archived, false), eq(user.role, "admin"));
+      case "archived": return eq(user.archived, true);
+      default:         return eq(user.archived, false);
+    }
+  })();
+  const conditions = [viewCondition, searchCondition].filter(Boolean);
   const condition = conditions.length > 0 ? and(...conditions) : undefined;
   const selectFields = {
     id: user.id,

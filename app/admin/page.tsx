@@ -23,17 +23,19 @@ import {
 import { cn } from "@/lib/utils"
 
 async function getStats() {
-  const [{ total: totalProducts }] = await db.select({ total: count() }).from(product)
-  const [{ total: activeProducts }] = await db.select({ total: count() }).from(product).where(eq(product.status, "active"))
-  const [{ total: totalUsers }] = await db.select({ total: count() }).from(user)
-  const [{ total: pendingCollector }] = await db
-    .select({ total: count() })
-    .from(collectorPieceShowRequest)
-    .where(eq(collectorPieceShowRequest.status, "pending"))
-  const [{ total: pendingPoints }] = await db
-    .select({ total: count() })
-    .from(pointPurchaseRequest)
-    .where(eq(pointPurchaseRequest.status, "pending"))
+  const [
+    [{ total: totalProducts }],
+    [{ total: activeProducts }],
+    [{ total: totalUsers }],
+    [{ total: pendingCollector }],
+    [{ total: pendingPoints }],
+  ] = await Promise.all([
+    db.select({ total: count() }).from(product),
+    db.select({ total: count() }).from(product).where(eq(product.status, "active")),
+    db.select({ total: count() }).from(user),
+    db.select({ total: count() }).from(collectorPieceShowRequest).where(eq(collectorPieceShowRequest.status, "pending")),
+    db.select({ total: count() }).from(pointPurchaseRequest).where(eq(pointPurchaseRequest.status, "pending")),
+  ])
   return { totalProducts, activeProducts, totalUsers, pendingCollector, pendingPoints }
 }
 

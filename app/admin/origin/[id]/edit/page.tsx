@@ -14,15 +14,7 @@ async function AdminOriginEditContent({ params }: Props) {
   const origin = await getCachedOriginById(id);
   if (!origin) notFound();
 
-  return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit Origin</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{origin.name}</p>
-      </div>
-      <OriginForm key={origin.id} mode="edit" origin={origin} />
-    </div>
-  );
+  return <OriginForm key={origin.id} mode="edit" origin={origin} />;
 }
 
 export default function AdminOriginEditPage(props: Props) {

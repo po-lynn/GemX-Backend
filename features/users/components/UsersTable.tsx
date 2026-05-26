@@ -1,328 +1,359 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import Image from "next/image"
-import Link from "next/link"
+import { useMemo } from "react"
 import { useRouter } from "next/navigation"
-import type { UserRow } from "@/features/users/db/users"
-import { deleteUserAction } from "@/features/users/actions/users"
-import { Button } from "@/components/ui/button"
-import { Search, X, ExternalLink } from "lucide-react"
-import {
-  AdminTableShell,
-  AdminPagination,
-  AdminDeleteDialog,
-  AdminEmptyRow,
-  adminTH,
-  adminTHRight,
-  adminTRClickable,
-  adminTD,
-} from "@/components/admin/admin-ui"
+import { ListViewCard } from "@/components/admin/list-view"
+import type { ColumnDef, FilterDef, GroupOption, ViewTab } from "@/components/admin/list-view"
+import type { UserRow, ViewCounts } from "@/features/users/db/users"
 
-const TRUNCATE_TOKEN_LEN = 20
-const SUGGEST_DEBOUNCE_MS = 300
+// ─── Helpers ──────────────────────────────────────────────
+
+function avatarHue(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 47 + id.charCodeAt(i)) & 0xffff
+  return (h % 6) + 1 // 1–6
+}
+
+function initials(name: string): string {
+  return (
+    name
+      .split(" ")
+      .map((w) => w[0])
+      .filter(Boolean)
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U"
+  )
+}
+
+function derivedStatus(u: UserRow): "active" | "archived" {
+  return u.archived ? "archived" : "active"
+}
+
+function derivedKyc(u: UserRow): "verified" | "submitted" | "unverified" {
+  if (u.verified && u.emailVerified) return "verified"
+  if (u.emailVerified) return "submitted"
+  return "unverified"
+}
+
+function fmtDate(d: Date): string {
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  })
+}
+
+function fmtRelative(d: Date): string {
+  const s = (Date.now() - new Date(d).getTime()) / 1000
+  if (s < 60) return "just now"
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`
+  return fmtDate(d)
+}
+
+function countryFlag(iso2: string): string {
+  if (!iso2 || iso2.length < 2) return "🌐"
+  return iso2
+    .slice(0, 2)
+    .toUpperCase()
+    .replace(/./g, (c) => String.fromCodePoint(c.charCodeAt(0) + 127397))
+}
+
+// ─── Extended row type ─────────────────────────────────────
+
+type UserRowX = UserRow & {
+  _status: "active" | "archived"
+  _kyc: "verified" | "submitted" | "unverified"
+  _hasPush: boolean
+  _hue: number
+}
+
+// ─── View tabs ────────────────────────────────────────────
+
+const VIEW_IDS = ["all", "pending", "dealers", "buyers", "admins", "archived"] as const
+
+const VIEW_LABELS: Record<string, string> = {
+  all: "All", pending: "Pending", dealers: "Dealers",
+  buyers: "Buyers", admins: "Admins", archived: "Archived",
+}
+
+// ─── Column defs ──────────────────────────────────────────
+
+const KYC_LABELS = { verified: "Verified", submitted: "Submitted", unverified: "Unverified" }
+
+const COLUMN_DEFS: ColumnDef<UserRowX>[] = [
+  {
+    id: "user", label: "User", width: 280, sortable: true,
+    render: (u) => (
+      <div className="u-cell-user">
+        <div className="u-avatar-wrap">
+          <span className="lv-avatar" data-hue={u._hue}>
+            {initials(u.name)}
+          </span>
+          <span className={`u-avatar-status ${u._status}`} />
+        </div>
+        <div className="u-cell-meta">
+          <span className="u-cell-name" title={u.name}>{u.name}</span>
+          <span className="u-cell-id">{u.id.slice(0, 12)}…</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "contact", label: "Contact", width: 240, sortable: true,
+    render: (u) => (
+      <div className="u-cell-contact">
+        <span className="u-cell-email" title={u.email}>{u.email}</span>
+        <span className="u-cell-phone">
+          <span className={`u-cell-phone-dot${u._hasPush ? "" : " off"}`} />
+          {u.phone ?? <span style={{ color: "var(--lv-text-4, #C4CBD6)" }}>No phone</span>}
+        </span>
+      </div>
+    ),
+  },
+  {
+    id: "role", label: "Role", width: 120, sortable: true,
+    render: (u) => (
+      <span className={`u-role ${u.role}`}>
+        <span className="u-role-dot" />
+        {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+      </span>
+    ),
+  },
+  {
+    id: "status", label: "Status", width: 110, sortable: true,
+    render: (u) => (
+      <span className={`lv-status ${u._status}`}>
+        {u._status.charAt(0).toUpperCase() + u._status.slice(1)}
+      </span>
+    ),
+  },
+  {
+    id: "kyc", label: "KYC", width: 130, sortable: true, toggleable: true,
+    render: (u) => (
+      <span className={`u-kyc ${u._kyc}`}>
+        <span className="u-kyc-dot" />
+        {KYC_LABELS[u._kyc]}
+      </span>
+    ),
+  },
+  {
+    id: "location", label: "Location", width: 180, sortable: true,
+    render: (u) =>
+      u.country ? (
+        <span className="u-loc">
+          <span className="u-loc-flag">{countryFlag(u.country)}</span>
+          <span className="u-loc-meta">
+            <span className="u-loc-country">{u.country}</span>
+            {u.city && <span className="u-loc-city">{u.city}</span>}
+          </span>
+        </span>
+      ) : (
+        <span className="u-loc-empty">—</span>
+      ),
+  },
+  {
+    id: "points", label: "Points", width: 100, sortable: true, align: "right",
+    render: (u) => (
+      <span className={`u-points${u.points === 0 ? " zero" : ""}`}>
+        {u.points.toLocaleString()}
+      </span>
+    ),
+  },
+  {
+    id: "push", label: "Push", width: 90, sortable: true, toggleable: true,
+    render: (u) => (
+      <span className={`u-push ${u._hasPush ? "on" : "off"}`}>
+        {u._hasPush ? "Enabled" : "Off"}
+      </span>
+    ),
+  },
+  {
+    id: "joined", label: "Joined", width: 130, sortable: true,
+    render: (u) => (
+      <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.25 }}>
+        <span style={{ fontSize: 12.5, color: "var(--lv-text)", fontVariantNumeric: "tabular-nums" }}>
+          {fmtDate(u.createdAt)}
+        </span>
+        <span style={{ fontSize: 10.5, color: "var(--lv-text-3)" }}>
+          {fmtRelative(u.createdAt)}
+        </span>
+      </div>
+    ),
+  },
+]
+
+// ─── Filter defs ──────────────────────────────────────────
+
+const FILTER_DEFS: FilterDef[] = [
+  {
+    id: "role", label: "Role", type: "multi",
+    options: [
+      { value: "admin",    label: "Admin" },
+      { value: "dealer",   label: "Dealer" },
+      { value: "seller",   label: "Seller" },
+      { value: "buyer",    label: "Buyer" },
+      { value: "user",     label: "User" },
+      { value: "collector",label: "Collector" },
+    ],
+  },
+  {
+    id: "status", label: "Status", type: "multi",
+    options: [
+      { value: "active",   label: "Active" },
+      { value: "archived", label: "Archived" },
+    ],
+  },
+  {
+    id: "kyc", label: "KYC", type: "multi",
+    options: [
+      { value: "verified",   label: "Verified" },
+      { value: "submitted",  label: "Submitted" },
+      { value: "unverified", label: "Unverified" },
+    ],
+  },
+  {
+    id: "push", label: "Push token", type: "multi",
+    options: [
+      { value: "on",  label: "Enabled" },
+      { value: "off", label: "Disabled" },
+    ],
+  },
+  { id: "joined", label: "Joined", type: "daterange" },
+]
+
+// ─── Group options ─────────────────────────────────────────
+
+const GROUP_OPTIONS: GroupOption[] = [
+  { id: "role",    label: "Role" },
+  { id: "status",  label: "Status" },
+  { id: "kyc",     label: "KYC" },
+  { id: "country", label: "Country" },
+]
+
+// ─── Props ─────────────────────────────────────────────────
 
 type Props = {
   users: UserRow[]
   page: number
-  totalPages: number
   total: number
+  pageSize: number
   searchQuery?: string
   pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>
+  view?: string
+  viewCounts?: ViewCounts
 }
 
-function UserAvatar({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) {
-  const [error, setError] = useState(false)
-  const initials = (name ?? "U").charAt(0).toUpperCase()
-  return imageUrl && !error ? (
-    <Image
-      src={imageUrl}
-      alt=""
-      width={36}
-      height={36}
-      className="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-slate-200/60"
-      onError={() => setError(true)}
-    />
-  ) : (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-xs font-semibold text-violet-600 ring-1 ring-slate-200/60">
-      {initials}
-    </div>
-  )
-}
+const BASE = "/admin/users"
 
-const ROLE_STYLE: Record<string, string> = {
-  admin: "bg-violet-50 text-violet-700 ring-violet-200/60",
-  user: "bg-slate-100 text-slate-600 ring-slate-200/60",
-}
-
-function RoleBadge({ role }: { role: string }) {
-  const style = ROLE_STYLE[role?.toLowerCase()] ?? ROLE_STYLE.user
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${style}`}>
-      {role}
-    </span>
-  )
-}
+// ─── Component ─────────────────────────────────────────────
 
 export function UsersTable({
   users,
   page,
-  totalPages,
   total,
+  pageSize,
   searchQuery = "",
   pushTokensByUserId = {},
+  view = "all",
+  viewCounts,
 }: Props) {
   const router = useRouter()
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-  const [inputValue, setInputValue] = useState(searchQuery)
-  const [suggestions, setSuggestions] = useState<UserRow[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [suggestLoading, setSuggestLoading] = useState(false)
-  const suggestAbortRef = useRef<AbortController | null>(null)
-  const searchWrapRef = useRef<HTMLDivElement>(null)
-  const base = "/admin/users"
 
-  useEffect(() => { setInputValue(searchQuery) }, [searchQuery])
+  const enriched = useMemo<UserRowX[]>(
+    () =>
+      users.map((u) => ({
+        ...u,
+        _status: derivedStatus(u),
+        _kyc: derivedKyc(u),
+        _hasPush: (pushTokensByUserId[u.id]?.length ?? 0) > 0,
+        _hue: avatarHue(u.id),
+      })),
+    [users, pushTokensByUserId]
+  )
 
-  useEffect(() => {
-    const q = inputValue.trim()
-    if (!q) { setSuggestions([]); setShowSuggestions(false); return }
-    const t = setTimeout(() => {
-      suggestAbortRef.current?.abort()
-      suggestAbortRef.current = new AbortController()
-      setSuggestLoading(true)
-      fetch(`/api/admin/users/suggest?q=${encodeURIComponent(q)}`, {
-        signal: suggestAbortRef.current.signal,
-      })
-        .then((r) => r.json())
-        .then((data: { users?: UserRow[] }) => {
-          setSuggestions(data.users ?? [])
-          setShowSuggestions(true)
-        })
-        .catch(() => setSuggestions([]))
-        .finally(() => setSuggestLoading(false))
-    }, SUGGEST_DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [inputValue])
+  const views: ViewTab[] = VIEW_IDS.map((id) => ({
+    id,
+    label: VIEW_LABELS[id],
+    count: viewCounts?.[id],
+  }))
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
-      }
+  function buildViewHref(v: string): string {
+    const p = new URLSearchParams()
+    if (v !== "all") p.set("view", v)
+    if (searchQuery) p.set("search", searchQuery)
+    p.set("page", "1")
+    const qs = p.toString()
+    return qs ? `${BASE}?${qs}` : BASE
+  }
+
+  function buildPageHref(pg: number): string {
+    const p = new URLSearchParams()
+    if (view !== "all") p.set("view", view)
+    if (searchQuery) p.set("search", searchQuery)
+    p.set("page", String(pg))
+    return `${BASE}?${p.toString()}`
+  }
+
+  function filterRow(u: UserRowX, filterId: string, selected: string[]): boolean | null {
+    if (filterId === "status") return selected.includes(u._status)
+    if (filterId === "kyc")    return selected.includes(u._kyc)
+    if (filterId === "push")   return selected.includes(u._hasPush ? "on" : "off")
+    return null
+  }
+
+  function getGroupKey(u: UserRowX, groupBy: string): string | null {
+    if (groupBy === "role")    return u.role
+    if (groupBy === "status")  return u._status
+    if (groupBy === "kyc")     return u._kyc
+    if (groupBy === "country") return u.country ?? "—"
+    return null
+  }
+
+  function getSortValue(u: UserRowX, colId: string): string | number {
+    switch (colId) {
+      case "user":     return u.name.toLowerCase()
+      case "contact":  return u.email.toLowerCase()
+      case "role":     return u.role
+      case "status":   return u._status
+      case "kyc":      return ["verified", "submitted", "unverified"].indexOf(u._kyc)
+      case "location": return (u.country ?? "ZZ") + (u.city ?? "")
+      case "points":   return u.points
+      case "push":     return u._hasPush ? 1 : 0
+      case "joined":   return new Date(u.createdAt).getTime()
+      default:         return ""
     }
-    document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [])
-
-  function buildHref(p: number) {
-    const params = new URLSearchParams()
-    if (searchQuery) params.set("search", searchQuery)
-    params.set("page", String(p))
-    return `${base}?${params.toString()}`
-  }
-
-  function handleSearchSubmit() {
-    const q = inputValue.trim()
-    setShowSuggestions(false)
-    router.push(q ? `${base}?search=${encodeURIComponent(q)}&page=1` : base)
-  }
-
-  function handleSuggestionClick(u: UserRow) {
-    const q = u.name
-    setInputValue(q)
-    setShowSuggestions(false)
-    router.push(`${base}?search=${encodeURIComponent(q)}&page=1`)
-  }
-
-  function handleClear() {
-    setInputValue("")
-    setShowSuggestions(false)
-    router.push(base)
   }
 
   return (
-    <>
-      {/* Search bar */}
-      <div ref={searchWrapRef} className="relative flex flex-wrap items-center gap-2">
-        <div className="relative flex min-w-0 flex-1 items-center sm:min-w-[320px]">
-          <Search className="pointer-events-none absolute left-3 size-4 text-slate-400" aria-hidden />
-          <input
-            type="search"
-            placeholder="Search by name, email, phone, country…"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onFocus={() => inputValue.trim() && setShowSuggestions(suggestions.length > 0)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
-            className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-8 text-sm text-slate-800 placeholder:text-slate-400 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50"
-            aria-label="Search users"
-          />
-          {inputValue && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2.5 text-slate-400 hover:text-slate-600"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-        <Button size="sm" type="button" onClick={handleSearchSubmit} className="h-9">
-          Search
-        </Button>
-
-        {showSuggestions && (suggestions.length > 0 || suggestLoading) && (
-          <ul
-            className="absolute left-0 top-full z-20 mt-1 w-full max-w-sm overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
-            role="listbox"
-          >
-            {suggestLoading ? (
-              <li className="px-3 py-2 text-sm text-slate-400">Loading…</li>
-            ) : (
-              suggestions.map((u) => (
-                <li
-                  key={u.id}
-                  role="option"
-                  aria-selected={false}
-                  className="cursor-pointer px-3 py-2 text-sm transition-colors hover:bg-slate-50"
-                  onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(u) }}
-                >
-                  <span className="font-medium text-slate-800">{u.name}</span>
-                  {u.email && <span className="ml-2 text-slate-500">{u.email}</span>}
-                  {u.phone && <span className="ml-2 text-slate-400">{u.phone}</span>}
-                </li>
-              ))
-            )}
-          </ul>
-        )}
-      </div>
-
-      {/* Table */}
-      <AdminTableShell>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/80">
-              <th className={adminTH + " w-12 text-center"}>Photo</th>
-              <th className={adminTH}>Name</th>
-              <th className={adminTH}>Email</th>
-              <th className={adminTH}>Role</th>
-              <th className={adminTH}>Phone</th>
-              <th className={adminTH}>Country</th>
-              <th className={adminTH}>Products</th>
-              <th className={adminTH}>Push token</th>
-              <th className={adminTHRight}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
-              <AdminEmptyRow colSpan={9} message="No users found." />
-            ) : (
-              users.map((u) => (
-                <tr
-                  key={u.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(`${base}/${u.id}/edit`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      router.push(`${base}/${u.id}/edit`)
-                    }
-                  }}
-                  className={adminTRClickable}
-                >
-                  <td className="px-4 py-2.5 text-center">
-                    <UserAvatar imageUrl={u.image} name={u.name} />
-                  </td>
-                  <td className={adminTD}>
-                    <span className="font-medium text-slate-800">{u.name}</span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{u.email}</td>
-                  <td className={adminTD}>
-                    <RoleBadge role={u.role} />
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{u.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{u.country ?? "—"}</td>
-                  <td
-                    className="px-4 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Link
-                      href={`/admin/users/${u.id}/products`}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
-                    >
-                      View
-                      <ExternalLink className="size-3" />
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
-                    {(() => {
-                      const tokens = pushTokensByUserId[u.id]
-                      if (!tokens?.length) return "—"
-                      const first = tokens[0]
-                      const truncated =
-                        first.token.length > TRUNCATE_TOKEN_LEN
-                          ? `${first.token.slice(0, TRUNCATE_TOKEN_LEN)}…`
-                          : first.token
-                      return tokens.length === 1 ? (
-                        <span title={first.token}>{truncated}</span>
-                      ) : (
-                        <span title={tokens.map((t) => t.token).join("\n")}>
-                          {truncated} <span className="text-slate-500">+{tokens.length - 1}</span>
-                        </span>
-                      )
-                    })()}
-                  </td>
-                  <td
-                    className="px-4 py-3 text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                      aria-label={`Delete ${u.name}`}
-                    >
-                      <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        <AdminPagination
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageCount={users.length}
-          buildHref={buildHref}
-        />
-      </AdminTableShell>
-
-      <AdminDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(v) => !v && setDeleteTarget(null)}
-        title="Delete user"
-        description={
-          <>
-            Delete <strong>{deleteTarget?.name}</strong>? This will remove their
-            account and all associated data. This cannot be undone.
-          </>
-        }
-        onDelete={async () => {
-          if (!deleteTarget) return
-          const form = new FormData()
-          form.set("userId", deleteTarget.id)
-          const result = await deleteUserAction(form)
-          if (result?.error) return result.error
-          router.refresh()
-          setDeleteTarget(null)
-        }}
-      />
-    </>
+    <ListViewCard
+      rows={enriched}
+      columnDefs={COLUMN_DEFS}
+      views={views}
+      activeView={view}
+      buildViewHref={buildViewHref}
+      filterDefs={FILTER_DEFS}
+      groupOptions={GROUP_OPTIONS}
+      defaultSort={{ id: "joined", dir: "desc" }}
+      getSortValue={getSortValue}
+      filterRow={filterRow}
+      getGroupKey={getGroupKey}
+      onRowClick={(u) => router.push(`${BASE}/${u.id}/edit`)}
+      renderBulkActions={(_rows, onClear) => (
+        <>
+          <button className="lv-bulkbtn approve" onClick={onClear}>Verify KYC</button>
+          <button className="lv-bulkbtn" onClick={onClear}>Grant points</button>
+          <button className="lv-bulkbtn" onClick={onClear}>Message</button>
+          <button className="lv-bulkbtn danger" onClick={onClear}>Suspend</button>
+          <button className="lv-bulkbtn danger" onClick={onClear}>Archive</button>
+        </>
+      )}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      buildPageHref={buildPageHref}
+      onRefresh={() => router.refresh()}
+      emptyMessage="No users found."
+    />
   )
 }

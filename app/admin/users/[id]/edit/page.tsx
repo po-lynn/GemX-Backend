@@ -14,15 +14,7 @@ async function AdminUsersEditContent({ params }: Props) {
   const user = await getUserById(id);
   if (!user) notFound();
 
-  return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit User</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{user.name}</p>
-      </div>
-      <UserForm key={user.id} mode="edit" user={user} />
-    </div>
-  );
+  return <UserForm key={user.id} mode="edit" user={user} />;
 }
 
 export default function AdminUsersEditPage(props: Props) {

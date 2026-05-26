@@ -1,128 +1,202 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import type { ArticleRow } from "@/features/articles/db/articles"
+import Link from "next/link"
+import { Pencil, Trash2 } from "lucide-react"
+import { ListViewCard } from "@/components/admin/list-view"
+import type { ColumnDef, ViewTab } from "@/components/admin/list-view"
+import type { ArticleRow, ArticleStatusCounts } from "@/features/articles/db/articles"
 import { deleteArticleAction } from "@/features/articles/actions/articles"
-import { Pencil } from "lucide-react"
-import { formatDate } from "@/lib/formatters"
-import {
-  AdminTableShell,
-  AdminPagination,
-  AdminStatusBadge,
-  AdminDeleteDialog,
-  AdminEmptyRow,
-  adminTH,
-  adminTHRight,
-  adminTRClickable,
-  adminTD,
-} from "@/components/admin/admin-ui"
+import { AdminDeleteDialog } from "@/components/admin/admin-ui"
+
+// ─── Helpers ──────────────────────────────────────────────
+
+function coverGradient(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff
+  return h % 7
+}
+
+function coverAbbr(title: string): string {
+  return title
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "A"
+}
+
+function fmtDate(d: Date): string {
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  })
+}
+
+function fmtRelative(d: Date): string {
+  const s = (Date.now() - new Date(d).getTime()) / 1000
+  if (s < 60) return "just now"
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`
+  if (s < 2592000) return `${Math.floor(s / 604800)}w ago`
+  return fmtDate(d)
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  published: "Published",
+  draft: "Draft",
+}
+
+// ─── Types ────────────────────────────────────────────────
 
 type Props = {
   articles: ArticleRow[]
   page: number
-  totalPages: number
   total: number
+  pageSize: number
+  view: string
+  viewCounts: ArticleStatusCounts
 }
 
-export function ArticlesTable({ articles: items, page, totalPages, total }: Props) {
+// ─── Component ────────────────────────────────────────────
+
+export function ArticlesTable({ articles: items, page, total, pageSize, view, viewCounts }: Props) {
   const router = useRouter()
   const base = "/admin/articles"
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
 
-  function buildHref(p: number) {
+  function buildViewHref(v: string) {
+    return `${base}?view=${v}`
+  }
+
+  function buildPageHref(p: number) {
     const sp = new URLSearchParams()
+    if (view !== "all") sp.set("view", view)
     sp.set("page", String(p))
     return `${base}?${sp.toString()}`
   }
 
+  const views: ViewTab[] = [
+    { id: "all",       label: "All",       count: viewCounts.all },
+    { id: "published", label: "Published", count: viewCounts.published },
+    { id: "drafts",    label: "Drafts",    count: viewCounts.draft },
+  ]
+
+  const columnDefs = useMemo((): ColumnDef<ArticleRow>[] => [
+    {
+      id: "title",
+      label: "Title",
+      flex: true,
+      render: (row) => {
+        const g = coverGradient(row.id)
+        const abbr = coverAbbr(row.title)
+        const shortId = row.id.slice(0, 8).toUpperCase()
+        return (
+          <div className="n-titlecell">
+            <div className="n-cover sm" data-g={String(g)}>
+              <span className="n-cover-glyph">{abbr}</span>
+            </div>
+            <div className="n-titlecell-meta">
+              <span className="n-titlecell-title">{row.title}</span>
+              <span className="n-titlecell-meta-row">
+                <span className="n-titlecell-id">{shortId}</span>
+                {row.author ? (
+                  <span style={{ color: "var(--lv-text-3)", fontSize: 11 }}>{row.author}</span>
+                ) : null}
+              </span>
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      id: "status",
+      label: "Status",
+      width: 120,
+      sortable: false,
+      render: (row) => (
+        <span className={`lv-status ${row.status}`}>
+          {STATUS_LABELS[row.status] ?? row.status}
+        </span>
+      ),
+    },
+    {
+      id: "publishDate",
+      label: "Publish date",
+      width: 160,
+      sortable: false,
+      render: (row) => {
+        if (!row.publishDate) return <span style={{ color: "var(--lv-text-3)" }}>—</span>
+        return (
+          <div className="n-schedcell">
+            <span className="n-schedcell-when">{fmtDate(new Date(row.publishDate))}</span>
+            <span className="n-schedcell-rel">{fmtRelative(new Date(row.publishDate))}</span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "updatedAt",
+      label: "Updated",
+      width: 110,
+      sortable: false,
+      render: (row) => (
+        <span style={{ fontSize: 11.5, color: "var(--lv-text-3)", fontFamily: "var(--font-mono, monospace)" }}>
+          {fmtRelative(new Date(row.updatedAt))}
+        </span>
+      ),
+    },
+  ], [])
+
   return (
     <>
-      <AdminTableShell>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/80">
-              <th className={adminTH}>Title</th>
-              <th className={adminTH + " w-36"}>Author</th>
-              <th className={adminTH + " w-28"}>Status</th>
-              <th className={adminTH + " w-44"}>Publish date</th>
-              <th className={adminTHRight + " w-24"}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <AdminEmptyRow colSpan={5} message="No articles yet. Create one to get started." />
-            ) : (
-              items.map((row) => (
-                <tr
-                  key={row.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(`${base}/${row.id}/edit`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      router.push(`${base}/${row.id}/edit`)
-                    }
-                  }}
-                  className={adminTRClickable}
-                >
-                  <td className={adminTD}>
-                    <span className="font-medium text-slate-800">{row.title}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{row.author || "—"}</td>
-                  <td className={adminTD}>
-                    <AdminStatusBadge status={row.status} />
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">
-                    {row.publishDate ? formatDate(new Date(row.publishDate)) : "—"}
-                  </td>
-                  <td
-                    className="px-4 py-3 text-right"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="inline-flex items-center gap-0.5">
-                      <Link
-                        href={`${base}/${row.id}/edit`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                        aria-label="Edit"
-                      >
-                        <Pencil className="size-3.5" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget({ id: row.id, title: row.title })}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                        aria-label="Delete"
-                      >
-                        <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        <AdminPagination
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageCount={items.length}
-          buildHref={buildHref}
-        />
-      </AdminTableShell>
+      <ListViewCard
+        rows={items}
+        columnDefs={columnDefs}
+        views={views}
+        activeView={view}
+        buildViewHref={buildViewHref}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        buildPageHref={buildPageHref}
+        onRowClick={(row) => router.push(`${base}/${row.id}/edit`)}
+        rowActions={(row) => (
+          <>
+            <Link
+              href={`${base}/${row.id}/edit`}
+              onClick={(e) => e.stopPropagation()}
+              className="lv-rowbtn open"
+              aria-label="Edit"
+            >
+              <Pencil /> Edit
+            </Link>
+            <button
+              type="button"
+              className="lv-rowbtn lv-icon lv-danger"
+              onClick={(e) => {
+                e.stopPropagation()
+                setDeleteTarget({ id: row.id, title: row.title })
+              }}
+              aria-label="Delete"
+            >
+              <Trash2 />
+            </button>
+          </>
+        )}
+        emptyMessage="No articles yet. Create the first one."
+        onRefresh={() => router.refresh()}
+      />
 
       <AdminDeleteDialog
         open={!!deleteTarget}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="Delete article"
-        description={<>Delete <strong>&ldquo;{deleteTarget?.title}&rdquo;</strong>? This cannot be undone.</>}
+        description={
+          <>
+            Delete <strong>&ldquo;{deleteTarget?.title}&rdquo;</strong>? This cannot be undone.
+          </>
+        }
         onDelete={async () => {
           if (!deleteTarget) return
           const form = new FormData()

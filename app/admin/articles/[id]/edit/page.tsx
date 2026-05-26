@@ -15,11 +15,7 @@ async function AdminArticleEditContent({ params }: Props) {
   if (!article) notFound();
 
   return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit Article</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{article.title}</p>
-      </div>
+    <div className="py-2">
       <ArticleForm key={article.id} mode="edit" article={article} />
     </div>
   );

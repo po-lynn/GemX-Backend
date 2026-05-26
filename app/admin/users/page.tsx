@@ -2,37 +2,42 @@ import Link from "next/link"
 import { connection } from "next/server"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getUsersPaginatedFromDb } from "@/features/users/db/users"
+import {
+  getUsersPaginatedFromDb,
+  getUserStatsFromDb,
+  getViewCountsFromDb,
+} from "@/features/users/db/users"
 import { getPushTokensByUserIds } from "@/features/push/db/push-tokens"
 import { UsersTable } from "@/features/users/components"
-import { UserFilters } from "@/features/users/components/UserFilters"
 
-const USERS_PAGE_SIZE = 20
+const PAGE_SIZE = 20
 
 type Props = {
   searchParams: Promise<{
     page?: string
     search?: string
-    country?: string
-    state?: string
-    city?: string
+    view?: string
   }>
+}
+
+function fmtCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
 }
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   await connection()
   const params = await searchParams
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
-  const search = params.search?.trim() ?? ""
-  const country = params.country?.trim() ?? ""
-  const state = params.state?.trim() ?? ""
-  const city = params.city?.trim() ?? ""
+  const search  = params.search?.trim() ?? ""
+  const view    = params.view?.trim() ?? "all"
 
-  const { users, total } = await getUsersPaginatedFromDb({
-    page: rawPage,
-    limit: USERS_PAGE_SIZE,
-    search: search || undefined,
-  })
+  const [{ users, total }, stats, viewCounts] = await Promise.all([
+    getUsersPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, search: search || undefined, view }),
+    getUserStatsFromDb(),
+    getViewCountsFromDb(),
+  ])
 
   let pushTokensByUserId: Record<string, { token: string; platform: string | null }[]> = {}
   if (users.length > 0) {
@@ -43,37 +48,79 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE))
+  const kpis = [
+    {
+      label: "Total users",
+      value: stats.total.toLocaleString(),
+      delta: `+${stats.newThisWeek} new this week`,
+      tone: "purple",
+    },
+    {
+      label: "Active",
+      value: stats.active.toLocaleString(),
+      delta: stats.total > 0 ? `${Math.round((stats.active / stats.total) * 100)}% of total` : "—",
+      tone: "emer",
+    },
+    {
+      label: "KYC verified",
+      value: stats.verified.toLocaleString(),
+      delta: `${stats.total - stats.verified} awaiting verification`,
+      tone: "warn",
+    },
+    {
+      label: "Points in circulation",
+      value: fmtCompact(stats.totalPoints),
+      delta: `${stats.dealers} active dealers`,
+      tone: "purple",
+    },
+  ]
 
   return (
     <div className="space-y-5 py-2">
       {/* Page header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="lv-pagehead">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Users</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Manage buyer and seller accounts, roles, and points
+          <h1 className="lv-h1">
+            Users
+            <span className="lv-h1-count">{stats.total.toLocaleString()} total</span>
+          </h1>
+          <p className="lv-subhead">
+            Manage buyer, seller and dealer accounts — roles, KYC, points and access.
           </p>
         </div>
-        <Button asChild size="sm" className="shrink-0 shadow-sm">
-          <Link href="/admin/users/new">
-            <Plus className="mr-1.5 size-4" />
-            New User
-          </Link>
-        </Button>
+        <div className="lv-pagehead-actions">
+          <Button asChild size="sm" className="shrink-0 shadow-sm">
+            <Link href="/admin/users/new">
+              <Plus className="mr-1.5 size-4" />
+              New User
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Location filters */}
-      <UserFilters country={country} state={state} city={city} />
+      {/* KPI strip */}
+      <div className="lv-kpis">
+        {kpis.map((k) => (
+          <div key={k.label} className="lv-kpi" data-tone={k.tone}>
+            <span className="lv-kpi-label">
+              <span className="lv-kpi-dot" />
+              {k.label}
+            </span>
+            <span className="lv-kpi-value">{k.value}</span>
+            <span className="lv-kpi-delta">{k.delta}</span>
+          </div>
+        ))}
+      </div>
 
-      {/* Table */}
       <UsersTable
         users={users}
         page={rawPage}
-        totalPages={totalPages}
         total={total}
+        pageSize={PAGE_SIZE}
         searchQuery={search}
         pushTokensByUserId={pushTokensByUserId}
+        view={view}
+        viewCounts={viewCounts}
       />
     </div>
   )

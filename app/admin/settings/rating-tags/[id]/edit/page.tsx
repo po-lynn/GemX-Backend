@@ -14,17 +14,7 @@ async function AdminRatingTagEditContent({ params }: Props) {
   const row = await getCachedRatingTagById(id)
   if (!row) notFound()
 
-  return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-          Edit rating tag
-        </h1>
-        <p className="mt-0.5 text-sm text-slate-500">{row.name}</p>
-      </div>
-      <RatingTagForm key={row.id} mode="edit" ratingTag={row} />
-    </div>
-  )
+  return <RatingTagForm key={row.id} mode="edit" ratingTag={row} />
 }
 
 export default function AdminRatingTagEditPage(props: Props) {

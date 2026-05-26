@@ -21,9 +21,6 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     ? (params.view as View)
     : "all"
 
-  const counts = await getAdminProductCounts()
-
-  // Map view tab to DB filter params
   const viewFilter = {
     all:       {},
     pending:   { moderationStatus: "pending" as const },
@@ -33,11 +30,10 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     drafts:    { status: "hidden" as const },
   }[view]
 
-  const { products, total } = await getAdminProducts({
-    page,
-    limit: PAGE_SIZE,
-    ...viewFilter,
-  })
+  const [counts, { products, total }] = await Promise.all([
+    getAdminProductCounts(),
+    getAdminProducts({ page, limit: PAGE_SIZE, ...viewFilter }),
+  ])
 
   const views: ViewTab[] = [
     { id: "all",       label: "All",       count: counts.all },

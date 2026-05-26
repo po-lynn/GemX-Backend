@@ -15,11 +15,7 @@ async function AdminNewsEditContent({ params }: Props) {
   if (!news) notFound();
 
   return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit News</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{news.title}</p>
-      </div>
+    <div className="py-2">
       <NewsForm key={news.id} mode="edit" news={news} />
     </div>
   );

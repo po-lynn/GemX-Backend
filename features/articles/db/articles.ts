@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { articles } from "@/drizzle/schema/articles-schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, ne, desc, sql, type SQL } from "drizzle-orm";
 
 export type ArticleRow = {
   id: string;
@@ -36,26 +36,49 @@ export async function getArticleBySlug(slug: string): Promise<ArticleRow | null>
   return row ?? null;
 }
 
-/** List articles with pagination. Optional status filter (omit for all). */
+/** List articles with pagination. Pass `view` for admin tab filtering, `status` for API filtering. */
 export async function getArticlesPaginatedFromDb(options: {
   page: number;
   limit: number;
   status?: "draft" | "published";
+  view?: string;
 }): Promise<{ items: ArticleRow[]; total: number }> {
-  const { page, limit, status } = options;
-  const where = status === undefined ? undefined : eq(articles.status, status);
+  const { page, limit, status, view } = options;
+  let where: SQL | undefined
+  if (view === "published")   where = eq(articles.status, "published")
+  else if (view === "drafts") where = eq(articles.status, "draft")
+  else if (view === "all")    where = undefined
+  else if (status !== undefined) where = eq(articles.status, status)
   const items = await db
     .select()
     .from(articles)
     .where(where)
-    .orderBy(desc(articles.publishDate ?? articles.updatedAt))
+    .orderBy(desc(articles.updatedAt))
     .limit(limit)
     .offset((page - 1) * limit)
-  const countResult = where
-    ? await db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
-    : await db.select({ count: sql<number>`count(*)::int` }).from(articles)
+  const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
   const total = countResult[0]?.count ?? 0;
   return { items, total };
+}
+
+export type ArticleStatusCounts = {
+  all: number
+  published: number
+  draft: number
+}
+
+export async function getArticleStatusCountsFromDb(): Promise<ArticleStatusCounts> {
+  const rows = await db
+    .select({ status: articles.status, count: sql<number>`count(*)::int` })
+    .from(articles)
+    .groupBy(articles.status)
+  const map: Record<string, number> = {}
+  for (const r of rows) map[r.status] = r.count
+  return {
+    all: Object.values(map).reduce((s, n) => s + n, 0),
+    published: map["published"] ?? 0,
+    draft: map["draft"] ?? 0,
+  }
 }
 
 export async function createArticleInDb(input: {

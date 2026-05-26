@@ -23,7 +23,10 @@ export default async function AdminChatDashboardPage({
   }
 
   const peerFromUrl = (await searchParams)?.peer
-  const chatPeerRows = await getChatPeerProfilesForUser(session.user.id)
+  const [chatPeerRows, { users: directoryRows }] = await Promise.all([
+    getChatPeerProfilesForUser(session.user.id),
+    getUsersPaginatedFromDb({ page: 1, limit: 200 }),
+  ])
   const chatPeerIds = chatPeerRows.map((u) => u.id)
   const activityMap = await getLastSessionActivityByUserIds(chatPeerIds)
   const peers = chatPeerRows.map((u) => ({
@@ -33,8 +36,6 @@ export default async function AdminChatDashboardPage({
     image: u.image ?? null,
     lastSessionAt: activityMap.get(u.id)?.toISOString() ?? null,
   }))
-
-  const { users: directoryRows } = await getUsersPaginatedFromDb({ page: 1, limit: 200 })
   const contactPickerUsers = directoryRows
     .filter((u) => u.id !== session.user.id)
     .map((u) => ({

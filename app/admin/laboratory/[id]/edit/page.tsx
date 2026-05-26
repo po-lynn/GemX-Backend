@@ -14,15 +14,7 @@ async function AdminLaboratoryEditContent({ params }: Props) {
   const laboratory = await getCachedLaboratoryById(id);
   if (!laboratory) notFound();
 
-  return (
-    <div className="space-y-5 py-2">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Edit Laboratory</h1>
-        <p className="mt-0.5 text-sm text-slate-500">{laboratory.name}</p>
-      </div>
-      <LaboratoryForm mode="edit" laboratory={laboratory} />
-    </div>
-  );
+  return <LaboratoryForm mode="edit" laboratory={laboratory} />;
 }
 
 export default function AdminLaboratoryEditPage(props: Props) {

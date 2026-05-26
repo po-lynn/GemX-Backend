@@ -2,20 +2,38 @@ import { db } from "@/drizzle/db";
 import { origin } from "@/drizzle/schema/origin-schema";
 import { eq } from "drizzle-orm";
 
-export type OriginOption = { id: string; name: string; country: string };
+export type OriginOption = {
+  id: string;
+  name: string;
+  country: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type OriginForEdit = OriginOption;
 
 export async function getAllOrigins(): Promise<OriginOption[]> {
   return db
-    .select({ id: origin.id, name: origin.name, country: origin.country })
+    .select({
+      id: origin.id,
+      name: origin.name,
+      country: origin.country,
+      createdAt: origin.createdAt,
+      updatedAt: origin.updatedAt,
+    })
     .from(origin)
     .orderBy(origin.name);
 }
 
 export async function getOriginById(id: string): Promise<OriginForEdit | null> {
   const row = await db
-    .select({ id: origin.id, name: origin.name, country: origin.country })
+    .select({
+      id: origin.id,
+      name: origin.name,
+      country: origin.country,
+      createdAt: origin.createdAt,
+      updatedAt: origin.updatedAt,
+    })
     .from(origin)
     .where(eq(origin.id, id))
     .limit(1);
