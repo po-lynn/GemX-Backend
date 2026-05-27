@@ -3,7 +3,8 @@ import { user } from "@/drizzle/schema/auth-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { product } from "@/drizzle/schema/product-schema"
-import { alias, and, desc, eq, gte, sql } from "drizzle-orm"
+import { and, desc, eq, gte, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 
 export type CollectorPieceShowRequestRow = {
   id: string
