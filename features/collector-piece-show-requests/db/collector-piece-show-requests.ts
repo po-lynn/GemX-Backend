@@ -3,7 +3,7 @@ import { user } from "@/drizzle/schema/auth-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { product } from "@/drizzle/schema/product-schema"
-import { and, desc, eq, gte, sql } from "drizzle-orm"
+import { alias, and, desc, eq, gte, sql } from "drizzle-orm"
 
 export type CollectorPieceShowRequestRow = {
   id: string
@@ -32,6 +32,65 @@ export type CollectorPieceShowRequestsKPIs = {
   approvedCount: number
   highValuePending: number
   totalCount: number
+}
+
+export type MobileCollectorPieceShowRequestItem = {
+  id: string
+  productId: string
+  /** Product listing title at request time (from `product.title`). */
+  productName: string
+  /** Seller display name (from `user.name` for `product.seller_id`). */
+  sellerName: string
+  status: string
+  message: string | null
+  createdAt: Date
+}
+
+/** Paginated list of collector-piece show requests for the mobile app (requester-scoped). */
+export async function getMyCollectorPieceShowRequestsPaginated(options: {
+  userId: string
+  page: number
+  limit: number
+}): Promise<{ requests: MobileCollectorPieceShowRequestItem[]; total: number }> {
+  const { userId, page, limit } = options
+  const offset = (page - 1) * limit
+  const seller = alias(user, "collector_piece_show_req_seller")
+
+  const rows = await db
+    .select({
+      id: collectorPieceShowRequest.id,
+      productId: collectorPieceShowRequest.productId,
+      productName: product.title,
+      sellerName: seller.name,
+      status: collectorPieceShowRequest.status,
+      message: collectorPieceShowRequest.message,
+      createdAt: collectorPieceShowRequest.createdAt,
+    })
+    .from(collectorPieceShowRequest)
+    .innerJoin(product, eq(product.id, collectorPieceShowRequest.productId))
+    .innerJoin(seller, eq(seller.id, product.sellerId))
+    .where(eq(collectorPieceShowRequest.userId, userId))
+    .orderBy(desc(collectorPieceShowRequest.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(collectorPieceShowRequest)
+    .where(eq(collectorPieceShowRequest.userId, userId))
+
+  return {
+    requests: rows.map((r) => ({
+      id: r.id,
+      productId: r.productId,
+      productName: r.productName,
+      sellerName: r.sellerName,
+      status: r.status,
+      message: r.message,
+      createdAt: r.createdAt,
+    })),
+    total: countRows[0]?.count ?? 0,
+  }
 }
 
 export async function getCollectorPieceShowRequestsPaginated(options: {

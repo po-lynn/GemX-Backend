@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Collector piece show requests — list enrichment** – **GET `/api/mobile/collector-piece-show-requests`** each **`requests`** item now includes **`productName`** (from **`product.title`**) and **`sellerName`** (from the listing seller’s **`user.name`**). See **5.4.4**.
 - **Premium dealers list — premium since date** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`premiumSinceDate`** (ISO 8601; earliest **`premium_dealers_packages.start_date`** for that user, including expired/cancelled history). See **5.4.3c**.
 - **Profile — admin verified flag** – **GET `/api/profile`** and **GET `/api/profile/:id`** response **`profile`** now include **`verified`** (`boolean` from **`user.verified`**; set by admin when the account is verified). See **5.4** and **5.4a**.
 - **Premium dealer auto-renew** – **POST `/api/mobile/premium-dealers/activate`** `autoRenew` field now triggers automatic renewal: a daily server-side cron job (`POST /api/cron/renew-premium-dealers`) deducts `pointsRequired` and creates a new subscription row on expiry; if the user has insufficient points the subscription expires without renewal. **GET `/api/mobile/premium-dealers/status`** now returns `points` (always), `daysRemaining`, and `autoRenew` alongside the existing `active`/`packageName`/`expiresAt` fields. **GET `/api/mobile/premium-dealers/settings`** now includes `recommended` (boolean; `true` for the second package when 2+ packages exist). See **5.4.3**, **5.4.3a**, and **5.4.3b**.
@@ -37,7 +38,7 @@
 - **Collector-piece owner visibility** – `GET /api/products/:id` now returns **full collector-piece details for the owner** when `sellerId === logged-in user id` (Bearer token), even without a show-request. Non-owners still receive limited shape until their `collector_piece_show_request` is approved. See **5.2**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
 - **Escrow service requests (mobile)** – Added **POST `/api/mobile/escrow-service-requests`** (auth required) and **GET `/api/mobile/escrow-service-requests`** (auth required). POST body: `type` (`"buyer"` | `"seller"`), optional `productId` (UUID), optional `message`. When `productId` is provided the server auto-fetches the product's `sellerId` and stores it — no client-side snapshot fields required. GET returns the authenticated user's own requests (paginated). `adminNote` is never returned to mobile clients. See **5.4.5**.
-- **Collector piece show request (mobile)** – **POST `/api/mobile/collector-piece-show-requests`** (auth required): user submits `productId` and optional `message`; user info (name, email, phone) is taken from the session automatically. **GET `/api/mobile/collector-piece-show-requests`** (auth required): paginated list of the current user's own requests with status. See **5.4.4**.
+- **Collector piece show request (mobile)** – **POST `/api/mobile/collector-piece-show-requests`** (auth required): user submits `productId` and optional `message`; user info (name, email, phone) is taken from the session automatically. **GET `/api/mobile/collector-piece-show-requests`** (auth required): paginated list of the current user's own requests with status, **`productName`**, and **`sellerName`**. See **5.4.4**.
 - *(Superseded — see above)* `POST /api/mobile/products/:id/feature` was briefly removed; it is now re-added with a points-and-tier model. The old direct `isFeatured`/`featured`/`featureDurationDays` fields on product create/update still work for admin use.
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
@@ -82,7 +83,7 @@
 | GET    | `/api/mobile/points/purchase-requests` | Yes  | List current user's own credit point purchase request history (all statuses). See **5.4.2**.                                                                                                         |
 | GET    | `/api/mobile/points/purchase-history` | Yes  | List current user's **approved** credit point purchase requests only (`point_purchase_request` where `status` is `"approved"`). See **5.4.2**.                                                         |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit a show-request for a collector-piece product. Body: `productId`, optional `message`. User info taken from session. See **5.4.4**.                                                              |
-| GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. See **5.4.4**.                                                               |
+| GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. Each item includes **`productName`**, **`sellerName`**. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow-service chat account from `escrow_service_setting.user_id` (`id`, `name`, `image`, `role` for **5.4.5a** / chat `recipientId`). |
@@ -2087,6 +2088,8 @@ Returns a paginated list of the current user's own collector-piece show requests
     {
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "productId": "550e8400-e29b-41d4-a716-446655440000",
+      "productName": "Burmese Ruby 2.1 ct",
+      "sellerName": "Jane Gems",
       "status": "pending",
       "message": "I am a serious collector.",
       "createdAt": "2026-04-14T10:00:00.000Z"
@@ -2102,11 +2105,13 @@ Returns a paginated list of the current user's own collector-piece show requests
 | ----------- | ------ | ----------------------------------------------------------------- |
 | `id`        | string | Request ID.                                                       |
 | `productId` | string | The collector-piece product this request is for.                  |
+| `productName` | string | Listing title from **`product.title`** (current product row).     |
+| `sellerName` | string | Seller display name from **`user.name`** for **`product.seller_id`**. |
 | `status`    | string | `"pending"` (awaiting review), `"approved"`, or `"dismissed"`.   |
 | `message`   | string | null | The note submitted with the request.                       |
 | `createdAt` | string | ISO 8601 submission time.                                         |
 
-**Use in app:** Poll or call this endpoint after submitting a request to show status ("Pending review", "Approved", "Dismissed"). When `status` is `"approved"`, call `GET /api/products/:id` with Bearer token to retrieve full product details.
+**Use in app:** Poll or call this endpoint after submitting a request to show status ("Pending review", "Approved", "Dismissed"). Use **`productName`** / **`sellerName`** for list labels without an extra product fetch. When `status` is `"approved"`, call `GET /api/products/:id` with Bearer token to retrieve full product details.
 
 **Errors:**
 
@@ -3168,7 +3173,7 @@ Returns a single published article by ID. Draft items return **404**.
   - **Save/Unsave favourites:** `POST /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to save; `DELETE /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to unsave; `GET /api/mobile/favourite-products?page=1&limit=20` to show saved items.
   - **Collector piece browse (public):** `GET /api/products?isCollectorPiece=true` — no auth needed. Returns image + masked price only for all active collector pieces.
   - **Collector piece detail:** `GET /api/products/:id` — seller(owner) gets full data when logged in; non-owner gets limited shape (image + masked price + `requestStatus`) until approved.
-  - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer). See **5.4.4**.
+  - **Request access:** on a collector listing, `POST /api/mobile/collector-piece-show-requests` with `productId` and optional `message` (Bearer token). User info is auto-captured from session. Check request status via `GET /api/mobile/collector-piece-show-requests` (Bearer; each row includes **`productName`** and **`sellerName`**). See **5.4.4**.
   - Detail: `GET /api/products/:id`.
   - Seller profile (public): `GET /api/profile/:id` to show another seller and their active products; response **`profile`** includes **`verified`** and **`isPremiumDealer`**.
   - **Seller ratings:** Load preset tag options with `GET /api/rating-tags` (cache locally). After viewing a seller, load public stats with `GET /api/mobile/seller-ratings/<sellerId>?page=1&limit=20`. To submit or change your rating (logged in): `POST /api/mobile/seller-ratings` with `{ "sellerId": "<sellerUserId>", "score": 1..5, "comment": "optional", "tagIds": ["<uuid>", ...] }` (`tagIds` optional; each id must be active in **GET `/api/rating-tags`**). List ratings you have given: `GET /api/mobile/seller-ratings?page=1&limit=20` (each item includes `tagIds`).
@@ -3230,7 +3235,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/points/purchase-requests` | Yes  | List own credit point purchase request history. See 5.4.2.                                                   |
 | POST   | `/api/mobile/points/purchase` | Yes  | *(Legacy)* Purchase points and add to user balance based on configured conversion. See 5.4.2.                 |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit show-request for a collector piece (`productId`, optional `message`). User info auto-captured from session. See 5.4.4. |
-| GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`). See 5.4.4.                                            |
+| GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`; each item includes `productName`, `sellerName`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
 | GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow chat account from `escrow_service_setting` (`user` or `null`). See 5.4.5a. |

@@ -1,11 +1,12 @@
 import { NextRequest, connection } from "next/server"
 import { z } from "zod"
-import { desc, eq, sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { product } from "@/drizzle/schema/product-schema"
 import { jsonError, jsonUncached } from "@/lib/api"
+import { getMyCollectorPieceShowRequestsPaginated } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 
 const bodySchema = z.object({
   productId: z.string().uuid(),
@@ -91,32 +92,18 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const page = Math.max(1, Number(url.searchParams.get("page") || 1))
     const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 10)))
-    const offset = (page - 1) * limit
 
-    const rows = await db
-      .select({
-        id: collectorPieceShowRequest.id,
-        productId: collectorPieceShowRequest.productId,
-        status: collectorPieceShowRequest.status,
-        message: collectorPieceShowRequest.message,
-        createdAt: collectorPieceShowRequest.createdAt,
-      })
-      .from(collectorPieceShowRequest)
-      .where(eq(collectorPieceShowRequest.userId, session.user.id))
-      .orderBy(desc(collectorPieceShowRequest.createdAt))
-      .limit(limit)
-      .offset(offset)
-
-    const countRows = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(collectorPieceShowRequest)
-      .where(eq(collectorPieceShowRequest.userId, session.user.id))
-
-    return jsonUncached({
-      requests: rows,
+    const { requests, total } = await getMyCollectorPieceShowRequestsPaginated({
+      userId: session.user.id,
       page,
       limit,
-      total: countRows[0]?.count ?? 0,
+    })
+
+    return jsonUncached({
+      requests,
+      page,
+      limit,
+      total,
     })
   } catch (e) {
     console.error("GET /api/mobile/collector-piece-show-requests:", e)
