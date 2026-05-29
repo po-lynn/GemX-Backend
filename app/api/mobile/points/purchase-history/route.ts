@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       .select({
         id: pointPurchaseRequest.id,
         packageName: pointPurchaseRequest.packageName,
+        paymentMethod: pointPurchaseRequest.paymentMethod,
         points: pointPurchaseRequest.points,
         price: pointPurchaseRequest.price,
         currency: pointPurchaseRequest.currency,

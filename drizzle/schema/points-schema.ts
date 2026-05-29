@@ -43,6 +43,8 @@ export const pointPurchaseRequest = pgTable(
     price: integer("price").notNull(),
     /** Currency of the payment, e.g. "mmk", "usd", "krw" */
     currency: text("currency").notNull().default("mmk"),
+    /** Payment method name from settings (e.g. "KBZ Pay") */
+    paymentMethod: text("payment_method"),
     status: text("status").notNull().default("pending"),
     /** Amount the customer claims to have transferred (in the selected currency) */
     transferredAmount: integer("transferred_amount"),

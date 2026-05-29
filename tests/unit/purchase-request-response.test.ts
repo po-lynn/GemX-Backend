@@ -10,6 +10,7 @@ describe("serializePointPurchaseRequest", () => {
     const out = serializePointPurchaseRequest({
       id: "req-1",
       packageName: "Starter Pack",
+      paymentMethod: "KBZ Pay",
       points: 100,
       price: 5000,
       currency: "mmk",
@@ -23,7 +24,9 @@ describe("serializePointPurchaseRequest", () => {
       reviewedAt: null,
     })
     expect(out.package_name).toBe("Starter Pack")
+    expect(out.payment_method).toBe("KBZ Pay")
     expect(out).not.toHaveProperty("packageName")
+    expect(out).not.toHaveProperty("paymentMethod")
     expect(out.createdAt).toBe(created.toISOString())
   })
 })
@@ -43,5 +46,12 @@ describe("normalizePurchaseRequestBody", () => {
       packageName: "B",
     }) as Record<string, unknown>
     expect(out.package_name).toBe("A")
+  })
+
+  it("copies paymentMethod to payment_method when payment_method is missing", () => {
+    const out = normalizePurchaseRequestBody({
+      paymentMethod: "KBZ Pay",
+    }) as Record<string, unknown>
+    expect(out.payment_method).toBe("KBZ Pay")
   })
 })

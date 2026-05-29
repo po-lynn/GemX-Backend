@@ -14,6 +14,7 @@ vi.mock("@/drizzle/schema/points-schema", () => ({
     id: "id",
     userId: "user_id",
     packageName: "package_name",
+    paymentMethod: "payment_method",
     points: "points",
     price: "price",
     currency: "currency",
@@ -71,6 +72,7 @@ describe("GET /api/mobile/points/purchase-history", () => {
         {
           id: "req-1",
           packageName: "Starter Pack",
+          paymentMethod: "KBZ Pay",
           points: 100,
           price: 5000,
           currency: "mmk",
@@ -93,6 +95,7 @@ describe("GET /api/mobile/points/purchase-history", () => {
       history: Array<{
         id: string
         package_name: string
+        payment_method: string | null
         status: string
         points: number
         createdAt: string
@@ -101,6 +104,7 @@ describe("GET /api/mobile/points/purchase-history", () => {
     }
     expect(body.history).toHaveLength(1)
     expect(body.history[0].package_name).toBe("Starter Pack")
+    expect(body.history[0].payment_method).toBe("KBZ Pay")
     expect(body.history[0].status).toBe("approved")
     expect(body.history[0].points).toBe(100)
     expect(body.history[0].createdAt).toBe(created.toISOString())

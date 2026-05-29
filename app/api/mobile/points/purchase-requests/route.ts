@@ -5,7 +5,10 @@ import { db } from "@/drizzle/db"
 import { pointPurchaseRequest } from "@/drizzle/schema/points-schema"
 import { desc, eq } from "drizzle-orm"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { getPointPurchasePackagesSettings } from "@/features/points/db/points"
+import {
+  getPaymentMethods,
+  getPointPurchasePackagesSettings,
+} from "@/features/points/db/points"
 import {
   normalizePurchaseRequestBody,
   serializePointPurchaseRequest,
@@ -13,6 +16,8 @@ import {
 
 const createSchema = z.object({
   package_name: z.string().min(1).max(200),
+  /** Payment method name from GET /api/mobile/points/packages paymentMethods */
+  payment_method: z.string().min(1).max(200),
   /** Currency the customer is paying in — must match a configured price on the package */
   currency: z.enum(["mmk", "usd", "krw"]).default("mmk"),
   /** Amount the customer transferred (in the selected currency) */
@@ -39,6 +44,7 @@ export async function GET(request: NextRequest) {
       .select({
         id: pointPurchaseRequest.id,
         packageName: pointPurchaseRequest.packageName,
+        paymentMethod: pointPurchaseRequest.paymentMethod,
         points: pointPurchaseRequest.points,
         price: pointPurchaseRequest.price,
         currency: pointPurchaseRequest.currency,
@@ -81,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     const {
       package_name: packageName,
+      payment_method: paymentMethodName,
       currency,
       transferredAmount,
       transferredName,
@@ -91,6 +98,10 @@ export async function POST(request: NextRequest) {
     const settings = await getPointPurchasePackagesSettings()
     const pkg = settings.packages.find((p) => p.name === packageName)
     if (!pkg) return jsonError("Package not found", 400)
+
+    const paymentMethods = (await getPaymentMethods()).filter((m) => m.enabled !== false)
+    const paymentMethod = paymentMethods.find((m) => m.name === paymentMethodName)
+    if (!paymentMethod) return jsonError("Payment method not found", 400)
 
     const priceMap: Record<string, number | null | undefined> = {
       mmk: pkg.priceMmk,
@@ -107,6 +118,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: session.user.id,
         packageName: pkg.name,
+        paymentMethod: paymentMethod.name,
         points: pkg.points,
         price,
         currency,
@@ -126,6 +138,7 @@ export async function POST(request: NextRequest) {
       success: true,
       requestId: row.id,
       package_name: pkg.name,
+      payment_method: paymentMethod.name,
       points: pkg.points,
       price,
       currency,

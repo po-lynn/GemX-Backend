@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Point purchase requests — `payment_method`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** now include **`payment_method`** (name from `GET /api/mobile/points/packages` → `paymentMethods`). **POST** requires **`payment_method`** in the body; **`paymentMethod`** is accepted as an alias. Stored in **`point_purchase_request.payment_method`**. See **5.4.2**.
 - **Point purchase requests — `package_name`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** success responses now include **`package_name`** (snake_case) on each item. **POST** request body uses **`package_name`** (required); **`packageName`** is still accepted as an alias. See **5.4.2**.
 - **Collector piece show requests — list enrichment** – **GET `/api/mobile/collector-piece-show-requests`** each **`requests`** item now includes **`productName`** (from **`product.title`**) and **`sellerName`** (from the listing seller’s **`user.name`**). See **5.4.4**.
 - **Premium dealers list — premium since date** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`premiumSinceDate`** (ISO 8601; earliest **`premium_dealers_packages.start_date`** for that user, including expired/cancelled history). See **5.4.3c**.
@@ -2482,6 +2483,7 @@ Submit a credit point purchase request after the user has transferred payment to
 ```json
 {
   "package_name": "Starter Pack",
+  "payment_method": "KBZ Pay",
   "currency": "mmk",
   "transferredAmount": 5000,
   "transferredName": "Ko Aung",
@@ -2493,6 +2495,7 @@ Submit a credit point purchase request after the user has transferred payment to
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `package_name` | string | Yes | Exact name of the package from `GET /api/mobile/points/packages`. Max 200 chars. Legacy alias: `packageName` (same value). |
+| `payment_method` | string | Yes | Exact `name` of a payment method from `GET /api/mobile/points/packages` → `paymentMethods` (enabled only). Max 200 chars. Legacy alias: `paymentMethod`. |
 | `currency` | string | Yes | Currency used for payment: `"mmk"`, `"usd"`, or `"krw"`. The package must have a price set for this currency. |
 | `transferredAmount` | number (int) | Yes | Amount the user transferred (in the selected currency). Must be >= 0. |
 | `transferredName` | string | Yes | Name the user used on the transfer. Max 200 chars. |
@@ -2502,6 +2505,7 @@ Submit a credit point purchase request after the user has transferred payment to
 **Business rules:**
 
 - `package_name` must match a package returned by `GET /api/mobile/points/packages`.
+- `payment_method` must match an enabled payment method from `GET /api/mobile/points/packages` → `paymentMethods` (compare to each item’s `name`).
 - `currency` must match one of the prices configured on that package (e.g. if only `priceMmk` is set, only `"mmk"` is accepted).
 - Points are **not** credited on submission — only after admin approval.
 - Multiple requests can be pending simultaneously.
@@ -2513,6 +2517,7 @@ Submit a credit point purchase request after the user has transferred payment to
   "success": true,
   "requestId": "uuid-here",
   "package_name": "Starter Pack",
+  "payment_method": "KBZ Pay",
   "points": 100,
   "price": 5000,
   "currency": "mmk",
@@ -2525,6 +2530,7 @@ Submit a credit point purchase request after the user has transferred payment to
 
 - **400** – `{ "error": "Invalid input" }`
 - **400** – `{ "error": "Package not found" }` — `package_name` does not match any configured package.
+- **400** – `{ "error": "Payment method not found" }` — `payment_method` does not match any enabled payment method.
 - **400** – `{ "error": "Package does not have a price set for MMK" }` — package has no price for the chosen currency.
 - **401** – `{ "error": "Unauthorized" }`
 - **500** – `{ "error": "Failed to submit purchase request" }`
@@ -2545,6 +2551,7 @@ Returns the current user's own credit point purchase request history, newest fir
     {
       "id": "uuid-here",
       "package_name": "Starter Pack",
+      "payment_method": "KBZ Pay",
       "points": 100,
       "price": 5000,
       "currency": "mmk",
@@ -2565,6 +2572,7 @@ Returns the current user's own credit point purchase request history, newest fir
 | ----- | ---- | ----------- |
 | `id` | string | Request UUID. |
 | `package_name` | string | Name of the package requested (`point_purchase_request.package_name`). |
+| `payment_method` | string \| null | Payment method used (`point_purchase_request.payment_method`); `null` on older rows created before this field existed. |
 | `points` | number | Points to be credited on approval. |
 | `price` | number | Package price in the selected currency. |
 | `currency` | string | Payment currency (`"mmk"`, `"usd"`, or `"krw"`). |
@@ -2598,6 +2606,7 @@ Returns the current user's **approved** credit point purchase requests from **`p
     {
       "id": "uuid-here",
       "package_name": "Starter Pack",
+      "payment_method": "KBZ Pay",
       "points": 100,
       "price": 5000,
       "currency": "mmk",
@@ -2614,7 +2623,7 @@ Returns the current user's **approved** credit point purchase requests from **`p
 }
 ```
 
-Each object in **`history`** uses the same field definitions as **GET `/api/mobile/points/purchase-requests`** (`requests[]`), including **`package_name`**. Every row has **`status`** `"approved"`.
+Each object in **`history`** uses the same field definitions as **GET `/api/mobile/points/purchase-requests`** (`requests[]`), including **`package_name`** and **`payment_method`**. Every row has **`status`** `"approved"`.
 
 **Errors:**
 
@@ -3232,7 +3241,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
-| POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`package_name`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |
+| POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`package_name`, `payment_method`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |
 | GET    | `/api/mobile/points/purchase-requests` | Yes  | List own credit point purchase request history. See 5.4.2.                                                   |
 | POST   | `/api/mobile/points/purchase` | Yes  | *(Legacy)* Purchase points and add to user balance based on configured conversion. See 5.4.2.                 |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit show-request for a collector piece (`productId`, optional `message`). User info auto-captured from session. See 5.4.4. |

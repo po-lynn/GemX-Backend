@@ -2,6 +2,7 @@
 export type PointPurchaseRequestRow = {
   id: string
   packageName: string
+  paymentMethod: string | null
   points: number
   price: number
   currency: string
@@ -20,6 +21,7 @@ export function serializePointPurchaseRequest(row: PointPurchaseRequestRow) {
   return {
     id: row.id,
     package_name: row.packageName,
+    payment_method: row.paymentMethod,
     points: row.points,
     price: row.price,
     currency: row.currency,
@@ -34,12 +36,16 @@ export function serializePointPurchaseRequest(row: PointPurchaseRequestRow) {
   }
 }
 
-/** Accept `package_name` or legacy `packageName` in POST body before Zod parse. */
+/** Accept snake_case or legacy camelCase keys in POST body before Zod parse. */
 export function normalizePurchaseRequestBody(body: unknown): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body
   const b = body as Record<string, unknown>
-  if (b.package_name == null && b.packageName != null) {
-    return { ...b, package_name: b.packageName }
+  const next = { ...b }
+  if (next.package_name == null && next.packageName != null) {
+    next.package_name = next.packageName
   }
-  return body
+  if (next.payment_method == null && next.paymentMethod != null) {
+    next.payment_method = next.paymentMethod
+  }
+  return next
 }
