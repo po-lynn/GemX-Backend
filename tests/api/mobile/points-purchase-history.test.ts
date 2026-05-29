@@ -92,6 +92,7 @@ describe("GET /api/mobile/points/purchase-history", () => {
     const body = (await res.json()) as {
       history: Array<{
         id: string
+        package_name: string
         status: string
         points: number
         createdAt: string
@@ -99,6 +100,7 @@ describe("GET /api/mobile/points/purchase-history", () => {
       }>
     }
     expect(body.history).toHaveLength(1)
+    expect(body.history[0].package_name).toBe("Starter Pack")
     expect(body.history[0].status).toBe("approved")
     expect(body.history[0].points).toBe(100)
     expect(body.history[0].createdAt).toBe(created.toISOString())

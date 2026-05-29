@@ -4,6 +4,7 @@ import { db } from "@/drizzle/db"
 import { pointPurchaseRequest } from "@/drizzle/schema/points-schema"
 import { and, desc, eq } from "drizzle-orm"
 import { jsonError, jsonUncached } from "@/lib/api"
+import { serializePointPurchaseRequest } from "@/features/points/api/purchase-request-response"
 
 /**
  * GET /api/mobile/points/purchase-history
@@ -41,11 +42,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(pointPurchaseRequest.createdAt))
 
     return jsonUncached({
-      history: rows.map((r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-        reviewedAt: r.reviewedAt?.toISOString() ?? null,
-      })),
+      history: rows.map(serializePointPurchaseRequest),
     })
   } catch (e) {
     console.error("GET /api/mobile/points/purchase-history:", e)

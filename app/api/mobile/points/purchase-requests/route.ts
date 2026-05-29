@@ -6,9 +6,13 @@ import { pointPurchaseRequest } from "@/drizzle/schema/points-schema"
 import { desc, eq } from "drizzle-orm"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { getPointPurchasePackagesSettings } from "@/features/points/db/points"
+import {
+  normalizePurchaseRequestBody,
+  serializePointPurchaseRequest,
+} from "@/features/points/api/purchase-request-response"
 
 const createSchema = z.object({
-  packageName: z.string().min(1).max(200),
+  package_name: z.string().min(1).max(200),
   /** Currency the customer is paying in — must match a configured price on the package */
   currency: z.enum(["mmk", "usd", "krw"]).default("mmk"),
   /** Amount the customer transferred (in the selected currency) */
@@ -52,11 +56,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(pointPurchaseRequest.createdAt))
 
     return jsonUncached({
-      requests: rows.map((r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-        reviewedAt: r.reviewedAt?.toISOString() ?? null,
-      })),
+      requests: rows.map(serializePointPurchaseRequest),
     })
   } catch (e) {
     console.error("GET /api/mobile/points/purchase-requests:", e)
@@ -76,10 +76,17 @@ export async function POST(request: NextRequest) {
     if (!session) return jsonError("Unauthorized", 401)
 
     const body = await request.json().catch(() => ({}))
-    const parsed = createSchema.safeParse(body)
+    const parsed = createSchema.safeParse(normalizePurchaseRequestBody(body))
     if (!parsed.success) return jsonError("Invalid input", 400)
 
-    const { packageName, currency, transferredAmount, transferredName, transactionReference, transferNote } = parsed.data
+    const {
+      package_name: packageName,
+      currency,
+      transferredAmount,
+      transferredName,
+      transactionReference,
+      transferNote,
+    } = parsed.data
 
     const settings = await getPointPurchasePackagesSettings()
     const pkg = settings.packages.find((p) => p.name === packageName)
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
     return jsonUncached({
       success: true,
       requestId: row.id,
-      packageName: pkg.name,
+      package_name: pkg.name,
       points: pkg.points,
       price,
       currency,
