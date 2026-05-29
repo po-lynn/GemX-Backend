@@ -32,6 +32,10 @@ export const user = pgTable("user", {
   gender: text("gender"),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
   points: integer("points").notNull().default(0),
+  /** Cumulative total points ever credited (never decremented) */
+  pointsLifetime: integer("points_lifetime").notNull().default(0),
+  /** Points currently reserved (e.g. for escrow holds) — always 0 until escrow is implemented */
+  pointsReserved: integer("points_reserved").notNull().default(0),
   /** Name of the active premium dealer package, or null if not a premium dealer */
   premiumDealerPackageName: text("premium_dealer_package_name"),
   /** When the premium dealer status expires; null means no active status */

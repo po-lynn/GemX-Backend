@@ -8,6 +8,7 @@ import { jsonError, jsonUncached } from "@/lib/api"
 import {
   getPaymentMethods,
   getPointPurchasePackagesSettings,
+  logPointTransaction,
 } from "@/features/points/db/points"
 import {
   normalizePurchaseRequestBody,
@@ -133,6 +134,18 @@ export async function POST(request: NextRequest) {
         status: pointPurchaseRequest.status,
         createdAt: pointPurchaseRequest.createdAt,
       })
+
+    await logPointTransaction({
+      userId: session.user.id,
+      type: "topup",
+      direction: "credit",
+      amount: pkg.points,
+      status: "pending",
+      referenceId: row.id,
+      referenceType: "purchase_request",
+      description: `Top-up via ${paymentMethod.name}`,
+      paymentMethod: paymentMethod.name,
+    })
 
     return jsonUncached({
       success: true,

@@ -48,12 +48,25 @@ vi.mock("@/drizzle/schema/points-schema", () => ({
     createdAt: "created_at",
   },
   premiumDealersPackage: {
+    id: "id",
     userId: "user_id",
     packageName: "package_name",
     startDate: "start_date",
     endDate: "end_date",
     autoRenew: "auto_renew",
     status: "status",
+  },
+  pointTransaction: {
+    userId: "user_id",
+    type: "type",
+    direction: "direction",
+    amount: "amount",
+    status: "status",
+    referenceId: "reference_id",
+    referenceType: "reference_type",
+    description: "description",
+    paymentMethod: "payment_method",
+    createdAt: "created_at",
   },
 }))
 
@@ -96,13 +109,22 @@ describe("activatePremiumDealer", () => {
     expect(result?.remainingPoints).toBe(900)
     expect(result?.autoRenew).toBe(true)
     expect(result?.status).toBe("active")
-    expect(tx.insert).toHaveBeenCalledTimes(1)
+    // insert called twice: once for the subscription, once for the point_transaction log
+    expect(tx.insert).toHaveBeenCalledTimes(2)
     expect(insertValuesMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-1",
         packageName: "Basic Package",
         autoRenew: true,
         status: "active",
+      })
+    )
+    expect(insertValuesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        type: "premium_activation",
+        direction: "debit",
+        status: "completed",
       })
     )
   })

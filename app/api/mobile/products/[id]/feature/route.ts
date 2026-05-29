@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { getFeatureSettings } from "@/features/points/db/points"
+import { getFeatureSettings, logPointTransaction } from "@/features/points/db/points"
 import { CACHE_CONTROL_NO_STORE, jsonError, jsonUncached } from "@/lib/api"
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
 
@@ -118,6 +118,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           featuredExpiresAt: new Date(Date.now() + selectedTier.durationDays * 24 * 60 * 60 * 1000),
         })
         .where(eq(product.id, id))
+
+      await logPointTransaction({
+        userId: session.user.id,
+        type: "feature_activation",
+        direction: "debit",
+        amount: selectedTier.points,
+        status: "completed",
+        referenceId: id,
+        referenceType: "product",
+        description: `Featured · ${selectedTier.durationDays}d`,
+      })
 
       return { ok: true as const, remainingPoints: updatedUser.points }
     })

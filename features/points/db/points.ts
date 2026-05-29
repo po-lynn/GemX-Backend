@@ -3,10 +3,11 @@ import { user } from "@/drizzle/schema/auth-schema";
 import {
   pointPurchaseRequest,
   pointSetting,
+  pointTransaction,
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
-import { and, desc, eq, gt, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -460,6 +461,7 @@ export async function activatePremiumDealer(
   const cost = Math.max(0, Math.floor(pkg.pointsRequired));
   const startDate = new Date();
   const expiresAt = new Date(startDate.getTime() + pkg.durationDays * 24 * 60 * 60 * 1000);
+  const subscriptionId = crypto.randomUUID();
 
   const result = await db.transaction(async (tx) => {
     const [updatedUser] = await tx
@@ -479,12 +481,24 @@ export async function activatePremiumDealer(
       .where(eq(user.id, userId));
 
     await tx.insert(premiumDealersPackage).values({
+      id: subscriptionId,
       userId,
       packageName: pkg.name,
       startDate,
       endDate: expiresAt,
       autoRenew,
       status: "active",
+    });
+
+    await tx.insert(pointTransaction).values({
+      userId,
+      type: "premium_activation",
+      direction: "debit",
+      amount: cost,
+      status: "completed",
+      referenceId: subscriptionId,
+      referenceType: "premium_package",
+      description: `Premium · ${pkg.name}`,
     });
 
     return {
@@ -706,7 +720,7 @@ export async function setUserPoints(userId: string, points: number): Promise<voi
   await db.update(user).set({ points: safe }).where(eq(user.id, userId));
 }
 
-/** Add points to user balance and return latest balance. */
+/** Add points to user balance and return latest balance. Also increments pointsLifetime. */
 export async function creditUserPoints(
   userId: string,
   pointsToAdd: number
@@ -714,7 +728,10 @@ export async function creditUserPoints(
   const safe = Math.max(0, Math.floor(Number(pointsToAdd)) || 0);
   const [updated] = await db
     .update(user)
-    .set({ points: sql`${user.points} + ${safe}` })
+    .set({
+      points: sql`${user.points} + ${safe}`,
+      pointsLifetime: sql`${user.pointsLifetime} + ${safe}`,
+    })
     .where(eq(user.id, userId))
     .returning({ points: user.points });
 
@@ -756,7 +773,17 @@ export async function applyDefaultPointsToNewUser(email: string): Promise<void> 
   const enabledRow = await getInt(REGISTRATION_BONUS_ENABLED_KEY);
   if (enabledRow === 0 || defaultPoints <= 0) return;
   const u = await getUserByEmail(email);
-  if (u) await setUserPoints(u.id, defaultPoints);
+  if (!u) return;
+  await setUserPoints(u.id, defaultPoints);
+  await logPointTransaction({
+    userId: u.id,
+    type: "registration_bonus",
+    direction: "credit",
+    amount: defaultPoints,
+    status: "completed",
+    referenceType: "registration",
+    description: "Registration bonus",
+  });
 }
 
 /**
@@ -770,6 +797,15 @@ export async function creditDefaultRegistrationPointsToUser(
   const pointsAdded = Math.max(0, Math.floor(Number(defaultPoints)) || 0)
   if (pointsAdded <= 0) return { pointsAdded: 0 }
   await creditUserPoints(userId, pointsAdded)
+  await logPointTransaction({
+    userId,
+    type: "registration_bonus",
+    direction: "credit",
+    amount: pointsAdded,
+    status: "completed",
+    referenceType: "registration",
+    description: "Registration bonus",
+  })
   return { pointsAdded }
 }
 
@@ -800,7 +836,14 @@ export async function approvePointPurchaseRequest(
   adminNote?: string | null
 ): Promise<{ success: false; reason: "not_found" | "not_pending" } | { success: true; pointsAdded: number; updatedPoints: number | null }> {
   const [existing] = await db
-    .select({ id: pointPurchaseRequest.id, userId: pointPurchaseRequest.userId, points: pointPurchaseRequest.points, status: pointPurchaseRequest.status })
+    .select({
+      id: pointPurchaseRequest.id,
+      userId: pointPurchaseRequest.userId,
+      points: pointPurchaseRequest.points,
+      status: pointPurchaseRequest.status,
+      packageName: pointPurchaseRequest.packageName,
+      paymentMethod: pointPurchaseRequest.paymentMethod,
+    })
     .from(pointPurchaseRequest)
     .where(eq(pointPurchaseRequest.id, requestId))
     .limit(1);
@@ -813,6 +856,28 @@ export async function approvePointPurchaseRequest(
     .where(eq(pointPurchaseRequest.id, requestId));
 
   const credited = await creditUserPoints(existing.userId, existing.points);
+
+  // Update the pending transaction row (created when request was submitted) to completed,
+  // or insert a new completed row if the request predates the ledger.
+  const updated = await db
+    .update(pointTransaction)
+    .set({ status: "completed" })
+    .where(and(eq(pointTransaction.referenceId, requestId), eq(pointTransaction.status, "pending")))
+    .returning({ id: pointTransaction.id });
+  if (updated.length === 0) {
+    await logPointTransaction({
+      userId: existing.userId,
+      type: "topup",
+      direction: "credit",
+      amount: existing.points,
+      status: "completed",
+      referenceId: requestId,
+      referenceType: "purchase_request",
+      description: existing.paymentMethod ? `Top-up via ${existing.paymentMethod}` : `Top-up · ${existing.packageName}`,
+      paymentMethod: existing.paymentMethod ?? null,
+    });
+  }
+
   return { success: true, pointsAdded: existing.points, updatedPoints: credited.updatedPoints };
 }
 
@@ -833,6 +898,11 @@ export async function rejectPointPurchaseRequest(
     .update(pointPurchaseRequest)
     .set({ status: "rejected", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
     .where(eq(pointPurchaseRequest.id, requestId));
+
+  await db
+    .update(pointTransaction)
+    .set({ status: "rejected" })
+    .where(and(eq(pointTransaction.referenceId, requestId), eq(pointTransaction.status, "pending")));
 
   return { success: true };
 }
@@ -1151,6 +1221,7 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
       const newStart = new Date();
       const newExpiry = new Date(newStart.getTime() + pkg.durationDays * 24 * 60 * 60 * 1000);
 
+      const renewedSubId = crypto.randomUUID();
       const didRenew = await db.transaction(async (tx) => {
         // Mark old subscription expired
         await tx
@@ -1178,12 +1249,24 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
 
         // Insert new subscription
         await tx.insert(premiumDealersPackage).values({
+          id: renewedSubId,
           userId: row.userId,
           packageName: pkg.name,
           startDate: newStart,
           endDate: newExpiry,
           autoRenew: true,
           status: "active",
+        });
+
+        await tx.insert(pointTransaction).values({
+          userId: row.userId,
+          type: "premium_activation",
+          direction: "debit",
+          amount: cost,
+          status: "completed",
+          referenceId: renewedSubId,
+          referenceType: "premium_package",
+          description: `Premium renewal · ${pkg.name}`,
         });
 
         // Update user cache fields
@@ -1220,4 +1303,87 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
   }
 
   return { renewed, expired, failed };
+}
+
+// ─── Point Transaction Ledger ─────────────────────────────────────────────────
+
+export type PointTransactionRow = {
+  id: string;
+  userId: string;
+  type: string;
+  direction: string;
+  amount: number;
+  status: string;
+  referenceId: string | null;
+  referenceType: string | null;
+  description: string | null;
+  paymentMethod: string | null;
+  createdAt: Date;
+};
+
+type LogPointTransactionInput = {
+  userId: string;
+  type: string;
+  direction: "credit" | "debit";
+  amount: number;
+  status: string;
+  referenceId?: string | null;
+  referenceType?: string | null;
+  description?: string | null;
+  paymentMethod?: string | null;
+};
+
+export async function logPointTransaction(
+  input: LogPointTransactionInput
+): Promise<{ id: string }> {
+  const [row] = await db
+    .insert(pointTransaction)
+    .values(input)
+    .returning({ id: pointTransaction.id });
+  return row;
+}
+
+export async function getUserPointBalance(
+  userId: string
+): Promise<{ available: number; reserved: number; lifetime: number }> {
+  const [row] = await db
+    .select({ points: user.points, pointsLifetime: user.pointsLifetime, pointsReserved: user.pointsReserved })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  if (!row) return { available: 0, reserved: 0, lifetime: 0 };
+  return { available: row.points, reserved: row.pointsReserved, lifetime: row.pointsLifetime };
+}
+
+export async function getUserPointHistory(
+  userId: string,
+  opts: { filter: "all" | "topups" | "spent" | "pending"; page: number; limit: number }
+): Promise<{ transactions: PointTransactionRow[]; total: number }> {
+  const { filter, page, limit } = opts;
+  const offset = (page - 1) * limit;
+
+  const filterCondition =
+    filter === "topups"
+      ? and(eq(pointTransaction.userId, userId), or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      : filter === "spent"
+      ? and(eq(pointTransaction.userId, userId), eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
+      : filter === "pending"
+      ? and(eq(pointTransaction.userId, userId), eq(pointTransaction.status, "pending"))
+      : eq(pointTransaction.userId, userId);
+
+  const [rows, [{ value: total }]] = await Promise.all([
+    db
+      .select()
+      .from(pointTransaction)
+      .where(filterCondition)
+      .orderBy(desc(pointTransaction.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ value: count() })
+      .from(pointTransaction)
+      .where(filterCondition),
+  ]);
+
+  return { transactions: rows, total };
 }

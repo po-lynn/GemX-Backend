@@ -66,6 +66,38 @@ export const pointPurchaseRequest = pgTable(
   ]
 );
 
+/**
+ * Unified ledger of all point movements per user.
+ * type: "topup" | "premium_activation" | "feature_activation" | "registration_bonus" | "admin_adjustment"
+ * direction: "credit" | "debit"
+ * status: "completed" | "pending" | "cancelled" | "rejected"
+ * referenceType: "purchase_request" | "premium_package" | "product" | "registration"
+ */
+export const pointTransaction = pgTable(
+  "point_transaction",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    direction: text("direction").notNull(),
+    amount: integer("amount").notNull(),
+    status: text("status").notNull(),
+    referenceId: text("reference_id"),
+    referenceType: text("reference_type"),
+    description: text("description"),
+    paymentMethod: text("payment_method"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("pt_userId_idx").on(table.userId),
+    index("pt_userId_type_idx").on(table.userId, table.type),
+    index("pt_userId_status_idx").on(table.userId, table.status),
+    index("pt_userId_createdAt_idx").on(table.userId, table.createdAt),
+  ]
+);
+
 export const premiumDealerPackageStatusEnum = pgEnum(
   "premium_dealer_package_status",
   ["active", "expired", "cancelled"]
