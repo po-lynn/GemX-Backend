@@ -7,7 +7,6 @@ import {
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
-import { alias } from "drizzle-orm/pg-core";
 import { and, count, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
@@ -1368,8 +1367,6 @@ export type PointTransactionAdminRow = PointTransactionRow & {
   createdByName: string | null
 }
 
-const adminUser = alias(user, "admin_user")
-
 export async function getPointTransactionsPaginated(opts: {
   page: number
   limit: number
@@ -1406,13 +1403,12 @@ export async function getPointTransactionsPaginated(opts: {
         userPhone: user.phone,
         packageName: sql<string | null>`COALESCE(${pointPurchaseRequest.packageName}, ${premiumDealersPackage.packageName})`,
         createdBy: pointTransaction.createdBy,
-        createdByName: adminUser.name,
+        createdByName: sql<string | null>`(SELECT name FROM "user" WHERE id = ${pointTransaction.createdBy})`,
       })
       .from(pointTransaction)
       .leftJoin(user, eq(pointTransaction.userId, user.id))
       .leftJoin(pointPurchaseRequest, eq(pointTransaction.referenceId, pointPurchaseRequest.id))
       .leftJoin(premiumDealersPackage, eq(pointTransaction.referenceId, premiumDealersPackage.id))
-      .leftJoin(adminUser, eq(pointTransaction.createdBy, adminUser.id))
       .where(filterCondition)
       .orderBy(desc(pointTransaction.createdAt))
       .limit(limit)
