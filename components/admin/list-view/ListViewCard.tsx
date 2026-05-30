@@ -625,6 +625,8 @@ type ListViewCardProps<T extends { id: string }> = {
   filterRow?: (row: T, filterId: string, selectedValues: string[]) => boolean | null
   /** override group key for a specific groupBy id; return null to fall back to default string lookup */
   getGroupKey?: (row: T, groupBy: string) => string | null
+  /** compute aggregate pills shown in the group header row */
+  getGroupAggs?: (rows: T[], groupBy: string) => Array<{ label: string; value: string }>
 
   // Row actions (rendered in the hover actions column)
   rowActions?: (row: T, disabled: boolean) => ReactNode
@@ -659,6 +661,7 @@ export function ListViewCard<T extends { id: string }>({
   getSortValue,
   filterRow,
   getGroupKey,
+  getGroupAggs,
   rowActions,
   onRowClick,
   renderDrawer,
@@ -737,11 +740,12 @@ export function ListViewCard<T extends { id: string }>({
         key,
         label: key,
         count: items.length,
+        aggs: getGroupAggs ? getGroupAggs(items, groupBy) : undefined,
       } satisfies GroupRow)
       if (!collapsedGroups[key]) out.push(...items)
     }
     return out
-  }, [sorted, groupBy, collapsedGroups, getGroupKey])
+  }, [sorted, groupBy, collapsedGroups, getGroupKey, getGroupAggs])
 
   // Active filter chips
   const activeChips: Array<{ defId: string; value: string; defLabel: string; valueLabel: string }> = []

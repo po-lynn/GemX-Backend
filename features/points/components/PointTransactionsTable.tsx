@@ -252,6 +252,17 @@ export function PointTransactionsTable({ rows, views, activeView, page, pageSize
           default:          return ""
         }
       }}
+      getGroupAggs={(rows, groupBy) => {
+        if (groupBy !== "user") return []
+        const credits = rows.filter((r) => r.direction === "credit").reduce((s, r) => s + r.amount, 0)
+        const debits  = rows.filter((r) => r.direction === "debit").reduce((s, r) => s + r.amount, 0)
+        const net = credits - debits
+        return [
+          { label: "credit", value: `+${credits.toLocaleString()} pts` },
+          { label: "debit",  value: `−${debits.toLocaleString()} pts` },
+          { label: "net",    value: `${net >= 0 ? "+" : ""}${net.toLocaleString()} pts` },
+        ]
+      }}
       filterRow={(r, filterId, vals) => {
         if (filterId === "type")      return vals.includes(r.type)
         if (filterId === "direction") return vals.includes(r.direction)
