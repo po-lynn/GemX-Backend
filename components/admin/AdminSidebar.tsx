@@ -47,7 +47,7 @@ const navGroups: (NavItem | NavGroup)[] = [
     color: "#6366f1",
   },
   {
-    label: "Settings",
+    label: "Points & Credits",
     items: [
       {
         href: "/admin/credit",
@@ -71,6 +71,53 @@ const navGroups: (NavItem | NavGroup)[] = [
         isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
       },
       {
+        href: "/account/points",
+        label: "My Points",
+        icon: Coins,
+        color: "#7c3aed",
+        isActive: (p) => p.startsWith("/account/points"),
+      },
+    ],
+  },
+  {
+    label: "Marketplace",
+    items: [
+      { href: "/admin/products", label: "Products", icon: Package, color: "#3b82f6" },
+      { href: "/admin/categories", label: "Categories", icon: FolderTree, color: "#f97316" },
+      { href: "/admin/laboratory", label: "Laboratory", icon: FlaskConical, color: "#22c55e" },
+      { href: "/admin/origin", label: "Origin", icon: Globe, color: "#06b6d4" },
+      {
+        href: "/admin/collector-piece-show-requests",
+        label: "Collector Requests",
+        icon: Eye,
+        color: "#06b6d4",
+      },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { href: "/admin/messages", label: "Messages", icon: MessageSquare, color: "#a855f7" },
+      {
+        href: "/admin/chat-dashboard",
+        label: "Chat Dashboard",
+        icon: MessageSquare,
+        color: "#0ea5e9",
+      },
+      { href: "/admin/users", label: "Users", icon: Users, color: "#ec4899" },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/admin/news", label: "News", icon: Newspaper, color: "#84cc16" },
+      { href: "/admin/articles", label: "Articles", icon: FileText, color: "#64748b" },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      {
         href: "/admin/settings/escrow-service",
         label: "Escrow Service",
         icon: ShieldCheck,
@@ -84,43 +131,6 @@ const navGroups: (NavItem | NavGroup)[] = [
         color: "#f43f5e",
         isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
       },
-    ],
-  },
-  {
-    label: "My Account",
-    items: [
-      {
-        href: "/account/points",
-        label: "My Points",
-        icon: Coins,
-        color: "#7c3aed",
-        isActive: (p) => p.startsWith("/account/points"),
-      },
-    ],
-  },
-  {
-    label: "Catalog",
-    items: [
-      { href: "/admin/products", label: "Products", icon: Package, color: "#3b82f6" },
-      {
-        href: "/admin/collector-piece-show-requests",
-        label: "Collector Requests",
-        icon: Eye,
-        color: "#06b6d4",
-      },
-{ href: "/admin/categories", label: "Categories", icon: FolderTree, color: "#f97316" },
-      { href: "/admin/messages", label: "Messages", icon: MessageSquare, color: "#a855f7" },
-      {
-        href: "/admin/chat-dashboard",
-        label: "Chat Dashboard",
-        icon: MessageSquare,
-        color: "#0ea5e9",
-      },
-      { href: "/admin/users", label: "Users", icon: Users, color: "#ec4899" },
-      { href: "/admin/news", label: "News", icon: Newspaper, color: "#84cc16" },
-      { href: "/admin/articles", label: "Articles", icon: FileText, color: "#64748b" },
-      { href: "/admin/laboratory", label: "Laboratory", icon: FlaskConical, color: "#22c55e" },
-      { href: "/admin/origin", label: "Origin", icon: Globe, color: "#06b6d4" },
     ],
   },
 ];
