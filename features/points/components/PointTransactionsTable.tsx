@@ -99,6 +99,7 @@ function TransactionDrawer({ row, onClose }: { row: PointTransactionAdminRow; on
               </dd>
               <dt>Amount</dt>
               <dd className={`pt-amount ${row.direction}`}>{isCredit ? "+" : "−"}{fmtPts(row.amount)} pts</dd>
+              {row.packageName && <><dt>Package</dt><dd><span className="pt-package">{row.packageName}</span></dd></>}
               {row.description && <><dt>Description</dt><dd>{row.description}</dd></>}
               {row.paymentMethod && <><dt>Payment</dt><dd>{row.paymentMethod}</dd></>}
               <dt>Date</dt>
@@ -131,7 +132,7 @@ const columnDefs: ColumnDef<PointTransactionAdminRow>[] = [
             {r.userName ?? "—"}
           </span>
           <span className="lv-cell-sub" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {r.userEmail ?? r.userId}
+            {r.userPhone ?? r.userEmail ?? r.userId}
           </span>
         </div>
       </div>
@@ -148,6 +149,15 @@ const columnDefs: ColumnDef<PointTransactionAdminRow>[] = [
         {r.paymentMethod && <span className="pt-desc-sub">{r.paymentMethod}</span>}
       </div>
     ),
+  },
+  {
+    id: "packageName",
+    label: "Package",
+    width: 160,
+    sortable: false,
+    render: (r) => r.packageName
+      ? <span className="pt-package">{r.packageName}</span>
+      : <span style={{ color: "var(--lv-text-3)", fontSize: 12 }}>—</span>,
   },
   {
     id: "type",

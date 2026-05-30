@@ -182,7 +182,7 @@ function PointActionDrawer({
                         <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lv-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {u.name}
                         </div>
-                        <div style={{ fontSize: 11.5, color: "var(--lv-text-3)" }}>{u.email}</div>
+                        <div style={{ fontSize: 11.5, color: "var(--lv-text-3)" }}>{u.phone ?? u.email}</div>
                       </div>
                       <div style={{ fontSize: 12, color: "var(--lv-text-2)", fontWeight: 600, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                         {u.points.toLocaleString()} pts
@@ -206,7 +206,7 @@ function PointActionDrawer({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lv-text)" }}>{selectedUser.name}</div>
                   <div style={{ fontSize: 11.5, color: "var(--lv-text-3)" }}>
-                    {selectedUser.email}{selectedUser.phone ? ` · ${selectedUser.phone}` : ""}
+                    {selectedUser.phone ?? selectedUser.email}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>

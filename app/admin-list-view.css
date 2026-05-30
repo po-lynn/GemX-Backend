@@ -3949,6 +3949,14 @@
 .pt-type.admin_adjustment    { color: #475569; background: #f1f5f9; }
 .pt-type svg { width: 11px; height: 11px; opacity: 0.8; }
 
+/* ── Package badge ───────────────────────────────────────── */
+.pt-package {
+  display: inline-block; font-size: 12px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+  color: #1e40af; background: #dbeafe;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+
 /* ── Description cell ────────────────────────────────────── */
 .pt-desc { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pt-desc-main {

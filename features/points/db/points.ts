@@ -1361,6 +1361,7 @@ export type PointTransactionAdminRow = PointTransactionRow & {
   userName: string | null
   userEmail: string | null
   userPhone: string | null
+  packageName: string | null
 }
 
 export async function getPointTransactionsPaginated(opts: {
@@ -1397,9 +1398,12 @@ export async function getPointTransactionsPaginated(opts: {
         userName: user.name,
         userEmail: user.email,
         userPhone: user.phone,
+        packageName: sql<string | null>`COALESCE(${pointPurchaseRequest.packageName}, ${premiumDealersPackage.packageName})`,
       })
       .from(pointTransaction)
       .leftJoin(user, eq(pointTransaction.userId, user.id))
+      .leftJoin(pointPurchaseRequest, eq(pointTransaction.referenceId, pointPurchaseRequest.id))
+      .leftJoin(premiumDealersPackage, eq(pointTransaction.referenceId, premiumDealersPackage.id))
       .where(filterCondition)
       .orderBy(desc(pointTransaction.createdAt))
       .limit(limit)
