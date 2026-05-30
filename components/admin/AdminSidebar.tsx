@@ -24,7 +24,6 @@ import {
   Tags,
   Crown,
   Coins,
-  PlusCircle,
 } from "lucide-react";
 
 type NavItem = {
@@ -70,13 +69,6 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: Crown,
         color: "#f59e0b",
         isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
-      },
-      {
-        href: "/admin/credit/add-points",
-        label: "Credit / Deduct",
-        icon: PlusCircle,
-        color: "#059669",
-        isActive: (p) => p.startsWith("/admin/credit/add-points"),
       },
       {
         href: "/admin/my-points",
