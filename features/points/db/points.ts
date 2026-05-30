@@ -1319,7 +1319,7 @@ export type PointTransactionRow = {
   referenceType: string | null;
   description: string | null;
   paymentMethod: string | null;
-  createdByAdminId: string | null;
+  createdBy: string | null;
   createdAt: Date;
 };
 
@@ -1333,7 +1333,7 @@ type LogPointTransactionInput = {
   referenceType?: string | null;
   description?: string | null;
   paymentMethod?: string | null;
-  createdByAdminId?: string | null;
+  createdBy?: string | null;
 };
 
 export async function logPointTransaction(
@@ -1365,7 +1365,7 @@ export type PointTransactionAdminRow = PointTransactionRow & {
   userEmail: string | null
   userPhone: string | null
   packageName: string | null
-  createdByAdminName: string | null
+  createdByName: string | null
 }
 
 const adminUser = alias(user, "admin_user")
@@ -1405,14 +1405,14 @@ export async function getPointTransactionsPaginated(opts: {
         userEmail: user.email,
         userPhone: user.phone,
         packageName: sql<string | null>`COALESCE(${pointPurchaseRequest.packageName}, ${premiumDealersPackage.packageName})`,
-        createdByAdminId: pointTransaction.createdByAdminId,
-        createdByAdminName: adminUser.name,
+        createdBy: pointTransaction.createdBy,
+        createdByName: adminUser.name,
       })
       .from(pointTransaction)
       .leftJoin(user, eq(pointTransaction.userId, user.id))
       .leftJoin(pointPurchaseRequest, eq(pointTransaction.referenceId, pointPurchaseRequest.id))
       .leftJoin(premiumDealersPackage, eq(pointTransaction.referenceId, premiumDealersPackage.id))
-      .leftJoin(adminUser, eq(pointTransaction.createdByAdminId, adminUser.id))
+      .leftJoin(adminUser, eq(pointTransaction.createdBy, adminUser.id))
       .where(filterCondition)
       .orderBy(desc(pointTransaction.createdAt))
       .limit(limit)

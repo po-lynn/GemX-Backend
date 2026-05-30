@@ -101,7 +101,7 @@ function TransactionDrawer({ row, onClose }: { row: PointTransactionAdminRow; on
               <dd className={`pt-amount ${row.direction}`}>{isCredit ? "+" : "−"}{fmtPts(row.amount)} pts</dd>
               {row.packageName && <><dt>Package</dt><dd><span className="pt-package">{row.packageName}</span></dd></>}
               <dt>Created by</dt>
-              <dd>{row.createdByAdminId ? (row.createdByAdminName ?? "Admin") : "Self"}</dd>
+              <dd>{row.createdBy ? (row.createdByName ?? "Admin") : "Self"}</dd>
               {row.description && <><dt>Description</dt><dd>{row.description}</dd></>}
               {row.paymentMethod && <><dt>Payment</dt><dd>{row.paymentMethod}</dd></>}
               <dt>Date</dt>
@@ -186,18 +186,18 @@ const columnDefs: ColumnDef<PointTransactionAdminRow>[] = [
     ),
   },
   {
-    id: "createdByAdminId",
+    id: "createdBy",
     label: "Created by",
     width: 150,
     sortable: false,
-    render: (r) => r.createdByAdminId
+    render: (r) => r.createdBy
       ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span className="lv-avatar" data-hue={getHue(r.createdByAdminId)} style={{ width: 22, height: 22, fontSize: 9, flexShrink: 0 }}>
-            {getInitials(r.createdByAdminName)}
+          <span className="lv-avatar" data-hue={getHue(r.createdBy)} style={{ width: 22, height: 22, fontSize: 9, flexShrink: 0 }}>
+            {getInitials(r.createdByName)}
           </span>
           <span style={{ fontSize: 12.5, color: "var(--lv-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {r.createdByAdminName ?? "Admin"}
+            {r.createdByName ?? "Admin"}
           </span>
         </div>
       )

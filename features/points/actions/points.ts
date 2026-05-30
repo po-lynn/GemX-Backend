@@ -480,7 +480,7 @@ export async function adminCreditUserPointsAction(
     amount: safe,
     status: "completed",
     description: note?.trim() ? `Admin credit: ${note.trim()}` : "Admin credit",
-    createdByAdminId: session.user.id,
+    createdBy: session.user.id,
   });
 
   return { success: true, updatedPoints: credited.updatedPoints ?? 0 };
@@ -509,7 +509,7 @@ export async function adminDeductUserPointsAction(
     amount: safe,
     status: "completed",
     description: note?.trim() ? `Admin deduction: ${note.trim()}` : "Admin deduction",
-    createdByAdminId: session.user.id,
+    createdBy: session.user.id,
   });
 
   return { success: true, updatedPoints: deducted.remainingPoints ?? 0 };
@@ -538,7 +538,7 @@ export async function adminTopUpUserPointsAction(
     amount: safe,
     status: "completed",
     description: note?.trim() ? `Admin top-up: ${note.trim()}` : "Admin top-up",
-    createdByAdminId: session.user.id,
+    createdBy: session.user.id,
   });
 
   return { success: true, updatedPoints: credited.updatedPoints ?? 0 };

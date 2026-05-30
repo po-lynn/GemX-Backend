@@ -88,7 +88,7 @@ export const pointTransaction = pgTable(
     referenceType: text("reference_type"),
     description: text("description"),
     paymentMethod: text("payment_method"),
-    createdByAdminId: text("created_by_admin_id").references(() => user.id, { onDelete: "set null" }),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
