@@ -1355,6 +1355,24 @@ export async function getUserPointBalance(
   return { available: row.points, reserved: row.pointsReserved, lifetime: row.pointsLifetime };
 }
 
+export async function getUserPointTransactionCounts(
+  userId: string
+): Promise<{ all: number; topups: number; spent: number; pending: number }> {
+  const rows = await db
+    .select({ type: pointTransaction.type, direction: pointTransaction.direction, status: pointTransaction.status })
+    .from(pointTransaction)
+    .where(eq(pointTransaction.userId, userId));
+
+  let all = 0, topups = 0, spent = 0, pending = 0;
+  for (const r of rows) {
+    all++;
+    if (r.status === "pending") pending++;
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++;
+    else if (r.status === "completed" && r.direction === "debit") spent++;
+  }
+  return { all, topups, spent, pending };
+}
+
 export async function getUserPointHistory(
   userId: string,
   opts: { filter: "all" | "topups" | "spent" | "pending"; page: number; limit: number }
