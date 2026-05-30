@@ -3,14 +3,13 @@
 import { useState, useTransition, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Search, Plus, Minus, SlidersHorizontal, X, ArrowDownToLine } from "lucide-react"
+import { Search, Minus, X, ArrowDownToLine } from "lucide-react"
 import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
-  adminAdjustUserPointsAction,
 } from "@/features/points/actions/points"
 
-type Mode = "topup" | "deduct" | "adjust"
+type Mode = "topup" | "deduct"
 
 type UserOption = {
   id: string
@@ -35,9 +34,8 @@ function getHue(str: string): number {
 }
 
 const MODE_CONFIG: Record<Mode, { label: string; color: string; bg: string; border: string; Icon: React.ElementType }> = {
-  topup:  { label: "Top-up",    color: "#047857", bg: "#ecfdf5", border: "var(--lv-good)",   Icon: ArrowDownToLine },
-  deduct: { label: "Deduct",    color: "#b91c1c", bg: "#fef2f2", border: "var(--lv-danger)", Icon: Minus },
-  adjust: { label: "Adjust",    color: "#1d4ed8", bg: "#eff6ff", border: "#93c5fd",          Icon: SlidersHorizontal },
+  topup:  { label: "Top-up", color: "#047857", bg: "#ecfdf5", border: "var(--lv-good)",   Icon: ArrowDownToLine },
+  deduct: { label: "Deduct", color: "#b91c1c", bg: "#fef2f2", border: "var(--lv-danger)", Icon: Minus },
 }
 
 // ─── Drawer ────────────────────────────────────────────────
@@ -83,10 +81,9 @@ function PointActionDrawer({
   function previewBalance(): number | null {
     if (!selectedUser || !amount) return null
     const n = Math.floor(Number(amount))
-    if (isNaN(n) || n < 0) return null
+    if (isNaN(n) || n <= 0) return null
     if (mode === "topup")  return selectedUser.points + n
     if (mode === "deduct") return Math.max(0, selectedUser.points - n)
-    if (mode === "adjust") return n
     return null
   }
 
@@ -94,30 +91,18 @@ function PointActionDrawer({
     e.preventDefault()
     if (!selectedUser) return
     const n = Math.floor(Number(amount))
-
-    if (mode === "adjust") {
-      if (isNaN(n) || n < 0) { toast.error("Enter a valid balance (0 or more)"); return }
-    } else {
-      if (!n || n <= 0) { toast.error("Enter a valid amount"); return }
-    }
+    if (!n || n <= 0) { toast.error("Enter a valid amount"); return }
 
     startTransition(async () => {
-      let result: { success: true; updatedPoints: number } | { error: string }
-
-      if (mode === "topup") {
-        result = await adminTopUpUserPointsAction(selectedUser.id, n, note)
-      } else if (mode === "deduct") {
-        result = await adminDeductUserPointsAction(selectedUser.id, n, note)
-      } else {
-        result = await adminAdjustUserPointsAction(selectedUser.id, n, selectedUser.points, note)
-      }
+      const result = mode === "topup"
+        ? await adminTopUpUserPointsAction(selectedUser.id, n, note)
+        : await adminDeductUserPointsAction(selectedUser.id, n, note)
 
       if ("error" in result) { toast.error(result.error); return }
 
       const msgs: Record<Mode, string> = {
         topup:  `Topped up ${n.toLocaleString()} pts — ${selectedUser.name} now has ${result.updatedPoints.toLocaleString()} pts`,
         deduct: `Deducted ${n.toLocaleString()} pts — ${selectedUser.name} now has ${result.updatedPoints.toLocaleString()} pts`,
-        adjust: `Balance set to ${result.updatedPoints.toLocaleString()} pts for ${selectedUser.name}`,
       }
       toast.success(msgs[mode])
       setSelected(null)
@@ -130,8 +115,7 @@ function PointActionDrawer({
   }
 
   const preview = previewBalance()
-  const amountLabel = mode === "adjust" ? "New balance" : `Points to ${mode === "topup" ? "add" : "deduct"}`
-  const amountPlaceholder = mode === "adjust" ? "e.g. 5000" : "e.g. 1000"
+  const amountLabel = `Points to ${mode === "topup" ? "add" : "deduct"}`
 
   return (
     <>
@@ -146,7 +130,6 @@ function PointActionDrawer({
             <div className="lv-drawer-sub">
               {mode === "topup"  && "Credit points as a top-up purchase"}
               {mode === "deduct" && "Deduct points from user balance"}
-              {mode === "adjust" && "Set user balance to an exact value"}
             </div>
           </div>
           <button className="lv-drawer-close" onClick={onClose} aria-label="Close">
@@ -245,16 +228,16 @@ function PointActionDrawer({
                 <input
                   type="number"
                   required
-                  min={mode === "adjust" ? 0 : 1}
+                  min={1}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder={amountPlaceholder}
+                  placeholder="e.g. 1000"
                   style={inputStyle}
                 />
                 {preview !== null && (
                   <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>
                     New balance: <strong style={{ color: "var(--lv-text)" }}>{preview.toLocaleString()} pts</strong>
-                    {mode !== "adjust" && selectedUser && (
+                    {selectedUser && (
                       <span style={{ marginLeft: 6, color: mode === "topup" ? "#047857" : "#b91c1c" }}>
                         ({mode === "topup" ? "+" : "−"}{Math.floor(Number(amount)).toLocaleString()})
                       </span>
@@ -315,7 +298,7 @@ export function PointActionButtons({ users }: Props) {
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        {(["topup", "deduct", "adjust"] as Mode[]).map((mode) => {
+        {(["topup", "deduct"] as Mode[]).map((mode) => {
           const cfg = MODE_CONFIG[mode]
           return (
             <button
