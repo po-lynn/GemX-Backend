@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Tags,
   Crown,
+  Coins,
 } from "lucide-react";
 
 type NavItem = {
@@ -82,6 +83,18 @@ const navGroups: (NavItem | NavGroup)[] = [
         icon: Tags,
         color: "#f43f5e",
         isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
+      },
+    ],
+  },
+  {
+    label: "My Account",
+    items: [
+      {
+        href: "/account/points",
+        label: "My Points",
+        icon: Coins,
+        color: "#7c3aed",
+        isActive: (p) => p.startsWith("/account/points"),
       },
     ],
   },

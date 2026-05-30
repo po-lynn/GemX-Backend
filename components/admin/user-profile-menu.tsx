@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, LogOut, Pencil, User } from "lucide-react"
+import { ChevronDown, Coins, LogOut, Pencil, User } from "lucide-react"
 
 type UserType = {
   id: string
@@ -83,6 +83,16 @@ export function UserProfileMenu({
 
         {/* Menu items */}
         <div className="p-1.5 space-y-0.5">
+          <Button
+            variant="ghost"
+            asChild
+            className="w-full justify-start gap-2.5 rounded-lg text-sm font-normal"
+          >
+            <Link href="/account/points">
+              <Coins className="h-4 w-4 text-muted-foreground" />
+              My Points
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             asChild
