@@ -32,7 +32,7 @@ export function UserPointBalanceHeader({ available, reserved, lifetime, purchase
         </div>
       </div>
       <Link href={purchaseHref} className="pt-topup-btn">
-        <Plus /> Top up points
+        <Plus /> Credit / Deduct
       </Link>
     </div>
   )
