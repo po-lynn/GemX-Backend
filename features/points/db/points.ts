@@ -1355,6 +1355,81 @@ export async function getUserPointBalance(
   return { available: row.points, reserved: row.pointsReserved, lifetime: row.pointsLifetime };
 }
 
+// ─── Admin: all-user transaction queries ──────────────────────────────────────
+
+export type PointTransactionAdminRow = PointTransactionRow & {
+  userName: string | null
+  userEmail: string | null
+  userPhone: string | null
+}
+
+export async function getPointTransactionsPaginated(opts: {
+  page: number
+  limit: number
+  filter?: "all" | "topups" | "spent" | "pending"
+}): Promise<{ transactions: PointTransactionAdminRow[]; total: number }> {
+  const { page, limit, filter = "all" } = opts
+  const offset = (page - 1) * limit
+
+  const filterCondition =
+    filter === "topups"
+      ? and(or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      : filter === "spent"
+      ? and(eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
+      : filter === "pending"
+      ? eq(pointTransaction.status, "pending")
+      : undefined
+
+  const [rows, [{ value: total }]] = await Promise.all([
+    db
+      .select({
+        id: pointTransaction.id,
+        userId: pointTransaction.userId,
+        type: pointTransaction.type,
+        direction: pointTransaction.direction,
+        amount: pointTransaction.amount,
+        status: pointTransaction.status,
+        referenceId: pointTransaction.referenceId,
+        referenceType: pointTransaction.referenceType,
+        description: pointTransaction.description,
+        paymentMethod: pointTransaction.paymentMethod,
+        createdAt: pointTransaction.createdAt,
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+      })
+      .from(pointTransaction)
+      .leftJoin(user, eq(pointTransaction.userId, user.id))
+      .where(filterCondition)
+      .orderBy(desc(pointTransaction.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ value: count() })
+      .from(pointTransaction)
+      .where(filterCondition),
+  ])
+
+  return { transactions: rows, total }
+}
+
+export async function getPointTransactionCounts(): Promise<{
+  all: number; topups: number; spent: number; pending: number
+}> {
+  const rows = await db
+    .select({ type: pointTransaction.type, direction: pointTransaction.direction, status: pointTransaction.status })
+    .from(pointTransaction)
+
+  let all = 0, topups = 0, spent = 0, pending = 0
+  for (const r of rows) {
+    all++
+    if (r.status === "pending") pending++
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++
+    else if (r.status === "completed" && r.direction === "debit") spent++
+  }
+  return { all, topups, spent, pending }
+}
+
 export async function getUserPointTransactionCounts(
   userId: string
 ): Promise<{ all: number; topups: number; spent: number; pending: number }> {

@@ -88,7 +88,7 @@ export function UserProfileMenu({
             asChild
             className="w-full justify-start gap-2.5 rounded-lg text-sm font-normal"
           >
-            <Link href="/admin/my-points">
+            <Link href="/admin/credit/transactions">
               <Coins className="h-4 w-4 text-muted-foreground" />
               My Points
             </Link>
