@@ -16,6 +16,9 @@ import {
   setDefaultRegistrationPoints,
   setEarningPointsRates,
   setUserPoints,
+  creditUserPoints,
+  deductUserPoints,
+  logPointTransaction,
   approvePointPurchaseRequest,
   rejectPointPurchaseRequest,
   resetPointPurchaseRequestToPending,
@@ -452,4 +455,60 @@ export async function updateSubscriptionExpiryAction(formData: FormData) {
   const result = await updatePremiumDealerSubscriptionExpiry(subscriptionId, parsed);
   if (!result.success) return { error: "Subscription not found." };
   return { success: true };
+}
+
+export async function adminCreditUserPointsAction(
+  userId: string,
+  amount: number,
+  note?: string
+): Promise<{ success: true; updatedPoints: number } | { error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const safe = Math.floor(Number(amount));
+  if (!userId) return { error: "User ID is required." };
+  if (isNaN(safe) || safe <= 0) return { error: "Amount must be a positive number." };
+
+  const credited = await creditUserPoints(userId, safe);
+  if (!credited.success) return { error: "User not found." };
+
+  await logPointTransaction({
+    userId,
+    type: "admin_adjustment",
+    direction: "credit",
+    amount: safe,
+    status: "completed",
+    description: note?.trim() ? `Admin credit: ${note.trim()}` : "Admin credit",
+  });
+
+  return { success: true, updatedPoints: credited.updatedPoints ?? 0 };
+}
+
+export async function adminDeductUserPointsAction(
+  userId: string,
+  amount: number,
+  note?: string
+): Promise<{ success: true; updatedPoints: number } | { error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const safe = Math.floor(Number(amount));
+  if (!userId) return { error: "User ID is required." };
+  if (isNaN(safe) || safe <= 0) return { error: "Amount must be a positive number." };
+
+  const deducted = await deductUserPoints(userId, safe);
+  if (!deducted.success) return { error: "Insufficient balance or user not found." };
+
+  await logPointTransaction({
+    userId,
+    type: "admin_adjustment",
+    direction: "debit",
+    amount: safe,
+    status: "completed",
+    description: note?.trim() ? `Admin deduction: ${note.trim()}` : "Admin deduction",
+  });
+
+  return { success: true, updatedPoints: deducted.remainingPoints ?? 0 };
 }
