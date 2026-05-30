@@ -5,13 +5,14 @@ type Props = {
   available: number
   reserved: number
   lifetime: number
+  purchaseHref?: string
 }
 
 function fmtPts(n: number): string {
   return n.toLocaleString("en-US")
 }
 
-export function UserPointBalanceHeader({ available, reserved, lifetime }: Props) {
+export function UserPointBalanceHeader({ available, reserved, lifetime, purchaseHref = "/account/points/purchase" }: Props) {
   return (
     <div className="pt-balance">
       <div className="pt-balance-main">
@@ -30,7 +31,7 @@ export function UserPointBalanceHeader({ available, reserved, lifetime }: Props)
           )}
         </div>
       </div>
-      <Link href="/account/points/purchase" className="pt-topup-btn">
+      <Link href={purchaseHref} className="pt-topup-btn">
         <Plus /> Top up points
       </Link>
     </div>

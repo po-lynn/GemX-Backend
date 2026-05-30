@@ -9,13 +9,14 @@ import type { PointPurchasePackage, PaymentMethod } from "@/features/points/db/p
 type Props = {
   packages: PointPurchasePackage[]
   paymentMethods: PaymentMethod[]
+  successRedirect?: string
 }
 
 function fmtMMK(n: number) {
   return n.toLocaleString("en-US")
 }
 
-export function PurchaseForm({ packages, paymentMethods }: Props) {
+export function PurchaseForm({ packages, paymentMethods, successRedirect = "/account/points?filter=pending" }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -66,7 +67,7 @@ export function PurchaseForm({ packages, paymentMethods }: Props) {
           return
         }
         toast.success(`Request submitted — ${selectedPkg.points.toLocaleString()} pts pending approval`)
-        router.push("/account/points?filter=pending")
+        router.push(successRedirect)
       } catch {
         toast.error("Network error. Please try again.")
       }

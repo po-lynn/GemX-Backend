@@ -71,11 +71,11 @@ const navGroups: (NavItem | NavGroup)[] = [
         isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
       },
       {
-        href: "/account/points",
+        href: "/admin/my-points",
         label: "My Points",
         icon: Coins,
         color: "#7c3aed",
-        isActive: (p) => p.startsWith("/account/points"),
+        isActive: (p) => p.startsWith("/admin/my-points"),
       },
     ],
   },

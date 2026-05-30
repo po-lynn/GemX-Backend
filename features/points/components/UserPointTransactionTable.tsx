@@ -154,6 +154,7 @@ type Props = {
   page: number
   pageSize: number
   total: number
+  basePath?: string
 }
 
 const columnDefs: ColumnDef<PointTransactionRow>[] = [
@@ -230,8 +231,8 @@ const filterDefs: FilterDef[] = [
   { id: "createdAt", label: "Date", type: "daterange" },
 ]
 
-export function UserPointTransactionTable({ rows, views, activeView, page, pageSize, total }: Props) {
-  const base = "/account/points"
+export function UserPointTransactionTable({ rows, views, activeView, page, pageSize, total, basePath = "/account/points" }: Props) {
+  const base = basePath
 
   return (
     <ListViewCard
