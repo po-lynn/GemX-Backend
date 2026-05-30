@@ -6,6 +6,8 @@
 
 ## Recent changes
 
+- **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
+- **Feature settings (full, mobile)** – **GET `/api/mobile/feature-settings`** (no auth): returns both **`homeFeaturedLimit`** (admin-configured max homepage featured slots) and the full **`pricingTiers`** array (same tiers as **GET `/api/mobile/feature-pricing-tiers`** but with optional **`enabled`** flag per tier). Use when you need to show remaining capacity alongside tier selection. See **5.4.1b**.
 - **Point purchase requests — `payment_method`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** now include **`payment_method`** (name from `GET /api/mobile/points/packages` → `paymentMethods`). **POST** requires **`payment_method`** in the body; **`paymentMethod`** is accepted as an alias. Stored in **`point_purchase_request.payment_method`**. See **5.4.2**.
 - **Point purchase requests — `package_name`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** success responses now include **`package_name`** (snake_case) on each item. **POST** request body uses **`package_name`** (required); **`packageName`** is still accepted as an alias. See **5.4.2**.
 - **Collector piece show requests — list enrichment** – **GET `/api/mobile/collector-piece-show-requests`** each **`requests`** item now includes **`productName`** (from **`product.title`**) and **`sellerName`** (from the listing seller’s **`user.name`**). See **5.4.4**.
@@ -74,6 +76,9 @@
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
+| GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
+| GET    | `/api/mobile/points/balance` | Yes  | Current user's point balance breakdown (`available`, `reserved`, `lifetime`). See **5.4.2a**. |
+| GET    | `/api/mobile/points/history` | Yes  | Current user's point balance + paginated transaction ledger. Query: `filter` (`all`\|`topups`\|`spent`\|`pending`), `page`, `limit`. See **5.4.2b**. |
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. Body: `packageName`, `autoRenew`. See **5.4.3a**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
@@ -1738,6 +1743,42 @@ Use this endpoint to load feature options for a picker/dropdown in mobile. It re
 
 ---
 
+### 5.4.1b Get full feature settings (mobile)
+
+**GET** `/api/mobile/feature-settings`
+
+**Auth:** Not required.
+
+Returns both the homepage featured-slot cap and the full pricing tier list. Use this when the mobile app needs to show remaining capacity (e.g. "3 of 5 slots in use") alongside the tier selection UI. For a tiers-only picker, **GET `/api/mobile/feature-pricing-tiers`** is lighter.
+
+**Success (200):**
+
+```json
+{
+  "homeFeaturedLimit": 5,
+  "pricingTiers": [
+    { "durationDays": 1, "points": 100 },
+    { "durationDays": 3, "points": 270 },
+    { "durationDays": 7, "points": 500, "badge": "Best Value" }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `homeFeaturedLimit` | number | Maximum number of products that can be featured on the homepage simultaneously (admin-configured; default 5). |
+| `pricingTiers` | array | Same tier options as **GET `/api/mobile/feature-pricing-tiers`**. |
+| `pricingTiers[].durationDays` | number | Duration option in days. |
+| `pricingTiers[].points` | number | Point cost for this duration. |
+| `pricingTiers[].badge` | string \| undefined | Optional label (e.g. `"Best Value"`). |
+| `pricingTiers[].enabled` | boolean \| undefined | When present and `false`, exclude this tier from the picker. |
+
+**Errors:**
+
+- **500** – `{ "error": "Failed to load feature settings" }`
+
+---
+
 ### 5.4.1a Feature a product with points (mobile)
 
 **POST** `/api/mobile/products/:id/feature`
@@ -2632,6 +2673,118 @@ Each object in **`history`** uses the same field definitions as **GET `/api/mobi
 
 ---
 
+#### GET `/api/mobile/points/balance` {#5-4-2a}
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the authenticated user's point balance split into three buckets. Suitable for a lightweight wallet header shown on the home/profile screen.
+
+**Success (200):**
+
+```json
+{
+  "available": 850,
+  "reserved": 0,
+  "lifetime": 1350
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `available` | number | Spendable balance (`user.points`). |
+| `reserved` | number | Points held in escrow or pending deduction (`user.pointsReserved`; typically `0`). |
+| `lifetime` | number | All-time points earned (`user.pointsLifetime`). |
+
+**Errors:**
+
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to load balance" }`
+
+---
+
+#### GET `/api/mobile/points/history` {#5-4-2b}
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Returns the user's current balance alongside a paginated transaction ledger (newest first). Covers all ledger entries — top-ups, registration bonus, feature purchases, premium dealer activations, admin debits, etc.
+
+**Query params:**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `filter` | string | `all` | `all` — every row; `topups` — completed credits (type `topup` or `registration_bonus`); `spent` — completed debits; `pending` — rows with `status` `pending`. |
+| `page` | number | `1` | Page number (min 1). |
+| `limit` | number | `20` | Items per page (min 1, max 50). |
+
+**Success (200):**
+
+```json
+{
+  "balance": {
+    "available": 850,
+    "reserved": 0,
+    "lifetime": 1350
+  },
+  "transactions": [
+    {
+      "id": "uuid-here",
+      "type": "topup",
+      "direction": "credit",
+      "amount": 100,
+      "status": "completed",
+      "description": "Top-up via KBZ Pay",
+      "paymentMethod": "KBZ Pay",
+      "referenceId": "purchase-request-uuid",
+      "referenceType": "purchase_request",
+      "createdAt": "2026-05-15T10:00:00.000Z"
+    },
+    {
+      "id": "uuid-here-2",
+      "type": "premium_activation",
+      "direction": "debit",
+      "amount": 100,
+      "status": "completed",
+      "description": "Premium · Basic Package",
+      "paymentMethod": null,
+      "referenceId": "subscription-uuid",
+      "referenceType": "premium_package",
+      "createdAt": "2026-05-14T08:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `balance` | object | Same shape as **GET `/api/mobile/points/balance`** (`available`, `reserved`, `lifetime`). |
+| `transactions` | array | Ledger rows for this user, newest first. |
+| `transactions[].id` | string | Row UUID. |
+| `transactions[].type` | string | `topup`, `registration_bonus`, `feature_purchase`, `premium_activation`, `admin_credit`, `admin_debit`, etc. |
+| `transactions[].direction` | string | `"credit"` (points added) or `"debit"` (points deducted). |
+| `transactions[].amount` | number | Points involved (always positive). |
+| `transactions[].status` | string | `"completed"`, `"pending"`, or `"rejected"`. |
+| `transactions[].description` | string \| null | Human-readable note (e.g. `"Top-up via KBZ Pay"`, `"Premium · Basic Package"`). |
+| `transactions[].paymentMethod` | string \| null | Payment method name for top-up rows; `null` otherwise. |
+| `transactions[].referenceId` | string \| null | UUID of the linked record (purchase request, premium subscription, etc.). |
+| `transactions[].referenceType` | string \| null | Type of the linked record (e.g. `"purchase_request"`, `"premium_package"`, `"registration"`). |
+| `transactions[].createdAt` | string | ISO 8601 timestamp. |
+| `pagination.total` | number | Total matching rows (for page count calculation). |
+| `pagination.page` | number | Current page. |
+| `pagination.limit` | number | Page size. |
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid query params" }` — unknown `filter` value.
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to load point history" }`
+
+---
+
 #### POST `/api/mobile/points/purchase` *(legacy)*
 
 **POST** `/api/mobile/points/purchase`
@@ -3174,6 +3327,8 @@ Returns a single published article by ID. Draft items return **404**.
   - On every protected request, set header: `Authorization: Bearer <stored_token>`.
   - Load feature options: call `GET /api/mobile/feature-pricing-tiers` and let user select `durationDays` + `points`.
   - To buy points (top-up): call `GET /api/mobile/points/packages` to load packages and payment methods → user selects a package and transfers payment → submit `POST /api/mobile/points/purchase-requests` with transfer details → admin approves → points are credited. Track status with `GET /api/mobile/points/purchase-requests`. See **5.4.2**.
+  - **Wallet header (balance only):** `GET /api/mobile/points/balance` → `{ available, reserved, lifetime }`. See **5.4.2a**.
+  - **Wallet / transaction history screen:** `GET /api/mobile/points/history?filter=all&page=1&limit=20` → balance + paginated ledger. Filter options: `topups`, `spent`, `pending`. See **5.4.2b**.
   - To feature a product: send `isFeatured`, `featured`, and `featureDurationDays` in `POST /api/products` or `PATCH /api/products/:id`.
 2. **Categories**
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
@@ -3235,6 +3390,9 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/mobile/register` | No   | Register                                                                                                    |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
+| GET    | `/api/mobile/feature-settings` | No   | Full feature settings: `homeFeaturedLimit` + `pricingTiers` (with optional `enabled`). See 5.4.1b.         |
+| GET    | `/api/mobile/points/balance` | Yes  | Point balance breakdown (`available`, `reserved`, `lifetime`). See 5.4.2a.                                  |
+| GET    | `/api/mobile/points/history` | Yes  | Point balance + paginated ledger (`filter`, `page`, `limit`). See 5.4.2b.                                   |
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
