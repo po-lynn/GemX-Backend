@@ -6,6 +6,8 @@ import {
   getPointTransactionCounts,
 } from "@/features/points/db/points"
 import { PointTransactionsTable } from "@/features/points/components/PointTransactionsTable"
+import { PointActionButtons } from "@/features/points/components/PointActionButtons"
+import { getAllUsersFromDb } from "@/features/users/db/users"
 import type { ViewTab } from "@/components/admin/list-view"
 
 const PAGE_SIZE = 20
@@ -24,10 +26,20 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
     : "all"
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
 
-  const [{ transactions, total }, counts] = await Promise.all([
+  const [{ transactions, total }, counts, allUsers] = await Promise.all([
     getPointTransactionsPaginated({ page, limit: PAGE_SIZE, filter }),
     getPointTransactionCounts(),
+    getAllUsersFromDb(),
   ])
+
+  const users = allUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    points: u.points,
+    role: u.role,
+  }))
 
   const views: ViewTab[] = [
     { id: "all",     label: "All",     count: counts.all },
@@ -53,6 +65,7 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
           </h1>
           <p className="lv-subhead">Full ledger of every point movement across all user accounts.</p>
         </div>
+        <PointActionButtons users={users} />
       </div>
 
       <PointTransactionsTable

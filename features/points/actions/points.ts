@@ -512,3 +512,63 @@ export async function adminDeductUserPointsAction(
 
   return { success: true, updatedPoints: deducted.remainingPoints ?? 0 };
 }
+
+export async function adminTopUpUserPointsAction(
+  userId: string,
+  amount: number,
+  note?: string
+): Promise<{ success: true; updatedPoints: number } | { error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const safe = Math.floor(Number(amount));
+  if (!userId) return { error: "User ID is required." };
+  if (isNaN(safe) || safe <= 0) return { error: "Amount must be a positive number." };
+
+  const credited = await creditUserPoints(userId, safe);
+  if (!credited.success) return { error: "User not found." };
+
+  await logPointTransaction({
+    userId,
+    type: "topup",
+    direction: "credit",
+    amount: safe,
+    status: "completed",
+    description: note?.trim() ? `Admin top-up: ${note.trim()}` : "Admin top-up",
+  });
+
+  return { success: true, updatedPoints: credited.updatedPoints ?? 0 };
+}
+
+export async function adminAdjustUserPointsAction(
+  userId: string,
+  newBalance: number,
+  currentBalance: number,
+  note?: string
+): Promise<{ success: true; updatedPoints: number } | { error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || !canAdminManageUsers(session.user.role)) {
+    return { error: "Unauthorized" };
+  }
+  const safeNew = Math.max(0, Math.floor(Number(newBalance)));
+  const safeCurrent = Math.max(0, Math.floor(Number(currentBalance)));
+  if (!userId) return { error: "User ID is required." };
+  if (isNaN(safeNew)) return { error: "Balance must be a non-negative number." };
+
+  await setUserPoints(userId, safeNew);
+
+  const delta = Math.abs(safeNew - safeCurrent);
+  if (delta > 0) {
+    await logPointTransaction({
+      userId,
+      type: "admin_adjustment",
+      direction: safeNew >= safeCurrent ? "credit" : "debit",
+      amount: delta,
+      status: "completed",
+      description: note?.trim() ? `Admin adjustment: ${note.trim()}` : "Admin adjustment",
+    });
+  }
+
+  return { success: true, updatedPoints: safeNew };
+}
