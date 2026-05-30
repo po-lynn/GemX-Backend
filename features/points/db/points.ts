@@ -7,6 +7,7 @@ import {
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
+import { alias } from "drizzle-orm/pg-core";
 import { and, count, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
@@ -1318,6 +1319,7 @@ export type PointTransactionRow = {
   referenceType: string | null;
   description: string | null;
   paymentMethod: string | null;
+  createdByAdminId: string | null;
   createdAt: Date;
 };
 
@@ -1331,6 +1333,7 @@ type LogPointTransactionInput = {
   referenceType?: string | null;
   description?: string | null;
   paymentMethod?: string | null;
+  createdByAdminId?: string | null;
 };
 
 export async function logPointTransaction(
@@ -1362,7 +1365,10 @@ export type PointTransactionAdminRow = PointTransactionRow & {
   userEmail: string | null
   userPhone: string | null
   packageName: string | null
+  createdByAdminName: string | null
 }
+
+const adminUser = alias(user, "admin_user")
 
 export async function getPointTransactionsPaginated(opts: {
   page: number
@@ -1399,11 +1405,14 @@ export async function getPointTransactionsPaginated(opts: {
         userEmail: user.email,
         userPhone: user.phone,
         packageName: sql<string | null>`COALESCE(${pointPurchaseRequest.packageName}, ${premiumDealersPackage.packageName})`,
+        createdByAdminId: pointTransaction.createdByAdminId,
+        createdByAdminName: adminUser.name,
       })
       .from(pointTransaction)
       .leftJoin(user, eq(pointTransaction.userId, user.id))
       .leftJoin(pointPurchaseRequest, eq(pointTransaction.referenceId, pointPurchaseRequest.id))
       .leftJoin(premiumDealersPackage, eq(pointTransaction.referenceId, premiumDealersPackage.id))
+      .leftJoin(adminUser, eq(pointTransaction.createdByAdminId, adminUser.id))
       .where(filterCondition)
       .orderBy(desc(pointTransaction.createdAt))
       .limit(limit)
