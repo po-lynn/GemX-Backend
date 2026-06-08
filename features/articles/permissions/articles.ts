@@ -1,3 +1,3 @@
 export function canAdminManageArticles(role: string) {
-  return role === "admin";
+  return role === "admin" || role === "supervisor";
 }

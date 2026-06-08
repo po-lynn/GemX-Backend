@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
-import { canAdminManageProducts } from "@/features/products/permissions/products"
+import { canAdminManageCategories } from "@/features/products/permissions/products"
 import { categoryCreateSchema, categoryUpdateSchema, categoryDeleteSchema } from "@/features/categories/schemas/categories"
 import {
   createCategoryInDb,
@@ -31,7 +31,7 @@ export async function createCategoryAction(formData: FormData) {
   }
 
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  if (!session || !canAdminManageCategories(session.user.role)) {
     return { error: "Unauthorized" }
   }
 
@@ -61,7 +61,7 @@ export async function updateCategoryAction(formData: FormData) {
   }
 
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  if (!session || !canAdminManageCategories(session.user.role)) {
     return { error: "Unauthorized" }
   }
 
@@ -86,7 +86,7 @@ export async function deleteCategoryAction(formData: FormData) {
   }
 
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  if (!session || !canAdminManageCategories(session.user.role)) {
     return { error: "Unauthorized" }
   }
 

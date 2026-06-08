@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   const role = session.user.role
 
-  if (role === "admin") {
+  if (role === "admin" || role === "supervisor") {
     return NextResponse.next()
   }
 

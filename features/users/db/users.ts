@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { and, eq, asc, ilike, or, sql, inArray } from "drizzle-orm";
+import { and, eq, asc, ilike, or, sql } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -74,7 +74,6 @@ export type UserStats = {
   verified: number;
   totalPoints: number;
   newThisWeek: number;
-  dealers: number;
 };
 
 export async function getUserStatsFromDb(): Promise<UserStats> {
@@ -85,7 +84,6 @@ export async function getUserStatsFromDb(): Promise<UserStats> {
       verified:    sql<number>`sum(case when ${user.verified} = true and ${user.emailVerified} = true then 1 else 0 end)::int`,
       totalPoints: sql<number>`coalesce(sum(${user.points}), 0)::int`,
       newThisWeek: sql<number>`count(*) filter (where ${user.createdAt} > now() - interval '7 days')::int`,
-      dealers:     sql<number>`sum(case when ${user.archived} = false and ${user.role} in ('dealer','seller') then 1 else 0 end)::int`,
     })
     .from(user);
   return {
@@ -94,33 +92,29 @@ export async function getUserStatsFromDb(): Promise<UserStats> {
     verified:    row?.verified    ?? 0,
     totalPoints: row?.totalPoints ?? 0,
     newThisWeek: row?.newThisWeek ?? 0,
-    dealers:     row?.dealers     ?? 0,
   };
 }
 
 export type ViewCounts = {
-  all: number; pending: number; dealers: number;
-  buyers: number; admins: number; archived: number;
+  all: number; pending: number; admins: number; supervisors: number; archived: number;
 };
 
 export async function getViewCountsFromDb(): Promise<ViewCounts> {
   const [row] = await db
     .select({
-      all:      sql<number>`sum(case when ${user.archived} = false then 1 else 0 end)::int`,
-      pending:  sql<number>`sum(case when ${user.archived} = false and ${user.emailVerified} = false then 1 else 0 end)::int`,
-      dealers:  sql<number>`sum(case when ${user.archived} = false and ${user.role} in ('dealer','seller') then 1 else 0 end)::int`,
-      buyers:   sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'buyer' then 1 else 0 end)::int`,
-      admins:   sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'admin' then 1 else 0 end)::int`,
-      archived: sql<number>`sum(case when ${user.archived} = true  then 1 else 0 end)::int`,
+      all:         sql<number>`sum(case when ${user.archived} = false then 1 else 0 end)::int`,
+      pending:     sql<number>`sum(case when ${user.archived} = false and ${user.emailVerified} = false then 1 else 0 end)::int`,
+      admins:      sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'admin' then 1 else 0 end)::int`,
+      supervisors: sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'supervisor' then 1 else 0 end)::int`,
+      archived:    sql<number>`sum(case when ${user.archived} = true  then 1 else 0 end)::int`,
     })
     .from(user);
   return {
-    all:      row?.all      ?? 0,
-    pending:  row?.pending  ?? 0,
-    dealers:  row?.dealers  ?? 0,
-    buyers:   row?.buyers   ?? 0,
-    admins:   row?.admins   ?? 0,
-    archived: row?.archived ?? 0,
+    all:         row?.all         ?? 0,
+    pending:     row?.pending     ?? 0,
+    admins:      row?.admins      ?? 0,
+    supervisors: row?.supervisors ?? 0,
+    archived:    row?.archived    ?? 0,
   };
 }
 
@@ -144,11 +138,10 @@ export async function getUsersPaginatedFromDb(options: {
     : undefined;
   const viewCondition = (() => {
     switch (view) {
-      case "pending":  return and(eq(user.archived, false), eq(user.emailVerified, false));
-      case "dealers":  return and(eq(user.archived, false), inArray(user.role, ["dealer", "seller"]));
-      case "buyers":   return and(eq(user.archived, false), eq(user.role, "buyer"));
-      case "admins":   return and(eq(user.archived, false), eq(user.role, "admin"));
-      case "archived": return eq(user.archived, true);
+      case "pending":     return and(eq(user.archived, false), eq(user.emailVerified, false));
+      case "admins":      return and(eq(user.archived, false), eq(user.role, "admin"));
+      case "supervisors": return and(eq(user.archived, false), eq(user.role, "supervisor"));
+      case "archived":    return eq(user.archived, true);
       default:         return eq(user.archived, false);
     }
   })();

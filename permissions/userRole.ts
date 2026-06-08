@@ -12,4 +12,9 @@ export const user = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
+export const supervisor = ac.newRole({
+  ...userAc.statements,
+  user: [...userAc.statements.user, "list"],
+})
+
 export const admin = ac.newRole(adminAc.statements)

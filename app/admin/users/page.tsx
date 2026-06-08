@@ -70,7 +70,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     {
       label: "Points in circulation",
       value: fmtCompact(stats.totalPoints),
-      delta: `${stats.dealers} active dealers`,
+      delta: `${viewCounts.admins + viewCounts.supervisors} staff accounts`,
       tone: "purple",
     },
   ]
@@ -85,7 +85,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             <span className="lv-h1-count">{stats.total.toLocaleString()} total</span>
           </h1>
           <p className="lv-subhead">
-            Manage buyer, seller and dealer accounts — roles, KYC, points and access.
+            Manage user accounts — roles, KYC, points and access.
           </p>
         </div>
         <div className="lv-pagehead-actions">

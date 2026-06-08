@@ -11,5 +11,9 @@ export const productPermissions = {
 } as const
 
 export function canAdminManageProducts(role: string) {
+  return role === "admin" || role === "supervisor"
+}
+
+export function canAdminManageCategories(role: string) {
   return role === "admin"
 }

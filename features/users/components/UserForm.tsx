@@ -29,11 +29,9 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const MAX_IMAGE_SIZE_MB = 5;
 
 const ROLES = [
-  { value: "admin",  label: "Admin"  },
-  { value: "dealer", label: "Dealer" },
-  { value: "seller", label: "Seller" },
-  { value: "buyer",  label: "Buyer"  },
-  { value: "user",   label: "User"   },
+  { value: "admin",      label: "Admin"      },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "user",       label: "User"       },
 ];
 
 const GENDERS = [
