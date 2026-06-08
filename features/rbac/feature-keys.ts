@@ -1,7 +1,8 @@
+// Feature keys for configurable supervisor permissions.
+// NOTE: categories and users management are ALWAYS admin-only and intentionally
+// excluded — they cannot be granted to supervisors via the toggle system.
 export const FEATURE_KEYS = {
   PRODUCTS:                  "products",
-  CATEGORIES:                "categories",
-  USERS:                     "users",
   CREDIT_PACKAGES:           "credit.packages",
   CREDIT_PURCHASE_REQUESTS:  "credit.purchase_requests",
   CREDIT_SUBSCRIPTIONS:      "credit.subscriptions",
@@ -27,7 +28,6 @@ export const FEATURE_GROUPS: Array<{
     label: "Marketplace",
     features: [
       { key: FEATURE_KEYS.PRODUCTS,           label: "Products" },
-      { key: FEATURE_KEYS.CATEGORIES,         label: "Categories" },
       { key: FEATURE_KEYS.ORIGIN,             label: "Origin" },
       { key: FEATURE_KEYS.LABORATORY,         label: "Laboratory" },
       { key: FEATURE_KEYS.COLLECTOR_REQUESTS, label: "Collector Requests" },
@@ -47,7 +47,6 @@ export const FEATURE_GROUPS: Array<{
     features: [
       { key: FEATURE_KEYS.MESSAGES,       label: "Messages" },
       { key: FEATURE_KEYS.CHAT_DASHBOARD, label: "Chat Dashboard" },
-      { key: FEATURE_KEYS.USERS,          label: "Users" },
     ],
   },
   {
