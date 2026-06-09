@@ -1,12 +1,15 @@
 import Link from "next/link"
 import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
 import { LaboratoryListView } from "@/features/laboratory/components/LaboratoryListView"
 import type { ViewTab } from "@/components/admin/list-view"
 
 export default async function AdminLaboratoryPage() {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.LABORATORY)
   const laboratories = await getCachedLaboratories()
 
   const views: ViewTab[] = [

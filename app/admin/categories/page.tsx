@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { connection } from "next/server"
+import { requireAdmin } from "@/lib/admin-guard"
 import { ChevronRight, Plus, Download } from "lucide-react"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { CategoriesListView } from "@/features/categories/components/CategoriesListView"
@@ -14,6 +15,7 @@ type Props = {
 
 export default async function AdminCategoriesPage({ searchParams }: Props) {
   await connection()
+  await requireAdmin()
   const params = await searchParams
   const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
     ? (params.view as View)

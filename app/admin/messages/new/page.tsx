@@ -1,6 +1,9 @@
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { MessageForm } from "@/features/messages/components/MessageForm";
 
-export default function AdminMessagesNewPage() {
+export default async function AdminMessagesNewPage() {
+  await requireFeatureAccess(FEATURE_KEYS.MESSAGES);
   return (
     <div className="space-y-5 py-2">
       <div>
@@ -11,4 +14,3 @@ export default function AdminMessagesNewPage() {
     </div>
   );
 }
-

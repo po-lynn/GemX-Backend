@@ -1,5 +1,7 @@
 import { connection } from "next/server"
 import { notFound } from "next/navigation"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getCachedProduct } from "@/features/products/db/cache/products"
 import { getAllCategories } from "@/features/categories/db/categories"
@@ -21,6 +23,7 @@ type Props = {
 
 export default async function AdminProductsEditPage({ params, searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
   const { id } = await params
   const { from } = await searchParams
   const back = from ? (BACK_ROUTES[from] ?? null) : null

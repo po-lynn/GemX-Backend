@@ -1,5 +1,7 @@
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { MessageForm } from "@/features/messages/components/MessageForm";
 import { getMessageById } from "@/features/messages/db/messages";
 
@@ -9,6 +11,7 @@ type Props = {
 
 export default async function AdminMessagesEditPage({ params }: Props) {
   await connection();
+  await requireFeatureAccess(FEATURE_KEYS.MESSAGES);
   const { id } = await params;
   const message = await getMessageById(id);
   if (!message) notFound();

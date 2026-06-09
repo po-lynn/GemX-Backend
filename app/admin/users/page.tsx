@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { connection } from "next/server"
+import { requireAdmin } from "@/lib/admin-guard"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +29,7 @@ function fmtCompact(n: number): string {
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   await connection()
+  await requireAdmin()
   const params = await searchParams
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const search  = params.search?.trim() ?? ""

@@ -1,4 +1,6 @@
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { CollectorPieceShowRequestsTable } from "@/features/collector-piece-show-requests/components/CollectorPieceShowRequestsTable"
 import {
   getCollectorPieceShowRequestsPaginated,
@@ -18,6 +20,7 @@ type Props = {
 
 export default async function AdminCollectorPieceShowRequestsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.COLLECTOR_REQUESTS)
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const view: ViewId = (VIEW_IDS as readonly string[]).includes(params.view ?? "")

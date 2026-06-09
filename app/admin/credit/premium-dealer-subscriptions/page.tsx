@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { ChevronRight, Download } from "lucide-react"
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getPremiumDealerSubscriptionsPaginated, getPremiumDealerSubscriptionCounts } from "@/features/points/db/points"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -15,6 +17,7 @@ type Props = {
 
 export default async function AdminPremiumDealerSubscriptionsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.CREDIT_SUBSCRIPTIONS)
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const status: StatusFilter = (STATUS_FILTERS as readonly string[]).includes(params.status ?? "")

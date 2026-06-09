@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { LaboratoryForm } from "@/features/laboratory/components";
 import { getCachedLaboratoryById } from "@/features/laboratory/db/cache/laboratory";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -10,6 +12,7 @@ type Props = {
 
 async function AdminLaboratoryEditContent({ params }: Props) {
   await connection();
+  await requireFeatureAccess(FEATURE_KEYS.LABORATORY);
   const { id } = await params;
   const laboratory = await getCachedLaboratoryById(id);
   if (!laboratory) notFound();

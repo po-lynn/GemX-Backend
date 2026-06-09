@@ -1,4 +1,6 @@
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
@@ -7,6 +9,7 @@ import { getFeatureSettings } from "@/features/points/db/points"
 
 export default async function AdminProductsNewPage() {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
   const origins = await getAllOrigins()

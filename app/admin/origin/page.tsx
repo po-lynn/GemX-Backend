@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedOrigins } from "@/features/origin/db/cache/origin"
 import { OriginListView } from "@/features/origin/components/OriginListView"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -14,6 +16,7 @@ type Props = {
 
 export default async function AdminOriginPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.ORIGIN)
   const params = await searchParams
   const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
     ? (params.view as View)

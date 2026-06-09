@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { UserForm } from "@/features/users/components";
 import { getUserById } from "@/features/users/db/users";
+import { requireAdmin } from "@/lib/admin-guard";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -10,6 +11,7 @@ type Props = {
 
 async function AdminUsersEditContent({ params }: Props) {
   await connection();
+  await requireAdmin();
   const { id } = await params;
   const user = await getUserById(id);
   if (!user) notFound();

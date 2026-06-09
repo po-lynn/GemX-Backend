@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import {
   getPointTransactionsPaginated,
   getPointTransactionCounts,
@@ -20,6 +22,7 @@ type Props = {
 
 export default async function AdminPointTransactionsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.CREDIT_TRANSACTIONS)
   const params = await searchParams
   const filter: Filter = (FILTERS as readonly string[]).includes(params.filter ?? "")
     ? (params.filter as Filter)

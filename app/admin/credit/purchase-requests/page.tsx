@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { ChevronRight, Download } from "lucide-react"
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import {
   getPointPurchaseRequestsPaginated,
   getPointPurchaseRequestCounts,
@@ -18,6 +20,7 @@ type Props = {
 
 export default async function AdminPointPurchaseRequestsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS)
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const status: StatusFilter = (STATUS_FILTERS as readonly string[]).includes(params.status ?? "")

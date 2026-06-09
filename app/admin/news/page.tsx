@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { Plus, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +18,7 @@ type Props = {
 
 export default async function AdminNewsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.NEWS)
   const params = await searchParams
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const view = params.view?.trim() ?? "all"

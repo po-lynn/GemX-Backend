@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getAdminProducts, getAdminProductCounts } from "@/features/products/db/cache/products"
 import { ProductsListView } from "@/features/products/components/ProductsListView"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -10,13 +12,15 @@ const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as c
 type View = (typeof VIEWS)[number]
 
 type Props = {
-  searchParams: Promise<{ page?: string; view?: string }>
+  searchParams: Promise<{ page?: string; view?: string; search?: string }>
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
+  const search = params.search?.trim() || undefined
   const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
     ? (params.view as View)
     : "all"
@@ -32,7 +36,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
 
   const [counts, { products, total }] = await Promise.all([
     getAdminProductCounts(),
-    getAdminProducts({ page, limit: PAGE_SIZE, ...viewFilter }),
+    getAdminProducts({ page, limit: PAGE_SIZE, search, ...viewFilter }),
   ])
 
   const views: ViewTab[] = [
@@ -80,6 +84,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
+        search={search}
       />
     </div>
   )

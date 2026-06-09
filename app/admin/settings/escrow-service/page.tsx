@@ -1,4 +1,6 @@
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,7 @@ import { EscrowServiceSettingsForm } from "@/features/escrow-service-settings/co
 
 export default async function AdminEscrowServiceSettingsPage() {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.SETTINGS_ESCROW)
 
   const settings = await getEscrowServiceSettings()
   const users = await getAllUsersFromDb()

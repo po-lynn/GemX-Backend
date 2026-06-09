@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
+import { requireAdmin } from "@/lib/admin-guard"
 import { Suspense } from "react"
 import { ChevronLeft, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -51,6 +52,7 @@ type Props = {
 
 export default async function AdminUserProductsPage({ params, searchParams }: Props) {
   await connection()
+  await requireAdmin()
   const { id: userId } = await params
   const user = await getUserById(userId)
   if (!user || user.archived) notFound()

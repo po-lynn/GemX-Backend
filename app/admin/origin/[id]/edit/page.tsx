@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { OriginForm } from "@/features/origin/components";
 import { getCachedOriginById } from "@/features/origin/db/cache/origin";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -10,6 +12,7 @@ type Props = {
 
 async function AdminOriginEditContent({ params }: Props) {
   await connection();
+  await requireFeatureAccess(FEATURE_KEYS.ORIGIN);
   const { id } = await params;
   const origin = await getCachedOriginById(id);
   if (!origin) notFound();

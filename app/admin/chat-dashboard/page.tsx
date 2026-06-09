@@ -1,7 +1,6 @@
 import { connection } from "next/server"
-import { headers } from "next/headers"
-import { auth } from "@/lib/auth"
-import { canAdminManageUsers } from "@/features/users/permissions/users"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getUsersPaginatedFromDb } from "@/features/users/db/users"
 import { ChatDashboard } from "@/features/chat/components/ChatDashboard"
 import { getLastSessionActivityByUserIds } from "@/features/chat/db/session-presence"
@@ -13,14 +12,7 @@ export default async function AdminChatDashboardPage({
   searchParams: Promise<{ peer?: string }>
 }) {
   await connection()
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user?.id || !canAdminManageUsers(session.user.role)) {
-    return (
-      <div className="container my-6">
-        <p className="text-sm text-destructive">Unauthorized</p>
-      </div>
-    )
-  }
+  const session = await requireFeatureAccess(FEATURE_KEYS.CHAT_DASHBOARD)
 
   const peerFromUrl = (await searchParams)?.peer
   const [chatPeerRows, { users: directoryRows }] = await Promise.all([
@@ -57,7 +49,7 @@ export default async function AdminChatDashboardPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Chat Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Left panel lists people you already have messages with. Use “New chat” to message
+          Left panel lists people you already have messages with. Use &ldquo;New chat&rdquo; to message
           anyone else.
         </p>
       </div>

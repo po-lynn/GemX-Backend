@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAllMessages } from "@/features/messages/db/messages";
@@ -25,6 +27,7 @@ type PageProps = {
 
 export default async function AdminMessagesPage({ searchParams }: PageProps) {
   await connection();
+  await requireFeatureAccess(FEATURE_KEYS.MESSAGES);
   const params = await searchParams;
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const allMessages = await getAllMessages();

@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { connection } from "next/server"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ChevronRight, Plus, Download } from "lucide-react"
 import { getCachedRatingTags } from "@/features/rating-tags/db/cache/rating-tags"
 import { RatingTagsListView } from "@/features/rating-tags/components/RatingTagsListView"
@@ -14,6 +16,7 @@ type Props = {
 
 export default async function AdminRatingTagsPage({ searchParams }: Props) {
   await connection()
+  await requireFeatureAccess(FEATURE_KEYS.SETTINGS_RATING_TAGS)
   const params = await searchParams
   const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
     ? (params.view as View)

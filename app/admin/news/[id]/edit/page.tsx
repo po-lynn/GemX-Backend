@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { NewsForm } from "@/features/news/components";
 import { getNewsById } from "@/features/news/db/news";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -10,6 +12,7 @@ type Props = {
 
 async function AdminNewsEditContent({ params }: Props) {
   await connection();
+  await requireFeatureAccess(FEATURE_KEYS.NEWS);
   const { id } = await params;
   const news = await getNewsById(id);
   if (!news) notFound();
