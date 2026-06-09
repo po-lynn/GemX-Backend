@@ -1,8 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useRef, useState } from "react"
 import { Check, X, Archive } from "lucide-react"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/formatters"
@@ -99,16 +99,18 @@ function ProductStatusPill({ status }: { status: string }) {
 
 const BASE = "/admin/products"
 
-function buildViewHref(view: string): string {
+function buildViewHref(view: string, search?: string): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
+  if (search?.trim()) p.set("search", search.trim())
   p.set("page", "1")
   return `${BASE}?${p.toString()}`
 }
 
-function buildPageHref(page: number, view: string): string {
+function buildPageHref(page: number, view: string, search?: string): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
+  if (search?.trim()) p.set("search", search.trim())
   p.set("page", String(page))
   return `${BASE}?${p.toString()}`
 }
@@ -122,6 +124,7 @@ type Props = {
   page: number
   pageSize: number
   total: number
+  search?: string
 }
 
 export function ProductsListView({
@@ -131,9 +134,20 @@ export function ProductsListView({
   page,
   pageSize,
   total,
+  search,
 }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const currentSearch = search ?? searchParams.get("search") ?? ""
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
+
+  function handleSearch(q: string) {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current)
+    searchDebounce.current = setTimeout(() => {
+      router.push(buildPageHref(1, activeView, q))
+    }, 400)
+  }
   const isPending = pendingAction !== null
 
   async function runBulk(action: string, fn: () => Promise<unknown>, onClear: () => void, count?: number) {
@@ -359,7 +373,7 @@ export function ProductsListView({
       columnDefs={columnDefs}
       views={views}
       activeView={activeView}
-      buildViewHref={buildViewHref}
+      buildViewHref={(v) => buildViewHref(v, currentSearch)}
       filterDefs={filterDefs}
       groupOptions={groupOptions}
       getGroupKey={(r, grp) => {
@@ -441,7 +455,9 @@ export function ProductsListView({
       page={page}
       pageSize={pageSize}
       total={total}
-      buildPageHref={(p) => buildPageHref(p, activeView)}
+      defaultSearch={currentSearch}
+      onSearch={handleSearch}
+      buildPageHref={(p) => buildPageHref(p, activeView, currentSearch)}
       emptyMessage="No products found. Try adjusting the filters or view."
     />
   )

@@ -24,7 +24,6 @@ import {
   Tags,
   Crown,
   Coins,
-  Lock,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys"
 
@@ -84,7 +83,6 @@ const navGroups: (NavItem | NavGroup)[] = [
     items: [
       { href: "/admin/settings/escrow-service", label: "Escrow Service",     icon: ShieldCheck, color: "#ef4444", featureKey: FEATURE_KEYS.SETTINGS_ESCROW,      isActive: (p) => p.startsWith("/admin/settings/escrow-service") },
       { href: "/admin/settings/rating-tags",    label: "Seller Rating Tags", icon: Tags,        color: "#f43f5e", featureKey: FEATURE_KEYS.SETTINGS_RATING_TAGS, isActive: (p) => p.startsWith("/admin/settings/rating-tags") },
-      { href: "/admin/permissions",             label: "Permissions",        icon: Lock,        color: "#6366f1", adminOnly: true,                               isActive: (p) => p.startsWith("/admin/permissions") },
     ],
   },
 ];

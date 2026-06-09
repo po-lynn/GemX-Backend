@@ -16,13 +16,17 @@ import DatePicker from "@/components/date-picker/date-picker";
 import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle, ChevronRight, Edit, Eye, EyeOff,
-  Gem, Info, KeyRound, MapPin, Shield, Tag, Trash2, Upload, Users,
+  AlertTriangle, ArrowLeftRight, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
+  FileText, FlaskConical, Gem, Globe, Info, KeyRound, MapPin, MessageSquare,
+  MessagesSquare, Newspaper, Package, Receipt, Shield, ShieldHalf, Tag, Tags,
+  Trash2, Upload, Users,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { FEATURE_GROUPS } from "@/features/rbac/feature-keys";
+import { saveUserPermissionsAction } from "@/features/rbac/actions/permissions";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -73,6 +77,23 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Admin", dealer: "Dealer", seller: "Seller", buyer: "Buyer", user: "User",
 };
 
+const FEATURE_ICONS: Record<string, React.ElementType> = {
+  "products":                 Package,
+  "origin":                   Globe,
+  "laboratory":               FlaskConical,
+  "collector_requests":       Eye,
+  "credit.packages":          Coins,
+  "credit.purchase_requests": Receipt,
+  "credit.subscriptions":     Crown,
+  "credit.transactions":      ArrowLeftRight,
+  "messages":                 MessageSquare,
+  "chat_dashboard":           MessagesSquare,
+  "news":                     Newspaper,
+  "articles":                 FileText,
+  "settings.rating_tags":     Tags,
+  "settings.escrow":          ShieldHalf,
+};
+
 // ─── Input styles (used by create form only) ──────────────────────────────────
 const inputClass =
   "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60";
@@ -82,6 +103,7 @@ const selectClass = `${inputClass} cursor-pointer`;
 type Props = {
   mode: "create" | "edit";
   user?: UserForEdit | null;
+  permissions?: Record<string, boolean>;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,20 +159,23 @@ function parseMyanmarNrc(nrc: string | null | undefined) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function UserForm({ mode, user }: Props) {
-  if (mode === "edit" && user) return <UserEditForm user={user} />;
+export function UserForm({ mode, user, permissions }: Props) {
+  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} />;
   return <UserCreateForm />;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EDIT FORM — premium detail layout
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserEditForm({ user }: { user: UserForEdit }) {
+function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initialPermissions: Record<string, boolean> }) {
   const router = useRouter();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [dirty,   setDirty]   = useState(false);
-  const [tab,     setTab]     = useState<"profile" | "access" | "wallet" | "danger">("profile");
+  const [tab,     setTab]     = useState<"profile" | "access" | "wallet" | "permissions" | "danger">("profile");
+
+  // permissions (supervisor only)
+  const [perms, setPerms] = useState<Record<string, boolean>>(initialPermissions);
   const [error,   setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -205,6 +230,17 @@ function UserEditForm({ user }: { user: UserForEdit }) {
   const displayName = name || user.email || "User";
   const inits       = userInitials(displayName);
   const mark        = () => setDirty(true);
+
+  // permissions helpers
+  const allPermKeys  = FEATURE_GROUPS.flatMap(g => g.features.map(f => f.key));
+  const totalPerms   = allPermKeys.length;
+  const enabledCount = allPermKeys.filter(k => perms[k] ?? false).length;
+  function enableAll() { setPerms(Object.fromEntries(allPermKeys.map(k => [k, true]))); mark(); }
+  function clearAll()  { setPerms(Object.fromEntries(allPermKeys.map(k => [k, false]))); mark(); }
+  function toggleGroup(group: typeof FEATURE_GROUPS[0], value: boolean) {
+    setPerms(p => { const n = { ...p }; group.features.forEach(f => { n[f.key] = value; }); return n; });
+    mark();
+  }
 
   // ── Image upload ───────────────────────────────────────────────────────────
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -262,6 +298,12 @@ function UserEditForm({ user }: { user: UserForEdit }) {
     try {
       const result = await updateUserAction(fd);
       if (result?.error) { setError(result.error); return; }
+      if (role === "supervisor") {
+        const allKeys = FEATURE_GROUPS.flatMap((g) => g.features.map((f) => f.key));
+        const completePerms = Object.fromEntries(allKeys.map((k) => [k, perms[k] ?? false]));
+        const permsResult = await saveUserPermissionsAction(user.id, completePerms);
+        if (!permsResult.ok) { setError(permsResult.error ?? "Failed to save permissions"); return; }
+      }
       setDirty(false);
       router.push("/admin/users");
     } finally {
@@ -419,13 +461,17 @@ function UserEditForm({ user }: { user: UserForEdit }) {
 
           {/* Sub-tabs */}
           <div className="ud-tabs">
-            {(["profile", "access", "wallet", "danger"] as const).map(t => (
+            {(["profile", "access", "wallet", ...(role === "supervisor" ? ["permissions" as const] : []), "danger"] as const).map(t => (
               <button
                 key={t} type="button"
                 className={`ud-tab${tab === t ? " on" : ""}`}
                 onClick={() => setTab(t)}
               >
-                {t === "profile" ? "Profile" : t === "access" ? "Access & security" : t === "wallet" ? "Points wallet" : "Danger zone"}
+                {t === "profile" ? "Profile"
+                  : t === "access" ? "Access & security"
+                  : t === "wallet" ? "Points wallet"
+                  : t === "permissions" ? "Permissions"
+                  : "Danger zone"}
               </button>
             ))}
           </div>
@@ -797,6 +843,88 @@ function UserEditForm({ user }: { user: UserForEdit }) {
                     />
                     <span className="suffix">pts</span>
                   </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ── PERMISSIONS TAB ── */}
+          {tab === "permissions" && role === "supervisor" && (
+            <section className="ud-sec">
+              <div className="ud-sec-head" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div className="ud-sec-icon" data-tone="blue"><Shield style={{ width: 16, height: 16 }} /></div>
+                  <div>
+                    <div className="ud-sec-title">Feature permissions</div>
+                    <div className="ud-sec-sub">Control which features this supervisor can access</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--lv-text-2)", background: "#f6f7f9", border: "1px solid var(--lv-line)", borderRadius: 999, padding: "6px 13px", whiteSpace: "nowrap" }}>
+                    <b style={{ color: "#7c5cff", fontWeight: 800 }}>{enabledCount}</b>
+                    <span style={{ color: "var(--lv-text-3)" }}> / {totalPerms} enabled</span>
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <button type="button" onClick={enableAll} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "var(--lv-text-2)", padding: "4px 2px" }}>
+                      Enable all
+                    </button>
+                    <span style={{ color: "#d4d7de" }}>·</span>
+                    <button type="button" onClick={clearAll} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "var(--lv-text-2)", padding: "4px 2px" }}>
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="ud-sec-body" style={{ paddingTop: 22 }}>
+                <div style={{ columns: 2, columnGap: 52 }}>
+                  {FEATURE_GROUPS.map((group) => {
+                    const groupEnabled = group.features.filter(f => perms[f.key] ?? false).length;
+                    const allGroupOn   = groupEnabled === group.features.length;
+                    return (
+                      <div key={group.label} style={{ breakInside: "avoid", marginBottom: 22 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "0 6px 9px", marginBottom: 4, borderBottom: "1px solid var(--lv-line)" }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--lv-text-3)" }}>
+                            {group.label}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(group, !allGroupOn)}
+                            style={{ fontSize: 10.5, fontWeight: 800, color: "var(--lv-text-3)", background: "#f5f6f8", border: "1px solid transparent", borderRadius: 999, padding: "2px 8px", cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.02em" }}
+                          >
+                            {groupEnabled}/{group.features.length}
+                          </button>
+                        </div>
+                        <div>
+                          {group.features.map((feature) => {
+                            const Icon = FEATURE_ICONS[feature.key] ?? Shield;
+                            const isOn = perms[feature.key] ?? false;
+                            return (
+                              <label
+                                key={feature.key}
+                                style={{ display: "grid", gridTemplateColumns: "30px 1fr auto", alignItems: "center", gap: 13, padding: "8px 8px 8px 6px", borderRadius: 11, cursor: "pointer", userSelect: "none" }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={isOn}
+                                  onChange={(e) => { setPerms(p => ({ ...p, [feature.key]: e.target.checked })); mark(); }}
+                                />
+                                <span style={{ width: 30, height: 30, borderRadius: 9, background: isOn ? "#efeaff" : "#f3f4f6", color: isOn ? "#7c5cff" : "#9aa1ad", display: "grid", placeItems: "center", transition: "background .16s, color .16s", flexShrink: 0 }}>
+                                  <Icon style={{ width: 16, height: 16 }} />
+                                </span>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: isOn ? "#1d2333" : "#444b5c", transition: "color .16s" }}>
+                                  {feature.label}
+                                </span>
+                                <span style={{ width: 42, height: 24, borderRadius: 999, background: isOn ? "linear-gradient(135deg,#7b61ff 0%,#9d5cff 100%)" : "#e2e5ea", position: "relative", display: "block", transition: "background .18s ease", flexShrink: 0 }}>
+                                  <span style={{ position: "absolute", top: 3, left: 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 2px rgba(16,24,40,.28)", transition: "transform .18s ease", transform: isOn ? "translateX(18px)" : "translateX(0)" }} />
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>

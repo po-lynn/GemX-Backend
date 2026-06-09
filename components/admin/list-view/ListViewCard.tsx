@@ -273,6 +273,7 @@ function Toolbar<T>({
   setVisibleColumns,
   onRefresh,
   onExport,
+  onSearch,
 }: {
   query: string
   setQuery: (v: string) => void
@@ -289,6 +290,7 @@ function Toolbar<T>({
   setVisibleColumns: (v: Record<string, boolean>) => void
   onRefresh?: () => void
   onExport?: (format: string) => void
+  onSearch?: (q: string) => void
 }) {
   const filterRef = useRef<HTMLDivElement>(null)
   const groupRef = useRef<HTMLDivElement>(null)
@@ -318,7 +320,7 @@ function Toolbar<T>({
         <input
           placeholder="Search…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); onSearch?.(e.target.value) }}
           aria-label="Search"
         />
         <span className="lv-search-kbd">⌘K</span>
@@ -643,6 +645,10 @@ type ListViewCardProps<T extends { id: string }> = {
   total?: number
   buildPageHref?: (page: number) => string
 
+  // URL-based search (when provided, search input drives URL navigation)
+  defaultSearch?: string
+  onSearch?: (q: string) => void
+
   // Misc
   onRefresh?: () => void
   onExport?: (format: string) => void
@@ -670,11 +676,13 @@ export function ListViewCard<T extends { id: string }>({
   pageSize = 20,
   total,
   buildPageHref,
+  defaultSearch,
+  onSearch,
   onRefresh,
   onExport,
   emptyMessage,
 }: ListViewCardProps<T>) {
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(defaultSearch ?? "")
   const [filters, setFilters] = useState<ActiveFilters>({})
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortState | null>(defaultSort ?? null)
@@ -843,6 +851,7 @@ export function ListViewCard<T extends { id: string }>({
           setVisibleColumns={setVisibleColumns}
           onRefresh={onRefresh}
           onExport={onExport}
+          onSearch={onSearch}
         />
 
         {/* Active filter chips */}

@@ -15,7 +15,7 @@ export async function requireFeatureAccess(featureKey: string) {
   if (!session) redirect("/login")
   if (session.user.role === "admin") return session
   if (session.user.role === "supervisor") {
-    if (await checkSupervisorAccess(featureKey)) return session
+    if (await checkSupervisorAccess(session.user.id, featureKey)) return session
   }
   redirect("/admin")
 }

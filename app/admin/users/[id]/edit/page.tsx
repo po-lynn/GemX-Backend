@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { UserForm } from "@/features/users/components";
 import { getUserById } from "@/features/users/db/users";
+import { getUserPermissions } from "@/features/rbac/db/permissions";
 import { requireAdmin } from "@/lib/admin-guard";
 
 type Props = {
@@ -16,7 +17,9 @@ async function AdminUsersEditContent({ params }: Props) {
   const user = await getUserById(id);
   if (!user) notFound();
 
-  return <UserForm key={user.id} mode="edit" user={user} />;
+  const permissions = user.role === "supervisor" ? await getUserPermissions(user.id) : {};
+
+  return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} />;
 }
 
 export default function AdminUsersEditPage(props: Props) {

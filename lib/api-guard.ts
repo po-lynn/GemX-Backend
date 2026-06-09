@@ -14,7 +14,7 @@ export async function requireAdminOrFeature(
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { error: jsonError("Unauthorized", 401) }
   if (session.user.role === "admin") return { session }
-  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
+  if (session.user.role === "supervisor" && await checkSupervisorAccess(session.user.id, featureKey)) {
     return { session }
   }
   return { error: jsonError("Forbidden", 403) }

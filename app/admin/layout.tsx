@@ -6,14 +6,15 @@ import { AdminSidebarSheet } from "@/components/admin/AdminSidebarSheet"
 import { Toaster } from "sonner"
 import { AdminChatNotificationProvider } from "@/features/chat/context/admin-chat-notification-context"
 import { auth } from "@/lib/auth"
-import { getSupervisorPermissions } from "@/features/rbac/db/permissions"
+import { getUserPermissions } from "@/features/rbac/db/permissions"
 
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const session = await auth.api.getSession({ headers: await headers() })
   const role = session?.user.role ?? "user"
-  const permissions = role === "supervisor" ? await getSupervisorPermissions() : {}
+  const userId = session?.user.id ?? ""
+  const permissions = role === "supervisor" && userId ? await getUserPermissions(userId) : {}
 
   return (
     <AdminChatNotificationProvider>

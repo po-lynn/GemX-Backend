@@ -59,4 +59,15 @@ describe("adminProductsSearchSchema", () => {
     expect(() => adminProductsSearchSchema.parse({ page: 0 })).toThrow()
     expect(() => adminProductsSearchSchema.parse({ page: -1 })).toThrow()
   })
+
+  it("passes search string through unchanged", () => {
+    // search is an arbitrary free-text term — no transformation
+    const out = adminProductsSearchSchema.parse({ search: "ruby" })
+    expect(out.search).toBe("ruby")
+  })
+
+  it("treats missing search as undefined", () => {
+    const out = adminProductsSearchSchema.parse({})
+    expect(out.search).toBeUndefined()
+  })
 })

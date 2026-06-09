@@ -61,11 +61,13 @@ describe("requireFeatureAccess", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(s)
     vi.mocked(checkSupervisorAccess).mockResolvedValue(true)
     expect(await requireFeatureAccess("products")).toBe(s)
+    expect(checkSupervisorAccess).toHaveBeenCalledWith("u2", "products")
   })
   it("redirects to /admin for supervisor when feature is denied", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(supSess())
     vi.mocked(checkSupervisorAccess).mockResolvedValue(false)
     await expect(requireFeatureAccess("products")).rejects.toThrow("REDIRECT:/admin")
+    expect(checkSupervisorAccess).toHaveBeenCalledWith("u2", "products")
   })
   it("redirects to /admin for unknown role", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(mockSession("user", "u3"))
