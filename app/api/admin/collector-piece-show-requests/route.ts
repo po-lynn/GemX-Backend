@@ -6,8 +6,9 @@ import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { product } from "@/drizzle/schema/product-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
-import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { jsonError, jsonUncached } from "@/lib/api"
+import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 
 const querySchema = z.object({
   status: z.enum(["pending", "approved", "rejected"]).optional(),
@@ -15,16 +16,19 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
 
-async function requireAdmin(request: NextRequest) {
+async function requireAdminOrFeature(request: NextRequest, featureKey: string) {
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (!canAdminManageUsers(session.user.role)) return { error: jsonError("Forbidden", 403) }
-  return { session }
+  if (session.user.role === "admin") return { session }
+  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
+    return { session }
+  }
+  return { error: jsonError("Forbidden", 403) }
 }
 
 export async function GET(request: NextRequest) {
   await connection()
-  const gate = await requireAdmin(request)
+  const gate = await requireAdminOrFeature(request, FEATURE_KEYS.COLLECTOR_REQUESTS)
   if ("error" in gate) return gate.error
 
   try {

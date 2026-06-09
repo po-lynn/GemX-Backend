@@ -4,15 +4,19 @@ import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
-import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { sendPushToUserIds } from "@/features/push/send-push"
 import { jsonError, jsonUncached } from "@/lib/api"
+import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 
-async function requireAdmin(request: NextRequest) {
+async function requireAdminOrFeature(request: NextRequest, featureKey: string) {
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (!canAdminManageUsers(session.user.role)) return { error: jsonError("Forbidden", 403) }
-  return { session }
+  if (session.user.role === "admin") return { session }
+  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
+    return { session }
+  }
+  return { error: jsonError("Forbidden", 403) }
 }
 
 /**
@@ -21,7 +25,7 @@ async function requireAdmin(request: NextRequest) {
  */
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   await connection()
-  const gate = await requireAdmin(request)
+  const gate = await requireAdminOrFeature(request, FEATURE_KEYS.COLLECTOR_REQUESTS)
   if ("error" in gate) return gate.error
 
   try {

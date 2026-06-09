@@ -1,7 +1,8 @@
 import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { canAdminManageUsers } from "@/features/users/permissions/users"
+import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getLastSessionActivityByUserIds } from "@/features/chat/db/session-presence"
 
 const MAX_IDS = 300
@@ -14,8 +15,11 @@ export async function GET(request: NextRequest) {
   await connection()
   try {
     const session = await auth.api.getSession({ headers: request.headers })
-    if (!session?.user?.id || !canAdminManageUsers(session.user.role)) {
-      return jsonError("Unauthorized", 401)
+    if (!session?.user?.id) return jsonError("Unauthorized", 401)
+    if (session.user.role !== "admin") {
+      if (session.user.role !== "supervisor" || !await checkSupervisorAccess(FEATURE_KEYS.CHAT_DASHBOARD)) {
+        return jsonError("Forbidden", 403)
+      }
     }
 
     const raw = request.nextUrl.searchParams.get("ids") ?? ""
