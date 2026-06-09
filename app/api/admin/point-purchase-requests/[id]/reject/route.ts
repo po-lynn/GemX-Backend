@@ -1,9 +1,8 @@
 import { NextRequest, connection } from "next/server"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
+import { requireAdminOrFeature } from "@/lib/api-guard"
 import { rejectPointPurchaseRequest } from "@/features/points/db/points"
 
 const bodySchema = z.object({
@@ -19,13 +18,9 @@ type RouteParams = { params: Promise<{ id: string }> }
 export async function POST(request: NextRequest, { params }: RouteParams) {
   await connection()
   try {
-    const session = await auth.api.getSession({ headers: request.headers })
-    if (!session) return jsonError("Unauthorized", 401)
-    if (session.user.role !== "admin") {
-      if (session.user.role !== "supervisor" || !await checkSupervisorAccess(FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS)) {
-        return jsonError("Forbidden", 403)
-      }
-    }
+    const gate = await requireAdminOrFeature(request, FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS)
+    if ("error" in gate) return gate.error
+    const { session } = gate
 
     const { id } = await params
     const body = await request.json().catch(() => ({}))

@@ -1,23 +1,12 @@
 import { NextRequest, connection } from "next/server"
 import { and, eq } from "drizzle-orm"
-import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { sendPushToUserIds } from "@/features/push/send-push"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-
-async function requireAdminOrFeature(request: NextRequest, featureKey: string) {
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (session.user.role === "admin") return { session }
-  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
-    return { session }
-  }
-  return { error: jsonError("Forbidden", 403) }
-}
+import { requireAdminOrFeature } from "@/lib/api-guard"
 
 /**
  * POST /api/admin/collector-piece-show-requests/:id/approve

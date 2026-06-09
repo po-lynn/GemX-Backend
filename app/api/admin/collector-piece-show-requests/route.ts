@@ -1,30 +1,19 @@
 import { NextRequest, connection } from "next/server"
 import { and, desc, eq, sql } from "drizzle-orm"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { product } from "@/drizzle/schema/product-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
+import { requireAdminOrFeature } from "@/lib/api-guard"
 
 const querySchema = z.object({
   status: z.enum(["pending", "approved", "rejected"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
-
-async function requireAdminOrFeature(request: NextRequest, featureKey: string) {
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (session.user.role === "admin") return { session }
-  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
-    return { session }
-  }
-  return { error: jsonError("Forbidden", 403) }
-}
 
 export async function GET(request: NextRequest) {
   await connection()

@@ -1,29 +1,18 @@
 import { NextRequest, connection } from "next/server"
 import { z } from "zod"
-import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { pointPurchaseRequest } from "@/drizzle/schema/points-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { eq, desc } from "drizzle-orm"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
+import { requireAdminOrFeature } from "@/lib/api-guard"
 
 const querySchema = z.object({
   status: z.enum(["pending", "approved", "rejected", "all"]).default("pending"),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 })
-
-async function requireAdminOrFeature(request: NextRequest, featureKey: string) {
-  const session = await auth.api.getSession({ headers: request.headers })
-  if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (session.user.role === "admin") return { session }
-  if (session.user.role === "supervisor" && await checkSupervisorAccess(featureKey)) {
-    return { session }
-  }
-  return { error: jsonError("Forbidden", 403) }
-}
 
 /**
  * GET /api/admin/point-purchase-requests
