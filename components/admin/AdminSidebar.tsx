@@ -24,7 +24,9 @@ import {
   Tags,
   Crown,
   Coins,
+  Lock,
 } from "lucide-react";
+import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys"
 
 type NavItem = {
   href: string;
@@ -32,6 +34,8 @@ type NavItem = {
   icon: React.ElementType;
   color: string;
   isActive?: (pathname: string) => boolean;
+  featureKey?: FeatureKey;      // undefined = visible to all
+  adminOnly?: boolean;           // true = only admin sees it
 };
 
 type NavGroup = {
@@ -40,104 +44,67 @@ type NavGroup = {
 };
 
 const navGroups: (NavItem | NavGroup)[] = [
-  {
-    href: "/admin",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    color: "#6366f1",
-  },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, color: "#6366f1" },
   {
     label: "Points & Credits",
     items: [
-      {
-        href: "/admin/credit",
-        label: "Point Packages",
-        icon: ShoppingBag,
-        color: "#8b5cf6",
-        isActive: (p) => p === "/admin/credit" || p === "/admin/credit/",
-      },
-      {
-        href: "/admin/credit/purchase-requests",
-        label: "Purchase Requests",
-        icon: ClipboardList,
-        color: "#f59e0b",
-        isActive: (p) => p.startsWith("/admin/credit/purchase-requests"),
-      },
-      {
-        href: "/admin/credit/premium-dealer-subscriptions",
-        label: "Dealer Subscriptions",
-        icon: Crown,
-        color: "#f59e0b",
-        isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions"),
-      },
-      {
-        href: "/admin/credit/transactions",
-        label: "All Transactions",
-        icon: Coins,
-        color: "#7c3aed",
-        isActive: (p) => p.startsWith("/admin/credit/transactions"),
-      },
+      { href: "/admin/credit",                              label: "Point Packages",       icon: ShoppingBag,   color: "#8b5cf6", featureKey: FEATURE_KEYS.CREDIT_PACKAGES,          isActive: (p) => p === "/admin/credit" || p === "/admin/credit/" },
+      { href: "/admin/credit/purchase-requests",            label: "Purchase Requests",    icon: ClipboardList, color: "#f59e0b", featureKey: FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS, isActive: (p) => p.startsWith("/admin/credit/purchase-requests") },
+      { href: "/admin/credit/premium-dealer-subscriptions", label: "Dealer Subscriptions", icon: Crown,         color: "#f59e0b", featureKey: FEATURE_KEYS.CREDIT_SUBSCRIPTIONS,     isActive: (p) => p.startsWith("/admin/credit/premium-dealer-subscriptions") },
+      { href: "/admin/credit/transactions",                 label: "All Transactions",     icon: Coins,         color: "#7c3aed", featureKey: FEATURE_KEYS.CREDIT_TRANSACTIONS,       isActive: (p) => p.startsWith("/admin/credit/transactions") },
     ],
   },
   {
     label: "Marketplace",
     items: [
-      { href: "/admin/products", label: "Products", icon: Package, color: "#3b82f6" },
-      { href: "/admin/categories", label: "Categories", icon: FolderTree, color: "#f97316" },
-      { href: "/admin/laboratory", label: "Laboratory", icon: FlaskConical, color: "#22c55e" },
-      { href: "/admin/origin", label: "Origin", icon: Globe, color: "#06b6d4" },
-      {
-        href: "/admin/collector-piece-show-requests",
-        label: "Collector Requests",
-        icon: Eye,
-        color: "#06b6d4",
-      },
+      { href: "/admin/products",                      label: "Products",           icon: Package,      color: "#3b82f6", featureKey: FEATURE_KEYS.PRODUCTS },
+      { href: "/admin/categories",                    label: "Categories",         icon: FolderTree,   color: "#f97316", adminOnly: true },
+      { href: "/admin/laboratory",                    label: "Laboratory",         icon: FlaskConical, color: "#22c55e", featureKey: FEATURE_KEYS.LABORATORY },
+      { href: "/admin/origin",                        label: "Origin",             icon: Globe,        color: "#06b6d4", featureKey: FEATURE_KEYS.ORIGIN },
+      { href: "/admin/collector-piece-show-requests", label: "Collector Requests", icon: Eye,          color: "#06b6d4", featureKey: FEATURE_KEYS.COLLECTOR_REQUESTS },
     ],
   },
   {
     label: "Communication",
     items: [
-      { href: "/admin/messages", label: "Messages", icon: MessageSquare, color: "#a855f7" },
-      {
-        href: "/admin/chat-dashboard",
-        label: "Chat Dashboard",
-        icon: MessageSquare,
-        color: "#0ea5e9",
-      },
-      { href: "/admin/users", label: "Users", icon: Users, color: "#ec4899" },
+      { href: "/admin/messages",       label: "Messages",       icon: MessageSquare, color: "#a855f7", featureKey: FEATURE_KEYS.MESSAGES },
+      { href: "/admin/chat-dashboard", label: "Chat Dashboard", icon: MessageSquare, color: "#0ea5e9", featureKey: FEATURE_KEYS.CHAT_DASHBOARD },
+      { href: "/admin/users",          label: "Users",          icon: Users,         color: "#ec4899", adminOnly: true },
     ],
   },
   {
     label: "Content",
     items: [
-      { href: "/admin/news", label: "News", icon: Newspaper, color: "#84cc16" },
-      { href: "/admin/articles", label: "Articles", icon: FileText, color: "#64748b" },
+      { href: "/admin/news",     label: "News",     icon: Newspaper, color: "#84cc16", featureKey: FEATURE_KEYS.NEWS },
+      { href: "/admin/articles", label: "Articles", icon: FileText,  color: "#64748b", featureKey: FEATURE_KEYS.ARTICLES },
     ],
   },
   {
     label: "Settings",
     items: [
-      {
-        href: "/admin/settings/escrow-service",
-        label: "Escrow Service",
-        icon: ShieldCheck,
-        color: "#ef4444",
-        isActive: (p) => p.startsWith("/admin/settings/escrow-service"),
-      },
-      {
-        href: "/admin/settings/rating-tags",
-        label: "Seller Rating Tags",
-        icon: Tags,
-        color: "#f43f5e",
-        isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
-      },
+      { href: "/admin/settings/escrow-service", label: "Escrow Service",     icon: ShieldCheck, color: "#ef4444", featureKey: FEATURE_KEYS.SETTINGS_ESCROW,      isActive: (p) => p.startsWith("/admin/settings/escrow-service") },
+      { href: "/admin/settings/rating-tags",    label: "Seller Rating Tags", icon: Tags,        color: "#f43f5e", featureKey: FEATURE_KEYS.SETTINGS_RATING_TAGS, isActive: (p) => p.startsWith("/admin/settings/rating-tags") },
+      { href: "/admin/permissions",             label: "Permissions",        icon: Lock,        color: "#6366f1", adminOnly: true,                               isActive: (p) => p.startsWith("/admin/permissions") },
     ],
   },
 ];
 
-export function AdminSidebar({ className }: { className?: string }) {
+type Props = {
+  className?: string
+  role: string
+  permissions: Record<string, boolean>
+}
+
+export function AdminSidebar({ className, role, permissions }: Props) {
   const pathname = usePathname();
   const { totalUnread } = useAdminChatNotifications();
+
+  function canSee(item: NavItem): boolean {
+    if (role === "admin") return true
+    if (item.adminOnly) return false
+    if (!item.featureKey) return true
+    return permissions[item.featureKey] ?? false
+  }
 
   function isActive(href: string, custom?: (p: string) => boolean) {
     if (custom) return custom(pathname);
@@ -222,34 +189,23 @@ export function AdminSidebar({ className }: { className?: string }) {
       <nav className="flex flex-1 flex-col overflow-y-auto p-3 pb-4">
         <div className="space-y-0.5">
           {navGroups.map((item) => {
-            if ("href" in item) {
-              return renderNavLink(item);
-            }
-
-            const group = item;
+            if ("href" in item) return renderNavLink(item)
+            const visibleItems = item.items.filter(canSee)
+            if (visibleItems.length === 0) return null
             return (
-              <div key={group.label} className="pt-5 first:pt-2">
+              <div key={item.label} className="pt-5 first:pt-2">
                 <div className="mb-1.5 flex items-center gap-2 px-2">
-                  <div
-                    className="h-px flex-1"
-                    style={{ backgroundColor: "var(--admin-sidebar-border)" }}
-                  />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-[0.08em]"
-                    style={{ color: "var(--admin-sidebar-muted)" }}
-                  >
-                    {group.label}
+                  <div className="h-px flex-1" style={{ backgroundColor: "var(--admin-sidebar-border)" }} />
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--admin-sidebar-muted)" }}>
+                    {item.label}
                   </span>
-                  <div
-                    className="h-px flex-1"
-                    style={{ backgroundColor: "var(--admin-sidebar-border)" }}
-                  />
+                  <div className="h-px flex-1" style={{ backgroundColor: "var(--admin-sidebar-border)" }} />
                 </div>
                 <div className="space-y-0.5">
-                  {group.items.map((nav) => renderNavLink(nav))}
+                  {visibleItems.map((nav) => renderNavLink(nav))}
                 </div>
               </div>
-            );
+            )
           })}
         </div>
 

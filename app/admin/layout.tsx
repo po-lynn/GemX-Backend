@@ -1,19 +1,26 @@
 import { ReactNode, Suspense } from "react"
+import { headers } from "next/headers"
 import AdminNavbarClient from "@/components/admin/AdminNavbarClient"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { AdminSidebarSheet } from "@/components/admin/AdminSidebarSheet"
 import { Toaster } from "sonner"
 import { AdminChatNotificationProvider } from "@/features/chat/context/admin-chat-notification-context"
+import { auth } from "@/lib/auth"
+import { getSupervisorPermissions } from "@/features/rbac/db/permissions"
 
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  const role = session?.user.role ?? "user"
+  const permissions = role === "supervisor" ? await getSupervisorPermissions() : {}
+
   return (
     <AdminChatNotificationProvider>
     <div className="admin-premium min-h-screen bg-[var(--admin-main-bg)]">
       {/* Desktop sidebar */}
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block md:w-72">
-        <AdminSidebar />
+        <AdminSidebar role={role} permissions={permissions} />
       </div>
 
       {/* Content */}
@@ -27,7 +34,7 @@ export default async function AdminLayout({
           }}
         >
           <div className="flex h-14 items-center gap-3 px-4 md:px-6">
-            <AdminSidebarSheet />
+            <AdminSidebarSheet role={role} permissions={permissions} />
 
             <div className="mr-auto flex items-center gap-2.5">
               <div
