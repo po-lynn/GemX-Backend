@@ -34,7 +34,7 @@ export async function setUserPermissions(
     canAccess,
   }))
   if (rows.length === 0) {
-    revalidateTag(permCacheTag(userId))
+    revalidateTag(permCacheTag(userId), "default")
     return
   }
   await db
@@ -44,5 +44,5 @@ export async function setUserPermissions(
       target: [supervisorPermission.userId, supervisorPermission.featureKey],
       set: { canAccess: sql`excluded.can_access` },
     })
-  revalidateTag(permCacheTag(userId))
+  revalidateTag(permCacheTag(userId), "default")
 }
