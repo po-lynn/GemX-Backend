@@ -104,7 +104,7 @@ export function AdminChatNotificationProvider({ children }: Props) {
   useEffect(() => {
     if (!userId || !isAdmin) return;
 
-    const intervalMs = 3500;
+    const intervalMs = 30_000;
     const id = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       void refreshUnread();

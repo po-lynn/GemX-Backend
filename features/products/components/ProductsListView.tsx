@@ -365,6 +365,7 @@ export function ProductsListView({
     { id: "status",     label: "Status" },
     { id: "moderation", label: "Moderation" },
     { id: "seller",     label: "Seller" },
+    { id: "visibility", label: "Visibility" },
   ]
 
   return (
@@ -383,6 +384,13 @@ export function ProductsListView({
           case "status":     return STATUS_LABELS[r.status] ?? r.status
           case "moderation": return STATUS_LABELS[r.moderationStatus] ?? r.moderationStatus
           case "seller":     return r.sellerName
+          case "visibility": {
+            const parts: string[] = []
+            if (r.isFeatured)       parts.push("Featured Listing")
+            if (r.isCollectorPiece) parts.push("Collector Piece")
+            if (r.isPrivilegeAssist) parts.push("Privilege Assist")
+            return parts.length ? parts.join(" · ") : "Standard"
+          }
           default:           return null
         }
       }}
