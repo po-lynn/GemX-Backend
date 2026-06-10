@@ -790,30 +790,26 @@ export function ChatDashboard({
       }
     }
 
-    const unsubscribe = service.subscribe(
-      {
-        onInsert: handleInsert,
-        onUpdate: (n, old) => {
-          const wasRead = Boolean(old.is_read ?? old.isRead)
-          if (n.recipientId !== currentUserId) return
-          if (n.isRead && !wasRead) {
-            if (n.senderId === selectedUserId) {
-              setMessages((prev) =>
-                prev.map((m) => (m.id === n.id ? { ...m, isRead: true } : m))
-              )
-            }
-            scheduleUnreadSync()
-          }
-        },
-        onDelete: (o) => {
-          const recipientId = String(o.recipient_id ?? o.recipientId ?? "")
-          const wasRead = Boolean(o.is_read ?? o.isRead)
-          if (recipientId !== currentUserId || wasRead) return
-          scheduleUnreadSync()
-        },
+    const unsubscribe = service.subscribe({
+      onInsert: handleInsert,
+      onUpdate: (updated) => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
+        )
       },
-      { includeOutbound: true }
-    )
+      onDelete: (id) => {
+        setMessages((prev) => prev.filter((m) => m.id !== id))
+        scheduleUnreadSync()
+      },
+      onReadUpdate: (messageIds, recipientId) => {
+        if (recipientId !== currentUserId) return
+        const idSet = new Set(messageIds)
+        setMessages((prev) =>
+          prev.map((m) => (idSet.has(m.id) ? { ...m, isRead: true } : m))
+        )
+        scheduleUnreadSync()
+      },
+    })
 
     return () => {
       if (unreadSyncTimer) clearTimeout(unreadSyncTimer)

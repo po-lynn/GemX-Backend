@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/drizzle/db";
 import { messages } from "@/drizzle/schema/chat-schema";
 import { jsonError, jsonUncached } from "@/lib/api";
+import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 
 const patchSchema = z
   .object({
@@ -24,7 +25,7 @@ function serialize(row: typeof messages.$inferSelect) {
     fileUrl: row.fileUrl,
     imageUrls: row.imageUrls ?? null,
     messageType: row.messageType,
-    isRead: row.isRead,
+    isRead: row.isRead ?? false,
     starred: row.starred ?? false,
     editedAt: row.editedAt?.toISOString?.() ?? null,
     createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
@@ -71,7 +72,13 @@ export async function PATCH(
 
     if (!saved) return jsonError("Failed to update message", 500);
 
-    return jsonUncached({ success: true, message: serialize(saved) });
+    const updatePayload = serialize(saved);
+    void broadcastChatEvents([
+      { userId: saved.senderId,    event: "message_updated", payload: updatePayload },
+      { userId: saved.recipientId, event: "message_updated", payload: updatePayload },
+    ]).catch((e) => console.error("Message-updated broadcast failed:", e));
+
+    return jsonUncached({ success: true, message: updatePayload });
   } catch (error) {
     console.error("PATCH /api/chat/messages/[messageId]:", error);
     return jsonError("Failed to update message", 500);
@@ -96,11 +103,17 @@ export async function DELETE(
     const deleted = await db
       .delete(messages)
       .where(and(eq(messages.id, messageId), eq(messages.senderId, session.user.id)))
-      .returning({ id: messages.id });
+      .returning({ id: messages.id, senderId: messages.senderId, recipientId: messages.recipientId });
 
     if (deleted.length === 0) return jsonError("Message not found", 404);
 
-    return jsonUncached({ success: true, id: deleted[0]!.id });
+    const { id, senderId, recipientId } = deleted[0]!;
+    void broadcastChatEvents([
+      { userId: senderId,    event: "message_deleted", payload: { id } },
+      { userId: recipientId, event: "message_deleted", payload: { id } },
+    ]).catch((e) => console.error("Message-deleted broadcast failed:", e));
+
+    return jsonUncached({ success: true, id });
   } catch (error) {
     console.error("DELETE /api/chat/messages/[messageId]:", error);
     return jsonError("Failed to delete message", 500);

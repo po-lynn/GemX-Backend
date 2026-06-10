@@ -8,186 +8,113 @@ import {
 
 export type MessagesRealtimeHandlers = {
   onInsert?: (message: ChatMessage) => void;
-  onUpdate?: (message: ChatMessage, previous: Record<string, unknown>) => void;
-  onDelete?: (oldRow: Record<string, unknown>) => void;
+  /** Message text or starred state edited by the sender. */
+  onUpdate?: (message: ChatMessage) => void;
+  /** Message removed by the sender. */
+  onDelete?: (id: string) => void;
+  /** Batch read-receipt: the recipient marked these message IDs as read. */
+  onReadUpdate?: (messageIds: string[], recipientId: string) => void;
   onSubscriptionError?: (channelName: string, status: string) => void;
 };
 
-export type MessagesRealtimeSubscribeOptions = {
-  /** Subscribe to messages you sent (updates sidebar outbound previews). Default true. */
-  includeOutbound?: boolean;
-  /** Subscribe to read-state updates on inbound messages. Default true. */
-  includeReadUpdates?: boolean;
-  /** Subscribe to inbound deletes (unread reconciliation). Default true. */
-  includeInboundDeletes?: boolean;
-};
-
 /**
- * Reusable Supabase Realtime listener for `public.messages`.
- * Filters inbound events by `recipient_id=eq.<adminUserId>`.
+ * Supabase Broadcast listener for `chat:<userId>`.
+ * Receives new_message / message_updated / message_deleted / read_update events
+ * pushed by the server after each DB write — no WAL overhead.
  */
 export class MessagesRealtimeService {
-  private readonly adminUserId: string;
-  private channels: RealtimeChannel[] = [];
+  private readonly userId: string;
+  private channel: RealtimeChannel | null = null;
   private processedIds = new Set<string>();
-  private subscribed = false;
 
-  constructor(adminUserId: string) {
-    this.adminUserId = adminUserId;
+  constructor(userId: string) {
+    this.userId = userId;
   }
 
-  subscribe(
-    handlers: MessagesRealtimeHandlers,
-    options: MessagesRealtimeSubscribeOptions = {}
-  ): () => void {
-    if (this.subscribed) {
-      this.unsubscribe();
-    }
+  subscribe(handlers: MessagesRealtimeHandlers): () => void {
+    this.unsubscribe();
+
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       chatRealtimeLogger.warn("Supabase browser client not configured; Realtime disabled");
       return () => undefined;
     }
 
-    const {
-      includeOutbound = true,
-      includeReadUpdates = true,
-      includeInboundDeletes = true,
-    } = options;
+    const channelName = `chat:${this.userId}`;
 
-    const handleInsert = (raw: Record<string, unknown>) => {
-      const row = normalizeChatMessageRow(raw);
-      if (this.processedIds.has(row.id)) return;
-      this.processedIds.add(row.id);
-      handlers.onInsert?.(row);
-    };
-
-    const inbound = supabase
-      .channel(`messages-in-${this.adminUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `recipient_id=eq.${this.adminUserId}`,
-        },
-        (payload) => {
-          try {
-            handleInsert(payload.new as Record<string, unknown>);
-          } catch (e) {
-            chatRealtimeLogger.error("Inbound INSERT handler failed", {
-              error: e instanceof Error ? e.message : String(e),
-            });
-          }
+    this.channel = supabase
+      .channel(channelName)
+      .on("broadcast", { event: "new_message" }, ({ payload }) => {
+        try {
+          const row = normalizeChatMessageRow(payload as Record<string, unknown>);
+          if (this.processedIds.has(row.id)) return;
+          this.processedIds.add(row.id);
+          handlers.onInsert?.(row);
+        } catch (e) {
+          chatRealtimeLogger.error("new_message handler failed", {
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
-      )
+      })
+      .on("broadcast", { event: "message_updated" }, ({ payload }) => {
+        try {
+          handlers.onUpdate?.(normalizeChatMessageRow(payload as Record<string, unknown>));
+        } catch (e) {
+          chatRealtimeLogger.error("message_updated handler failed", {
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      })
+      .on("broadcast", { event: "message_deleted" }, ({ payload }) => {
+        try {
+          const p = payload as { id?: unknown };
+          if (typeof p?.id === "string") handlers.onDelete?.(p.id);
+        } catch (e) {
+          chatRealtimeLogger.error("message_deleted handler failed", {
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      })
+      .on("broadcast", { event: "read_update" }, ({ payload }) => {
+        try {
+          const p = payload as { messageIds?: unknown; recipientId?: unknown };
+          if (Array.isArray(p?.messageIds) && typeof p?.recipientId === "string") {
+            handlers.onReadUpdate?.(p.messageIds as string[], p.recipientId);
+          }
+        } catch (e) {
+          chatRealtimeLogger.error("read_update handler failed", {
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+      })
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR") {
-          handlers.onSubscriptionError?.(`messages-in-${this.adminUserId}`, status);
-          chatRealtimeLogger.error("Inbound channel error", { status });
+          handlers.onSubscriptionError?.(channelName, status);
+          chatRealtimeLogger.error("Channel error", { channelName, status });
         } else if (status === "SUBSCRIBED") {
-          chatRealtimeLogger.info("Subscribed to inbound messages", {
-            adminUserId: this.adminUserId,
+          chatRealtimeLogger.info("Subscribed to chat broadcast channel", {
+            userId: this.userId,
           });
         }
       });
-    this.channels.push(inbound);
-
-    if (includeOutbound) {
-      const outbound = supabase
-        .channel(`messages-out-${this.adminUserId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "messages",
-            filter: `sender_id=eq.${this.adminUserId}`,
-          },
-          (payload) => {
-            try {
-              handleInsert(payload.new as Record<string, unknown>);
-            } catch (e) {
-              chatRealtimeLogger.error("Outbound INSERT handler failed", {
-                error: e instanceof Error ? e.message : String(e),
-              });
-            }
-          }
-        )
-        .subscribe();
-      this.channels.push(outbound);
-    }
-
-    if (includeReadUpdates) {
-      const readUpdates = supabase
-        .channel(`messages-read-${this.adminUserId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "messages",
-            filter: `recipient_id=eq.${this.adminUserId}`,
-          },
-          (payload) => {
-            try {
-              handlers.onUpdate?.(
-                normalizeChatMessageRow(payload.new as Record<string, unknown>),
-                (payload.old ?? {}) as Record<string, unknown>
-              );
-            } catch (e) {
-              chatRealtimeLogger.error("UPDATE handler failed", {
-                error: e instanceof Error ? e.message : String(e),
-              });
-            }
-          }
-        )
-        .subscribe();
-      this.channels.push(readUpdates);
-    }
-
-    if (includeInboundDeletes) {
-      const deletes = supabase
-        .channel(`messages-del-${this.adminUserId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "DELETE",
-            schema: "public",
-            table: "messages",
-            filter: `recipient_id=eq.${this.adminUserId}`,
-          },
-          (payload) => {
-            handlers.onDelete?.((payload.old ?? {}) as Record<string, unknown>);
-          }
-        )
-        .subscribe();
-      this.channels.push(deletes);
-    }
-
-    this.subscribed = true;
 
     return () => this.unsubscribe();
   }
 
   unsubscribe(): void {
+    if (!this.channel) return;
     const supabase = getSupabaseBrowserClient();
-    if (!supabase) return;
-    for (const ch of this.channels) {
-      void supabase.removeChannel(ch);
-    }
-    this.channels = [];
-    this.subscribed = false;
-    chatRealtimeLogger.info("Unsubscribed from messages Realtime", {
-      adminUserId: this.adminUserId,
+    if (supabase) void supabase.removeChannel(this.channel);
+    this.channel = null;
+    chatRealtimeLogger.info("Unsubscribed from chat broadcast channel", {
+      userId: this.userId,
     });
   }
 }
 
 export function createMessagesRealtimeService(
-  adminUserId: string
+  userId: string
 ): MessagesRealtimeService | null {
   if (!getSupabaseBrowserClient()) return null;
-  return new MessagesRealtimeService(adminUserId);
+  return new MessagesRealtimeService(userId);
 }

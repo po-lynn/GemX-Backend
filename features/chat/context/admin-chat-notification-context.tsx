@@ -154,33 +154,30 @@ export function AdminChatNotificationProvider({ children }: Props) {
       }
     };
 
-    const unsubscribe = service.subscribe(
-      {
-        onInsert: (message) => {
-          if (message.recipientId !== userId) return;
+    const unsubscribe = service.subscribe({
+      onInsert: (message) => {
+        if (message.recipientId !== userId) return;
 
-          scheduleUnreadRefresh();
+        scheduleUnreadRefresh();
 
-          void (async () => {
-            const label = await resolveSenderLabel(message.senderId);
-            showChatBrowserNotification({
-              message,
-              senderLabel: label,
-              suppress: shouldSuppressBrowserPopup(message),
-            });
-          })();
-        },
-        onUpdate: (message, old) => {
-          const wasRead = Boolean(old.is_read ?? old.isRead);
-          if (message.isRead && !wasRead) scheduleUnreadRefresh();
-        },
-        onDelete: () => scheduleUnreadRefresh(),
-        onSubscriptionError: (channel, status) => {
-          chatRealtimeLogger.error("Realtime subscription error", { channel, status });
-        },
+        void (async () => {
+          const label = await resolveSenderLabel(message.senderId);
+          showChatBrowserNotification({
+            message,
+            senderLabel: label,
+            suppress: shouldSuppressBrowserPopup(message),
+          });
+        })();
       },
-      { includeOutbound: false }
-    );
+      onReadUpdate: (_messageIds, recipientId) => {
+        if (recipientId !== userId) return;
+        scheduleUnreadRefresh();
+      },
+      onDelete: () => scheduleUnreadRefresh(),
+      onSubscriptionError: (channel, status) => {
+        chatRealtimeLogger.error("Realtime subscription error", { channel, status });
+      },
+    });
 
     return () => {
       if (unreadDebounce) clearTimeout(unreadDebounce);

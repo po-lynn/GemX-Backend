@@ -7,6 +7,7 @@ import { user } from "@/drizzle/schema/auth-schema";
 import { messages, messageTypeEnum } from "@/drizzle/schema/chat-schema";
 import { jsonError, jsonUncached } from "@/lib/api";
 import { sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
+import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 
 const messageTypeValues = messageTypeEnum.enumValues;
 
@@ -109,6 +110,24 @@ export async function POST(request: NextRequest) {
       senderName,
       preview: messagePreview(saved),
     }).catch((e) => console.error("Chat push notification failed:", e));
+
+    const broadcastPayload = {
+      id: saved.id,
+      senderId: saved.senderId,
+      recipientId: saved.recipientId,
+      content: saved.content,
+      fileUrl: saved.fileUrl,
+      imageUrls: saved.imageUrls ?? null,
+      messageType: saved.messageType,
+      isRead: saved.isRead ?? false,
+      starred: saved.starred ?? false,
+      editedAt: saved.editedAt?.toISOString?.() ?? null,
+      createdAt: saved.createdAt?.toISOString?.() ?? String(saved.createdAt),
+    };
+    void broadcastChatEvents([
+      { userId: recipientId, event: "new_message", payload: broadcastPayload },
+      { userId: senderId,    event: "new_message", payload: broadcastPayload },
+    ]).catch((e) => console.error("Chat broadcast failed:", e));
 
     return jsonUncached({
       success: true,

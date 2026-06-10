@@ -37,7 +37,8 @@
 - **Credit point packages & purchase requests (mobile)** – Added **GET `/api/mobile/points/packages`** (no auth): returns the configured `pointPackages` (name, points, prices in MMK/USD/KRW) and `paymentMethods` (name, accountName, phoneNumber, optional instructions) for the top-up UI. Added **POST `/api/mobile/points/purchase-requests`** (auth): customer submits a purchase request after transferring payment; body: `package_name`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`, optional `transferNote`. Request is created as `"pending"` — admin approves at `/admin/credit/purchase-requests`, points are credited only on approval. Added **GET `/api/mobile/points/purchase-requests`** (auth): returns the current user's own purchase request history (all statuses). Added **GET `/api/mobile/points/purchase-history`** (auth): approved requests only — see **5.4.2**.
 - **Seller ratings (mobile)** – **POST `/api/mobile/seller-ratings`** (auth): rate another user (seller) with **`score`** (1–5), optional **`comment`**, optional **`tagIds`** (active preset tag UUIDs; stored in **`rating_tag_map`**). **GET `/api/mobile/seller-ratings`** (auth) lists the current user’s submitted seller ratings (paginated; each row includes **`tagIds`**). **GET `/api/mobile/seller-ratings/:sellerId`** (no auth) returns aggregate **`averageScore`** / **`totalRatings`** plus paginated received ratings (each includes **`tagIds`**). Preset tag list: **GET `/api/rating-tags`** (no auth). See **5.4b**.
 - **Edit profile (mobile)** – **POST `/api/profile`** (auth) updates profile fields `name`, `address`, `image` (URL). **POST `/api/profile/image`** (auth, multipart/form-data) uploads one profile image and returns `{ "url": "..." }`. Use the returned `url` in **POST `/api/profile`**. See **5.4c**.
-- **User chat APIs (mobile, Supabase Realtime)** – Chat now uses **Supabase Realtime** (Postgres changes on `messages` table) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/conversations`** (inbox JSON or **`?stream=1`** SSE for live list), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
+- **Chat realtime — migrated to Supabase Broadcast** – Real-time delivery now uses **Supabase Broadcast** (`chat:<userId>` channel) instead of `postgres_changes` on the `messages` table. The server pushes four event types after each DB write: **`new_message`**, **`message_updated`**, **`message_deleted`**, and **`read_update`**. Mobile must subscribe to `chat:<currentUserId>` via the Broadcast API (not `postgres_changes`). Channel name changed from `chat-user-<id>` → `chat:<id>`. Payload fields are **camelCase**. See updated code example in **5.4d**.
+- **User chat APIs (mobile, Supabase Realtime)** – Chat uses **Supabase Realtime** (Broadcast channel, not Postgres changes) instead of Socket.IO. REST APIs: **POST `/api/chat/messages`** (send/save message), **GET `/api/chat/conversations`** (inbox JSON or **`?stream=1`** SSE for live list), **GET `/api/chat/history`** (conversation history), **POST `/api/chat/media`** (upload image/audio/file and return URL), and **PATCH `/api/chat/read-status`** (mark messages seen). See **5.4d**.
 - **Favourite products (mobile)** – Added authenticated endpoints to manage user-saved products: **POST `/api/mobile/favourite-products`** (save by `productId`), **GET `/api/mobile/favourite-products`** (paginated saved list), and **DELETE `/api/mobile/favourite-products`** (remove by `productId`). See **5.4.6**.
 - **Collector-piece owner visibility** – `GET /api/products/:id` now returns **full collector-piece details for the owner** when `sellerId === logged-in user id` (Bearer token), even without a show-request. Non-owners still receive limited shape until their `collector_piece_show_request` is approved. See **5.2**.
 - **Escrow service requests — package & fee selection** – POST `/api/mobile/escrow-service-requests` now accepts optional `packageName` (string, max 120 chars). Server validates it against the live package list from `GET /api/mobile/premium-dealers/settings`; returns `400 "Invalid package name"` if the value doesn't match. The chosen package name is stored and returned in GET responses. Mobile should call `GET /api/mobile/premium-dealers/settings` first to show the available packages and their `serviceFeePercent` to the user before submission. See **5.4.5**.
@@ -102,7 +103,7 @@
 | GET    | `/api/mobile/seller-ratings/:sellerId` | No   | Public: average score, total count, and paginated ratings received by that seller (each rating includes **`tagIds`**). Query: `page`, `limit`. See **5.4b**. |
 | GET    | `/api/rating-tags` | No   | List active seller-rating preset tags (`ratingTags`: `id`, `name`, `type`). Cached. See **5.4b**. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for use in **POST `/api/profile`**. See **5.4c**. |
-| POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime via Supabase; **FCM push** to receiver (unless they are viewing this chat). See **5.4d**. |
+| POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery via Supabase **Broadcast** (`new_message` event); **FCM push** to receiver (unless they are viewing this chat). See **5.4d**. |
 | PUT    | `/api/chat/viewing` | Yes  | Heartbeat: user is on chat screen with `peerId` (suppresses push for that thread). Repeat every ~30s. See **5.4d**. |
 | DELETE | `/api/chat/viewing` | Yes  | User left chat screen (resume push). See **5.4d**. |
 | GET    | `/api/chat/conversations` | Yes  | List chat peers (JSON) **or** live updates via **`?stream=1`** (SSE: same payload when it changes; optional **`intervalMs`**). See **5.4d**. |
@@ -1103,58 +1104,54 @@ At least one of `name`, `address`, `image` is required.
 
 These routes support send/save message, inbox list (conversations), history, media upload before sending, and read-status updates.
 
-**Realtime engine:** Supabase Realtime (Postgres changes), not Socket.IO.
+**Realtime engine:** Supabase **Broadcast** (channel-based), not `postgres_changes` and not Socket.IO.
+
+The server pushes four event types to `chat:<userId>` after every DB write. All payload fields are **camelCase**.
+
+| Event | When pushed | Payload |
+|-------|-------------|---------|
+| `new_message` | Message sent | Full message object (`id`, `senderId`, `recipientId`, `content`, `fileUrl`, `imageUrls`, `messageType`, `isRead`, `starred`, `editedAt`, `createdAt`) |
+| `message_updated` | Sender edited text or toggled starred | Same full message object |
+| `message_deleted` | Sender deleted a message | `{ id: string }` |
+| `read_update` | Recipient marked messages as read | `{ messageIds: string[], recipientId: string }` — pushed to both the sender (read-receipt ✓✓) and the recipient themselves (multi-tab sync) |
 
 Mobile flow:
-1. Subscribe to `messages` table changes with Supabase Realtime (typically `INSERT` events where `recipient_id = currentUserId` or `sender_id = currentUserId`).
-2. Load the inbox with `GET /api/chat/conversations`, or open **`GET /api/chat/conversations?stream=1`** (SSE) for **server-pushed** list refreshes when **`lastMessage`**, **`lastMessageTime`**, **`unreadCount`**, or **`isOnline`** change (tunable **`intervalMs`**); still combine with Realtime for instant thread rows if desired.
+1. Subscribe to `chat:<currentUserId>` via Supabase **Broadcast** (see example below).
+2. Load the inbox with `GET /api/chat/conversations`, or open **`GET /api/chat/conversations?stream=1`** (SSE) for server-pushed list refreshes when **`lastMessage`**, **`lastMessageTime`**, **`unreadCount`**, or **`isOnline`** change (tunable **`intervalMs`**).
 3. Send a message via `POST /api/chat/messages`.
-4. Receive realtime updates from Supabase subscription.
+4. Receive `new_message` / `message_updated` / `message_deleted` / `read_update` events from the Broadcast subscription.
 
-**React Native quick example (Supabase Realtime):**
+**React Native quick example (Supabase Broadcast):**
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function subscribeChat(currentUserId: string, onNewMessage: (row: any) => void) {
+function subscribeChat(currentUserId: string, handlers: {
+  onNewMessage:     (msg: any) => void;
+  onMessageUpdated: (msg: any) => void;
+  onMessageDeleted: (id: string) => void;
+  onReadUpdate:     (messageIds: string[], recipientId: string) => void;
+}) {
+  // Single channel — receives all 4 event types for this user
   const channel = supabase
-    .channel(`chat-messages-${currentUserId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        // Receive messages where current user is sender or recipient
-        filter: `recipient_id=eq.${currentUserId}`,
-      },
-      (payload) => onNewMessage(payload.new)
-    )
+    .channel(`chat:${currentUserId}`)           // ⚠ must match exactly — "chat:<userId>" not "chat-user-<userId>"
+    .on("broadcast", { event: "new_message" },
+      ({ payload }) => handlers.onNewMessage(payload))
+    .on("broadcast", { event: "message_updated" },
+      ({ payload }) => handlers.onMessageUpdated(payload))
+    .on("broadcast", { event: "message_deleted" },
+      ({ payload }) => handlers.onMessageDeleted(payload.id))
+    .on("broadcast", { event: "read_update" },
+      ({ payload }) => handlers.onReadUpdate(payload.messageIds, payload.recipientId))
     .subscribe();
 
-  // Optional second subscription for own sent inserts if needed by UI:
-  const sentChannel = supabase
-    .channel(`chat-sent-${currentUserId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `sender_id=eq.${currentUserId}`,
-      },
-      (payload) => onNewMessage(payload.new)
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-    supabase.removeChannel(sentChannel);
-  };
+  return () => supabase.removeChannel(channel);
 }
 ```
+
+> **Migration note (if upgrading from an older build):** The old subscription used `postgres_changes` on the `messages` table with channel name `chat-user-<id>`. That no longer receives events. Replace it with the Broadcast subscription above using channel name `chat:<id>`.
 
 #### POST `/api/chat/messages`
 
@@ -3350,7 +3347,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
   - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first). For **live** list updates from the server without polling JSON yourself, use **`GET /api/chat/conversations?stream=1`** (SSE; see **5.4d**).
-  - Chat realtime: subscribe to `messages` table via Supabase Realtime for incoming rows.
+  - Chat realtime: subscribe to `chat:<currentUserId>` via Supabase **Broadcast** for `new_message`, `message_updated`, `message_deleted`, and `read_update` events (see **5.4d**).
   - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` — includes `participantImage` for the peer’s avatar.
   - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
   - Mark messages as seen: `PATCH /api/chat/read-status` with `{ "messageIds": ["<uuid>", ...] }`.
@@ -3416,7 +3413,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/rating-tags` | No   | Active seller-rating preset tags (`ratingTags`). Cached. See 5.4b. |
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
-| POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase Realtime on `messages`. See 5.4d. |
+| POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase **Broadcast** (`new_message` event on `chat:<userId>`). See 5.4d. |
 | GET    | `/api/chat/conversations` | Yes  | Inbox list (JSON) or **`?stream=1`** SSE live pushes when payload changes; optional **`intervalMs`**. See 5.4d. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |

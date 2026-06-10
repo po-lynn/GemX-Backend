@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/drizzle/db";
 import { messages } from "@/drizzle/schema/chat-schema";
 import { jsonError, jsonUncached } from "@/lib/api";
+import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 
 const bodySchema = z.object({
   messageIds: z.array(z.string().uuid()).min(1).max(500),
@@ -31,13 +32,31 @@ export async function PATCH(request: NextRequest) {
       .where(
         and(inArray(messages.id, messageIds), eq(messages.recipientId, session.user.id))
       )
-      .returning({ id: messages.id });
+      .returning({ id: messages.id, senderId: messages.senderId });
+
+    const updatedIds = updatedRows.map((r) => r.id);
+    const recipientId = session.user.id;
+    const readPayload = { messageIds: updatedIds, recipientId };
+
+    // Notify each unique sender (read receipts) and the recipient themselves (multi-tab sync).
+    const uniqueSenderIds = [...new Set(updatedRows.map((r) => r.senderId))];
+    const broadcastTargets = [
+      ...uniqueSenderIds.map((userId) => ({
+        userId,
+        event: "read_update" as const,
+        payload: readPayload,
+      })),
+      { userId: recipientId, event: "read_update" as const, payload: readPayload },
+    ];
+    void broadcastChatEvents(broadcastTargets).catch((e) =>
+      console.error("Read-status broadcast failed:", e)
+    );
 
     return jsonUncached({
       success: true,
       requestedCount: messageIds.length,
       updatedCount: updatedRows.length,
-      messageIds: updatedRows.map((r) => r.id),
+      messageIds: updatedIds,
     });
   } catch (error) {
     console.error("PATCH /api/chat/read-status:", error);
