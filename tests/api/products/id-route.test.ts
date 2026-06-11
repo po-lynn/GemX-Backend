@@ -7,6 +7,7 @@ import { updateProductInDb, deleteProductInDb } from "@/features/products/db/pro
 import { getUserById } from "@/features/users/db/users"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
+import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 
@@ -29,6 +30,10 @@ vi.mock("@/features/users/db/users", () => ({
 }))
 vi.mock("@/drizzle/db", () => ({
   db: { select: vi.fn() },
+}))
+vi.mock("@/features/points/db/points", () => ({
+  deductUserPoints: vi.fn(),
+  getUserPointBalance: vi.fn(),
 }))
 vi.mock("@/drizzle/schema/seller-rating-schema", () => ({
   sellerRating: { score: "score", sellerUserId: "seller_user_id" },
@@ -132,6 +137,15 @@ describe("PATCH /api/products/[id]", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
     vi.mocked(getCachedProduct).mockResolvedValue(null)
     vi.mocked(updateProductInDb).mockResolvedValue(undefined)
+    vi.mocked(getUserPointBalance).mockResolvedValue({
+      available: 10_000,
+      reserved: 0,
+      lifetime: 10_000,
+    })
+    vi.mocked(deductUserPoints).mockResolvedValue({
+      success: true,
+      remainingPoints: 9_500,
+    })
   })
 
   it("returns 401 when not authenticated", async () => {
@@ -205,6 +219,35 @@ describe("PATCH /api/products/[id]", () => {
       expect.objectContaining({ title: "Updated Ruby" }),
       { actorId: "seller-1" }
     )
+  })
+
+  it("returns 400 when seller lacks points to increase featured cost", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "seller-1", role: "user" },
+    } as never)
+    vi.mocked(getCachedProduct).mockResolvedValue({
+      id: VALID_UUID,
+      sellerId: "seller-1",
+      featured: 0,
+      isFeatured: false,
+    } as never)
+    vi.mocked(getUserPointBalance).mockResolvedValue({
+      available: 100,
+      reserved: 0,
+      lifetime: 500,
+    })
+
+    const req = new Request(`http://localhost/api/products/${VALID_UUID}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFeatured: true, featured: 500 }),
+    })
+    const res = await PATCH(req as NextRequest, params(VALID_UUID))
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: "Insufficient points balance" })
+    expect(deductUserPoints).not.toHaveBeenCalled()
+    expect(updateProductInDb).not.toHaveBeenCalled()
   })
 
   it("returns 200 when admin updates any product", async () => {

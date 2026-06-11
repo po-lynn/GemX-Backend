@@ -13,7 +13,7 @@ import {
 import { getUserById } from "@/features/users/db/users"
 import { productUpdateSchema } from "@/features/products/schemas/products"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
-import { deductUserPoints } from "@/features/points/db/points"
+import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { getCollectorPieceShowRequestForUser } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import { maskPrice } from "@/lib/formatters"
 import { db } from "@/drizzle/db"
@@ -134,6 +134,11 @@ export async function PATCH(
     const additionalPointsNeeded = Math.max(0, nextFeaturedPoints - previousFeaturedPoints)
 
     if (additionalPointsNeeded > 0) {
+      const { available } = await getUserPointBalance(product.sellerId)
+      if (available < additionalPointsNeeded) {
+        return jsonError("Insufficient points balance", 400)
+      }
+
       const deduction = await deductUserPoints(product.sellerId, additionalPointsNeeded)
       if (!deduction.success) {
         return jsonError("Insufficient points balance", 400)
