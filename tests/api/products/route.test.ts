@@ -61,6 +61,30 @@ describe("GET /api/products", () => {
     )
   })
 
+  it("returns featured_expires_at as ISO 8601 on each product", async () => {
+    const expires = new Date("2026-06-01T12:00:00.000Z")
+    vi.mocked(getAdminProducts).mockResolvedValue({
+      products: [
+        {
+          id: "p1",
+          title: "Featured Ruby",
+          isFeatured: true,
+          featuredExpiresAt: expires,
+        },
+      ] as never,
+      total: 1,
+    })
+    const req = new Request("http://localhost/api/products")
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    const data = (await res.json()) as {
+      products: Array<{ featured_expires_at: string | null; isFeatured: boolean }>
+    }
+    expect(data.products[0].featured_expires_at).toBe(expires.toISOString())
+    expect(data.products[0].isFeatured).toBe(true)
+    expect(data.products[0]).not.toHaveProperty("featuredExpiresAt")
+  })
+
   it("passes search params to getAdminProducts", async () => {
     const req = new Request(
       "http://localhost/api/products?page=2&search=ruby&productType=loose_stone&status=active"

@@ -53,6 +53,8 @@ export type AdminProductRow = {
   status: "pending" | "active" | "archive" | "sold" | "hidden"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
+  /** When featured listing expires (`featured_expires_at`); null if no expiry set */
+  featuredExpiresAt: Date | null
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   isPromotion: boolean
@@ -235,6 +237,7 @@ export async function getAdminProductsFromDb(opts: {
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
+      featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
@@ -297,6 +300,7 @@ export async function getAdminProductsFromDb(opts: {
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
+    featuredExpiresAt: p.featuredExpiresAt,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
     isPromotion: p.isPromotion,
@@ -503,6 +507,7 @@ export async function getProductsBySellerId(
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
+      featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
@@ -565,6 +570,7 @@ export async function getProductsBySellerId(
     laboratoryId: p.laboratoryId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
+    featuredExpiresAt: p.featuredExpiresAt,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
     isPromotion: p.isPromotion,

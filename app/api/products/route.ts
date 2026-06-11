@@ -12,6 +12,16 @@ import type { z } from "zod"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
 import { maskPrice } from "@/lib/formatters"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+import type { AdminProductRow } from "@/features/products/db/products"
+
+/** Public list JSON: expose DB `featured_expires_at` as snake_case ISO 8601. */
+function toPublicProductListItem(p: AdminProductRow) {
+  const { featuredExpiresAt, ...rest } = p
+  return {
+    ...rest,
+    featured_expires_at: featuredExpiresAt?.toISOString() ?? null,
+  }
+}
 
 function maskCollectorPiece(p: { id: string; price: string; currency: string; status: string; imageUrl: string | null; [key: string]: unknown }) {
   return {
@@ -21,7 +31,7 @@ function maskCollectorPiece(p: { id: string; price: string; currency: string; st
     productType: null, categoryId: null, categoryName: null,
     stoneCut: null, metal: null,
     status: p.status, moderationStatus: null,
-    isFeatured: false, isCollectorPiece: true,
+    isFeatured: false, featured_expires_at: null, isCollectorPiece: true,
     isPrivilegeAssist: false, isPromotion: false,
     promotionComparePrice: null,
     sellerId: null, sellerName: null, sellerPhone: null,
@@ -146,7 +156,9 @@ export async function GET(request: NextRequest) {
       const { products, total } = await getAdminProducts(listOpts)
       if (session) {
         const approvedIds = await getApprovedCollectorPieceProductIds(session.user.id)
-        const result = products.map((p) => approvedIds.has(p.id) ? p : maskCollectorPiece(p))
+        const result = products.map((p) =>
+          approvedIds.has(p.id) ? toPublicProductListItem(p) : maskCollectorPiece(p)
+        )
         return jsonUncached({ products: result, total })
       }
       return jsonCached({ products: products.map(maskCollectorPiece), total })
@@ -155,7 +167,14 @@ export async function GET(request: NextRequest) {
     const { products, total } = await getAdminProducts(listOpts)
     // Only mask collector pieces in the general browse; skip masking when explicitly filtering for another type
     const maskInBrowse = !isPrivilegeAssist && !isPromotion && !isFeatured
-    return jsonCached({ products: products.map((p) => (maskInBrowse && p.isCollectorPiece) ? maskCollectorPiece(p) : p), total })
+    return jsonCached({
+      products: products.map((p) =>
+        maskInBrowse && p.isCollectorPiece
+          ? maskCollectorPiece(p)
+          : toPublicProductListItem(p)
+      ),
+      total,
+    })
   } catch (error) {
     console.error("GET /api/products:", error)
     return jsonError("Failed to fetch products", 500)
