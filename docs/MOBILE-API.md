@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
 - **Feature settings (full, mobile)** – **GET `/api/mobile/feature-settings`** (no auth): returns both **`homeFeaturedLimit`** (admin-configured max homepage featured slots) and the full **`pricingTiers`** array (same tiers as **GET `/api/mobile/feature-pricing-tiers`** but with optional **`enabled`** flag per tier). Use when you need to show remaining capacity alongside tier selection. See **5.4.1b**.
 - **Point purchase requests — `payment_method`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** now include **`payment_method`** (name from `GET /api/mobile/points/packages` → `paymentMethods`). **POST** requires **`payment_method`** in the body; **`paymentMethod`** is accepted as an alias. Stored in **`point_purchase_request.payment_method`**. See **5.4.2**.
@@ -50,7 +51,7 @@
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
 - **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (any user with a registered push token). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
-- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only `isFeatured` (boolean).
+- **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only **`isFeatured`** (boolean) and **`featured_expires_at`** (ISO 8601 or `null`).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Collector-piece rows are shown as owner data (no public masking), since this endpoint is seller-scoped. Same sort order as public list when filters apply.
 - **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, image, phone, username, displayUsername, `rating: { averageScore, totalRatings }`), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: owner (seller) gets full data when authenticated; non-owner gets limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the show-request is approved — see **5.2**.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
@@ -529,7 +530,7 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 - **No `search`, default browse / filters only:** (1) collector pieces, (2) privilege assist, (3) featured, (4) promotion, (5) `createdAt` (newest first).  
 - **No `search`, new-products list:** `newest=true` or `newest=1` → sort by **`createdAt` only** (newest first). You can combine with filters (e.g. `categoryId`, `productType`).  
 - **No `search`, explicit admin sort:** `sortBy` and/or `sortOrder` in the query → sort by that column only (same as admin).  
-The API does **not** return a numeric `featured` field—only `isFeatured` (boolean).
+The API does **not** return a numeric `featured` field—only **`isFeatured`** (boolean; `false` when `featured_expires_at` is in the past) and **`featured_expires_at`** (ISO 8601 timestamp when the featured period ends, or `null` if not set).
 
 **Query:**
 
@@ -775,6 +776,7 @@ Authorization: Bearer <session_token>
       "status": "active",
       "moderationStatus": "approved",
       "isFeatured": false,
+      "featured_expires_at": null,
       "isCollectorPiece": false,
       "isPrivilegeAssist": false,
       "isPromotion": false,
@@ -789,7 +791,7 @@ Authorization: Bearer <session_token>
 }
 ```
 
-Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, and `isFeatured` (all booleans). The API does not return a numeric `featured` field.
+Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, and `isFeatured` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`). The API does not return a numeric `featured` field.
 
 ---
 
