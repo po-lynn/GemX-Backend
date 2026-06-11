@@ -26,7 +26,7 @@ const weightCaratSchema = z
   )
 
 /** All gemstone specification fields (same as loose stone / report fields) */
-export const gemstoneSpecSchema = z.object({
+const gemstoneSpecSchema = z.object({
   weightCarat: weightCaratSchema,
   dimensions: z.string().max(300).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
@@ -66,16 +66,13 @@ export type JewelleryGemstoneEntry = JewelleryGemstoneItem & {
 }
 
 /** Field names shared for search/filter (both product and product_jewellery_gemstone) */
-export const GEMSTONE_SPEC_FIELD_NAMES = [
-  "weightCarat",
-  "dimensions",
-  "color",
-  "shape",
-  "origin",
-  "cut",
-  "transparency",
-  "comment",
-  "inclusions",
-] as const
-
-export type GemstoneSpecFieldName = (typeof GEMSTONE_SPEC_FIELD_NAMES)[number]
+export type GemstoneSpecFieldName =
+  | "weightCarat"
+  | "dimensions"
+  | "color"
+  | "shape"
+  | "origin"
+  | "cut"
+  | "transparency"
+  | "comment"
+  | "inclusions"

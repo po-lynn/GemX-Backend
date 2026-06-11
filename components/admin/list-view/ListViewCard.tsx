@@ -129,7 +129,7 @@ function FilterPanel({
   setFilters: (v: ActiveFilters) => void
   onClose: () => void
 }) {
-  const [activeId, setActiveId] = useState(filterDefs[0]?.id ?? "")
+  const [activeId, setActiveId] = useState(filterDefs.find((d) => d.type !== "toggle")?.id ?? "")
   const def = filterDefs.find((d) => d.id === activeId)
 
   const totalSelected = Object.values(filters).reduce((sum, v) => {
@@ -147,7 +147,7 @@ function FilterPanel({
   }
 
   function selectAll() {
-    if (!def || def.type === "daterange") return
+    if (!def || def.type === "daterange" || def.type === "toggle") return
     setFilters({ ...filters, [def.id]: def.options.map((o) => o.value) })
   }
 
@@ -157,17 +157,51 @@ function FilterPanel({
     setFilters(next)
   }
 
+  function toggleDef(defId: string) {
+    const isOn = filters[defId]?.includes("true")
+    if (isOn) {
+      const next = { ...filters }
+      delete next[defId]
+      setFilters(next)
+    } else {
+      setFilters({ ...filters, [defId]: ["true"] })
+    }
+  }
+
   function defCount(defId: string) {
     const vals = filters[defId]
     if (!vals || vals.length === 0) return 0
     return vals.some((x) => x.startsWith("from:") || x.startsWith("to:")) ? 1 : vals.length
   }
 
+  const nonToggleDefs = filterDefs.filter((d) => d.type !== "toggle")
+  const toggleDefs = filterDefs.filter((d) => d.type === "toggle")
+
   return (
     <div className="lv-filter-panel">
       <nav className="lv-filter-nav" aria-label="Filter categories">
         <div className="lv-filter-nav-head">Filter by</div>
-        {filterDefs.map((d) => {
+        {toggleDefs.length > 0 && (
+          <>
+            {toggleDefs.map((d) => {
+              const isOn = filters[d.id]?.includes("true")
+              return (
+                <button
+                  key={d.id}
+                  className={`lv-filter-nav-item lv-filter-nav-toggle${isOn ? " active" : ""}`}
+                  onClick={() => toggleDef(d.id)}
+                >
+                  <span className={`lv-filter-check${isOn ? " lv-filter-on" : ""}`}>
+                    {isOn && <span className="lv-filter-check-ico"><Check /></span>}
+                  </span>
+                  <span className="lv-filter-nav-label">{d.label}</span>
+                </button>
+              )
+            })}
+            {nonToggleDefs.length > 0 && <div className="lv-filter-nav-sep" />}
+          </>
+        )}
+        {nonToggleDefs.map((d) => {
           const count = defCount(d.id)
           return (
             <button
@@ -199,7 +233,7 @@ function FilterPanel({
               onChange={(v) => setFilters({ ...filters, [def.id]: v })}
             />
           </>
-        ) : def ? (
+        ) : def && def.type === "multi" ? (
           <>
             <div className="lv-filter-pane-head">
               <span className="lv-filter-pane-title">
@@ -653,6 +687,13 @@ type ListViewCardProps<T extends { id: string }> = {
   onRefresh?: () => void
   onExport?: (format: string) => void
   emptyMessage?: string
+  /** Pre-populate filter state on mount (use for server-driven filter restoration). */
+  defaultFilters?: ActiveFilters
+  /**
+   * Called when a filter value changes. Return `true` to handle the change
+   * externally (skips internal state update — use for server-driven filters).
+   */
+  onFilterChange?: (filterId: string, values: string[]) => boolean | void
 }
 
 export function ListViewCard<T extends { id: string }>({
@@ -681,9 +722,37 @@ export function ListViewCard<T extends { id: string }>({
   onRefresh,
   onExport,
   emptyMessage,
+  defaultFilters,
+  onFilterChange,
 }: ListViewCardProps<T>) {
   const [query, setQuery] = useState(defaultSearch ?? "")
-  const [filters, setFilters] = useState<ActiveFilters>({})
+  const [filters, setFilters] = useState<ActiveFilters>(defaultFilters ?? {})
+
+  function handleSetFilters(next: ActiveFilters) {
+    if (onFilterChange) {
+      for (const [id, vals] of Object.entries(next)) {
+        const prev = filters[id] ?? []
+        const newVals = vals ?? []
+        const changed =
+          newVals.length !== prev.length ||
+          newVals.some((v) => !prev.includes(v))
+        if (changed) {
+          const handled = onFilterChange(id, newVals)
+          if (handled) { setFilters(next); return }
+        }
+      }
+      for (const id of Object.keys(filters)) {
+        if (!(id in next) || (next[id] ?? []).length === 0) {
+          const prev = filters[id] ?? []
+          if (prev.length > 0) {
+            const handled = onFilterChange(id, [])
+            if (handled) { setFilters(next); return }
+          }
+        }
+      }
+    }
+    setFilters(next)
+  }
   const [groupBy, setGroupBy] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortState | null>(defaultSort ?? null)
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({})
@@ -769,6 +838,10 @@ export function ListViewCard<T extends { id: string }>({
         ? `${drFmt(from)} – ${drFmt(to)}`
         : from ? `From ${drFmt(from)}` : `Until ${drFmt(to)}`
       activeChips.push({ defId, value: "__daterange__", defLabel: def.label, valueLabel: label })
+    } else if (def.type === "toggle") {
+      if (vals.includes("true")) {
+        activeChips.push({ defId, value: "true", defLabel: def.label, valueLabel: def.label })
+      }
     } else {
       for (const v of vals) {
         const opt = def.options.find((o) => o.value === v)
@@ -785,11 +858,11 @@ export function ListViewCard<T extends { id: string }>({
     } else {
       next[defId] = (next[defId] ?? []).filter((v) => v !== value)
     }
-    setFilters(next)
+    handleSetFilters(next)
   }
 
   function clearAll() {
-    setFilters({})
+    handleSetFilters({})
     setGroupBy(null)
     setSortBy(null)
   }
@@ -840,7 +913,7 @@ export function ListViewCard<T extends { id: string }>({
           setQuery={(v) => setQuery(v)}
           filterDefs={filterDefs}
           filters={filters}
-          setFilters={setFilters}
+          setFilters={handleSetFilters}
           groupBy={groupBy}
           setGroupBy={setGroupBy}
           groupOptions={groupOptions}

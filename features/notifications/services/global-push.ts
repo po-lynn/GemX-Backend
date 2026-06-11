@@ -19,7 +19,7 @@ import type {
  * Broadcast to all devices subscribed to the global topic.
  * No user authentication or device token registration required on the client.
  */
-export async function sendGlobalPushNotification(
+async function sendGlobalPushNotification(
   payload: PushNotificationPayload
 ): Promise<TopicPushResult> {
   return sendPushToTopic(FCM_GLOBAL_TOPIC, payload);

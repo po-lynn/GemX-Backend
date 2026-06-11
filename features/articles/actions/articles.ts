@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { canAdminManageArticles } from "@/features/articles/permissions/articles";
 import {
   articleCreateSchema,
@@ -15,10 +13,9 @@ import {
   getArticleById,
 } from "@/features/articles/db/articles";
 import { sendArticlePublishedNotification } from "@/features/notifications/services/global-push";
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined);
-}
 
 function slugify(title: string): string {
   return title
@@ -40,11 +37,11 @@ export async function createArticleAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageArticles(session.user.role)) {
+  const session = await requireActionRole(canAdminManageArticles);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const publishDate =
@@ -78,11 +75,11 @@ export async function updateArticleAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageArticles(session.user.role)) {
+  const session = await requireActionRole(canAdminManageArticles);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const { articleId, publishDate: publishDateRaw, title, ...rest } = parsed.data;
@@ -116,8 +113,8 @@ export async function deleteArticleAction(formData: FormData) {
     articleId: formData.get("articleId"),
   });
   if (!parsed.success) return { error: "Invalid input" };
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageArticles(session.user.role)) {
+  const session = await requireActionRole(canAdminManageArticles);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const deleted = await deleteArticleInDb(parsed.data.articleId);

@@ -7,7 +7,7 @@ let firebaseAdminInitSkipped = false;
  * Service account `private_key` from JSON is often pasted into `.env` with:
  * outer quotes, JSON-escaped newlines, BOM, or doubled quoting from copy/paste.
  */
-export function normalizeFirebasePrivateKey(raw: string): string {
+function normalizeFirebasePrivateKey(raw: string): string {
   let k = raw.trim().replace(/^\uFEFF/, "");
   for (let i = 0; i < 3; i++) {
     if (

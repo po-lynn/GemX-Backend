@@ -22,7 +22,7 @@ export type MessagesRealtimeHandlers = {
  * Receives new_message / message_updated / message_deleted / read_update events
  * pushed by the server after each DB write — no WAL overhead.
  */
-export class MessagesRealtimeService {
+class MessagesRealtimeService {
   private readonly userId: string;
   private channel: RealtimeChannel | null = null;
   private processedIds = new Set<string>();

@@ -1,18 +1,8 @@
 import { NextRequest, connection } from "next/server";
-import { auth } from "@/lib/auth";
 import { jsonError, jsonUncached } from "@/lib/api";
-import { canAdminManageUsers } from "@/features/users/permissions/users";
+import { requireAdminRole } from "@/lib/api-guard";
 import { adminGlobalPushBodySchema } from "@/features/notifications/schemas/global-push";
 import { sendAdminGlobalNotification } from "@/features/notifications/services/global-push";
-
-async function requireAdmin(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return { error: jsonError("Unauthorized", 401) };
-  if (!canAdminManageUsers(session.user.role)) {
-    return { error: jsonError("Forbidden", 403) };
-  }
-  return { session };
-}
 
 /**
  * POST — send a push notification to all devices on the FCM `global` topic.
@@ -20,7 +10,7 @@ async function requireAdmin(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   await connection();
-  const gate = await requireAdmin(request);
+  const gate = await requireAdminRole(request);
   if ("error" in gate) return gate.error;
 
   try {

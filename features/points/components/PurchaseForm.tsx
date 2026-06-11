@@ -27,9 +27,6 @@ export function PurchaseForm({ packages, paymentMethods, successRedirect = "/acc
   const [transactionRef, setTransactionRef]       = useState("")
   const [transferNote, setTransferNote]           = useState("")
 
-  function getPrice(pkg: PointPurchasePackage) {
-    return pkg.priceMmk ?? pkg.priceUsd ?? pkg.priceKrw ?? 0
-  }
   function getCurrency(pkg: PointPurchasePackage) {
     if (pkg.priceMmk != null) return "mmk"
     if (pkg.priceUsd != null) return "usd"

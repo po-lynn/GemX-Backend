@@ -1,13 +1,8 @@
 "use server"
 
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
 import { canAdminManageProducts } from "@/features/products/permissions/products"
 import {
-  productModerationActionSchema,
-  productStatusActionSchema,
-  productFeaturedActionSchema,
   productCreateSchema,
   productUpdateSchema,
   productDeleteSchema,
@@ -18,93 +13,11 @@ import {
   deleteProductInDb,
 } from "@/features/products/db/products"
 import { db } from "@/drizzle/db"
-import { product, productAdminChangeLog } from "@/drizzle/schema/product-schema"
+import { product } from "@/drizzle/schema/product-schema"
 import { eq, inArray } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
-
-export async function setProductModeration(formData: FormData) {
-  const parsed = productModerationActionSchema.safeParse({
-    productId: formData.get("productId"),
-    moderationStatus: formData.get("moderationStatus"),
-  })
-  if (!parsed.success) return { error: "Invalid input" }
-
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
-    return { error: "Unauthorized" }
-  }
-
-  await db
-    .update(product)
-    .set({ moderationStatus: parsed.data.moderationStatus })
-    .where(eq(product.id, parsed.data.productId))
-
-  revalidateProductsCache(parsed.data.productId)
-  return { success: true }
-}
-
-export async function setProductStatus(formData: FormData) {
-  const parsed = productStatusActionSchema.safeParse({
-    productId: formData.get("productId"),
-    status: formData.get("status"),
-  })
-  if (!parsed.success) return { error: "Invalid input" }
-
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
-    return { error: "Unauthorized" }
-  }
-
-  const productId = parsed.data.productId
-  const [row] = await db
-    .select({ status: product.status })
-    .from(product)
-    .where(eq(product.id, productId))
-
-  await db.transaction(async (tx) => {
-    if (row && row.status !== parsed.data.status) {
-      await tx.insert(productAdminChangeLog).values({
-        productId,
-        changeType: "status",
-        oldValue: row.status,
-        newValue: parsed.data.status,
-        actorId: session.user.id,
-      })
-    }
-    await tx
-      .update(product)
-      .set({ status: parsed.data.status })
-      .where(eq(product.id, productId))
-  })
-
-  revalidateProductsCache(productId)
-  return { success: true }
-}
-
-export async function setProductFeatured(formData: FormData) {
-  const parsed = productFeaturedActionSchema.safeParse({
-    productId: formData.get("productId"),
-    featured: Number(formData.get("featured")),
-  })
-  if (!parsed.success) return { error: "Invalid input" }
-
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
-    return { error: "Unauthorized" }
-  }
-
-  await db
-    .update(product)
-    .set({ featured: parsed.data.featured })
-    .where(eq(product.id, parsed.data.productId))
-
-  revalidateProductsCache(parsed.data.productId)
-  return { success: true }
-}
-
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined)
-}
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
+import { requireActionRole } from "@/lib/action-guard"
 
 /** FormData: missing → undefined (skip on update); empty → clear; else trimmed string */
 function promotionComparePriceFromForm(fd: FormData): string | null | undefined {
@@ -173,18 +86,12 @@ export async function createProductAction(formData: FormData) {
     videoUrls: formData.get("videoUrls") || undefined,
   })
   if (!parsed.success) {
-    const flat = parsed.error.flatten()
-    const msg =
-      flat.formErrors.join(", ") ||
-      Object.entries(flat.fieldErrors)
-        .map(([k, v]) => `${k}: ${(v as string[])?.[0] ?? "invalid"}`)
-        .join(", ") ||
-      "Invalid input"
+    const msg = zodErrorMessage(parsed.error)
     return { error: msg }
   }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -279,18 +186,12 @@ export async function updateProductAction(formData: FormData) {
     videoUrls: formData.get("videoUrls") || undefined,
   })
   if (!parsed.success) {
-    const flat = parsed.error.flatten()
-    const msg =
-      flat.formErrors.join(", ") ||
-      Object.entries(flat.fieldErrors)
-        .map(([k, v]) => `${k}: ${(v as string[])?.[0] ?? "invalid"}`)
-        .join(", ") ||
-      "Invalid input"
+    const msg = zodErrorMessage(parsed.error)
     return { error: msg }
   }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -369,8 +270,8 @@ export async function deleteProductAction(formData: FormData) {
   })
   if (!parsed.success) return { error: "Invalid input" }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -387,8 +288,8 @@ export async function bulkSetProductModeration(
 ) {
   if (!ids.length) return { error: "No products selected" }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -403,8 +304,8 @@ export async function bulkSetProductStatus(
 ) {
   if (!ids.length) return { error: "No products selected" }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageProducts(session.user.role)) {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 

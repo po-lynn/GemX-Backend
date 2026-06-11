@@ -280,12 +280,6 @@ export async function getEarningPointsRates(): Promise<EarningPointsRates> {
   };
 }
 
-/** Get earning rate for a single currency (e.g. "mmk" | "usd" | "krw"). */
-export async function getEarningPointsRate(currency: keyof EarningPointsRates): Promise<number> {
-  const rates = await getEarningPointsRates();
-  return rates[currency] ?? 0;
-}
-
 async function getInt(key: string): Promise<number> {
   const [row] = await db.select({ value: pointSetting.value }).from(pointSetting).where(eq(pointSetting.key, key)).limit(1);
   return row?.value ?? 0;
@@ -307,7 +301,7 @@ async function getSettingsBatch(keys: string[]): Promise<Map<string, { value: nu
   return map;
 }
 
-export async function getCurrencyConversion(): Promise<{
+async function getCurrencyConversion(): Promise<{
   mmk: CurrencyConversion;
   usd: CurrencyConversion;
   krw: CurrencyConversion;
@@ -511,27 +505,6 @@ export async function activatePremiumDealer(
   });
 
   return result;
-}
-
-/**
- * Get the active premium dealer status for a user.
- * Returns null if the user has no active package or if it has expired.
- */
-export async function getUserPremiumDealerStatus(
-  userId: string
-): Promise<{ packageName: string; expiresAt: Date } | null> {
-  const [row] = await db
-    .select({
-      premiumDealerPackageName: user.premiumDealerPackageName,
-      premiumDealerExpiresAt: user.premiumDealerExpiresAt,
-    })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1);
-
-  if (!row?.premiumDealerPackageName || !row.premiumDealerExpiresAt) return null;
-  if (row.premiumDealerExpiresAt <= new Date()) return null;
-  return { packageName: row.premiumDealerPackageName, expiresAt: row.premiumDealerExpiresAt };
 }
 
 /**
@@ -755,7 +728,7 @@ export async function deductUserPoints(
   return { success: true, remainingPoints: updated.points };
 }
 
-export async function getUserByEmail(email: string): Promise<{ id: string } | null> {
+async function getUserByEmail(email: string): Promise<{ id: string } | null> {
   const [row] = await db
     .select({ id: user.id })
     .from(user)

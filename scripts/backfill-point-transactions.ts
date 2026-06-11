@@ -5,9 +5,8 @@
  *   npx tsx scripts/backfill-point-transactions.ts
  */
 import { db } from "@/drizzle/db"
-import { user } from "@/drizzle/schema/auth-schema"
 import { pointPurchaseRequest, pointTransaction, premiumDealersPackage } from "@/drizzle/schema/points-schema"
-import { eq, sql, inArray } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 
 async function main() {
   console.log("Backfilling point_transaction from purchase requests…")

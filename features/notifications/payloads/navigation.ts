@@ -1,7 +1,7 @@
 import type { NotificationScreen } from "@/features/notifications/types";
 
 /** FCM `data` keys the Flutter app reads for notification tap navigation. */
-export const FCM_DATA_KEYS = {
+const FCM_DATA_KEYS = {
   type: "type",
   screen: "screen",
   articleId: "articleId",

@@ -1,15 +1,14 @@
 import { z } from "zod"
 import { jewelleryGemstoneItemSchema, productShapeSchema } from "./gemstone-spec"
 
-export { productShapeSchema }
 
-export const productStatusSchema = z.enum(["pending", "active", "archive", "sold", "hidden"])
-export const productModerationSchema = z.enum([
+const productStatusSchema = z.enum(["pending", "active", "archive", "sold", "hidden"])
+const productModerationSchema = z.enum([
   "pending",
   "approved",
   "rejected",
 ])
-export const currencySchema = z.enum(["USD", "MMK"])
+const currencySchema = z.enum(["USD", "MMK"])
 
 /** Product identification / treatment type (dropdown). */
 export const PRODUCT_IDENTIFICATION_OPTIONS = [
@@ -18,7 +17,7 @@ export const PRODUCT_IDENTIFICATION_OPTIONS = [
   "Treatments",
   "Others",
 ] as const
-export const productIdentificationSchema = z.enum(PRODUCT_IDENTIFICATION_OPTIONS)
+const productIdentificationSchema = z.enum(PRODUCT_IDENTIFICATION_OPTIONS)
 export type ProductIdentification = z.infer<typeof productIdentificationSchema>
 
 const optionalUuid = z

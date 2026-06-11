@@ -4,7 +4,7 @@ import { getDirectConversationId } from "@/features/chat/lib/conversation-id";
 import { eq } from "drizzle-orm";
 
 /** Heartbeat older than this is treated as "not viewing" (mobile should refresh every ~30s). */
-export const ACTIVE_CHAT_VIEW_TTL_MS = 90_000;
+const ACTIVE_CHAT_VIEW_TTL_MS = 90_000;
 
 export async function setActiveChatView(userId: string, peerId: string): Promise<void> {
   const conversationId = getDirectConversationId(userId, peerId);

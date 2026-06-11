@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 /**
  * FCM background handler for web push. Registered with firebaseConfig query param from the client.
  */

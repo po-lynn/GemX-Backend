@@ -1,18 +1,17 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { headers } from "next/headers"
-import { auth } from "@/lib/auth"
 import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { sendPushToUserIds } from "@/features/push/send-push"
 import {
   approveCollectorPieceShowRequestInDb,
   rejectCollectorPieceShowRequestInDb,
 } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+import { requireActionRole } from "@/lib/action-guard"
 
 export async function approveCollectorPieceShowRequestAction(formData: FormData) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -40,8 +39,8 @@ export async function approveCollectorPieceShowRequestAction(formData: FormData)
 }
 
 export async function rejectCollectorPieceShowRequestAction(formData: FormData) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 

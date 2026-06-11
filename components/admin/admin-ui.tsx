@@ -85,14 +85,9 @@ export const adminTH =
   "h-11 px-4 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap"
 export const adminTHRight =
   "h-11 px-4 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap"
-export const adminTHCenter =
-  "h-11 px-4 text-center text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap"
-export const adminTR =
-  "border-b border-slate-100 text-sm last:border-0 transition-colors"
 export const adminTRClickable =
   "cursor-pointer border-b border-slate-100 text-sm last:border-0 transition-colors hover:bg-slate-50/80"
 export const adminTD = "px-4 py-3 text-slate-700"
-export const adminTDMuted = "px-4 py-3 text-slate-500"
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
 export function AdminPagination({
@@ -268,19 +263,6 @@ export function AdminEmptyRow({
 }
 
 // ─── Form utilities ──────────────────────────────────────────────────────────
-export const adminInput =
-  "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
-
-export const adminSelect =
-  "h-9 w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
-
-export const adminTextarea =
-  "w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
-
-export const adminLabel = "text-sm font-medium text-slate-700"
-
-export const adminFieldClass = "space-y-1.5"
-
 export function AdminFormSection({
   title,
   description,
@@ -311,28 +293,5 @@ export function AdminFormError({ error }: { error: string | null }) {
     <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200/60">
       {error}
     </p>
-  )
-}
-
-// ─── Page Header ──────────────────────────────────────────────────────────────
-export function AdminPageHeader({
-  title,
-  description,
-  action,
-}: {
-  title: string
-  description?: string
-  action?: ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description && (
-          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
-        )}
-      </div>
-      {action}
-    </div>
   )
 }

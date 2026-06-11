@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   messageCreateSchema,
@@ -14,15 +12,14 @@ import {
   updateMessageInDb,
 } from "@/features/messages/db/messages";
 import { z } from "zod";
+import { emptyToUndefined, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
 const toggleStarSchema = z.object({
   id: z.string().uuid(),
   starred: z.enum(["true", "false"]),
 });
 
-function emptyToUndefined<T>(v: T): T | undefined {
-  return (v === "" ? undefined : v) as T | undefined;
-}
 
 export async function createMessageAction(formData: FormData) {
   const parsed = messageCreateSchema.safeParse({
@@ -34,11 +31,11 @@ export async function createMessageAction(formData: FormData) {
     isRead: formData.get("isRead"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
+    return { error: zodErrorMessage(parsed.error) };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -69,11 +66,11 @@ export async function updateMessageAction(formData: FormData) {
     isRead: formData.get("isRead"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
+    return { error: zodErrorMessage(parsed.error) };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -97,8 +94,8 @@ export async function setMessageStarredAction(formData: FormData) {
   });
   if (!parsed.success) return { error: "Invalid input" };
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -119,8 +116,8 @@ export async function deleteMessageAction(formData: FormData) {
   });
   if (!parsed.success) return { error: "Invalid input" };
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 

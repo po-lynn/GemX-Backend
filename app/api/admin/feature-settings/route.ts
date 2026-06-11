@@ -1,7 +1,6 @@
 import { NextRequest, connection } from "next/server";
-import { auth } from "@/lib/auth";
 import { jsonError, jsonUncached } from "@/lib/api";
-import { canAdminManageUsers } from "@/features/users/permissions/users";
+import { requireAdminRole } from "@/lib/api-guard";
 import {
   getFeatureSettings,
   saveFeatureSettings,
@@ -9,22 +8,13 @@ import {
 import type { FeatureSettings } from "@/features/points/db/points";
 import { featureSettingsPutBodySchema } from "@/features/points/schemas/admin-points-api";
 
-async function requireAdmin(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) return { error: jsonError("Unauthorized", 401) };
-  if (!canAdminManageUsers(session.user.role)) {
-    return { error: jsonError("Forbidden", 403) };
-  }
-  return { session };
-}
-
 /**
  * GET — featured product home limit and point pricing tiers for featuring.
  * PUT — replace feature settings (admin only).
  */
 export async function GET(request: NextRequest) {
   await connection();
-  const gate = await requireAdmin(request);
+  const gate = await requireAdminRole(request);
   if ("error" in gate) return gate.error;
   try {
     const settings = await getFeatureSettings();
@@ -37,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   await connection();
-  const gate = await requireAdmin(request);
+  const gate = await requireAdminRole(request);
   if ("error" in gate) return gate.error;
   try {
     const body = await request.json().catch(() => null);

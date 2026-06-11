@@ -6,7 +6,7 @@
 
 const DIM_SEP = " × "
 
-export function formatDimensionsParts(parts: string[]): string | null {
+function formatDimensionsParts(parts: string[]): string | null {
   const cleaned = parts.map((p) => String(p).trim()).filter(Boolean)
   return cleaned.length ? cleaned.join(DIM_SEP) : null
 }

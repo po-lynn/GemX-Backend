@@ -12,10 +12,6 @@ export type NewsRow = {
   updatedAt: Date;
 };
 
-export async function getAllNewsFromDb(): Promise<NewsRow[]> {
-  return db.select().from(news).orderBy(desc(news.updatedAt));
-}
-
 export async function getNewsById(id: string): Promise<NewsRow | null> {
   const [row] = await db.select().from(news).where(eq(news.id, id)).limit(1);
   return row ?? null;

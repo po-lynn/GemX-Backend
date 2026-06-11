@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
-import { connection } from "next/server";
 import { POST } from "@/app/api/push/global/subscribe/route";
 
 vi.mock("next/server", () => ({ connection: vi.fn() }));

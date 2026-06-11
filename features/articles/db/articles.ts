@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { articles } from "@/drizzle/schema/articles-schema";
-import { eq, ne, desc, sql, type SQL } from "drizzle-orm";
+import { eq, desc, sql, type SQL } from "drizzle-orm";
 
 export type ArticleRow = {
   id: string;
@@ -14,24 +14,11 @@ export type ArticleRow = {
   updatedAt: Date;
 };
 
-export async function getAllArticlesFromDb(): Promise<ArticleRow[]> {
-  return db.select().from(articles).orderBy(desc(articles.updatedAt));
-}
-
 export async function getArticleById(id: string): Promise<ArticleRow | null> {
   const [row] = await db
     .select()
     .from(articles)
     .where(eq(articles.id, id))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function getArticleBySlug(slug: string): Promise<ArticleRow | null> {
-  const [row] = await db
-    .select()
-    .from(articles)
-    .where(eq(articles.slug, slug))
     .limit(1);
   return row ?? null;
 }

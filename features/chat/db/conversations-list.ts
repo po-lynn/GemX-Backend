@@ -31,7 +31,7 @@ function normalizeImageUrls(value: unknown): string[] | null {
   return null;
 }
 
-export function previewLastMessage(
+function previewLastMessage(
   content: string,
   messageType: string,
   imageUrls: string[] | null

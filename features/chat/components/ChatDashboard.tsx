@@ -12,10 +12,7 @@ import {
 import { createClient } from "@supabase/supabase-js"
 import { createMessagesRealtimeService } from "@/features/chat/realtime/messages-realtime-service"
 import { useAdminChatNotifications } from "@/features/chat/context/admin-chat-notification-context"
-import {
-  normalizeChatMessageRow,
-  type ChatMessage,
-} from "@/features/chat/types/message"
+import type { ChatMessage } from "@/features/chat/types/message"
 import { Button } from "@/components/ui/button"
 import {
   Command,

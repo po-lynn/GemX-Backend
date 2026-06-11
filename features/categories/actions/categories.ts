@@ -1,7 +1,5 @@
 "use server"
 
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
 import { canAdminManageCategories } from "@/features/products/permissions/products"
 import { categoryCreateSchema, categoryUpdateSchema, categoryDeleteSchema } from "@/features/categories/schemas/categories"
 import {
@@ -9,6 +7,8 @@ import {
   updateCategoryInDb,
   deleteCategoryInDb,
 } from "@/features/categories/db/categories"
+import { zodErrorMessage } from "@/lib/form-data"
+import { requireActionRole } from "@/lib/action-guard"
 
 function toSlug(s: string): string {
   return s
@@ -27,11 +27,11 @@ export async function createCategoryAction(formData: FormData) {
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" }
+    return { error: zodErrorMessage(parsed.error) }
   }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageCategories(session.user.role)) {
+  const session = await requireActionRole(canAdminManageCategories)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -57,11 +57,11 @@ export async function updateCategoryAction(formData: FormData) {
     sortOrder: formData.get("sortOrder"),
   })
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" }
+    return { error: zodErrorMessage(parsed.error) }
   }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageCategories(session.user.role)) {
+  const session = await requireActionRole(canAdminManageCategories)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -85,8 +85,8 @@ export async function deleteCategoryAction(formData: FormData) {
     return { error: "Invalid input" }
   }
 
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageCategories(session.user.role)) {
+  const session = await requireActionRole(canAdminManageCategories)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 

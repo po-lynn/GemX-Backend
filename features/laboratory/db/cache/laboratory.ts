@@ -6,11 +6,11 @@ import {
 } from "../laboratory";
 import type { LaboratoryOption, LaboratoryForEdit } from "../laboratory";
 
-export function getLaboratoryGlobalTag() {
+function getLaboratoryGlobalTag() {
   return getGlobalTag("laboratory");
 }
 
-export function getLaboratoryIdTag(id: string) {
+function getLaboratoryIdTag(id: string) {
   return getIdTag("laboratory", id);
 }
 

@@ -4,7 +4,7 @@ import { user } from "@/drizzle/schema/auth-schema"
 import { messages } from "@/drizzle/schema/chat-schema"
 
 /** Distinct user ids that have at least one `messages` row with `userId`. */
-export async function getDistinctChatPeerIdsForUser(userId: string): Promise<string[]> {
+async function getDistinctChatPeerIdsForUser(userId: string): Promise<string[]> {
   const inbound = await db
     .select({ id: messages.senderId })
     .from(messages)

@@ -1,17 +1,17 @@
 "use server"
 
-import { headers } from "next/headers"
-import { auth } from "@/lib/auth"
 import { canAdminManageUsers } from "@/features/users/permissions/users"
 import { getUserById } from "@/features/users/db/users"
 import {
   escrowServiceSettingsSchema,
 } from "@/features/escrow-service-settings/schemas/escrow-service-settings"
 import { saveEscrowServiceSettings } from "@/features/escrow-service-settings/db/escrow-service-settings"
+import { zodErrorMessage } from "@/lib/form-data"
+import { requireActionRole } from "@/lib/action-guard"
 
 export async function saveEscrowServiceSettingsAction(formData: FormData) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers)
+  if (!session) {
     return { error: "Unauthorized" }
   }
 
@@ -22,7 +22,7 @@ export async function saveEscrowServiceSettingsAction(formData: FormData) {
   })
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     }
   }
 

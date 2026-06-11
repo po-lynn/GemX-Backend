@@ -16,10 +16,9 @@ import {
 } from "@/features/users/db/users";
 import type { UpdateUserInput } from "@/features/users/db/users";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined);
-}
 
 export async function createUserAction(formData: FormData) {
   const parsed = userCreateSchema.safeParse({
@@ -40,11 +39,11 @@ export async function createUserAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const email = (parsed.data.email ?? "").trim();
@@ -125,11 +124,11 @@ export async function updateUserAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const { userId, ...rest } = parsed.data;
@@ -154,12 +153,12 @@ export async function changeUserPasswordAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -191,8 +190,8 @@ export async function deleteUserAction(formData: FormData) {
     userId: formData.get("userId"),
   });
   if (!parsed.success) return { error: "Invalid input" };
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageUsers(session.user.role)) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   if (session.user.id === parsed.data.userId) {

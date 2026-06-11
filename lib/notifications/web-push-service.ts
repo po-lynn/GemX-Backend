@@ -25,7 +25,7 @@ const GLOBAL_SUBSCRIBE_URL = "/api/push/global/subscribe";
  * Reusable web push service: permission, FCM token, global topic subscription, foreground messages.
  * No user authentication required.
  */
-export class WebPushNotificationService {
+class WebPushNotificationService {
   private app: FirebaseApp | null = null;
   private messaging: Messaging | null = null;
   private currentToken: string | null = null;

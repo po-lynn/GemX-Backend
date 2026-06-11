@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { revalidateLaboratoryCache } from "@/features/laboratory/db/cache/laboratory";
 import { canAdminManageLaboratory } from "@/features/laboratory/permissions/laboratory";
 import {
@@ -14,10 +12,9 @@ import {
   updateLaboratoryInDb,
   deleteLaboratoryInDb,
 } from "@/features/laboratory/db/laboratory";
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined);
-}
 
 export async function createLaboratoryAction(formData: FormData) {
   const parsed = laboratoryCreateSchema.safeParse({
@@ -30,12 +27,12 @@ export async function createLaboratoryAction(formData: FormData) {
   if (!parsed.success) {
     return {
       error:
-        parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+        zodErrorMessage(parsed.error),
     };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageLaboratory(session.user.role)) {
+  const session = await requireActionRole(canAdminManageLaboratory);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -62,12 +59,12 @@ export async function updateLaboratoryAction(formData: FormData) {
   if (!parsed.success) {
     return {
       error:
-        parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+        zodErrorMessage(parsed.error),
     };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageLaboratory(session.user.role)) {
+  const session = await requireActionRole(canAdminManageLaboratory);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 
@@ -87,8 +84,8 @@ export async function deleteLaboratoryAction(formData: FormData) {
     return { error: "Invalid input" };
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageLaboratory(session.user.role)) {
+  const session = await requireActionRole(canAdminManageLaboratory);
+  if (!session) {
     return { error: "Unauthorized" };
   }
 

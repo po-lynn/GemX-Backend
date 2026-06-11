@@ -1,7 +1,7 @@
 import { getDirectConversationId } from "@/features/chat/lib/conversation-id";
 import type { NotificationScreen } from "@/features/notifications/types";
 
-export const CHAT_FCM_DATA_KEYS = {
+const CHAT_FCM_DATA_KEYS = {
   type: "type",
   screen: "screen",
   senderId: "senderId",

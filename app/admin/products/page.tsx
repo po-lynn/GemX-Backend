@@ -12,7 +12,7 @@ const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as c
 type View = (typeof VIEWS)[number]
 
 type Props = {
-  searchParams: Promise<{ page?: string; view?: string; search?: string }>
+  searchParams: Promise<{ page?: string; view?: string; search?: string; status?: string }>
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
@@ -24,9 +24,12 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   const view: View = (VIEWS as readonly string[]).includes(params.view ?? "")
     ? (params.view as View)
     : "all"
+  const statusFilter = params.status?.trim() || undefined
 
   const viewFilter = {
-    all:       {},
+    all:       statusFilter === "archive"
+                 ? { status: "archive" as const }
+                 : { excludeStatuses: ["archive"] as const },
     pending:   { moderationStatus: "pending" as const },
     featured:  { isFeatured: true },
     collector: { isCollectorPiece: true },

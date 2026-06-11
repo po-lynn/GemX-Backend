@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { canAdminManageNews } from "@/features/news/permissions/news";
 import {
   newsCreateSchema,
@@ -15,10 +13,9 @@ import {
   getNewsById,
 } from "@/features/news/db/news";
 import { sendNewsPublishedNotification } from "@/features/notifications/services/global-push";
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined);
-}
 
 export async function createNewsAction(formData: FormData) {
   const parsed = newsCreateSchema.safeParse({
@@ -29,11 +26,11 @@ export async function createNewsAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageNews(session.user.role)) {
+  const session = await requireActionRole(canAdminManageNews);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const publishDate =
@@ -64,11 +61,11 @@ export async function updateNewsAction(formData: FormData) {
   });
   if (!parsed.success) {
     return {
-      error: parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+      error: zodErrorMessage(parsed.error),
     };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageNews(session.user.role)) {
+  const session = await requireActionRole(canAdminManageNews);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const { newsId, publish: publishRaw, ...rest } = parsed.data;
@@ -95,8 +92,8 @@ export async function deleteNewsAction(formData: FormData) {
     newsId: formData.get("newsId"),
   });
   if (!parsed.success) return { error: "Invalid input" };
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageNews(session.user.role)) {
+  const session = await requireActionRole(canAdminManageNews);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const deleted = await deleteNewsInDb(parsed.data.newsId);

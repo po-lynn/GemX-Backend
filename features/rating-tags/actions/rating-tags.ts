@@ -1,7 +1,5 @@
 "use server"
 
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
 import { revalidateRatingTagCache } from "@/features/rating-tags/db/cache/rating-tags"
 import { canAdminManageRatingTags } from "@/features/rating-tags/permissions/rating-tags"
 import {
@@ -14,6 +12,8 @@ import {
   deleteRatingTagInDb,
   updateRatingTagInDb,
 } from "@/features/rating-tags/db/rating-tags"
+import { zodErrorMessage } from "@/lib/form-data"
+import { requireActionRole } from "@/lib/action-guard"
 
 function parseBool(formData: FormData, key: string): boolean {
   return formData.get(key) === "on"
@@ -28,11 +28,11 @@ export async function createRatingTagAction(formData: FormData) {
   if (!parsed.success) {
     return {
       error:
-        parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+        zodErrorMessage(parsed.error),
     }
   }
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageRatingTags(session.user.role)) {
+  const session = await requireActionRole(canAdminManageRatingTags)
+  if (!session) {
     return { error: "Unauthorized" }
   }
   const ratingTagId = await createRatingTagInDb(parsed.data)
@@ -50,11 +50,11 @@ export async function updateRatingTagAction(formData: FormData) {
   if (!parsed.success) {
     return {
       error:
-        parsed.error.flatten().formErrors.join(", ") || "Invalid input",
+        zodErrorMessage(parsed.error),
     }
   }
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageRatingTags(session.user.role)) {
+  const session = await requireActionRole(canAdminManageRatingTags)
+  if (!session) {
     return { error: "Unauthorized" }
   }
   const { ratingTagId, name, type, isActive } = parsed.data
@@ -68,8 +68,8 @@ export async function deleteRatingTagAction(formData: FormData) {
     ratingTagId: formData.get("ratingTagId"),
   })
   if (!parsed.success) return { error: "Invalid input" }
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || !canAdminManageRatingTags(session.user.role)) {
+  const session = await requireActionRole(canAdminManageRatingTags)
+  if (!session) {
     return { error: "Unauthorized" }
   }
   const deleted = await deleteRatingTagInDb(parsed.data.ratingTagId)

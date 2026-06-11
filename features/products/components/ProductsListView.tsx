@@ -85,7 +85,7 @@ const STATUS_LABELS: Record<string, string> = {
   active:   "Active",
   pending:  "Pending",
   sold:     "Sold",
-  archive:  "Archive",
+  archive:  "Archived",
   hidden:   "Hidden",
   approved: "Approved",
   rejected: "Rejected",
@@ -139,6 +139,7 @@ export function ProductsListView({
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentSearch = search ?? searchParams.get("search") ?? ""
+  const isArchiveView = searchParams.get("status") === "archive"
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
 
@@ -329,11 +330,11 @@ export function ProductsListView({
       id: "status",
       label: "Status",
       type: "multi",
-      options: (["active", "pending", "sold", "archive", "hidden"] as const).map((s) => ({
+      options: (["active", "pending", "sold", "hidden", "archive"] as const).map((s) => ({
         value: s,
         label: STATUS_LABELS[s] ?? s,
         count: products.filter((p) => p.status === s).length,
-      })).filter((o) => o.count > 0),
+      })),
     },
     {
       id: "moderation",
@@ -377,6 +378,19 @@ export function ProductsListView({
       buildViewHref={(v) => buildViewHref(v, currentSearch)}
       filterDefs={filterDefs}
       groupOptions={groupOptions}
+      defaultFilters={isArchiveView ? { status: ["archive"] } : undefined}
+      onFilterChange={(filterId, values) => {
+        if (filterId === "status") {
+          if (values.includes("archive")) {
+            router.push(`${BASE}?status=archive`)
+            return true
+          }
+          if (isArchiveView) {
+            router.push(BASE)
+            return true
+          }
+        }
+      }}
       getGroupKey={(r, grp) => {
         switch (grp) {
           case "type":       return r.productType === "loose_stone" ? "Loose Stone" : "Jewellery"

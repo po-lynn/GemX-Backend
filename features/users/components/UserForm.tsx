@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AdminFormSection, AdminFormError } from "@/components/admin/admin-ui";
+import { AdminFormError } from "@/components/admin/admin-ui";
 import {
   createUserAction,
   updateUserAction,
@@ -97,7 +97,6 @@ const FEATURE_ICONS: Record<string, React.ElementType> = {
 // ─── Input styles (used by create form only) ──────────────────────────────────
 const inputClass =
   "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition-colors focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60";
-const selectClass = `${inputClass} cursor-pointer`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Props = {
@@ -394,6 +393,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
             <div className="ud-head-row">
               <div className="ud-hero-avatar" data-hue={hue}>
                 {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- preview may be a local blob URL
                   <img
                     src={imageUrl} alt=""
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
@@ -492,6 +492,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
                   <div className="ud-upload">
                     <div className="ud-upload-avatar" data-hue={hue}>
                       {imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- preview may be a local blob URL
                         <img src={imageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
                       ) : (
                         inits || "?"
@@ -1286,6 +1287,7 @@ function UserCreateForm() {
             <div className="ud-head-row">
               <div className="ud-hero-avatar" data-hue={4}>
                 {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- preview may be a local blob URL
                   <img
                     src={imageUrl} alt=""
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
@@ -1438,6 +1440,7 @@ function UserCreateForm() {
               <div className="ud-upload">
                 <div className="ud-upload-avatar" data-hue={4}>
                   {imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- preview may be a local blob URL
                     <img src={imageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
                   ) : (
                     inits || "?"

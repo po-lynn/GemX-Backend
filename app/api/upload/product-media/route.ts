@@ -1,6 +1,11 @@
 import { NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
-import { getSupabaseAdmin, getSupabaseAdminErrorMessage, PRODUCT_IMAGES_BUCKET, PRODUCT_VIDEOS_BUCKET } from "@/lib/supabase/server"
+import {
+  requireUploadContext,
+  storageObjectPath,
+  uploadFileToBucket,
+  validateUploadFile,
+} from "@/lib/supabase/storage-upload"
+import { PRODUCT_IMAGES_BUCKET, PRODUCT_VIDEOS_BUCKET } from "@/lib/supabase/server"
 
 /** Allowed image MIME types for product uploads */
 const ALLOWED_IMAGE_TYPES = [
@@ -21,21 +26,8 @@ const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
 /** Only authenticated users can upload. Public (unauthenticated) users are rejected. */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers })
-    if (!session?.user?.id) {
-      return Response.json(
-        { error: "Unauthorized. Sign in to upload files." },
-        { status: 401 }
-      )
-    }
-
-    const supabase = getSupabaseAdmin()
-    if (!supabase) {
-      return Response.json(
-        { error: getSupabaseAdminErrorMessage() },
-        { status: 503 }
-      )
-    }
+    const { ctx, error } = await requireUploadContext(request)
+    if (error) return error
 
     const formData = await request.formData()
     const type = formData.get("type")?.toString()?.toLowerCase()
@@ -63,46 +55,20 @@ export async function POST(request: NextRequest) {
     const bucket = type === "image" ? PRODUCT_IMAGES_BUCKET : PRODUCT_VIDEOS_BUCKET
     const allowedTypes = type === "image" ? ALLOWED_IMAGE_TYPES : ALLOWED_VIDEO_TYPES
     const maxSize = type === "image" ? MAX_IMAGE_SIZE_BYTES : MAX_VIDEO_SIZE_BYTES
+    const fallbackExt = type === "image" ? "jpg" : "mp4"
 
     const urls: string[] = []
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (!allowedTypes.includes(file.type)) {
-        return Response.json(
-          { error: `Invalid file type: ${file.name}. Allowed: ${allowedTypes.join(", ")}` },
-          { status: 400 }
-        )
-      }
-      if (file.size > maxSize) {
-        return Response.json(
-          { error: `File too large: ${file.name}. Max size: ${maxSize / 1024 / 1024} MB` },
-          { status: 400 }
-        )
-      }
+    for (const file of files) {
+      const invalid = validateUploadFile(file, allowedTypes, maxSize)
+      if (invalid) return invalid
 
-      const ext = file.name.split(".").pop() || (type === "image" ? "jpg" : "mp4")
-      const path = `${session.user.id}/${crypto.randomUUID()}.${ext}`
-
-      const arrayBuffer = await file.arrayBuffer()
-      const { error } = await supabase.storage.from(bucket).upload(path, arrayBuffer, {
-        contentType: file.type,
-        upsert: false,
+      const result = await uploadFileToBucket(ctx.supabase, {
+        bucket,
+        path: storageObjectPath(ctx.user.id, file, fallbackExt),
+        file,
       })
-
-      if (error) {
-        console.error("Supabase storage upload error:", error)
-        const isRls = error.message?.includes("row-level security") || error.message?.includes("violates")
-        const message = isRls
-          ? "Storage RLS blocked upload. Set SUPABASE_SERVICE_ROLE_KEY in .env.local to the service_role secret (Supabase → Project Settings → API → service_role), not the anon key. Restart the dev server."
-          : (error.message || "Upload failed")
-        return Response.json(
-          { error: message },
-          { status: 500 }
-        )
-      }
-
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
-      urls.push(urlData.publicUrl)
+      if (result.error) return result.error
+      urls.push(result.url)
     }
 
     return Response.json({ urls })

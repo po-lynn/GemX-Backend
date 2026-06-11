@@ -3,7 +3,6 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Clock,
   Star,
   TrendingUp,
   Gift,

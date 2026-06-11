@@ -10,7 +10,7 @@ import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
-import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, or, sql, desc } from "drizzle-orm"
+import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, desc } from "drizzle-orm"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -27,6 +27,61 @@ function formatPriceLineForLog(currency: string, price: string): string {
 /** Escape a string for safe use in ILIKE patterns (%, _, \). */
 function escapeLike(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_")
+}
+
+function buildCategoryCondition(categoryId: string | null | undefined) {
+  if (categoryId == null) return undefined
+  return or(
+    eq(product.categoryId, categoryId),
+    exists(
+      db.select().from(productJewelleryGemstone).where(
+        and(
+          eq(productJewelleryGemstone.productId, product.id),
+          eq(productJewelleryGemstone.categoryId, categoryId)
+        )
+      )
+    )
+  )
+}
+
+function buildProductOrderBy(
+  opts: { sortByPublicPriority?: boolean; sortBy?: string; sortOrder?: "asc" | "desc" },
+  search?: string
+) {
+  if (opts.sortByPublicPriority) {
+    const base = [
+      desc(product.isCollectorPiece),
+      desc(product.isPrivilegeAssist),
+      desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
+      desc(product.featured),
+      desc(product.isPromotion),
+      desc(product.createdAt),
+    ]
+    return search
+      ? [desc(sql`ts_rank(to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')), plainto_tsquery('english', ${search}))`), ...base]
+      : base
+  }
+  const dir = opts.sortOrder === "asc" ? asc : desc
+  switch (opts.sortBy) {
+    case "title": return [dir(product.title), desc(product.createdAt)]
+    case "price": return [dir(product.price), desc(product.createdAt)]
+    case "status": return [dir(product.status), desc(product.createdAt)]
+    default: return [dir(product.createdAt)]
+  }
+}
+
+async function fetchFirstProductImages(productIds: string[]): Promise<Map<string, string>> {
+  if (productIds.length === 0) return new Map()
+  const images = await db
+    .select({ productId: productImage.productId, url: productImage.url, sortOrder: productImage.sortOrder })
+    .from(productImage)
+    .where(inArray(productImage.productId, productIds))
+    .orderBy(productImage.sortOrder)
+  const map = new Map<string, string>()
+  for (const img of images) {
+    if (!map.has(img.productId)) map.set(img.productId, img.url)
+  }
+  return map
 }
 
 /** Same spec shape as loose stone; used for jewellery piece gemstones (with categoryId/categoryName). */
@@ -73,7 +128,9 @@ export async function getAdminProductsFromDb(opts: {
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
   status?: "pending" | "active" | "archive" | "sold" | "hidden"
+  excludeStatuses?: ReadonlyArray<"pending" | "active" | "archive" | "sold" | "hidden">
   moderationStatus?: "pending" | "approved" | "rejected"
+  excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: ProductIdentification
@@ -112,23 +169,7 @@ export async function getAdminProductsFromDb(opts: {
       )
     : undefined
 
-  const categoryCondition =
-    opts.categoryId != null
-      ? or(
-          eq(product.categoryId, opts.categoryId),
-          exists(
-            db
-              .select()
-              .from(productJewelleryGemstone)
-              .where(
-                and(
-                  eq(productJewelleryGemstone.productId, product.id),
-                  eq(productJewelleryGemstone.categoryId, opts.categoryId)
-                )
-              )
-          )
-        )
-      : undefined
+  const categoryCondition = buildCategoryCondition(opts.categoryId)
 
   const createdFromDate = opts.createdFrom
     ? new Date(opts.createdFrom + "T00:00:00.000Z")
@@ -142,9 +183,11 @@ export async function getAdminProductsFromDb(opts: {
     opts.productType ? eq(product.productType, opts.productType) : undefined,
     categoryCondition,
     opts.status ? eq(product.status, opts.status) : undefined,
+    opts.excludeStatuses?.length ? notInArray(product.status, [...opts.excludeStatuses]) : undefined,
     opts.moderationStatus
       ? eq(product.moderationStatus, opts.moderationStatus)
       : undefined,
+    opts.excludeModerationStatuses?.length ? notInArray(product.moderationStatus, [...opts.excludeModerationStatuses]) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.metal ? eq(product.metal, opts.metal) : undefined,
     opts.identification ? eq(product.identification, opts.identification) : undefined,
@@ -183,39 +226,7 @@ export async function getAdminProductsFromDb(opts: {
   const whereClause =
     filterConditions.length > 0 ? and(...filterConditions) : undefined
 
-  const orderByColumns = opts.sortByPublicPriority
-    ? search
-      ? [
-          desc(sql`ts_rank(to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')), plainto_tsquery('english', ${search}))`),
-          desc(product.isCollectorPiece),
-          desc(product.isPrivilegeAssist),
-          desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
-          desc(product.featured),
-          desc(product.isPromotion),
-          desc(product.createdAt),
-        ]
-      : [
-          desc(product.isCollectorPiece),
-          desc(product.isPrivilegeAssist),
-          desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
-          desc(product.featured),
-          desc(product.isPromotion),
-          desc(product.createdAt),
-        ]
-    : (() => {
-        const dir = opts.sortOrder === "asc" ? asc : desc
-        switch (opts.sortBy) {
-          case "title":
-            return [dir(product.title), desc(product.createdAt)]
-          case "price":
-            return [dir(product.price), desc(product.createdAt)]
-          case "status":
-            return [dir(product.status), desc(product.createdAt)]
-          case "createdAt":
-          default:
-            return [dir(product.createdAt)]
-        }
-      })()
+  const orderByColumns = buildProductOrderBy(opts, search)
 
   const productsData = await db
     .select({
@@ -259,26 +270,7 @@ export async function getAdminProductsFromDb(opts: {
     .innerJoin(user, eq(product.sellerId, user.id))
     .where(whereClause)
 
-  const productIds = productsData.map((p) => p.id)
-  const images =
-    productIds.length > 0
-      ? await db
-          .select({
-            productId: productImage.productId,
-            url: productImage.url,
-            sortOrder: productImage.sortOrder,
-          })
-          .from(productImage)
-          .where(inArray(productImage.productId, productIds))
-          .orderBy(productImage.sortOrder)
-      : []
-
-  const imageByProduct = new Map<string, string>()
-  for (const img of images) {
-    if (!imageByProduct.has(img.productId)) {
-      imageByProduct.set(img.productId, img.url)
-    }
-  }
+  const imageByProduct = await fetchFirstProductImages(productsData.map((p) => p.id))
 
   const products: AdminProductRow[] = productsData.map((p) => ({
     id: p.id,
@@ -404,23 +396,7 @@ export async function getProductsBySellerId(
       )
     : undefined
 
-  const categoryConditionSeller =
-    opts.categoryId != null
-      ? or(
-          eq(product.categoryId, opts.categoryId),
-          exists(
-            db
-              .select()
-              .from(productJewelleryGemstone)
-              .where(
-                and(
-                  eq(productJewelleryGemstone.productId, product.id),
-                  eq(productJewelleryGemstone.categoryId, opts.categoryId)
-                )
-              )
-          )
-        )
-      : undefined
+  const categoryConditionSeller = buildCategoryCondition(opts.categoryId)
 
   const createdFromDate = opts.createdFrom
     ? new Date(opts.createdFrom + "T00:00:00.000Z")
@@ -461,29 +437,7 @@ export async function getProductsBySellerId(
 
   const whereClause = and(...filterConditions)
 
-  const orderByColumnsSeller = opts.sortByPublicPriority
-    ? [
-        desc(product.isCollectorPiece),
-        desc(product.isPrivilegeAssist),
-        desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
-        desc(product.featured),
-        desc(product.isPromotion),
-        desc(product.createdAt),
-      ]
-    : (() => {
-        const dir = opts.sortOrder === "asc" ? asc : desc
-        switch (opts.sortBy) {
-          case "title":
-            return [dir(product.title), desc(product.createdAt)]
-          case "price":
-            return [dir(product.price), desc(product.createdAt)]
-          case "status":
-            return [dir(product.status), desc(product.createdAt)]
-          case "createdAt":
-          default:
-            return [dir(product.createdAt)]
-        }
-      })()
+  const orderByColumnsSeller = buildProductOrderBy(opts)
 
   const productsData = await db
     .select({
@@ -527,26 +481,7 @@ export async function getProductsBySellerId(
     .innerJoin(user, eq(product.sellerId, user.id))
     .where(whereClause)
 
-  const productIds = productsData.map((p) => p.id)
-  const images =
-    productIds.length > 0
-      ? await db
-          .select({
-            productId: productImage.productId,
-            url: productImage.url,
-            sortOrder: productImage.sortOrder,
-          })
-          .from(productImage)
-          .where(inArray(productImage.productId, productIds))
-          .orderBy(productImage.sortOrder)
-      : []
-
-  const imageByProduct = new Map<string, string>()
-  for (const img of images) {
-    if (!imageByProduct.has(img.productId)) {
-      imageByProduct.set(img.productId, img.url)
-    }
-  }
+  const imageByProduct = await fetchFirstProductImages(productsData.map((p) => p.id))
 
   const products: AdminProductRow[] = productsData.map((p) => ({
     id: p.id,
@@ -1165,10 +1100,10 @@ export async function getAdminProductCountsFromDb(): Promise<{
 }> {
   const [row] = await db
     .select({
-      all:       sql<number>`count(*)::int`,
-      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending')::int`,
-      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true)::int`,
-      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true)::int`,
+      all:       sql<number>`count(*) filter (where ${product.status} != 'archive')::int`,
+      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} != 'archive')::int`,
+      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} != 'archive')::int`,
+      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} != 'archive')::int`,
       sold:      sql<number>`count(*) filter (where ${product.status} = 'sold')::int`,
       drafts:    sql<number>`count(*) filter (where ${product.status} = 'hidden')::int`,
     })

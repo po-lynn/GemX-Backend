@@ -1,7 +1,5 @@
 "use server";
 
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { revalidateOriginCache } from "@/features/origin/db/cache/origin";
 import { canAdminManageOrigin } from "@/features/origin/permissions/origin";
 import {
@@ -14,10 +12,9 @@ import {
   updateOriginInDb,
   deleteOriginInDb,
 } from "@/features/origin/db/origin";
+import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
+import { requireActionRole } from "@/lib/action-guard";
 
-function emptyToNull<T>(v: T): T | null | undefined {
-  return v === "" ? null : (v ?? undefined);
-}
 
 export async function createOriginAction(formData: FormData) {
   const parsed = originCreateSchema.safeParse({
@@ -25,10 +22,10 @@ export async function createOriginAction(formData: FormData) {
     country: emptyToNull(formData.get("country")),
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
+    return { error: zodErrorMessage(parsed.error) };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageOrigin(session.user.role)) {
+  const session = await requireActionRole(canAdminManageOrigin);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const originId = await createOriginInDb({
@@ -46,10 +43,10 @@ export async function updateOriginAction(formData: FormData) {
     country: emptyToNull(formData.get("country")),
   });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().formErrors.join(", ") || "Invalid input" };
+    return { error: zodErrorMessage(parsed.error) };
   }
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageOrigin(session.user.role)) {
+  const session = await requireActionRole(canAdminManageOrigin);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const { originId, ...data } = parsed.data;
@@ -63,8 +60,8 @@ export async function deleteOriginAction(formData: FormData) {
     originId: formData.get("originId"),
   });
   if (!parsed.success) return { error: "Invalid input" };
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canAdminManageOrigin(session.user.role)) {
+  const session = await requireActionRole(canAdminManageOrigin);
+  if (!session) {
     return { error: "Unauthorized" };
   }
   const deleted = await deleteOriginInDb(parsed.data.originId);

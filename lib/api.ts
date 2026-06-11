@@ -5,7 +5,7 @@ const DEFAULT_MAX_AGE = 60
 const DEFAULT_SWR = 300
 
 /** Cache-Control for public GET (edge/CDN). Revalidate via updateTag on mutations. */
-export const CACHE_CONTROL_PUBLIC =
+const CACHE_CONTROL_PUBLIC =
   `public, s-maxage=${DEFAULT_MAX_AGE}, stale-while-revalidate=${DEFAULT_SWR}` as const
 
 /** Cache-Control for mutations and errors (never cache). */

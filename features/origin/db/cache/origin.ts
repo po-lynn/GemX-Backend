@@ -3,11 +3,11 @@ import { getGlobalTag, getIdTag } from "@/lib/dataCache";
 import { getAllOrigins, getOriginById } from "../origin";
 import type { OriginOption, OriginForEdit } from "../origin";
 
-export function getOriginGlobalTag() {
+function getOriginGlobalTag() {
   return getGlobalTag("origin");
 }
 
-export function getOriginIdTag(id: string) {
+function getOriginIdTag(id: string) {
   return getIdTag("origin", id);
 }
 

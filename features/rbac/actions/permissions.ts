@@ -1,7 +1,6 @@
 "use server"
 
-import { headers } from "next/headers"
-import { auth } from "@/lib/auth"
+import { requireActionRole } from "@/lib/action-guard"
 import { setUserPermissions } from "@/features/rbac/db/permissions"
 import { updatePermissionsSchema } from "@/features/rbac/schemas/permissions"
 import { z } from "zod"
@@ -14,8 +13,8 @@ export async function saveUserPermissionsAction(
   userId: string,
   permissions: Record<string, boolean>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session || session.user.role !== "admin") {
+  const session = await requireActionRole((role) => role === "admin")
+  if (!session) {
     return { ok: false, error: "Unauthorized" }
   }
   const parsed = saveUserPermissionsSchema.safeParse({ userId, permissions })

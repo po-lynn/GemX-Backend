@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
-import { connection } from "next/server";
 import { POST } from "@/app/api/admin/push/global/route";
 import { auth } from "@/lib/auth";
 

@@ -2,27 +2,7 @@
 import { auth } from "@/lib/auth";
 import { mobileDevicePayloadSchema } from "@/features/notifications/schemas/device";
 import { handleAuthDeviceAndNotifications } from "@/features/notifications/services/register-device-on-auth";
-
-function normalizeMyanmarPhone(input: string) {
-  let p = String(input || "").trim();
-
-  // remove spaces and dashes
-  p = p.replace(/[\s-]/g, "");
-
-  // must start with 09
-  if (!p.startsWith("09")) return null;
-
-  // must be digits only after 09
-  if (!/^09\d{7,15}$/.test(p)) return null;
-
-  // convert 09xxxxxxxx -> +959xxxxxxxx
-  return "+95" + p.slice(1);
-}
-
-function internalEmailFromPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  return `user_${digits}@phone.local`;
-}
+import { normalizeMyanmarPhone, internalEmailFromPhone } from "@/lib/phone";
 
 export async function POST(req: Request) {
   try {

@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { userDevice } from "@/drizzle/schema/user-devices-schema";
-import type { RegisterUserDeviceInput, UserDeviceRecord } from "@/features/notifications/types";
+import type { RegisterUserDeviceInput } from "@/features/notifications/types";
 import { and, eq, inArray } from "drizzle-orm";
 
 export async function upsertUserDevice(input: RegisterUserDeviceInput): Promise<void> {
@@ -31,14 +31,6 @@ export async function upsertUserDevice(input: RegisterUserDeviceInput): Promise<
         updatedAt: now,
       },
     });
-}
-
-export async function touchUserDevice(userId: string, fcmToken: string): Promise<void> {
-  const now = new Date();
-  await db
-    .update(userDevice)
-    .set({ lastActiveAt: now, updatedAt: now })
-    .where(and(eq(userDevice.userId, userId), eq(userDevice.fcmToken, fcmToken)));
 }
 
 export async function removeUserDevice(userId: string, fcmToken: string): Promise<void> {
@@ -107,24 +99,4 @@ export async function getUserDevicesByUserIds(
     byUser[r.userId].push({ token: r.token, platform: r.platform });
   }
   return byUser;
-}
-
-export async function getUserDevicesForUser(userId: string): Promise<UserDeviceRecord[]> {
-  const rows = await db.select().from(userDevice).where(eq(userDevice.userId, userId));
-  return rows.map(mapRow);
-}
-
-function mapRow(row: typeof userDevice.$inferSelect): UserDeviceRecord {
-  return {
-    id: row.id,
-    userId: row.userId,
-    fcmToken: row.fcmToken,
-    platform: row.platform,
-    deviceId: row.deviceId,
-    deviceName: row.deviceName,
-    deviceModel: row.deviceModel,
-    osVersion: row.osVersion,
-    appVersion: row.appVersion,
-    lastActiveAt: row.lastActiveAt,
-  };
 }

@@ -3,11 +3,11 @@ import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import { getAllRatingTags, getRatingTagById } from "../rating-tags"
 import type { RatingTagForEdit, RatingTagRow } from "../rating-tags"
 
-export function getRatingTagGlobalTag() {
+function getRatingTagGlobalTag() {
   return getGlobalTag("ratingTag")
 }
 
-export function getRatingTagIdTag(id: string) {
+function getRatingTagIdTag(id: string) {
   return getIdTag("ratingTag", id)
 }
 

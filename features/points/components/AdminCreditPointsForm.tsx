@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Search, Plus, Minus, User } from "lucide-react"
+import { Search, Plus, Minus } from "lucide-react"
 import {
   adminCreditUserPointsAction,
   adminDeductUserPointsAction,

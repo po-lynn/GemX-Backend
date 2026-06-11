@@ -8,11 +8,11 @@ import {
 } from "../products"
 import type { ProductForEdit } from "../products"
 
-export function getProductsGlobalTag() {
+function getProductsGlobalTag() {
   return getGlobalTag("products")
 }
 
-export function getProductIdTag(id: string) {
+function getProductIdTag(id: string) {
   return getIdTag("products", id)
 }
 
@@ -29,7 +29,9 @@ export async function getAdminProducts(opts: {
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
   status?: "pending" | "active" | "archive" | "sold" | "hidden"
+  excludeStatuses?: ReadonlyArray<"pending" | "active" | "archive" | "sold" | "hidden">
   moderationStatus?: "pending" | "approved" | "rejected"
+  excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
