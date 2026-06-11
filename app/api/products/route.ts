@@ -10,6 +10,7 @@ import { productCreateSchema } from "@/features/products/schemas/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
 import { normalizeProductBody } from "@/features/products/api/normalize-product-body"
+import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { maskPrice } from "@/lib/formatters"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import type { AdminProductRow } from "@/features/products/db/products"
@@ -203,6 +204,21 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { "Cache-Control": "no-store" } }
       )
     }
+    const featuredPoints =
+      (parsed.data.isFeatured ?? false) ? Math.max(0, parsed.data.featured ?? 0) : 0
+
+    if (featuredPoints > 0) {
+      const { available } = await getUserPointBalance(session.user.id)
+      if (available < featuredPoints) {
+        return jsonError("Insufficient points balance", 400)
+      }
+
+      const deduction = await deductUserPoints(session.user.id, featuredPoints)
+      if (!deduction.success) {
+        return jsonError("Insufficient points balance", 400)
+      }
+    }
+
     const createInput = {
       ...parsed.data,
       sellerId: session.user.id,

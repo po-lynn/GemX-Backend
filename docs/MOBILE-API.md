@@ -6,7 +6,7 @@
 
 ## Recent changes
 
-- **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **PATCH `/api/products/:id`** applies the same rule when **`featured`** points increase (e.g. enabling featured or raising cost): seller balance is checked first; **no** deduction and **no** product update on failure. See **5.6**.
+- **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **POST `/api/products`** and **PATCH `/api/products/:id`** apply the same rule when creating or updating with **`isFeatured: true`** and a **`featured`** point cost: seller balance is checked first; **no** deduction and **no** product create/update on failure. See **5.5** and **5.6**.
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
 - **Feature settings (full, mobile)** – **GET `/api/mobile/feature-settings`** (no auth): returns both **`homeFeaturedLimit`** (admin-configured max homepage featured slots) and the full **`pricingTiers`** array (same tiers as **GET `/api/mobile/feature-pricing-tiers`** but with optional **`enabled`** flag per tier). Use when you need to show remaining capacity alongside tier selection. See **5.4.1b**.
@@ -2870,6 +2870,8 @@ Legacy endpoint — credits points immediately based on a payment amount and cur
 - `isFeatured` (boolean) – mark as featured
 - `featured` (number) – points/priority for featured listing (integer >= 0). If sent as number, backend floors it.
 - `featureDurationDays` (number) – featured duration in days (0–365). If `isFeatured=true` and `featureDurationDays > 0`, backend sets featured expiry time automatically.
+
+**Featuring via POST:** When **`isFeatured`** is `true` and **`featured`** is greater than **0**, the server checks the **seller’s** available point balance (`user.points`) against that cost **before** creating the product. If balance is insufficient, the request fails with **400** `{ "error": "Insufficient points balance" }` — **no points are deducted** and the product is **not** created. A second check runs at deduction time for concurrent spends.
 - `isCollectorPiece` (boolean) – high-value collector piece (e.g. 1M+)
 - `isPrivilegeAssist` (boolean) – product sold by us
 - `isPromotion` (boolean) – mark as promotion item (also accepts `"true"` / `"1"` string)
@@ -3052,6 +3054,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 **Errors:**
 
 - **400** – Validation failed. Body: `{ "error": "message", "details": { "field": ["error"] } }`
+- **400** – `{ "error": "Insufficient points balance" }` — `isFeatured: true` with `featured` > 0 but the seller does not have enough available points (no deduction, no product created).
 - **401** – `{ "error": "Unauthorized" }`
 
 ---

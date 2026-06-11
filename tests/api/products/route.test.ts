@@ -4,6 +4,7 @@ import { connection } from "next/server"
 import { GET, POST } from "@/app/api/products/route"
 import { getAdminProducts } from "@/features/products/db/cache/products"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
+import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { auth } from "@/lib/auth"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -19,6 +20,10 @@ vi.mock("@/features/products/db/cache/products", () => ({
 vi.mock("@/features/products/db/products", () => ({
   createProductInDb: vi.fn(),
   getAdminProductsFromDb: vi.fn(),
+}))
+vi.mock("@/features/points/db/points", () => ({
+  deductUserPoints: vi.fn(),
+  getUserPointBalance: vi.fn(),
 }))
 
 /** Valid category UUID for product create tests (categoryId is required). */
@@ -189,6 +194,15 @@ describe("POST /api/products", () => {
   beforeEach(() => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
     vi.mocked(createProductInDb).mockResolvedValue("new-id")
+    vi.mocked(getUserPointBalance).mockResolvedValue({
+      available: 10_000,
+      reserved: 0,
+      lifetime: 10_000,
+    })
+    vi.mocked(deductUserPoints).mockResolvedValue({
+      success: true,
+      remainingPoints: 9_500,
+    })
   })
 
   it("returns 401 when not authenticated", async () => {
@@ -241,6 +255,33 @@ describe("POST /api/products", () => {
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data).toHaveProperty("error")
+    expect(createProductInDb).not.toHaveBeenCalled()
+  })
+
+  it("returns 400 when seller lacks points to create as featured", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", role: "user" },
+    } as never)
+    vi.mocked(getUserPointBalance).mockResolvedValue({
+      available: 100,
+      reserved: 0,
+      lifetime: 500,
+    })
+
+    const req = new Request("http://localhost/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...validLooseStoneBody,
+        isFeatured: true,
+        featured: 500,
+      }),
+    })
+    const res = await POST(req as NextRequest)
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: "Insufficient points balance" })
+    expect(deductUserPoints).not.toHaveBeenCalled()
     expect(createProductInDb).not.toHaveBeenCalled()
   })
 
