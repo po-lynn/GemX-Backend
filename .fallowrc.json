@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "ignoreExports": [
+    {
+      "file": "features/points/api/purchase-request-response.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "features/points/db/points.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "features/users/db/users.ts",
+      "exports": ["*"]
+    }
+  ]
+}
