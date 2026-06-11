@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**.
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
 - **Feature settings (full, mobile)** – **GET `/api/mobile/feature-settings`** (no auth): returns both **`homeFeaturedLimit`** (admin-configured max homepage featured slots) and the full **`pricingTiers`** array (same tiers as **GET `/api/mobile/feature-pricing-tiers`** but with optional **`enabled`** flag per tier). Use when you need to show remaining capacity alongside tier selection. See **5.4.1b**.
@@ -1804,7 +1805,8 @@ Spend points to feature the seller's own product on the homepage for a selected 
 
 - Both `durationDays` and `points` must together match one configured tier exactly. If the pair doesn't match any tier, the request is rejected.
 - User must own the product; 403 if not.
-- Points are atomically deducted — if balance is insufficient the request is rejected without partial changes.
+- **Insufficient points:** The server compares the user's **available** point balance (`user.points`) to the tier cost **before** featuring. If balance &lt; tier `points`, the request fails with **400** `{ "error": "Insufficient points balance" }` — **no points are deducted** and the product is **not** marked featured. A second atomic check runs at deduction time (same error) to handle concurrent spends.
+- Points and featuring run in one DB transaction on success: deduct balance, then set `isFeatured`, `featured`, `featuredDurationDays`, and `featuredExpiresAt`.
 - The admin-configured homepage featured limit is enforced. If the limit is already full, the request is rejected until an existing featured product expires.
 - On success, the product is marked `isFeatured = true` with a `featuredExpiresAt` set to now + `durationDays`.
 

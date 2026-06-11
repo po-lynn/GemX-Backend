@@ -5,7 +5,11 @@ import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { user } from "@/drizzle/schema/auth-schema"
-import { getFeatureSettings, logPointTransaction } from "@/features/points/db/points"
+import {
+  getFeatureSettings,
+  getUserPointBalance,
+  logPointTransaction,
+} from "@/features/points/db/points"
 import { CACHE_CONTROL_NO_STORE, jsonError, jsonUncached } from "@/lib/api"
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
 
@@ -63,6 +67,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return jsonError("Invalid duration or points tier", 400)
     }
 
+    const [row] = await db
+      .select({
+        id: product.id,
+        sellerId: product.sellerId,
+      })
+      .from(product)
+      .where(eq(product.id, id))
+      .limit(1)
+    if (!row) return jsonError("Product not found", 404)
+    if (row.sellerId !== session.user.id) return jsonError("Forbidden", 403)
+
+    const { available } = await getUserPointBalance(session.user.id)
+    if (available < selectedTier.points) {
+      return jsonError("Insufficient points balance", 400)
+    }
+
     // Enforce homepage featured product limit
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -80,17 +100,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         400
       )
     }
-
-    const [row] = await db
-      .select({
-        id: product.id,
-        sellerId: product.sellerId,
-      })
-      .from(product)
-      .where(eq(product.id, id))
-      .limit(1)
-    if (!row) return jsonError("Product not found", 404)
-    if (row.sellerId !== session.user.id) return jsonError("Forbidden", 403)
 
     const result = await db.transaction(async (tx) => {
       const [updatedUser] = await tx
@@ -112,28 +121,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .update(product)
         .set({
           isFeatured: true,
-          // Reuse existing integer field to store points spent for featuring.
           featured: selectedTier.points,
           featuredDurationDays: selectedTier.durationDays,
-          featuredExpiresAt: new Date(Date.now() + selectedTier.durationDays * 24 * 60 * 60 * 1000),
+          featuredExpiresAt: new Date(
+            Date.now() + selectedTier.durationDays * 24 * 60 * 60 * 1000
+          ),
         })
         .where(eq(product.id, id))
-
-      await logPointTransaction({
-        userId: session.user.id,
-        type: "feature_activation",
-        direction: "debit",
-        amount: selectedTier.points,
-        status: "completed",
-        referenceId: id,
-        referenceType: "product",
-        description: `Featured · ${selectedTier.durationDays}d`,
-      })
 
       return { ok: true as const, remainingPoints: updatedUser.points }
     })
 
-    if (!result.ok) return jsonError("Insufficient points balance", 400)
+    if (!result.ok) {
+      return jsonError("Insufficient points balance", 400)
+    }
+
+    await logPointTransaction({
+      userId: session.user.id,
+      type: "feature_activation",
+      direction: "debit",
+      amount: selectedTier.points,
+      status: "completed",
+      referenceId: id,
+      referenceType: "product",
+      description: `Featured · ${selectedTier.durationDays}d`,
+    })
 
     revalidateProductsCache(id)
     return jsonUncached({
