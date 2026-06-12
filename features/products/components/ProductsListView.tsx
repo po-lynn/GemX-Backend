@@ -125,6 +125,10 @@ type Props = {
   pageSize: number
   total: number
   search?: string
+  priceMinUSD?: string
+  priceMaxUSD?: string
+  priceMinMMK?: string
+  priceMaxMMK?: string
 }
 
 export function ProductsListView({
@@ -135,11 +139,29 @@ export function ProductsListView({
   pageSize,
   total,
   search,
+  priceMinUSD,
+  priceMaxUSD,
+  priceMinMMK,
+  priceMaxMMK,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentSearch = search ?? searchParams.get("search") ?? ""
   const isArchiveView = searchParams.get("status") === "archive"
+
+  const defaultPriceFilters: Record<string, string[]> = {}
+  if (priceMinUSD || priceMaxUSD) {
+    defaultPriceFilters.priceUSD = [
+      ...(priceMinUSD ? [`min:${priceMinUSD}`] : []),
+      ...(priceMaxUSD ? [`max:${priceMaxUSD}`] : []),
+    ]
+  }
+  if (priceMinMMK || priceMaxMMK) {
+    defaultPriceFilters.priceMMK = [
+      ...(priceMinMMK ? [`min:${priceMinMMK}`] : []),
+      ...(priceMaxMMK ? [`max:${priceMaxMMK}`] : []),
+    ]
+  }
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
 
@@ -358,6 +380,8 @@ export function ProductsListView({
       ].filter((o) => o.count > 0),
     },
     { id: "createdAt", label: "Created", type: "daterange" },
+    { id: "priceUSD", label: "USD Price", type: "numrange" as const },
+    { id: "priceMMK", label: "MMK Price", type: "numrange" as const },
   ]
 
   const groupOptions: GroupOption[] = [
@@ -378,7 +402,10 @@ export function ProductsListView({
       buildViewHref={(v) => buildViewHref(v, currentSearch)}
       filterDefs={filterDefs}
       groupOptions={groupOptions}
-      defaultFilters={isArchiveView ? { status: ["archive"] } : undefined}
+      defaultFilters={{
+        ...(isArchiveView ? { status: ["archive"] } : {}),
+        ...defaultPriceFilters,
+      }}
       onFilterChange={(filterId, values) => {
         if (filterId === "status") {
           if (values.includes("archive")) {
@@ -389,6 +416,18 @@ export function ProductsListView({
             router.push(BASE)
             return true
           }
+        }
+        if (filterId === "priceUSD" || filterId === "priceMMK") {
+          const params = new URLSearchParams(searchParams.toString())
+          const minKey = filterId === "priceUSD" ? "priceMinUSD" : "priceMinMMK"
+          const maxKey = filterId === "priceUSD" ? "priceMaxUSD" : "priceMaxMMK"
+          const min = values.find((v) => v.startsWith("min:"))?.substring(4)
+          const max = values.find((v) => v.startsWith("max:"))?.substring(4)
+          if (min) params.set(minKey, min); else params.delete(minKey)
+          if (max) params.set(maxKey, max); else params.delete(maxKey)
+          params.set("page", "1")
+          router.push(`${BASE}?${params.toString()}`)
+          return true
         }
       }}
       getGroupKey={(r, grp) => {
@@ -427,6 +466,24 @@ export function ProductsListView({
             const d = new Date(r.createdAt)
             if (from && d < new Date(from + "T00:00:00")) return false
             if (to   && d > new Date(to   + "T23:59:59")) return false
+            return true
+          }
+          case "priceUSD": {
+            if (r.currency !== "USD") return false
+            const min = vals.find((v) => v.startsWith("min:"))?.substring(4)
+            const max = vals.find((v) => v.startsWith("max:"))?.substring(4)
+            const p = Number(r.price)
+            if (min && p < Number(min)) return false
+            if (max && p > Number(max)) return false
+            return true
+          }
+          case "priceMMK": {
+            if (r.currency !== "MMK") return false
+            const min = vals.find((v) => v.startsWith("min:"))?.substring(4)
+            const max = vals.find((v) => v.startsWith("max:"))?.substring(4)
+            const p = Number(r.price)
+            if (min && p < Number(min)) return false
+            if (max && p > Number(max)) return false
             return true
           }
           default: return null
