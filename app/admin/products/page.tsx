@@ -117,10 +117,10 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         pageSize={PAGE_SIZE}
         total={total}
         search={search}
-        priceMinUSD={params.priceMinUSD}
-        priceMaxUSD={params.priceMaxUSD}
-        priceMinMMK={params.priceMinMMK}
-        priceMaxMMK={params.priceMaxMMK}
+        priceMinUSD={priceMinUSD !== undefined ? String(priceMinUSD) : undefined}
+        priceMaxUSD={priceMaxUSD !== undefined ? String(priceMaxUSD) : undefined}
+        priceMinMMK={priceMinMMK !== undefined ? String(priceMinMMK) : undefined}
+        priceMaxMMK={priceMaxMMK !== undefined ? String(priceMaxMMK) : undefined}
       />
     </div>
   )

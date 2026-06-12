@@ -99,18 +99,28 @@ function ProductStatusPill({ status }: { status: string }) {
 
 const BASE = "/admin/products"
 
-function buildViewHref(view: string, search?: string): string {
+const PRICE_PARAMS = ["priceMinUSD", "priceMaxUSD", "priceMinMMK", "priceMaxMMK"] as const
+
+function buildViewHref(view: string, search?: string, sp?: URLSearchParams): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
   if (search?.trim()) p.set("search", search.trim())
+  for (const key of PRICE_PARAMS) {
+    const val = sp?.get(key)
+    if (val) p.set(key, val)
+  }
   p.set("page", "1")
   return `${BASE}?${p.toString()}`
 }
 
-function buildPageHref(page: number, view: string, search?: string): string {
+function buildPageHref(page: number, view: string, search?: string, sp?: URLSearchParams): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
   if (search?.trim()) p.set("search", search.trim())
+  for (const key of PRICE_PARAMS) {
+    const val = sp?.get(key)
+    if (val) p.set(key, val)
+  }
   p.set("page", String(page))
   return `${BASE}?${p.toString()}`
 }
@@ -168,7 +178,7 @@ export function ProductsListView({
   function handleSearch(q: string) {
     if (searchDebounce.current) clearTimeout(searchDebounce.current)
     searchDebounce.current = setTimeout(() => {
-      router.push(buildPageHref(1, activeView, q))
+      router.push(buildPageHref(1, activeView, q, searchParams))
     }, 400)
   }
   const isPending = pendingAction !== null
@@ -399,7 +409,7 @@ export function ProductsListView({
       columnDefs={columnDefs}
       views={views}
       activeView={activeView}
-      buildViewHref={(v) => buildViewHref(v, currentSearch)}
+      buildViewHref={(v) => buildViewHref(v, currentSearch, searchParams)}
       filterDefs={filterDefs}
       groupOptions={groupOptions}
       defaultFilters={{
@@ -536,7 +546,7 @@ export function ProductsListView({
       total={total}
       defaultSearch={currentSearch}
       onSearch={handleSearch}
-      buildPageHref={(p) => buildPageHref(p, activeView, currentSearch)}
+      buildPageHref={(p) => buildPageHref(p, activeView, currentSearch, searchParams)}
       emptyMessage="No products found. Try adjusting the filters or view."
     />
   )
