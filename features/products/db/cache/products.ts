@@ -48,6 +48,10 @@ export async function getAdminProducts(opts: {
   sortByPublicPriority?: boolean
   sortBy?: "createdAt" | "title" | "price" | "status"
   sortOrder?: "asc" | "desc"
+  priceMinUSD?: number
+  priceMaxUSD?: number
+  priceMinMMK?: number
+  priceMaxMMK?: number
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())

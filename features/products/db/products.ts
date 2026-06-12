@@ -148,6 +148,10 @@ export async function getAdminProductsFromDb(opts: {
   collectorPieceApprovedForUserId?: string
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
+  priceMinUSD?: number
+  priceMaxUSD?: number
+  priceMinMMK?: number
+  priceMaxMMK?: number
   /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
   sortByPublicPriority?: boolean
   /** Admin list sort column */
@@ -179,6 +183,27 @@ export async function getAdminProductsFromDb(opts: {
   const createdToDate = opts.createdTo
     ? new Date(opts.createdTo + "T23:59:59.999Z")
     : undefined
+
+  const usdRange =
+    opts.priceMinUSD != null || opts.priceMaxUSD != null
+      ? and(
+          eq(product.currency, "USD"),
+          opts.priceMinUSD != null ? gte(product.price, String(opts.priceMinUSD)) : undefined,
+          opts.priceMaxUSD != null ? lte(product.price, String(opts.priceMaxUSD)) : undefined,
+        )
+      : undefined
+
+  const mmkRange =
+    opts.priceMinMMK != null || opts.priceMaxMMK != null
+      ? and(
+          eq(product.currency, "MMK"),
+          opts.priceMinMMK != null ? gte(product.price, String(opts.priceMinMMK)) : undefined,
+          opts.priceMaxMMK != null ? lte(product.price, String(opts.priceMaxMMK)) : undefined,
+        )
+      : undefined
+
+  const priceCondition =
+    usdRange && mmkRange ? or(usdRange, mmkRange) : usdRange ?? mmkRange
 
   const filterConditions = [
     searchCondition,
@@ -223,6 +248,7 @@ export async function getAdminProductsFromDb(opts: {
       : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
     opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
+    priceCondition,
   ].filter(Boolean)
 
   const whereClause =
