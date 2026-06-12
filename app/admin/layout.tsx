@@ -20,12 +20,12 @@ export default async function AdminLayout({
     <AdminChatNotificationProvider>
     <div className="admin-premium min-h-screen bg-[var(--admin-main-bg)]">
       {/* Desktop sidebar */}
-      <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block md:w-72">
+      <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block md:w-[264px]">
         <AdminSidebar role={role} permissions={permissions} />
       </div>
 
       {/* Content */}
-      <div className="md:pl-72">
+      <div className="md:pl-[264px]">
         {/* Top bar */}
         <header
           className="sticky top-0 z-40 border-b shadow-sm"

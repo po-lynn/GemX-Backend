@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { AppSpeedInsights } from "@/components/app-speed-insights";
 import { GlobalPushProvider } from "@/components/notifications/GlobalPushProvider";
 import { Analytics } from '@vercel/analytics/next';
 import "./globals.css";
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -35,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
+        className={`${plusJakartaSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
       >
         <GlobalPushProvider>
           <Suspense fallback={null}>{children}</Suspense>

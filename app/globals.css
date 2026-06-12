@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-cormorant), var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -120,20 +120,24 @@
 /* Premium admin theme: light sidebar, refined surfaces */
 .admin-premium {
   --admin-sidebar-bg: #ffffff;
-  --admin-sidebar-border: #e2e8f0;
-  --admin-sidebar-text: #0f172a;
-  --admin-sidebar-muted: #64748b;
-  --admin-sidebar-accent: rgba(124, 58, 237, 0.08);
-  --admin-sidebar-active: #7c3aed;
+  --admin-sidebar-border: #eef0f4;
+  --admin-sidebar-text: #1f2330;
+  --admin-sidebar-muted: #9aa1b1;
+  --admin-sidebar-accent: #f1ecfe;
+  --admin-sidebar-accent-hover: #f6f7f9;
+  --admin-sidebar-active: #8b5cf6;
   --admin-header-bg: #ffffff;
-  --admin-header-border: #e2e8f0;
-  --admin-main-bg: #f8fafc;
+  --admin-header-border: #eef0f4;
+  --admin-main-bg: #f4f5f8;
 }
 .dark .admin-premium {
   --admin-sidebar-bg: #0c1222;
   --admin-sidebar-border: rgba(255, 255, 255, 0.06);
   --admin-sidebar-text: #e2e8f0;
   --admin-sidebar-muted: #64748b;
+  --admin-sidebar-accent: rgba(139, 92, 246, 0.12);
+  --admin-sidebar-accent-hover: rgba(255, 255, 255, 0.04);
+  --admin-sidebar-active: #a78bfa;
   --admin-header-bg: #0f172a;
   --admin-header-border: rgba(255, 255, 255, 0.08);
   --admin-main-bg: #020617;
