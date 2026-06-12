@@ -12,7 +12,16 @@ const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as c
 type View = (typeof VIEWS)[number]
 
 type Props = {
-  searchParams: Promise<{ page?: string; view?: string; search?: string; status?: string }>
+  searchParams: Promise<{
+    page?: string
+    view?: string
+    search?: string
+    status?: string
+    priceMinUSD?: string
+    priceMaxUSD?: string
+    priceMinMMK?: string
+    priceMaxMMK?: string
+  }>
 }
 
 export default async function AdminProductsPage({ searchParams }: Props) {
@@ -25,6 +34,17 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     ? (params.view as View)
     : "all"
   const statusFilter = params.status?.trim() || undefined
+
+  function parsePrice(raw: string | undefined): number | undefined {
+    if (!raw) return undefined
+    const n = Number(raw)
+    return isFinite(n) && n >= 0 ? n : undefined
+  }
+
+  const priceMinUSD = parsePrice(params.priceMinUSD)
+  const priceMaxUSD = parsePrice(params.priceMaxUSD)
+  const priceMinMMK = parsePrice(params.priceMinMMK)
+  const priceMaxMMK = parsePrice(params.priceMaxMMK)
 
   const viewFilter = {
     all:       statusFilter === "archive"
@@ -39,7 +59,16 @@ export default async function AdminProductsPage({ searchParams }: Props) {
 
   const [counts, { products, total }] = await Promise.all([
     getAdminProductCounts(),
-    getAdminProducts({ page, limit: PAGE_SIZE, search, ...viewFilter }),
+    getAdminProducts({
+      page,
+      limit: PAGE_SIZE,
+      search,
+      ...viewFilter,
+      priceMinUSD,
+      priceMaxUSD,
+      priceMinMMK,
+      priceMaxMMK,
+    }),
   ])
 
   const views: ViewTab[] = [
@@ -88,6 +117,10 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         pageSize={PAGE_SIZE}
         total={total}
         search={search}
+        priceMinUSD={params.priceMinUSD}
+        priceMaxUSD={params.priceMaxUSD}
+        priceMinMMK={params.priceMinMMK}
+        priceMaxMMK={params.priceMaxMMK}
       />
     </div>
   )
