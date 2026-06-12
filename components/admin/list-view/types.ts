@@ -27,6 +27,7 @@ export type FilterDef =
   | { id: string; label: string; type: "multi"; options: FilterOption[] }
   | { id: string; label: string; type: "daterange" }
   | { id: string; label: string; type: "toggle" }
+  | { id: string; label: string; type: "numrange"; placeholders?: { min?: string; max?: string } }
 
 export type SortState = {
   id: string
