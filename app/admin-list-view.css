@@ -1284,6 +1284,191 @@
 }
 .lv-daterange-clear:hover { text-decoration: underline; }
 
+/* ── Numrange (price-range) filter ───────────────────────── */
+.lv-numrange {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+}
+.lv-numrange-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.lv-numrange-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: var(--lv-text);
+  letter-spacing: -0.01em;
+}
+.lv-numrange-clear {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #c026d3;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  font-family: inherit;
+}
+.lv-numrange-clear:hover { text-decoration: underline; }
+
+.lv-numrange-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.lv-numrange-divider {
+  height: 1px;
+  background: var(--lv-border);
+  margin: 18px 0;
+}
+
+/* Currency header */
+.lv-numrange-curhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lv-numrange-curtag-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.lv-numrange-curtag {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--lv-accent-soft);
+  color: var(--lv-accent-600);
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.lv-numrange-curcode {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lv-text);
+  letter-spacing: 0.02em;
+}
+.lv-numrange-live {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--lv-accent-600);
+  font-variant-numeric: tabular-nums;
+}
+.lv-numrange-live.muted { color: var(--lv-text-3); }
+
+/* Slider */
+.lv-numrange-slider { position: relative; }
+.lv-numrange-track {
+  position: relative;
+  height: 6px;
+  border-radius: 6px;
+  background: #ebe9f3;
+  cursor: pointer;
+  margin: 8px 2px;
+}
+.lv-numrange-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: linear-gradient(90deg, #8b5cf6, var(--lv-accent));
+  border-radius: 6px;
+}
+.lv-numrange-handle {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--lv-accent);
+  box-shadow: 0 1px 4px rgba(80, 40, 160, 0.28);
+  cursor: grab;
+  z-index: 3;
+  outline: none;
+  transition: box-shadow 0.1s;
+}
+.lv-numrange-handle:hover {
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15), 0 1px 4px rgba(80, 40, 160, 0.28);
+}
+.lv-numrange-handle:active { cursor: grabbing; }
+.lv-numrange-handle:focus-visible {
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25), 0 1px 4px rgba(80, 40, 160, 0.28);
+}
+
+/* Min/Max fields */
+.lv-numrange-fields {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.lv-numrange-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  cursor: default;
+}
+.lv-numrange-field-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #9aa3b2;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+.lv-numrange-field-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.lv-numrange-field-prefix {
+  position: absolute;
+  left: 12px;
+  font-size: 13.5px;
+  color: var(--lv-text-3);
+  pointer-events: none;
+  z-index: 1;
+}
+.lv-numrange-field-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 26px;
+  border: 1.5px solid var(--lv-border);
+  border-radius: 9px;
+  background: #f5f5f9;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lv-text);
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.lv-numrange-field-input.long-prefix { padding-left: 38px; }
+.lv-numrange-field-input:focus {
+  border-color: var(--lv-accent);
+  background: #fff;
+}
+.lv-numrange-sep {
+  padding-bottom: 11px;
+  color: var(--lv-border);
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
 /* ── CPR (Credit Purchase Requests) additions ────────── */
 
 /* Extra status pill variants */

@@ -159,19 +159,13 @@ export function ProductsListView({
   const currentSearch = search ?? searchParams.get("search") ?? ""
   const isArchiveView = searchParams.get("status") === "archive"
 
-  const defaultPriceFilters: Record<string, string[]> = {}
-  if (priceMinUSD || priceMaxUSD) {
-    defaultPriceFilters.priceUSD = [
-      ...(priceMinUSD ? [`min:${priceMinUSD}`] : []),
-      ...(priceMaxUSD ? [`max:${priceMaxUSD}`] : []),
-    ]
-  }
-  if (priceMinMMK || priceMaxMMK) {
-    defaultPriceFilters.priceMMK = [
-      ...(priceMinMMK ? [`min:${priceMinMMK}`] : []),
-      ...(priceMaxMMK ? [`max:${priceMaxMMK}`] : []),
-    ]
-  }
+  const priceVals: string[] = [
+    ...(priceMinUSD ? [`usdMin:${priceMinUSD}`] : []),
+    ...(priceMaxUSD ? [`usdMax:${priceMaxUSD}`] : []),
+    ...(priceMinMMK ? [`mmkMin:${priceMinMMK}`] : []),
+    ...(priceMaxMMK ? [`mmkMax:${priceMaxMMK}`] : []),
+  ]
+  const defaultPriceFilters: Record<string, string[]> = priceVals.length > 0 ? { price: priceVals } : {}
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
 
@@ -390,8 +384,15 @@ export function ProductsListView({
       ].filter((o) => o.count > 0),
     },
     { id: "createdAt", label: "Created", type: "daterange" },
-    { id: "priceUSD", label: "USD Price", type: "numrange" as const },
-    { id: "priceMMK", label: "MMK Price", type: "numrange" as const },
+    {
+      id: "price",
+      label: "Price",
+      type: "numrange" as const,
+      currencies: [
+        { key: "usd", code: "USD", sym: "$",  domain: [0, 100000]   as [number, number], step: 500 },
+        { key: "mmk", code: "MMK", sym: "Ks", domain: [0, 5000000]  as [number, number], step: 25000 },
+      ],
+    },
   ]
 
   const groupOptions: GroupOption[] = [
@@ -427,14 +428,16 @@ export function ProductsListView({
             return true
           }
         }
-        if (filterId === "priceUSD" || filterId === "priceMMK") {
+        if (filterId === "price") {
           const params = new URLSearchParams(searchParams.toString())
-          const minKey = filterId === "priceUSD" ? "priceMinUSD" : "priceMinMMK"
-          const maxKey = filterId === "priceUSD" ? "priceMaxUSD" : "priceMaxMMK"
-          const min = values.find((v) => v.startsWith("min:"))?.substring(4)
-          const max = values.find((v) => v.startsWith("max:"))?.substring(4)
-          if (min) params.set(minKey, min); else params.delete(minKey)
-          if (max) params.set(maxKey, max); else params.delete(maxKey)
+          const usdMin = values.find((v) => v.startsWith("usdMin:"))?.slice(7)
+          const usdMax = values.find((v) => v.startsWith("usdMax:"))?.slice(7)
+          const mmkMin = values.find((v) => v.startsWith("mmkMin:"))?.slice(7)
+          const mmkMax = values.find((v) => v.startsWith("mmkMax:"))?.slice(7)
+          if (usdMin) params.set("priceMinUSD", usdMin); else params.delete("priceMinUSD")
+          if (usdMax) params.set("priceMaxUSD", usdMax); else params.delete("priceMaxUSD")
+          if (mmkMin) params.set("priceMinMMK", mmkMin); else params.delete("priceMinMMK")
+          if (mmkMax) params.set("priceMaxMMK", mmkMax); else params.delete("priceMaxMMK")
           params.set("page", "1")
           router.push(`${BASE}?${params.toString()}`)
           return true
@@ -478,23 +481,27 @@ export function ProductsListView({
             if (to   && d > new Date(to   + "T23:59:59")) return false
             return true
           }
-          case "priceUSD": {
-            if (r.currency !== "USD") return false
-            const min = vals.find((v) => v.startsWith("min:"))?.substring(4)
-            const max = vals.find((v) => v.startsWith("max:"))?.substring(4)
-            const p = Number(r.price)
-            if (min && p < Number(min)) return false
-            if (max && p > Number(max)) return false
-            return true
-          }
-          case "priceMMK": {
-            if (r.currency !== "MMK") return false
-            const min = vals.find((v) => v.startsWith("min:"))?.substring(4)
-            const max = vals.find((v) => v.startsWith("max:"))?.substring(4)
-            const p = Number(r.price)
-            if (min && p < Number(min)) return false
-            if (max && p > Number(max)) return false
-            return true
+          case "price": {
+            const priceNum = Number(r.price)
+            const cur = r.currency?.toUpperCase()
+            const usdMin = vals.find((v) => v.startsWith("usdMin:"))?.slice(7)
+            const usdMax = vals.find((v) => v.startsWith("usdMax:"))?.slice(7)
+            const mmkMin = vals.find((v) => v.startsWith("mmkMin:"))?.slice(7)
+            const mmkMax = vals.find((v) => v.startsWith("mmkMax:"))?.slice(7)
+            const hasUsd = usdMin !== undefined || usdMax !== undefined
+            const hasMmk = mmkMin !== undefined || mmkMax !== undefined
+            if (!hasUsd && !hasMmk) return true
+            if (hasUsd && cur === "USD") {
+              const lo = usdMin !== undefined ? Number(usdMin) : -Infinity
+              const hi = usdMax !== undefined ? Number(usdMax) : Infinity
+              if (priceNum >= lo && priceNum <= hi) return true
+            }
+            if (hasMmk && cur === "MMK") {
+              const lo = mmkMin !== undefined ? Number(mmkMin) : -Infinity
+              const hi = mmkMax !== undefined ? Number(mmkMax) : Infinity
+              if (priceNum >= lo && priceNum <= hi) return true
+            }
+            return false
           }
           default: return null
         }

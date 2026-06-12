@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useEffect,
+  Fragment,
   type ReactNode,
   type RefObject,
 } from "react"
@@ -29,6 +30,7 @@ import type {
   ColumnDef,
   ViewTab,
   FilterDef,
+  FilterCurrencyDef,
   SortState,
   GroupOption,
   ActiveFilters,
@@ -81,6 +83,14 @@ function nrFmt(val: string): string {
   if (!val) return ""
   return Number(val).toLocaleString()
 }
+function getCurMin(vals: string[], key: string): string {
+  const p = `${key}Min:`
+  return vals.find((v) => v.startsWith(p))?.slice(p.length) ?? ""
+}
+function getCurMax(vals: string[], key: string): string {
+  const p = `${key}Max:`
+  return vals.find((v) => v.startsWith(p))?.slice(p.length) ?? ""
+}
 
 // ─── DateRangePaneContent ──────────────────────────────────
 function DateRangePaneContent({
@@ -129,20 +139,192 @@ function DateRangePaneContent({
   )
 }
 
+// ─── RangeSlider — dual-handle slider ─────────────────────
+function RangeSlider({ domain, step, lo, hi, onChange }: {
+  domain: [number, number]
+  step: number
+  lo: number
+  hi: number
+  onChange: (lo: number, hi: number) => void
+}) {
+  const [dMin, dMax] = domain
+  const trackRef = useRef<HTMLDivElement>(null)
+  const valRef = useRef({ lo, hi })
+  valRef.current = { lo, hi }
+
+  const pct = (v: number) => ((v - dMin) / (dMax - dMin)) * 100
+
+  const valFromClient = (clientX: number): number => {
+    if (!trackRef.current) return dMin
+    const r = trackRef.current.getBoundingClientRect()
+    let f = (clientX - r.left) / r.width
+    f = Math.max(0, Math.min(1, f))
+    let v = dMin + f * (dMax - dMin)
+    v = Math.round(v / step) * step
+    return Math.max(dMin, Math.min(dMax, v))
+  }
+
+  const startDrag = (which: "lo" | "hi", e: React.PointerEvent) => {
+    e.preventDefault()
+    const move = (ev: PointerEvent) => {
+      const v = valFromClient(ev.clientX)
+      const { lo: clo, hi: chi } = valRef.current
+      if (which === "lo") onChange(Math.min(v, chi), chi)
+      else onChange(clo, Math.max(v, clo))
+    }
+    const up = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    move(e.nativeEvent)
+  }
+
+  const onTrackDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).dataset.handle) return
+    const v = valFromClient(e.clientX)
+    const which = Math.abs(v - lo) <= Math.abs(v - hi) ? "lo" : "hi"
+    startDrag(which, e)
+  }
+
+  return (
+    <div className="lv-numrange-slider">
+      <div ref={trackRef} className="lv-numrange-track" onPointerDown={onTrackDown}>
+        <div className="lv-numrange-fill" style={{ left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }} />
+        <div data-handle="lo" role="slider" tabIndex={0}
+          aria-valuemin={dMin} aria-valuemax={dMax} aria-valuenow={lo}
+          className="lv-numrange-handle" style={{ left: `${pct(lo)}%` }}
+          onPointerDown={(e) => startDrag("lo", e)}
+          onKeyDown={(e) => {
+            const d = e.key === "ArrowRight" ? step : e.key === "ArrowLeft" ? -step : 0
+            if (d) { e.preventDefault(); onChange(Math.max(dMin, Math.min(lo + d, hi)), hi) }
+          }} />
+        <div data-handle="hi" role="slider" tabIndex={0}
+          aria-valuemin={dMin} aria-valuemax={dMax} aria-valuenow={hi}
+          className="lv-numrange-handle" style={{ left: `${pct(hi)}%` }}
+          onPointerDown={(e) => startDrag("hi", e)}
+          onKeyDown={(e) => {
+            const d = e.key === "ArrowRight" ? step : e.key === "ArrowLeft" ? -step : 0
+            if (d) { e.preventDefault(); onChange(lo, Math.min(dMax, Math.max(hi + d, lo))) }
+          }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── PriceField — labelled input with currency prefix ─────
+function PriceField({ label, prefix, value, onCommit }: {
+  label: string
+  prefix: string
+  value: number
+  onCommit: (n: number) => void
+}) {
+  const [text, setText] = useState(value.toLocaleString("en-US"))
+  useEffect(() => { setText(value.toLocaleString("en-US")) }, [value])
+
+  const commit = () => {
+    const n = parseInt(text.replace(/[^0-9]/g, ""), 10)
+    onCommit(isNaN(n) ? 0 : n)
+  }
+  return (
+    <label className="lv-numrange-field">
+      <span className="lv-numrange-field-label">{label}</span>
+      <span className="lv-numrange-field-wrap">
+        {prefix && <span className="lv-numrange-field-prefix">{prefix}</span>}
+        <input
+          className={`lv-numrange-field-input${prefix.length > 1 ? " long-prefix" : ""}`}
+          value={text}
+          inputMode="numeric"
+          onChange={(e) => setText(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+        />
+      </span>
+    </label>
+  )
+}
+
+// ─── NumRangeBlock — one currency's slider + inputs ────────
+function NumRangeBlock({ cur, vals, onChange }: {
+  cur: FilterCurrencyDef
+  vals: string[]
+  onChange: (v: string[]) => void
+}) {
+  const [dMin, dMax] = cur.domain
+  const minStr = getCurMin(vals, cur.key)
+  const maxStr = getCurMax(vals, cur.key)
+  const lo = minStr ? Math.max(dMin, parseFloat(minStr)) : dMin
+  const hi = maxStr ? Math.min(dMax, parseFloat(maxStr)) : dMax
+  const isFull = lo <= dMin && hi >= dMax
+  const fmtN = (n: number) => n.toLocaleString("en-US")
+  const liveLabel = isFull ? "Any price" : `${cur.sym}${fmtN(lo)} – ${cur.sym}${fmtN(hi)}`
+
+  function encode(newLo: number, newHi: number) {
+    const next = vals.filter((v) => !v.startsWith(`${cur.key}Min:`) && !v.startsWith(`${cur.key}Max:`))
+    if (newLo > dMin) next.push(`${cur.key}Min:${newLo}`)
+    if (newHi < dMax) next.push(`${cur.key}Max:${newHi}`)
+    onChange(next)
+  }
+
+  return (
+    <div className="lv-numrange-block">
+      <div className="lv-numrange-curhead">
+        <span className="lv-numrange-curtag-wrap">
+          <span className="lv-numrange-curtag">{cur.sym}</span>
+          <span className="lv-numrange-curcode">{cur.code}</span>
+        </span>
+        <span className={`lv-numrange-live${isFull ? " muted" : ""}`}>{liveLabel}</span>
+      </div>
+      <RangeSlider domain={cur.domain} step={cur.step} lo={lo} hi={hi} onChange={encode} />
+      <div className="lv-numrange-fields">
+        <PriceField label="MIN" prefix={cur.sym} value={lo}
+          onCommit={(n) => encode(Math.min(Math.max(dMin, n), hi), hi)} />
+        <span className="lv-numrange-sep">—</span>
+        <PriceField label="MAX" prefix={cur.sym} value={hi}
+          onCommit={(n) => encode(lo, Math.max(Math.min(dMax, n), lo))} />
+      </div>
+    </div>
+  )
+}
+
 // ─── NumRangePaneContent ───────────────────────────────────
 function NumRangePaneContent({
   value,
   onChange,
-  placeholders,
+  showClear,
+  onClear,
+  def,
 }: {
   value: string[] | undefined
   onChange: (v: string[]) => void
-  placeholders?: { min?: string; max?: string }
+  showClear: boolean
+  onClear: () => void
+  def: Extract<FilterDef, { type: "numrange" }>
 }) {
   const vals = value ?? []
+
+  // Multi-currency variant (e.g. Price with USD + MMK blocks)
+  if (def.currencies && def.currencies.length > 0) {
+    return (
+      <div className="lv-numrange">
+        <div className="lv-numrange-head">
+          <h3 className="lv-numrange-title">{def.label}</h3>
+          {showClear && <button className="lv-numrange-clear" onClick={onClear}>Clear</button>}
+        </div>
+        {def.currencies.map((cur, i) => (
+          <Fragment key={cur.key}>
+            {i > 0 && <div className="lv-numrange-divider" />}
+            <NumRangeBlock cur={cur} vals={vals} onChange={onChange} />
+          </Fragment>
+        ))}
+      </div>
+    )
+  }
+
+  // Single plain range (legacy — no currency tag, no slider)
   const min = nrMin(vals)
   const max = nrMax(vals)
-
   function setMin(n: string) {
     const next = vals.filter((v) => !v.startsWith("min:"))
     onChange(n ? [...next, `min:${n}`] : next)
@@ -151,30 +333,17 @@ function NumRangePaneContent({
     const next = vals.filter((v) => !v.startsWith("max:"))
     onChange(n ? [...next, `max:${n}`] : next)
   }
-
   return (
     <div className="lv-daterange" style={{ padding: "4px 14px 10px" }}>
       <div className="lv-daterange-row">
         <label className="lv-daterange-label">Min</label>
-        <input
-          type="number"
-          className="lv-daterange-input"
-          value={min}
-          min={0}
-          placeholder={placeholders?.min ?? "0"}
-          onChange={(e) => setMin(e.target.value)}
-        />
+        <input type="number" className="lv-daterange-input" value={min} min={0}
+          placeholder={def.placeholders?.min ?? "0"} onChange={(e) => setMin(e.target.value)} />
       </div>
       <div className="lv-daterange-row">
         <label className="lv-daterange-label">Max</label>
-        <input
-          type="number"
-          className="lv-daterange-input"
-          value={max}
-          min={0}
-          placeholder={placeholders?.max ?? "∞"}
-          onChange={(e) => setMax(e.target.value)}
-        />
+        <input type="number" className="lv-daterange-input" value={max} min={0}
+          placeholder={def.placeholders?.max ?? "∞"} onChange={(e) => setMax(e.target.value)} />
       </div>
     </div>
   )
@@ -195,8 +364,20 @@ function FilterPanel({
   const [activeId, setActiveId] = useState(filterDefs.find((d) => d.type !== "toggle")?.id ?? "")
   const def = filterDefs.find((d) => d.id === activeId)
 
-  const totalSelected = Object.values(filters).reduce((sum, v) => {
+  // All interactions update local draft — committed to real state only on "Filter" click
+  const [draft, setDraft] = useState<ActiveFilters>(() => ({ ...filters }))
+
+  function handleFilterClick() {
+    setFilters(draft)
+    onClose()
+  }
+
+  const totalSelected = Object.entries(draft).reduce((sum, [defId, v]) => {
     if (!v || v.length === 0) return sum
+    const fd = filterDefs.find((d) => d.id === defId)
+    if (fd?.type === "numrange" && fd.currencies) {
+      return sum + fd.currencies.filter((c) => getCurMin(v, c.key) || getCurMax(v, c.key)).length
+    }
     const isDR = v.some(
       (x) => x.startsWith("from:") || x.startsWith("to:") || x.startsWith("min:") || x.startsWith("max:")
     )
@@ -204,38 +385,42 @@ function FilterPanel({
   }, 0)
 
   function toggleOption(defId: string, value: string) {
-    const cur = filters[defId] ?? []
-    setFilters({
-      ...filters,
+    const cur = draft[defId] ?? []
+    setDraft({
+      ...draft,
       [defId]: cur.includes(value) ? cur.filter((x) => x !== value) : [...cur, value],
     })
   }
 
   function selectAll() {
     if (!def || def.type !== "multi") return
-    setFilters({ ...filters, [def.id]: def.options.map((o) => o.value) })
+    setDraft({ ...draft, [def.id]: def.options.map((o) => o.value) })
   }
 
   function clearDef(defId: string) {
-    const next = { ...filters }
+    const next = { ...draft }
     delete next[defId]
-    setFilters(next)
+    setDraft(next)
   }
 
   function toggleDef(defId: string) {
-    const isOn = filters[defId]?.includes("true")
+    const isOn = draft[defId]?.includes("true")
     if (isOn) {
-      const next = { ...filters }
+      const next = { ...draft }
       delete next[defId]
-      setFilters(next)
+      setDraft(next)
     } else {
-      setFilters({ ...filters, [defId]: ["true"] })
+      setDraft({ ...draft, [defId]: ["true"] })
     }
   }
 
   function defCount(defId: string) {
-    const vals = filters[defId]
+    const vals = draft[defId]
     if (!vals || vals.length === 0) return 0
+    const fd = filterDefs.find((d) => d.id === defId)
+    if (fd?.type === "numrange" && fd.currencies) {
+      return fd.currencies.filter((c) => getCurMin(vals, c.key) || getCurMax(vals, c.key)).length
+    }
     return vals.some(
       (x) => x.startsWith("from:") || x.startsWith("to:") || x.startsWith("min:") || x.startsWith("max:")
     ) ? 1 : vals.length
@@ -251,7 +436,7 @@ function FilterPanel({
         {toggleDefs.length > 0 && (
           <>
             {toggleDefs.map((d) => {
-              const isOn = filters[d.id]?.includes("true")
+              const isOn = draft[d.id]?.includes("true")
               return (
                 <button
                   key={d.id}
@@ -296,40 +481,32 @@ function FilterPanel({
               )}
             </div>
             <DateRangePaneContent
-              value={filters[def.id]}
-              onChange={(v) => setFilters({ ...filters, [def.id]: v })}
+              value={draft[def.id]}
+              onChange={(v) => setDraft({ ...draft, [def.id]: v })}
             />
           </>
         ) : def && def.type === "numrange" ? (
-          <>
-            <div className="lv-filter-pane-head">
-              <span className="lv-filter-pane-title">{def.label}</span>
-              {defCount(def.id) > 0 && (
-                <div className="lv-filter-pane-actions">
-                  <button onClick={() => clearDef(def.id)}>Clear</button>
-                </div>
-              )}
-            </div>
-            <NumRangePaneContent
-              value={filters[def.id]}
-              onChange={(v) => setFilters({ ...filters, [def.id]: v })}
-              placeholders={def.placeholders}
-            />
-          </>
+          <NumRangePaneContent
+            value={draft[def.id]}
+            onChange={(v) => setDraft({ ...draft, [def.id]: v })}
+            showClear={defCount(def.id) > 0}
+            onClear={() => clearDef(def.id)}
+            def={def}
+          />
         ) : def && def.type === "multi" ? (
           <>
             <div className="lv-filter-pane-head">
               <span className="lv-filter-pane-title">
                 {def.label}
-                {(filters[def.id]?.length ?? 0) > 0 && (
+                {(draft[def.id]?.length ?? 0) > 0 && (
                   <span className="lv-filter-pane-sel">
-                    {filters[def.id]!.length}/{def.options.length} selected
+                    {draft[def.id]!.length}/{def.options.length} selected
                   </span>
                 )}
               </span>
               <div className="lv-filter-pane-actions">
                 <button onClick={selectAll}>Select all</button>
-                {(filters[def.id]?.length ?? 0) > 0 && (
+                {(draft[def.id]?.length ?? 0) > 0 && (
                   <>
                     <span className="lv-filter-pane-sep" />
                     <button onClick={() => clearDef(def.id)}>Clear</button>
@@ -338,7 +515,7 @@ function FilterPanel({
               </div>
             </div>
             {def.options.map((o) => {
-              const on = (filters[def.id] ?? []).includes(o.value)
+              const on = (draft[def.id] ?? []).includes(o.value)
               return (
                 <button
                   key={o.value}
@@ -365,8 +542,8 @@ function FilterPanel({
             ? `${totalSelected} filter${totalSelected !== 1 ? "s" : ""} applied`
             : "No filters applied"}
         </span>
-        <button className="lv-filter-done-btn" onClick={onClose}>
-          Done
+        <button className="lv-filter-done-btn" onClick={handleFilterClick}>
+          Filter
         </button>
       </div>
     </div>
@@ -922,16 +1099,30 @@ export function ListViewCard<T extends { id: string }>({
         : from ? `From ${drFmt(from)}` : `Until ${drFmt(to)}`
       activeChips.push({ defId, value: "__daterange__", defLabel: def.label, valueLabel: label })
     } else if (def.type === "numrange") {
-      const min = nrMin(vals)
-      const max = nrMax(vals)
-      if (!min && !max) continue
-      const label =
-        min && max
-          ? `${nrFmt(min)} – ${nrFmt(max)}`
-          : min
-            ? `≥ ${nrFmt(min)}`
-            : `≤ ${nrFmt(max)}`
-      activeChips.push({ defId, value: "__numrange__", defLabel: def.label, valueLabel: label })
+      if (def.currencies) {
+        for (const cur of def.currencies) {
+          const minStr = getCurMin(vals, cur.key)
+          const maxStr = getCurMax(vals, cur.key)
+          if (!minStr && !maxStr) continue
+          const [dMin, dMax] = cur.domain
+          const lo = minStr ? parseFloat(minStr) : dMin
+          const hi = maxStr ? parseFloat(maxStr) : dMax
+          const fmtN = (n: number) => n.toLocaleString("en-US")
+          const label = `${cur.code} ${cur.sym}${fmtN(lo)} – ${cur.sym}${fmtN(hi)}`
+          activeChips.push({ defId, value: `__numrange_${cur.key}`, defLabel: def.label, valueLabel: label })
+        }
+      } else {
+        const min = nrMin(vals)
+        const max = nrMax(vals)
+        if (!min && !max) continue
+        const label =
+          min && max
+            ? `${nrFmt(min)} – ${nrFmt(max)}`
+            : min
+              ? `≥ ${nrFmt(min)}`
+              : `≤ ${nrFmt(max)}`
+        activeChips.push({ defId, value: "__numrange__", defLabel: def.label, valueLabel: label })
+      }
     } else if (def.type === "toggle") {
       if (vals.includes("true")) {
         activeChips.push({ defId, value: "true", defLabel: def.label, valueLabel: def.label })
@@ -949,6 +1140,13 @@ export function ListViewCard<T extends { id: string }>({
     const next = { ...filters }
     if (value === "__daterange__" || value === "__numrange__") {
       delete next[defId]
+    } else if (value.startsWith("__numrange_")) {
+      const key = value.slice("__numrange_".length)
+      const filtered = (next[defId] ?? []).filter(
+        (v) => !v.startsWith(`${key}Min:`) && !v.startsWith(`${key}Max:`)
+      )
+      if (filtered.length === 0) delete next[defId]
+      else next[defId] = filtered
     } else {
       next[defId] = (next[defId] ?? []).filter((v) => v !== value)
     }

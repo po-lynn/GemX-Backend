@@ -23,11 +23,26 @@ export type FilterOption = {
   count?: number
 }
 
+export type FilterCurrencyDef = {
+  key: string
+  code: string
+  sym: string
+  domain: [number, number]
+  step: number
+}
+
 export type FilterDef =
   | { id: string; label: string; type: "multi"; options: FilterOption[] }
   | { id: string; label: string; type: "daterange" }
   | { id: string; label: string; type: "toggle" }
-  | { id: string; label: string; type: "numrange"; placeholders?: { min?: string; max?: string } }
+  | {
+      id: string; label: string; type: "numrange"
+      placeholders?: { min?: string; max?: string }
+      domain?: [number, number]
+      step?: number
+      currency?: { sym: string; code: string }
+      currencies?: FilterCurrencyDef[]
+    }
 
 export type SortState = {
   id: string

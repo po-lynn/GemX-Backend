@@ -3,6 +3,7 @@ export type {
   ColumnDef,
   ViewTab,
   FilterDef,
+  FilterCurrencyDef,
   FilterOption,
   SortState,
   GroupOption,
