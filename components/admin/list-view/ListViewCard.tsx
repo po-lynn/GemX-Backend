@@ -70,6 +70,18 @@ function drFmt(iso: string): string {
   })
 }
 
+// ─── Numrange helpers ──────────────────────────────────────
+function nrMin(vals: string[]): string {
+  return vals.find((v) => v.startsWith("min:"))?.substring(4) ?? ""
+}
+function nrMax(vals: string[]): string {
+  return vals.find((v) => v.startsWith("max:"))?.substring(4) ?? ""
+}
+function nrFmt(val: string): string {
+  if (!val) return ""
+  return Number(val).toLocaleString()
+}
+
 // ─── DateRangePaneContent ──────────────────────────────────
 function DateRangePaneContent({
   value,
@@ -117,6 +129,57 @@ function DateRangePaneContent({
   )
 }
 
+// ─── NumRangePaneContent ───────────────────────────────────
+function NumRangePaneContent({
+  value,
+  onChange,
+  placeholders,
+}: {
+  value: string[] | undefined
+  onChange: (v: string[]) => void
+  placeholders?: { min?: string; max?: string }
+}) {
+  const vals = value ?? []
+  const min = nrMin(vals)
+  const max = nrMax(vals)
+
+  function setMin(n: string) {
+    const next = vals.filter((v) => !v.startsWith("min:"))
+    onChange(n ? [...next, `min:${n}`] : next)
+  }
+  function setMax(n: string) {
+    const next = vals.filter((v) => !v.startsWith("max:"))
+    onChange(n ? [...next, `max:${n}`] : next)
+  }
+
+  return (
+    <div className="lv-daterange" style={{ padding: "4px 14px 10px" }}>
+      <div className="lv-daterange-row">
+        <label className="lv-daterange-label">Min</label>
+        <input
+          type="number"
+          className="lv-daterange-input"
+          value={min}
+          min={0}
+          placeholder={placeholders?.min ?? "0"}
+          onChange={(e) => setMin(e.target.value)}
+        />
+      </div>
+      <div className="lv-daterange-row">
+        <label className="lv-daterange-label">Max</label>
+        <input
+          type="number"
+          className="lv-daterange-input"
+          value={max}
+          min={0}
+          placeholder={placeholders?.max ?? "∞"}
+          onChange={(e) => setMax(e.target.value)}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ─── FilterPanel (two-pane) ────────────────────────────────
 function FilterPanel({
   filterDefs,
@@ -134,7 +197,9 @@ function FilterPanel({
 
   const totalSelected = Object.values(filters).reduce((sum, v) => {
     if (!v || v.length === 0) return sum
-    const isDR = v.some((x) => x.startsWith("from:") || x.startsWith("to:"))
+    const isDR = v.some(
+      (x) => x.startsWith("from:") || x.startsWith("to:") || x.startsWith("min:") || x.startsWith("max:")
+    )
     return sum + (isDR ? 1 : v.length)
   }, 0)
 
@@ -147,7 +212,7 @@ function FilterPanel({
   }
 
   function selectAll() {
-    if (!def || def.type === "daterange" || def.type === "toggle") return
+    if (!def || def.type !== "multi") return
     setFilters({ ...filters, [def.id]: def.options.map((o) => o.value) })
   }
 
@@ -171,7 +236,9 @@ function FilterPanel({
   function defCount(defId: string) {
     const vals = filters[defId]
     if (!vals || vals.length === 0) return 0
-    return vals.some((x) => x.startsWith("from:") || x.startsWith("to:")) ? 1 : vals.length
+    return vals.some(
+      (x) => x.startsWith("from:") || x.startsWith("to:") || x.startsWith("min:") || x.startsWith("max:")
+    ) ? 1 : vals.length
   }
 
   const nonToggleDefs = filterDefs.filter((d) => d.type !== "toggle")
@@ -231,6 +298,22 @@ function FilterPanel({
             <DateRangePaneContent
               value={filters[def.id]}
               onChange={(v) => setFilters({ ...filters, [def.id]: v })}
+            />
+          </>
+        ) : def && def.type === "numrange" ? (
+          <>
+            <div className="lv-filter-pane-head">
+              <span className="lv-filter-pane-title">{def.label}</span>
+              {defCount(def.id) > 0 && (
+                <div className="lv-filter-pane-actions">
+                  <button onClick={() => clearDef(def.id)}>Clear</button>
+                </div>
+              )}
+            </div>
+            <NumRangePaneContent
+              value={filters[def.id]}
+              onChange={(v) => setFilters({ ...filters, [def.id]: v })}
+              placeholders={def.placeholders}
             />
           </>
         ) : def && def.type === "multi" ? (
@@ -838,11 +921,22 @@ export function ListViewCard<T extends { id: string }>({
         ? `${drFmt(from)} – ${drFmt(to)}`
         : from ? `From ${drFmt(from)}` : `Until ${drFmt(to)}`
       activeChips.push({ defId, value: "__daterange__", defLabel: def.label, valueLabel: label })
+    } else if (def.type === "numrange") {
+      const min = nrMin(vals)
+      const max = nrMax(vals)
+      if (!min && !max) continue
+      const label =
+        min && max
+          ? `${nrFmt(min)} – ${nrFmt(max)}`
+          : min
+            ? `≥ ${nrFmt(min)}`
+            : `≤ ${nrFmt(max)}`
+      activeChips.push({ defId, value: "__numrange__", defLabel: def.label, valueLabel: label })
     } else if (def.type === "toggle") {
       if (vals.includes("true")) {
         activeChips.push({ defId, value: "true", defLabel: def.label, valueLabel: def.label })
       }
-    } else {
+    } else if (def.type === "multi") {
       for (const v of vals) {
         const opt = def.options.find((o) => o.value === v)
         activeChips.push({ defId, value: v, defLabel: def.label, valueLabel: opt?.label ?? v })
@@ -853,7 +947,7 @@ export function ListViewCard<T extends { id: string }>({
 
   function removeChip(defId: string, value: string) {
     const next = { ...filters }
-    if (value === "__daterange__") {
+    if (value === "__daterange__" || value === "__numrange__") {
       delete next[defId]
     } else {
       next[defId] = (next[defId] ?? []).filter((v) => v !== value)
