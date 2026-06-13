@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StaggerList, FadeUp } from "@/components/admin/motion"
 
 async function getStats() {
   const [
@@ -82,7 +83,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StaggerList className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {/* Products */}
         <Link
           href="/admin/products"
@@ -188,9 +189,10 @@ export default async function AdminPage() {
             <div className="mt-1.5 text-xs text-muted-foreground">Point purchase requests</div>
           </div>
         </Link>
-      </div>
+      </StaggerList>
 
       {/* Quick navigation */}
+      <FadeUp delay={0.32}>
       <div>
         <div className="mb-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-border/60" />
@@ -219,6 +221,7 @@ export default async function AdminPage() {
           ))}
         </div>
       </div>
+      </FadeUp>
     </div>
   )
 }
