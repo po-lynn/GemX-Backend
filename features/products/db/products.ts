@@ -854,12 +854,12 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     )
   }
 
-  const gemstones = input.jewelleryGemstones ?? []
+  const gemstones = (input.jewelleryGemstones ?? []).filter((g) => g.categoryId)
   if (gemstones.length > 0) {
     await db.insert(productJewelleryGemstone).values(
       gemstones.map((g) => ({
         productId,
-        categoryId: g.categoryId,
+        categoryId: g.categoryId!,
         pieceCount: g.pieceCount ?? null,
         weightCarat: g.weightCarat,
         dimensions: g.dimensions ?? null,
@@ -890,7 +890,7 @@ export type UpdateProductInput = {
   stoneCut?: "Faceted" | "Cabochon" | null
   metal?: "Gold" | "Silver" | "Other" | null
   jewelleryGemstones?: {
-    categoryId: string
+    categoryId?: string | null
     weightCarat: string
     pieceCount?: number | null
     dimensions?: string | null
@@ -1066,11 +1066,12 @@ export async function updateProductInDb(
 
   if (jewelleryGemstones !== undefined) {
     await db.delete(productJewelleryGemstone).where(eq(productJewelleryGemstone.productId, id))
-    if (jewelleryGemstones.length > 0) {
+    const gemstonesWithCategory = jewelleryGemstones.filter((g) => g.categoryId)
+    if (gemstonesWithCategory.length > 0) {
       await db.insert(productJewelleryGemstone).values(
-        jewelleryGemstones.map((g) => ({
+        gemstonesWithCategory.map((g) => ({
           productId: id,
-          categoryId: g.categoryId,
+          categoryId: g.categoryId!,
           pieceCount: g.pieceCount ?? null,
           weightCarat: g.weightCarat,
           dimensions: g.dimensions ?? null,

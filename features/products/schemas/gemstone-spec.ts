@@ -44,12 +44,10 @@ const gemstoneSpecSchema = z.object({
 
 export type GemstoneSpec = z.infer<typeof gemstoneSpecSchema>
 
-/** Jewellery gemstone = category + required weight, color, origin + optional piece count + full spec */
+/** Jewellery gemstone = required weight + optional category + optional piece count + full spec */
 export const jewelleryGemstoneItemSchema = gemstoneSpecSchema.extend({
-  categoryId: z.string().uuid(),
+  categoryId: z.string().uuid().optional().nullable(),
   weightCarat: z.string().min(1, "Weight is required"),
-  color: z.string().min(1, "Color is required").max(100),
-  origin: z.string().min(1, "Origin is required").max(200),
   /** Number of stones of this type (e.g. report "Ruby: 37 pcs") */
   pieceCount: z
     .union([z.string(), z.number()])

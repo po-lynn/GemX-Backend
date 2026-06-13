@@ -58,6 +58,7 @@
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
+- **POST /api/products** and **PATCH /api/products/:id** — `jewelleryGemstones` fix: only `weightCarat` is required per item; `categoryId` (stone type UUID), `color`, `origin`, and all other fields are optional. Previously `color` and `origin` were incorrectly required, causing items that omitted them to be silently dropped and the array to come back empty. Items without a `categoryId` are accepted in the request but not stored (skipped). See **5.5**.
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
 - **POST /api/products** / **PATCH /api/products/:id** – Featured now supports duration via `featureDurationDays` (0–365). When featured with a duration > 0, backend stores an expiry timestamp (`featuredExpiresAt`). Create/update also accept `isFeatured` + `featured` (points/priority; integer >= 0). `isPromotion` can be sent as boolean or `"true"/"1"` string and is normalized server-side.
 - **Status update** – Product status can be updated via **PATCH /api/products/:id** with body `{ "status": "active" | "hidden" | "sold" | "archive" }`. Sellers can **mark an item as sold** by sending `{ "status": "sold" }`. See **5.6.1 Status update (e.g. Mark as sold)**.
@@ -533,6 +534,8 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 - **No `search`, explicit admin sort:** `sortBy` and/or `sortOrder` in the query → sort by that column only (same as admin).  
 The API does **not** return a numeric `featured` field—only **`isFeatured`** (boolean; `false` when `featured_expires_at` is in the past) and **`featured_expires_at`** (ISO 8601 timestamp when the featured period ends, or `null` if not set).
 
+> **⚠️ Common mistake — `?sort=desc` does NOT work.** The sort param is `sortOrder`, not `sort`. Sending `?sort=desc` is silently ignored and the response falls back to default marketplace ordering. Use `?sortOrder=desc` (or `?sortBy=createdAt&sortOrder=desc`).
+
 **Query:**
 
 
@@ -755,6 +758,27 @@ GET /api/products/mine?isPrivilegeAssist=true
 Authorization: Bearer <session_token>
 ```
 
+**10. Explicit sort (column + direction)**
+
+```
+# Newest first (explicit)
+GET /api/products?sortOrder=desc
+
+# Oldest first
+GET /api/products?sortOrder=asc
+
+# By price, highest first
+GET /api/products?sortBy=price&sortOrder=desc
+
+# By title, A→Z
+GET /api/products?sortBy=title&sortOrder=asc
+```
+
+Valid `sortBy` values: `createdAt` (default), `title`, `price`, `status`.  
+`sortOrder` values: `asc` or `desc` (default `desc`).  
+Both params are ignored when `search` is set (search always uses relevance ordering).  
+`?sort=desc` is **not** a valid param — it is silently ignored.
+
 **Success (200):**
 
 ```json
@@ -793,6 +817,8 @@ Authorization: Bearer <session_token>
 ```
 
 Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, and `isFeatured` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`). The API does not return a numeric `featured` field.
+
+> **⚠️ `jewelleryGemstones` is NOT included in list responses.** The list endpoint returns a lightweight shape — `jewelleryGemstones` (the array of gemstones for a jewellery product) is only present on the **single product detail** response (`GET /api/products/:id`). Call the detail endpoint to get that data.
 
 ---
 
@@ -839,7 +865,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`** (see **5.4.4**).
 
-**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, `jewelleryGemstones[]` for jewellery, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
+**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
 
 
 | Field             | Type          | Description                |
@@ -2957,17 +2983,17 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 
 | Field          | Required | Type             | Description                                                       |
 | -------------- | -------- | ---------------- | ----------------------------------------------------------------- |
-| `categoryId`   | Yes      | string (UUID)    | Category of the gem (e.g. Ruby, Diamond). From `/api/categories`. |
-| `weightCarat`  | Yes      | string           | Total weight in carats for this stone type (e.g. `"1.5"`).        |
+| `categoryId`   | No       | string (UUID)    | Stone type (e.g. Ruby, Diamond). From `/api/categories`. Rows without a `categoryId` are skipped. |
+| `weightCarat`  | Yes      | string           | Total weight in carats for this stone type (e.g. `”1.5”`).        |
 | `pieceCount`   | No       | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”).       |
-| `dimensions`   | No       | string, string[], or object | Same rules as product-level **Dimensions** above (stored as one string, e.g. `"5 × 3mm"`). |
-| `color`        | Yes      | string           | e.g. `"Red"`, `"White"`. Required for each jewellery gemstone.    |
-| `shape`        | No       | string           | `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`.        |
-| `origin`       | Yes      | string           | e.g. `"Myanmar"`. Required for each jewellery gemstone.           |
-| `cut`          | No       | string           | Cut style (e.g. `"Brilliant"`, `"Step"`).                         |
-| `transparency` | No       | string           | e.g. `"Transparent"`.                                             |
+| `dimensions`   | No       | string, string[], or object | Same rules as product-level **Dimensions** above (stored as one string, e.g. `”5 × 3mm”`). |
+| `color`        | No       | string           | e.g. `”Red”`, `”White”`.                                          |
+| `shape`        | No       | string           | `”Oval”` | `”Cushion”` | `”Round”` | `”Pear”` | `”Heart”`.        |
+| `origin`       | No       | string           | e.g. `”Myanmar”`.                                                 |
+| `cut`          | No       | string           | Cut style (e.g. `”Brilliant”`, `”Step”`).                         |
+| `transparency` | No       | string           | e.g. `”Transparent”`.                                             |
 | `comment`      | No       | string           | Lab comment.                                                      |
-| `inclusions`   | No       | string           | e.g. `"Rutiles, feathers"`.                                       |
+| `inclusions`   | No       | string           | e.g. `”Rutiles, feathers”`.                                       |
 
 
 **Sample: jewellery product with gemstones (create by seller)**
@@ -3019,28 +3045,26 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 }
 ```
 
-**Minimal jewellery with one gemstone:**
+**Minimal jewellery with gemstones (only `weightCarat` required per item):**
 
 ```json
 {
-  "title": "Ruby & Diamond Ring",
+  "title": "Ruby & Emerald Ring",
   "price": "5000",
-  "identification": "Natural",
+  "currency": "USD",
   "productType": "jewellery",
+  "categoryId": "CATEGORY_UUID_RING",
   "metal": "Gold",
-  "totalWeightGrams": "5.2",
+  "status": "active",
   "jewelleryGemstones": [
-    {
-      "categoryId": "category-uuid-from-api",
-      "weightCarat": "1.5",
-      "color": "Red",
-      "origin": "Myanmar",
-      "shape": "Oval"
-    }
+    { "categoryId": "CATEGORY_UUID_RUBY", "weightCarat": "7" },
+    { "categoryId": "CATEGORY_UUID_EMERALD", "weightCarat": "5" }
   ],
   "imageUrls": ["https://example.com/ring.jpg"]
 }
 ```
+
+`categoryId` on each gemstone is the stone-type UUID from `GET /api/categories`. All other gemstone fields (`color`, `origin`, `pieceCount`, `dimensions`, `cut`, `transparency`, `comment`, `inclusions`) are optional. Gemstone items without a `categoryId` are silently skipped.
 
 **Success (201):**
 
