@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest"
 import { render } from "@testing-library/react"
 import { SkBlock } from "@/components/admin/motion/skeleton/sk-block"
+import { SkCard } from "@/components/admin/motion/skeleton/sk-card"
+import { SkRow } from "@/components/admin/motion/skeleton/sk-row"
+import { SkFormField } from "@/components/admin/motion/skeleton/sk-form-field"
 
 describe("SkBlock", () => {
   it("renders with the sk-shimmer class", () => {
@@ -30,5 +33,35 @@ describe("SkBlock", () => {
   it("renders without error when no color prop is given", () => {
     const { container } = render(<SkBlock w={48} h={12} />)
     expect(container.firstChild).toHaveClass("sk-shimmer")
+  })
+})
+
+describe("SkCard", () => {
+  it("renders a card container with 3 shimmer blocks (icon, number, label)", () => {
+    const { container } = render(<SkCard accentColor="#8b5cf6" />)
+    expect(container.querySelectorAll(".sk-shimmer")).toHaveLength(3)
+  })
+})
+
+describe("SkRow", () => {
+  it("renders shimmer blocks for avatar + name + extra cols", () => {
+    const { container } = render(<SkRow cols={5} />)
+    // avatar + name + 3 extra = 5 blocks
+    expect(container.querySelectorAll(".sk-shimmer")).toHaveLength(5)
+  })
+
+  it("renders more blocks when cols is higher", () => {
+    const { container: c5 } = render(<SkRow cols={5} />)
+    const { container: c7 } = render(<SkRow cols={7} />)
+    expect(c7.querySelectorAll(".sk-shimmer").length).toBeGreaterThan(
+      c5.querySelectorAll(".sk-shimmer").length
+    )
+  })
+})
+
+describe("SkFormField", () => {
+  it("renders exactly 2 shimmer blocks (label + input)", () => {
+    const { container } = render(<SkFormField />)
+    expect(container.querySelectorAll(".sk-shimmer")).toHaveLength(2)
   })
 })
