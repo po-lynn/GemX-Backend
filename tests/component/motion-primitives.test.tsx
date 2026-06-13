@@ -25,6 +25,8 @@ vi.mock("motion/react", async () => {
 
 import { FadeUp } from "@/components/admin/motion/fade-up"
 import { StaggerList } from "@/components/admin/motion/stagger-list"
+import { HoverCard } from "@/components/admin/motion/hover-card"
+import { PressButton } from "@/components/admin/motion/press-button"
 
 describe("FadeUp", () => {
   it("renders its children", () => {
@@ -66,5 +68,34 @@ describe("StaggerList", () => {
     )
     // 1 container motion.div + 2 per-child motion.divs = 3
     expect(container.querySelectorAll("[data-testid='motion-div']").length).toBe(3)
+  })
+})
+
+describe("HoverCard", () => {
+  it("renders its children", () => {
+    render(<HoverCard><span data-testid="inner">card</span></HoverCard>)
+    expect(screen.getByTestId("inner")).toBeInTheDocument()
+  })
+
+  it("wraps children in a motion div", () => {
+    const { container } = render(<HoverCard><span>x</span></HoverCard>)
+    expect(container.querySelector("[data-testid='motion-div']")).toBeInTheDocument()
+  })
+})
+
+describe("PressButton", () => {
+  it("renders as a button element", () => {
+    const { container } = render(<PressButton>Save</PressButton>)
+    expect(container.querySelector("[data-testid='motion-button']")).toBeInTheDocument()
+  })
+
+  it("renders children", () => {
+    render(<PressButton>Click me</PressButton>)
+    expect(screen.getByText("Click me")).toBeInTheDocument()
+  })
+
+  it("forwards className to the button", () => {
+    const { container } = render(<PressButton className="my-btn">OK</PressButton>)
+    expect(container.querySelector(".my-btn")).toBeInTheDocument()
   })
 })
