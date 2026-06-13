@@ -60,14 +60,7 @@ export default async function AdminLayout({
 
         {/* IMPORTANT: no mx-auto centering */}
         <main className="w-full px-3 py-5 md:px-10">
-          <Suspense
-            fallback={
-              <div className="container my-6 animate-pulse space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-                <div className="h-4 w-48 rounded bg-muted" />
-                <div className="mt-4 h-24 rounded-lg bg-muted/60" />
-              </div>
-            }
-          >
+          <Suspense>
             {children}
           </Suspense>
         </main>
