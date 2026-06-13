@@ -5,6 +5,7 @@ import { UserForm } from "@/features/users/components";
 import { getUserById } from "@/features/users/db/users";
 import { getUserPermissions } from "@/features/rbac/db/permissions";
 import { requireAdmin } from "@/lib/admin-guard";
+import { FadeUp } from "@/components/admin/motion";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -24,15 +25,17 @@ async function AdminUsersEditContent({ params }: Props) {
 
 export default function AdminUsersEditPage(props: Props) {
   return (
-    <Suspense
-      fallback={
-        <div className="animate-pulse space-y-5 py-2">
-          <div className="h-8 w-48 rounded-lg bg-slate-200" />
-          <div className="h-96 rounded-xl bg-white ring-1 ring-slate-200/60" />
-        </div>
-      }
-    >
-      <AdminUsersEditContent {...props} />
-    </Suspense>
+    <FadeUp>
+      <Suspense
+        fallback={
+          <div className="animate-pulse space-y-5 py-2">
+            <div className="h-8 w-48 rounded-lg bg-slate-200" />
+            <div className="h-96 rounded-xl bg-white ring-1 ring-slate-200/60" />
+          </div>
+        }
+      >
+        <AdminUsersEditContent {...props} />
+      </Suspense>
+    </FadeUp>
   );
 }

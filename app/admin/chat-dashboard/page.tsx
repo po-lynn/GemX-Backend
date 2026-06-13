@@ -5,6 +5,7 @@ import { getUsersPaginatedFromDb } from "@/features/users/db/users"
 import { ChatDashboard } from "@/features/chat/components/ChatDashboard"
 import { getLastSessionActivityByUserIds } from "@/features/chat/db/session-presence"
 import { getChatPeerProfilesForUser } from "@/features/chat/db/chat-peers"
+import { FadeUp } from "@/components/admin/motion"
 
 export default async function AdminChatDashboardPage({
   searchParams,
@@ -45,20 +46,22 @@ export default async function AdminChatDashboardPage({
       contactPickerUsers.some((u) => u.id === peerFromUrl))
 
   return (
-    <div className="container my-6 space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Chat Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Left panel lists people you already have messages with. Use &ldquo;New chat&rdquo; to message
-          anyone else.
-        </p>
+    <FadeUp>
+      <div className="container my-6 space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Chat Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Left panel lists people you already have messages with. Use &ldquo;New chat&rdquo; to message
+            anyone else.
+          </p>
+        </div>
+        <ChatDashboard
+          currentUserId={session.user.id}
+          users={peers}
+          contactPickerUsers={contactPickerUsers}
+          initialPeerId={initialPeerValid ? peerFromUrl : undefined}
+        />
       </div>
-      <ChatDashboard
-        currentUserId={session.user.id}
-        users={peers}
-        contactPickerUsers={contactPickerUsers}
-        initialPeerId={initialPeerValid ? peerFromUrl : undefined}
-      />
-    </div>
+    </FadeUp>
   )
 }

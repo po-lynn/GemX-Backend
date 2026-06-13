@@ -8,6 +8,7 @@ import {
   getPremiumDealersSettings,
 } from "@/features/points/db/points";
 import { CreditSettingsForm } from "@/features/points/components/CreditSettingsForm";
+import { FadeUp } from "@/components/admin/motion";
 
 export default async function AdminCreditPage() {
   await connection();
@@ -21,14 +22,16 @@ export default async function AdminCreditPage() {
     ]);
 
   return (
-    <div className="container my-6 max-w-7xl">
-      <CreditSettingsForm
-        defaultRegistrationPoints={management.defaultRegistrationPoints}
-        paymentMethods={management.paymentMethods}
-        packages={packages.packages}
-        featureSettings={featureSettings}
-        dealerPackages={dealerSettings.packages}
-      />
-    </div>
+    <FadeUp>
+      <div className="container my-6 max-w-7xl">
+        <CreditSettingsForm
+          defaultRegistrationPoints={management.defaultRegistrationPoints}
+          paymentMethods={management.paymentMethods}
+          packages={packages.packages}
+          featureSettings={featureSettings}
+          dealerPackages={dealerSettings.packages}
+        />
+      </div>
+    </FadeUp>
   );
 }

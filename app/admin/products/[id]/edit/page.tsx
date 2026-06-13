@@ -8,6 +8,7 @@ import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import { getFeatureSettings } from "@/features/points/db/points"
+import { FadeUp } from "@/components/admin/motion"
 
 const BACK_ROUTES: Record<string, { href: string; label: string }> = {
   "collector-requests": {
@@ -36,18 +37,20 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
   if (!product) notFound()
 
   return (
-    <div className="py-2">
-      <ProductForm
-        key={product.id}
-        mode="edit"
-        product={product}
-        categories={categories}
-        laboratories={laboratories}
-        origins={origins}
-        featurePricingTiers={featureSettings.pricingTiers}
-        backHref={back?.href}
-        backLabel={back?.label}
-      />
-    </div>
+    <FadeUp>
+      <div className="py-2">
+        <ProductForm
+          key={product.id}
+          mode="edit"
+          product={product}
+          categories={categories}
+          laboratories={laboratories}
+          origins={origins}
+          featurePricingTiers={featureSettings.pricingTiers}
+          backHref={back?.href}
+          backLabel={back?.label}
+        />
+      </div>
+    </FadeUp>
   )
 }
