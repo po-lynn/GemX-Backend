@@ -11,6 +11,7 @@ import { PointTransactionsTable } from "@/features/points/components/PointTransa
 import { PointActionButtons } from "@/features/points/components/PointActionButtons"
 import { getAllUsersFromDb } from "@/features/users/db/users"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 const FILTERS = ["all", "topups", "spent", "pending"] as const
@@ -52,6 +53,7 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -80,5 +82,6 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
         total={total}
       />
     </div>
+    </FadeUp>
   )
 }

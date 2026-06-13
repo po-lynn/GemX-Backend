@@ -7,6 +7,7 @@ import {
   getCollectorPieceShowRequestsKPIs,
 } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 
@@ -56,6 +57,7 @@ export default async function AdminCollectorPieceShowRequestsPage({ searchParams
   ]
 
   return (
+    <FadeUp>
     <div className="space-y-5 py-2">
       {/* Page header */}
       <div className="lv-pagehead">
@@ -118,5 +120,6 @@ export default async function AdminCollectorPieceShowRequestsPage({ searchParams
 
 
     </div>
+    </FadeUp>
   )
 }

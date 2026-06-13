@@ -9,6 +9,7 @@ import {
   getNewsStatusCountsFromDb,
 } from "@/features/news/db/news"
 import { NewsTable } from "@/features/news/components"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 
@@ -56,6 +57,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="space-y-5 py-2">
       <div className="lv-pagehead">
         <div>
@@ -106,5 +108,6 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         viewCounts={counts}
       />
     </div>
+    </FadeUp>
   )
 }

@@ -6,6 +6,7 @@ import { ChevronRight, Plus, Download } from "lucide-react"
 import { getCachedRatingTags } from "@/features/rating-tags/db/cache/rating-tags"
 import { RatingTagsListView } from "@/features/rating-tags/components/RatingTagsListView"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const VIEWS = ["all", "positive", "neutral", "negative"] as const
 type View = (typeof VIEWS)[number]
@@ -39,6 +40,7 @@ export default async function AdminRatingTagsPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -74,5 +76,6 @@ export default async function AdminRatingTagsPage({ searchParams }: Props) {
         activeView={view}
       />
     </div>
+    </FadeUp>
   )
 }

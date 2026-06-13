@@ -9,6 +9,7 @@ import {
 } from "@/features/points/db/points"
 import { PointPurchaseRequestsTable } from "@/features/points/components/PointPurchaseRequestsTable"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "pending", "approved", "rejected"] as const
@@ -42,6 +43,7 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -76,5 +78,6 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
         total={current.total}
       />
     </div>
+    </FadeUp>
   )
 }

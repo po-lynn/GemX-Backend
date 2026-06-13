@@ -5,6 +5,7 @@ import { ChevronRight, Plus, Download } from "lucide-react"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { CategoriesListView } from "@/features/categories/components/CategoriesListView"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const VIEWS = ["all", "loose_stone", "jewellery"] as const
 type View = (typeof VIEWS)[number]
@@ -36,6 +37,7 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -69,5 +71,6 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
         activeView={view}
       />
     </div>
+    </FadeUp>
   )
 }

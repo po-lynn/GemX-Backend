@@ -26,6 +26,7 @@ import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import { getUserById } from "@/features/users/db/users"
+import { FadeUp } from "@/components/admin/motion"
 
 type Props = {
   params: Promise<{ id: string }>
@@ -147,6 +148,7 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
   const listPath = `/admin/users/${userId}/products`
 
   return (
+    <FadeUp>
     <div className="gem-theme container my-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-2">
@@ -222,5 +224,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
         </CardContent>
       </Card>
     </div>
+    </FadeUp>
   )
 }

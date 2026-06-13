@@ -6,6 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
 import { LaboratoryListView } from "@/features/laboratory/components/LaboratoryListView"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 export default async function AdminLaboratoryPage() {
   await connection()
@@ -17,6 +18,7 @@ export default async function AdminLaboratoryPage() {
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -49,5 +51,6 @@ export default async function AdminLaboratoryPage() {
         activeView="all"
       />
     </div>
+    </FadeUp>
   )
 }

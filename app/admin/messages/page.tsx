@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getAllMessages } from "@/features/messages/db/messages";
 import type { MessageRow } from "@/features/messages/db/messages";
 import { MessagesAdminPanel } from "@/features/messages/components/MessagesAdminPanel";
+import { FadeUp } from "@/components/admin/motion";
 
 function participantsFromMessages(rows: MessageRow[]) {
   const map = new Map<string, string>();
@@ -34,6 +35,7 @@ export default async function AdminMessagesPage({ searchParams }: PageProps) {
   const participants = participantsFromMessages(allMessages);
 
   return (
+    <FadeUp>
     <div className="container my-6 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -57,5 +59,6 @@ export default async function AdminMessagesPage({ searchParams }: PageProps) {
         pageSize={MESSAGE_ADMIN_PAGE_SIZE}
       />
     </div>
+    </FadeUp>
   );
 }

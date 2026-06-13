@@ -9,6 +9,7 @@ import {
   getArticleStatusCountsFromDb,
 } from "@/features/articles/db/articles"
 import { ArticlesTable } from "@/features/articles/components"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 
@@ -50,6 +51,7 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="space-y-5 py-2">
       <div className="lv-pagehead">
         <div>
@@ -100,5 +102,6 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
         viewCounts={counts}
       />
     </div>
+    </FadeUp>
   )
 }

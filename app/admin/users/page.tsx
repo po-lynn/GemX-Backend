@@ -10,6 +10,7 @@ import {
 } from "@/features/users/db/users"
 import { getPushTokensByUserIds } from "@/features/push/db/push-tokens"
 import { UsersTable } from "@/features/users/components"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 
@@ -78,6 +79,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="space-y-5 py-2">
       {/* Page header */}
       <div className="lv-pagehead">
@@ -125,5 +127,6 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         viewCounts={viewCounts}
       />
     </div>
+    </FadeUp>
   )
 }

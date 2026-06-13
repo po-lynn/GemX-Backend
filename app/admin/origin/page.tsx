@@ -6,6 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedOrigins } from "@/features/origin/db/cache/origin"
 import { OriginListView } from "@/features/origin/components/OriginListView"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const VIEWS = ["all", "myanmar", "other"] as const
 type View = (typeof VIEWS)[number]
@@ -39,6 +40,7 @@ export default async function AdminOriginPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -72,5 +74,6 @@ export default async function AdminOriginPage({ searchParams }: Props) {
         activeView={view}
       />
     </div>
+    </FadeUp>
   )
 }

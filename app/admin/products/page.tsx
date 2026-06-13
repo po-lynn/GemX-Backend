@@ -6,6 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getAdminProducts, getAdminProductCounts } from "@/features/products/db/cache/products"
 import { ProductsListView } from "@/features/products/components/ProductsListView"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 25
 const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as const
@@ -81,6 +82,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -123,5 +125,6 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         priceMaxMMK={priceMaxMMK !== undefined ? String(priceMaxMMK) : undefined}
       />
     </div>
+    </FadeUp>
   )
 }

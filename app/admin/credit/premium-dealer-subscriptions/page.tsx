@@ -6,6 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getPremiumDealerSubscriptionsPaginated, getPremiumDealerSubscriptionCounts } from "@/features/points/db/points"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import type { ViewTab } from "@/components/admin/list-view"
+import { FadeUp } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "active", "expired", "cancelled"] as const
@@ -39,6 +40,7 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
   ]
 
   return (
+    <FadeUp>
     <div className="py-2">
       <div className="lv-pagehead">
         <div>
@@ -73,5 +75,6 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
         total={current.total}
       />
     </div>
+    </FadeUp>
   )
 }
