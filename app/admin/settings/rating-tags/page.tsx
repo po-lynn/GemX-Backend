@@ -6,7 +6,7 @@ import { ChevronRight, Plus, Download } from "lucide-react"
 import { getCachedRatingTags } from "@/features/rating-tags/db/cache/rating-tags"
 import { RatingTagsListView } from "@/features/rating-tags/components/RatingTagsListView"
 import type { ViewTab } from "@/components/admin/list-view"
-import { FadeUp } from "@/components/admin/motion"
+import { FadeUp, PressButton } from "@/components/admin/motion"
 
 const VIEWS = ["all", "positive", "neutral", "negative"] as const
 type View = (typeof VIEWS)[number]
@@ -60,9 +60,9 @@ export default async function AdminRatingTagsPage({ searchParams }: Props) {
           </p>
         </div>
         <div className="lv-pagehead-actions">
-          <button className="lv-export-btn">
+          <PressButton className="lv-export-btn">
             <Download /> Export Excel
-          </button>
+          </PressButton>
           <Link href="/admin/settings/rating-tags/new" className="lv-new-btn">
             <Plus /> New tag
           </Link>

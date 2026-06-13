@@ -5,7 +5,7 @@ import { ChevronRight, Plus, Download } from "lucide-react"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { CategoriesListView } from "@/features/categories/components/CategoriesListView"
 import type { ViewTab } from "@/components/admin/list-view"
-import { FadeUp } from "@/components/admin/motion"
+import { FadeUp, PressButton } from "@/components/admin/motion"
 
 const VIEWS = ["all", "loose_stone", "jewellery"] as const
 type View = (typeof VIEWS)[number]
@@ -55,9 +55,9 @@ export default async function AdminCategoriesPage({ searchParams }: Props) {
           </p>
         </div>
         <div className="lv-pagehead-actions">
-          <button className="lv-export-btn">
+          <PressButton className="lv-export-btn">
             <Download /> Export Excel
-          </button>
+          </PressButton>
           <Link href="/admin/categories/new" className="lv-new-btn">
             <Plus /> New category
           </Link>

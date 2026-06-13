@@ -6,7 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedOrigins } from "@/features/origin/db/cache/origin"
 import { OriginListView } from "@/features/origin/components/OriginListView"
 import type { ViewTab } from "@/components/admin/list-view"
-import { FadeUp } from "@/components/admin/motion"
+import { FadeUp, PressButton } from "@/components/admin/motion"
 
 const VIEWS = ["all", "myanmar", "other"] as const
 type View = (typeof VIEWS)[number]
@@ -58,9 +58,9 @@ export default async function AdminOriginPage({ searchParams }: Props) {
           </p>
         </div>
         <div className="lv-pagehead-actions">
-          <button className="lv-export-btn">
+          <PressButton className="lv-export-btn">
             <Download /> Export Excel
-          </button>
+          </PressButton>
           <Link href="/admin/origin/new" className="lv-new-btn">
             <Plus /> New origin
           </Link>

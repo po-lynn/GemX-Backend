@@ -6,7 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getPremiumDealerSubscriptionsPaginated, getPremiumDealerSubscriptionCounts } from "@/features/points/db/points"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import type { ViewTab } from "@/components/admin/list-view"
-import { FadeUp } from "@/components/admin/motion"
+import { FadeUp, PressButton } from "@/components/admin/motion"
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "active", "expired", "cancelled"] as const
@@ -60,9 +60,9 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
           </p>
         </div>
         <div className="lv-pagehead-actions">
-          <button className="lv-export-btn">
+          <PressButton className="lv-export-btn">
             <Download /> Export Excel
-          </button>
+          </PressButton>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
 import { LaboratoryListView } from "@/features/laboratory/components/LaboratoryListView"
 import type { ViewTab } from "@/components/admin/list-view"
-import { FadeUp } from "@/components/admin/motion"
+import { FadeUp, PressButton } from "@/components/admin/motion"
 
 export default async function AdminLaboratoryPage() {
   await connection()
@@ -36,9 +36,9 @@ export default async function AdminLaboratoryPage() {
           </p>
         </div>
         <div className="lv-pagehead-actions">
-          <button className="lv-export-btn">
+          <PressButton className="lv-export-btn">
             <Download /> Export Excel
-          </button>
+          </PressButton>
           <Link href="/admin/laboratory/new" className="lv-new-btn">
             <Plus /> New laboratory
           </Link>
