@@ -1,6 +1,6 @@
 import { SkBlock, SkFormField } from "@/components/admin/motion/skeleton"
 
-export default function UserEditLoading() {
+export default function UserNewLoading() {
   return (
     <div className="container my-4 w-full max-w-screen-2xl space-y-6 md:my-6">
       <div className="space-y-1.5">
