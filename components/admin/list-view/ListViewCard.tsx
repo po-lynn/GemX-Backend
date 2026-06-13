@@ -150,7 +150,7 @@ function RangeSlider({ domain, step, lo, hi, onChange }: {
   const [dMin, dMax] = domain
   const trackRef = useRef<HTMLDivElement>(null)
   const valRef = useRef({ lo, hi })
-  valRef.current = { lo, hi }
+  useEffect(() => { valRef.current = { lo, hi } }, [lo, hi])
 
   const pct = (v: number) => ((v - dMin) / (dMax - dMin)) * 100
 
@@ -233,7 +233,7 @@ function PriceField({ label, prefix, value, onCommit }: {
       <span className="lv-numrange-field-wrap">
         {prefix && <span className="lv-numrange-field-prefix">{prefix}</span>}
         <input
-          className={`lv-numrange-field-input${prefix.length > 1 ? " long-prefix" : ""}`}
+          className="lv-numrange-field-input"
           value={text}
           inputMode="numeric"
           onChange={(e) => setText(e.target.value)}
@@ -280,7 +280,6 @@ function NumRangeBlock({ cur, vals, onChange }: {
       <div className="lv-numrange-fields">
         <PriceField label="MIN" prefix={cur.sym} value={lo}
           onCommit={(n) => encode(Math.min(Math.max(dMin, n), hi), hi)} />
-        <span className="lv-numrange-sep">—</span>
         <PriceField label="MAX" prefix={cur.sym} value={hi}
           onCommit={(n) => encode(lo, Math.max(Math.min(dMax, n), lo))} />
       </div>
