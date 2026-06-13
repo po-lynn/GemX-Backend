@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: "node",
     environmentMatchGlobs: [["tests/component/**", "jsdom"]],
+    setupFiles: ["tests/setup-component.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     env: {
       AUTH_SECRET: "test-auth-secret",
