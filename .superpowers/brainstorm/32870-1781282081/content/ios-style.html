@@ -1,0 +1,75 @@
+<h2>Which iOS 26/27 animation style?</h2>
+<p class="subtitle">iOS 26 introduced "Liquid Glass" — but there are different ways to bring that into an admin panel. Which direction feels right?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="liquid-glass" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 20px; min-height: 160px; position: relative; overflow: hidden;">
+      <!-- Glass pane overlay -->
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.02) 100%);backdrop-filter:blur(20px);"></div>
+      <!-- Sidebar glass -->
+      <div style="position:absolute;left:0;top:0;bottom:0;width:60px;background:rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(32px);"></div>
+      <!-- Header glass -->
+      <div style="position:absolute;top:0;left:60px;right:0;height:32px;background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(20px);"></div>
+      <!-- Tinted cards -->
+      <div style="position:absolute;left:72px;top:40px;right:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="height:36px;border-radius:10px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.3);backdrop-filter:blur(12px);"></div>
+        <div style="height:36px;border-radius:10px;background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.25);backdrop-filter:blur(12px);"></div>
+        <div style="height:36px;border-radius:10px;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.25);backdrop-filter:blur(12px);"></div>
+        <div style="height:36px;border-radius:10px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.25);backdrop-filter:blur(12px);"></div>
+      </div>
+      <!-- Orbs -->
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.3) 0%,transparent 70%);filter:blur(8px);"></div>
+    </div>
+    <div class="card-body">
+      <h3>Liquid Glass</h3>
+      <p>Frosted translucent panels, blurred backgrounds, tinted color washes. Each card feels like a floating glass pane. Dark/light adapts via opacity. Closest to true iOS 26 "visionOS-meets-iOS" aesthetic.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="spring-motion" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #f4f5f8; padding: 20px; min-height: 160px; position: relative; overflow: hidden;">
+      <!-- Clean white sidebar -->
+      <div style="position:absolute;left:0;top:0;bottom:0;width:60px;background:#fff;border-right:1px solid #eef0f4;box-shadow:2px 0 8px rgba(0,0,0,0.04);"></div>
+      <!-- Header -->
+      <div style="position:absolute;top:0;left:60px;right:0;height:32px;background:#fff;border-bottom:1px solid #eef0f4;"></div>
+      <!-- Cards with spring-enter feeling -->
+      <div style="position:absolute;left:72px;top:40px;right:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="height:36px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);transform:translateY(0px);"></div>
+        <div style="height:36px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);transform:translateY(2px);opacity:0.8;"></div>
+        <div style="height:36px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);transform:translateY(4px);opacity:0.6;"></div>
+        <div style="height:36px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);transform:translateY(6px);opacity:0.4;"></div>
+      </div>
+      <!-- Spring bounce indicator -->
+      <div style="position:absolute;bottom:12px;right:12px;font-size:9px;color:#8b5cf6;font-weight:700;letter-spacing:0.05em;background:rgba(139,92,246,0.1);padding:2px 6px;border-radius:6px;">SPRING ↗</div>
+    </div>
+    <div class="card-body">
+      <h3>Spring Motion</h3>
+      <p>Current clean white design stays, but everything moves. Page load triggers staggered spring entrances (cards cascade in with elastic overshoot). Navigation transitions. Hover interactions feel alive with subtle bounce.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="both" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #f4f5f8 0%, #eef0f4 100%); padding: 20px; min-height: 160px; position: relative; overflow: hidden;">
+      <!-- Sidebar: slightly frosted -->
+      <div style="position:absolute;left:0;top:0;bottom:0;width:60px;background:rgba(255,255,255,0.85);border-right:1px solid rgba(139,92,246,0.12);backdrop-filter:blur(12px);"></div>
+      <!-- Header: slightly frosted -->
+      <div style="position:absolute;top:0;left:60px;right:0;height:32px;background:rgba(255,255,255,0.8);border-bottom:1px solid rgba(139,92,246,0.08);backdrop-filter:blur(8px);"></div>
+      <!-- Cards: glass + stagger -->
+      <div style="position:absolute;left:72px;top:40px;right:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="height:36px;border-radius:12px;background:rgba(255,255,255,0.9);box-shadow:0 2px 12px rgba(139,92,246,0.1),0 0 0 1px rgba(139,92,246,0.08);backdrop-filter:blur(8px);"></div>
+        <div style="height:36px;border-radius:12px;background:rgba(255,255,255,0.85);box-shadow:0 2px 12px rgba(59,130,246,0.1),0 0 0 1px rgba(59,130,246,0.08);backdrop-filter:blur(8px);opacity:0.9;"></div>
+        <div style="height:36px;border-radius:12px;background:rgba(255,255,255,0.8);box-shadow:0 2px 12px rgba(34,197,94,0.1),0 0 0 1px rgba(34,197,94,0.08);backdrop-filter:blur(8px);opacity:0.75;"></div>
+        <div style="height:36px;border-radius:12px;background:rgba(255,255,255,0.75);box-shadow:0 2px 12px rgba(245,158,11,0.1),0 0 0 1px rgba(245,158,11,0.08);backdrop-filter:blur(8px);opacity:0.6;"></div>
+      </div>
+      <div style="position:absolute;bottom:12px;right:12px;font-size:9px;color:#8b5cf6;font-weight:700;letter-spacing:0.05em;background:rgba(139,92,246,0.12);padding:2px 6px;border-radius:6px;">GLASS + SPRING</div>
+    </div>
+    <div class="card-body">
+      <h3>Glass + Spring (Recommended)</h3>
+      <p>Subtle glass on sidebar and header (frosted, light tint). Spring animations on page enter and interactions. Skeletons shimmer then fade to real content. Feels modern but stays admin-functional. Best balance.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 16px;">Click a card to select, then tell me your choice in the terminal.</p>

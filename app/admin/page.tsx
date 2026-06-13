@@ -88,8 +88,8 @@ export default async function AdminPage() {
         <Link
           href="/admin/products"
           className="group relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border/60 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+          style={{ backgroundImage: "radial-gradient(circle at 110% -10%, rgba(139,92,246,0.12) 0%, transparent 55%)" }}
         >
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-violet-100/50 blur-2xl" />
           <div className="relative flex items-start justify-between">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100">
               <Package className="h-5 w-5 text-violet-600" />
@@ -111,8 +111,8 @@ export default async function AdminPage() {
         <Link
           href="/admin/users"
           className="group relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border/60 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+          style={{ backgroundImage: "radial-gradient(circle at 110% -10%, rgba(59,130,246,0.12) 0%, transparent 55%)" }}
         >
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-blue-100/50 blur-2xl" />
           <div className="relative flex items-start justify-between">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
               <Users className="h-5 w-5 text-blue-600" />
@@ -135,8 +135,8 @@ export default async function AdminPage() {
             "group relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm ring-1 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
             pendingRequests > 0 ? "ring-amber-300/70" : "ring-border/60"
           )}
+          style={{ backgroundImage: "radial-gradient(circle at 110% -10%, rgba(245,158,11,0.12) 0%, transparent 55%)" }}
         >
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-100/50 blur-2xl" />
           {pendingRequests > 0 && (
             <span className="absolute right-4 top-4 flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
@@ -167,8 +167,8 @@ export default async function AdminPage() {
             "group relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm ring-1 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
             pendingPoints > 0 ? "ring-emerald-300/70" : "ring-border/60"
           )}
+          style={{ backgroundImage: "radial-gradient(circle at 110% -10%, rgba(16,185,129,0.12) 0%, transparent 55%)" }}
         >
-          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-100/50 blur-2xl" />
           {pendingPoints > 0 && (
             <span className="absolute right-4 top-4 flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />

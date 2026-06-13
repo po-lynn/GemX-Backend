@@ -1,4 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(tar -xf /tmp/design -C /tmp/ test3/README.md \"test3/project/Price Filter.html\" \"test3/project/Price Filter - Explorations.html\")",
+      "Bash(tar -xf /tmp/design -C /tmp/ \"test3/chats/\")",
+      "Bash(tar -xf /tmp/design -C /tmp/ \"test3/project/price-filter-shell.jsx\" \"test3/project/price-variations.jsx\")",
+      "Bash(/home/po/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh --project-dir /home/po/me/2026/Jade/infinity-gemx)",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs)",
+      "Bash(PATH=__TRACKED_VAR__:/home/po/.nvm/versions/node/v22.12.0/bin rtk git commit -m ' *)",
+      "Bash(PATH=__TRACKED_VAR__:/home/po/.nvm/versions/node/v22.12.0/bin rtk git add docs/superpowers/specs/2026-06-13-admin-motion-skeleton-design.md components/admin/list-view/ListViewCard.tsx)",
+      "Bash(/home/po/.nvm/versions/node/v20.18.1/bin/npm run *)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk git commit -m ' *)"
+    ],
+    "additionalDirectories": [
+      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs"
+    ]
+  },
   "enabledPlugins": {
     "claude-mem@thedotmack": true,
     "agent-skills@addy-agent-skills": true,

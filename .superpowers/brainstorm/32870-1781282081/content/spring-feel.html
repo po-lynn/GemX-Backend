@@ -1,0 +1,147 @@
+<h2>How bouncy should the spring feel?</h2>
+<p class="subtitle">Three personalities — approximated with CSS. In Motion.dev these map to stiffness/damping values. Watch the cards animate on loop.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="subtle" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f5f8;padding:20px;min-height:160px;overflow:hidden;display:flex;align-items:flex-start;gap:8px;">
+      <style>
+        /* Subtle: no overshoot, just smooth deceleration */
+        @keyframes subtle-enter {
+          0%   { opacity:0; transform: translateY(14px); }
+          100% { opacity:1; transform: translateY(0px); }
+        }
+        .card-subtle { animation: subtle-enter 0.4s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+        .card-subtle.d1 { animation-delay: 0s; }
+        .card-subtle.d2 { animation-delay: 0.07s; }
+        .card-subtle.d3 { animation-delay: 0.14s; }
+        .card-subtle.d4 { animation-delay: 0.21s; }
+        /* loop every 3s */
+        @keyframes subtle-loop {
+          0%,10%  { opacity:0; transform: translateY(14px); }
+          40%,90% { opacity:1; transform: translateY(0px); }
+          100%    { opacity:0; transform: translateY(14px); }
+        }
+        .lp-subtle { animation: subtle-loop 3s cubic-bezier(0.25,0.46,0.45,0.94) infinite; }
+        .lp-subtle.d1 { animation-delay: 0s; }
+        .lp-subtle.d2 { animation-delay: 0.07s; }
+        .lp-subtle.d3 { animation-delay: 0.14s; }
+        .lp-subtle.d4 { animation-delay: 0.21s; }
+      </style>
+      <div class="lp-subtle d1" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(139,92,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">142</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Products</div>
+      </div>
+      <div class="lp-subtle d2" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(59,130,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">2,481</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Users</div>
+      </div>
+      <div class="lp-subtle d3" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,158,11,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">7</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Pending</div>
+      </div>
+      <div class="lp-subtle d4" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(34,197,94,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">3</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Payments</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Subtle</h3>
+      <p>Smooth deceleration, no overshoot. Barely perceptible spring. Feels clean and professional. Motion stiffness ~300, damping ~30. Best for productivity tools used all day.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="moderate" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f5f8;padding:20px;min-height:160px;overflow:hidden;display:flex;align-items:flex-start;gap:8px;">
+      <style>
+        /* Moderate: slight overshoot ~6px then settles */
+        @keyframes moderate-loop {
+          0%,10%  { opacity:0; transform: translateY(18px) scale(0.96); }
+          55%     { opacity:1; transform: translateY(-4px) scale(1.01); }
+          70%,90% { opacity:1; transform: translateY(0px) scale(1); }
+          100%    { opacity:0; transform: translateY(18px) scale(0.96); }
+        }
+        .lp-moderate { animation: moderate-loop 3.2s ease-out infinite; }
+        .lp-moderate.d1 { animation-delay: 0s; }
+        .lp-moderate.d2 { animation-delay: 0.09s; }
+        .lp-moderate.d3 { animation-delay: 0.18s; }
+        .lp-moderate.d4 { animation-delay: 0.27s; }
+      </style>
+      <div class="lp-moderate d1" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(139,92,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">142</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Products</div>
+      </div>
+      <div class="lp-moderate d2" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(59,130,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">2,481</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Users</div>
+      </div>
+      <div class="lp-moderate d3" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,158,11,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">7</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Pending</div>
+      </div>
+      <div class="lp-moderate d4" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(34,197,94,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">3</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Payments</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Moderate iOS ✦ Recommended</h3>
+      <p>Gentle overshoot then settles. Natural, alive — the iOS 26 "system spring". Stiffness ~200, damping ~20. Enjoyable first time, not annoying on repeat visits. Scale + translate together.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="expressive" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f5f8;padding:20px;min-height:160px;overflow:hidden;display:flex;align-items:flex-start;gap:8px;">
+      <style>
+        /* Expressive: pronounced bounce, multiple oscillations */
+        @keyframes expressive-loop {
+          0%,8%  { opacity:0; transform: translateY(22px) scale(0.90); }
+          45%    { opacity:1; transform: translateY(-10px) scale(1.04); }
+          60%    { opacity:1; transform: translateY(4px) scale(0.99); }
+          72%    { opacity:1; transform: translateY(-3px) scale(1.01); }
+          82%,90%{ opacity:1; transform: translateY(0px) scale(1); }
+          100%   { opacity:0; transform: translateY(22px) scale(0.90); }
+        }
+        .lp-expressive { animation: expressive-loop 3.5s ease-out infinite; }
+        .lp-expressive.d1 { animation-delay: 0s; }
+        .lp-expressive.d2 { animation-delay: 0.1s; }
+        .lp-expressive.d3 { animation-delay: 0.2s; }
+        .lp-expressive.d4 { animation-delay: 0.3s; }
+      </style>
+      <div class="lp-expressive d1" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(139,92,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">142</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Products</div>
+      </div>
+      <div class="lp-expressive d2" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(59,130,246,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">2,481</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Users</div>
+      </div>
+      <div class="lp-expressive d3" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,158,11,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">7</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Pending</div>
+      </div>
+      <div class="lp-expressive d4" style="background:#fff;border-radius:12px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);flex:1;">
+        <div style="width:28px;height:28px;border-radius:8px;background:rgba(34,197,94,0.12);margin-bottom:8px;"></div>
+        <div style="height:16px;font-size:16px;font-weight:700;color:#1f2330;">3</div>
+        <div style="font-size:10px;color:#9aa1b1;margin-top:2px;">Payments</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Expressive</h3>
+      <p>Multiple oscillations, big overshoot. Full iOS 26 personality — delightful first time, potentially fatiguing in a daily-use tool. Stiffness ~120, damping ~10. Best for consumer apps, risky for admin.</p>
+    </div>
+  </div>
+
+</div>
+<p class="subtitle" style="margin-top:16px;">Cards animate on loop so you can compare without clicking. Select your preference and confirm in the terminal.</p>
