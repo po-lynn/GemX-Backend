@@ -2003,27 +2003,20 @@ export function ProductForm({
                     ))}
                   </select>
                 </div>
-                {(
-                  [
-                    { key: "weightCarat", label: "Weight (ct) *", placeholder: "e.g. 0.5", inputMode: "decimal" },
-                    { key: "pieceCount",  label: "Pieces",        placeholder: "e.g. 37",  inputMode: "numeric" },
-                  ] as { key: keyof FormGemstoneEntry; label: string; placeholder: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }[]
-                ).map(({ key, label, placeholder, inputMode }) => (
-                  <div key={key} className="space-y-1.5">
-                    <label className="text-xs font-medium">{label}</label>
-                    <input
-                      type="text"
-                      inputMode={inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]}
-                      placeholder={placeholder}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                      value={gemstoneDialogForm[key]}
-                      onChange={(e) =>
-                        setGemstoneDialogForm((p) => ({ ...p, [key]: e.target.value }))
-                      }
-                      disabled={gemstoneDialogMode === "view"}
-                    />
-                  </div>
-                ))}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium">Weight (ct) *</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="e.g. 0.5"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    value={gemstoneDialogForm.weightCarat}
+                    onChange={(e) =>
+                      setGemstoneDialogForm((p) => ({ ...p, weightCarat: e.target.value }))
+                    }
+                    disabled={gemstoneDialogMode === "view"}
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter className="shrink-0 gap-2 sm:gap-0">
