@@ -161,6 +161,7 @@ export async function PATCH(
         metal: data.metal,
         jewelleryGemstones: data.jewelleryGemstones,
         totalWeightGrams: data.totalWeightGrams,
+        pieceCount: data.pieceCount,
         weightCarat: data.weightCarat,
         dimensions: data.dimensions,
         color: data.color,

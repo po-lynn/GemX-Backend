@@ -58,6 +58,7 @@
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
+- **POST /api/products** and **PATCH /api/products/:id** — New `pieceCount` field (integer, optional) at the **product level** for jewellery: total number of stones/pieces in the piece (e.g. `13` for a ring with 1 ruby + 12 diamonds). Distinct from `jewelleryGemstones[].pieceCount` (per stone-type count). Returned in GET `/api/products/:id` response.
 - **POST /api/products** and **PATCH /api/products/:id** — `jewelleryGemstones` fix: only `weightCarat` is required per item; `categoryId` (stone type UUID), `color`, `origin`, and all other fields are optional. Previously `color` and `origin` were incorrectly required, causing items that omitted them to be silently dropped and the array to come back empty. Items without a `categoryId` are accepted in the request but not stored (skipped). See **5.5**.
 - **POST /api/products** and **PATCH /api/products/:id** – Request body uses `**jewelleryGemstones`** (lowercase `s`) for jewellery gemstone array. Optional `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion` (boolean). **`dimensions`** (product or each jewellery gemstone) may be a **string**, an **array of segments** (joined with ` × ` like the admin form), or an **object** `{ length, width, depth }` / `{ length, width, height }` / `{ part1, part2, part3 }` — see **5.5**. Validated up to **300** characters after normalization.
 - **POST /api/products** / **PATCH /api/products/:id** – Featured now supports duration via `featureDurationDays` (0–365). When featured with a duration > 0, backend stores an expiry timestamp (`featuredExpiresAt`). Create/update also accept `isFeatured` + `featured` (points/priority; integer >= 0). `isPromotion` can be sent as boolean or `"true"/"1"` string and is normalized server-side.
@@ -2931,8 +2932,9 @@ You may send any of:
 **Jewellery:**
 
 - `metal` – `"Gold"` | `"Silver"` | `"Other"`
-- `totalWeightGrams`
-- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Use the key `**jewelleryGemstones`** (lowercase `s`); `jewelleryGemStones` is not accepted. Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
+- `totalWeightGrams` – total weight of the piece in grams (metal + stones), e.g. `"28.48"`
+- `pieceCount` – total number of stones/pieces in the jewellery piece (integer, e.g. `3`). This is the product-level total, separate from the per-gemstone-type `pieceCount` inside `jewelleryGemstones`.
+- `jewelleryGemstones` – array of gemstone objects (see **Jewellery with gemstones** below). Use the key `jewelleryGemstones` (lowercase `s`); `jewelleryGemStones` is not accepted. Product-level `color` and `origin` are not used for jewellery; each stone has its own `color` and `origin` in this array.
 
 **Minimal example (all required fields):**
 
@@ -3011,6 +3013,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
   "categoryId": "CATEGORY_UUID_RING",
   "metal": "Gold",
   "totalWeightGrams": "4.2",
+  "pieceCount": 13,
   "isNegotiable": true,
   "status": "active",
   "imageUrls": [
@@ -3055,6 +3058,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
   "productType": "jewellery",
   "categoryId": "CATEGORY_UUID_RING",
   "metal": "Gold",
+  "pieceCount": 2,
   "status": "active",
   "jewelleryGemstones": [
     { "categoryId": "CATEGORY_UUID_RUBY", "weightCarat": "7" },
