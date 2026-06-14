@@ -1456,7 +1456,7 @@ export function ProductForm({
                     <div className="pd-gems-list">
                       {jewelleryGemstones.map((row, i) => {
                         const stoneName = row.categoryId
-                          ? stoneOptions.find((c) => c.id === row.categoryId)?.name ?? "—"
+                          ? (stoneOptions.find((c) => c.id === row.categoryId)?.name ?? categories.find((c) => c.id === row.categoryId)?.name ?? "—")
                           : "—"
                         return (
                           <div key={i} className="pd-gem">
@@ -1546,25 +1546,39 @@ export function ProductForm({
                     </div>
                   </div>
                 )}
-                <div className="pd-field">
-                  <label htmlFor="weightCarat" className="pd-label">
-                    {productType === "jewellery" ? "Total gem weight (ct)" : "Weight (carat)"}
-                    {productType === "loose_stone" && <span className="req"> *</span>}
-                  </label>
-                  <div className="pd-input-suffix">
+                {productType === "jewellery" ? (
+                  <div className="pd-field">
+                    <label htmlFor="pieceCount" className="pd-label">Total pieces</label>
                     <input
-                      id="weightCarat"
-                      name="weightCarat"
+                      id="pieceCount"
+                      name="pieceCount"
                       type="text"
-                      required={productType === "loose_stone"}
-                      inputMode="decimal"
-                      defaultValue={product?.weightCarat ?? ""}
-                      placeholder={productType === "jewellery" ? "e.g. 30.09" : "e.g. 2.5"}
+                      inputMode="numeric"
+                      defaultValue={product?.pieceCount != null ? String(product.pieceCount) : ""}
+                      placeholder="e.g. 3"
                       className="pd-input mono"
                     />
-                    <span className="pd-sfx">ct</span>
                   </div>
-                </div>
+                ) : (
+                  <div className="pd-field">
+                    <label htmlFor="weightCarat" className="pd-label">
+                      Weight (carat)<span className="req"> *</span>
+                    </label>
+                    <div className="pd-input-suffix">
+                      <input
+                        id="weightCarat"
+                        name="weightCarat"
+                        type="text"
+                        required
+                        inputMode="decimal"
+                        defaultValue={product?.weightCarat ?? ""}
+                        placeholder="e.g. 2.5"
+                        className="pd-input mono"
+                      />
+                      <span className="pd-sfx">ct</span>
+                    </div>
+                  </div>
+                )}
                 {productType === "loose_stone" && (
                   <div className="pd-field">
                     <label className="pd-label">
@@ -1978,6 +1992,10 @@ export function ProductForm({
                     disabled={gemstoneDialogMode === "view"}
                   >
                     <option value="">Select</option>
+                    {gemstoneDialogForm.categoryId && !stoneOptions.some((c) => c.id === gemstoneDialogForm.categoryId) && (() => {
+                      const orphan = categories.find((c) => c.id === gemstoneDialogForm.categoryId)
+                      return orphan ? <option key={orphan.id} value={orphan.id}>{orphan.name}</option> : null
+                    })()}
                     {stoneOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -1989,10 +2007,6 @@ export function ProductForm({
                   [
                     { key: "weightCarat", label: "Weight (ct) *", placeholder: "e.g. 0.5", inputMode: "decimal" },
                     { key: "pieceCount",  label: "Pieces",        placeholder: "e.g. 37",  inputMode: "numeric" },
-                    { key: "dimensions",  label: "Dimensions",    placeholder: "e.g. 8.2 x 6.1 mm" },
-                    { key: "color",       label: "Color *",       placeholder: "e.g. Pigeon Blood Red" },
-                    { key: "cut",         label: "Cut",           placeholder: "e.g. Mixed cut" },
-                    { key: "transparency",label: "Transparency",  placeholder: "e.g. Transparent" },
                   ] as { key: keyof FormGemstoneEntry; label: string; placeholder: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }[]
                 ).map(({ key, label, placeholder, inputMode }) => (
                   <div key={key} className="space-y-1.5">
@@ -2010,63 +2024,6 @@ export function ProductForm({
                     />
                   </div>
                 ))}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Shape</label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                    value={gemstoneDialogForm.shape}
-                    onChange={(e) =>
-                      setGemstoneDialogForm((p) => ({ ...p, shape: e.target.value }))
-                    }
-                    disabled={gemstoneDialogMode === "view"}
-                  >
-                    <option value="">Select</option>
-                    {SHAPES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium">Origin *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Mogok, Myanmar"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                    value={gemstoneDialogForm.origin}
-                    onChange={(e) =>
-                      setGemstoneDialogForm((p) => ({ ...p, origin: e.target.value }))
-                    }
-                    disabled={gemstoneDialogMode === "view"}
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium">Comment</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. No indication of thermal treatment"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                    value={gemstoneDialogForm.comment}
-                    onChange={(e) =>
-                      setGemstoneDialogForm((p) => ({ ...p, comment: e.target.value }))
-                    }
-                    disabled={gemstoneDialogMode === "view"}
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium">Inclusions (magnification)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rutiles, feathers, solids, zoning"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                    value={gemstoneDialogForm.inclusions}
-                    onChange={(e) =>
-                      setGemstoneDialogForm((p) => ({ ...p, inclusions: e.target.value }))
-                    }
-                    disabled={gemstoneDialogMode === "view"}
-                  />
-                </div>
               </div>
             </div>
             <DialogFooter className="shrink-0 gap-2 sm:gap-0">
@@ -2088,9 +2045,7 @@ export function ProductForm({
                     onClick={handleSaveGemstoneDialog}
                     disabled={
                       !gemstoneDialogForm.categoryId ||
-                      gemstoneDialogForm.weightCarat.trim() === "" ||
-                      gemstoneDialogForm.color.trim() === "" ||
-                      gemstoneDialogForm.origin.trim() === ""
+                      gemstoneDialogForm.weightCarat.trim() === ""
                     }
                   >
                     {gemstoneDialogMode === "add" ? "Add" : "Save"}

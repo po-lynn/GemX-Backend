@@ -126,6 +126,16 @@ const productCreateBaseSchema = z.object({
         !v || v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
       { message: "Total weight (g) must be a valid number" }
     ),
+  /** Jewellery only: total number of stones/pieces in the piece */
+  pieceCount: z
+    .union([z.string(), z.number()])
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v === "" || v === undefined || v === null) return null
+      const n = Math.floor(Number(v))
+      return Number.isFinite(n) && n >= 0 ? n : null
+    }),
   weightCarat: z
     .string()
     .optional()

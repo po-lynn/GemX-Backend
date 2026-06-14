@@ -571,6 +571,7 @@ export type ProductForEdit = {
   metal: "Gold" | "Silver" | "Other" | null
   jewelleryGemstones: JewelleryGemstoneRow[]
   totalWeightGrams: string | null
+  pieceCount: number | null
   weightCarat: string | null
   dimensions: string | null
   color: string | null
@@ -616,6 +617,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       stoneCut: product.stoneCut,
       metal: product.metal,
       totalWeightGrams: product.totalWeightGrams,
+      pieceCount: product.pieceCount,
       weightCarat: product.weightCarat,
       dimensions: product.dimensions,
       color: product.color,
@@ -726,6 +728,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     metal: row.metal,
     jewelleryGemstones,
     totalWeightGrams: row.totalWeightGrams ? String(row.totalWeightGrams) : null,
+    pieceCount: row.pieceCount ?? null,
     weightCarat: row.weightCarat ? String(row.weightCarat) : null,
     dimensions: row.dimensions,
     color: row.color,
@@ -792,6 +795,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     stoneCut: input.stoneCut ?? null,
     metal: input.metal ?? null,
     totalWeightGrams: input.totalWeightGrams ?? null,
+    pieceCount: input.pieceCount ?? null,
     weightCarat: input.weightCarat ?? null,
     dimensions: input.dimensions ?? null,
     color: input.color ?? null,
@@ -903,6 +907,7 @@ export type UpdateProductInput = {
     inclusions?: string | null
   }[]
   totalWeightGrams?: string | null
+  pieceCount?: number | null
   weightCarat?: string | null
   dimensions?: string | null
   color?: string | null
@@ -977,6 +982,7 @@ export async function updateProductInDb(
   if (rest.stoneCut !== undefined) updates.stoneCut = rest.stoneCut
   if (rest.metal !== undefined) updates.metal = rest.metal
   if (rest.totalWeightGrams !== undefined) updates.totalWeightGrams = rest.totalWeightGrams
+  if (rest.pieceCount !== undefined) updates.pieceCount = rest.pieceCount
   if (rest.weightCarat !== undefined) updates.weightCarat = rest.weightCarat
   if (rest.dimensions !== undefined) updates.dimensions = rest.dimensions
   if (rest.color !== undefined) updates.color = rest.color

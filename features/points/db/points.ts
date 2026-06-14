@@ -408,14 +408,20 @@ export async function getPointPurchasePackagesSettings(): Promise<PointPurchaseP
 }
 
 export async function savePointPurchasePackagesSettings(s: PointPurchasePackagesSettings): Promise<void> {
-  const packages = s.packages.map((p) => ({
-    name: p.name?.trim() ? p.name.trim().slice(0, 200) : "Package",
-    points: Math.max(1, Math.floor(Number(p.points) || 1)),
-    ...(p.priceMmk != null ? { priceMmk: Math.max(0, Math.floor(Number(p.priceMmk))) } : {}),
-    ...(p.priceUsd != null ? { priceUsd: Math.max(0, Math.floor(Number(p.priceUsd))) } : {}),
-    ...(p.priceKrw != null ? { priceKrw: Math.max(0, Math.floor(Number(p.priceKrw))) } : {}),
-    ...(p.description?.trim() ? { description: p.description.trim().slice(0, 500) } : {}),
-  }));
+  const packages = s.packages.map((p) => {
+    const bonus = Math.max(0, Math.floor(Number(p.bonus) || 0));
+    return {
+      name: p.name?.trim() ? p.name.trim().slice(0, 200) : "Package",
+      points: Math.max(1, Math.floor(Number(p.points) || 1)),
+      ...(bonus > 0 ? { bonus } : {}),
+      ...(typeof p.popular === "boolean" ? { popular: p.popular } : {}),
+      ...(typeof p.enabled === "boolean" ? { enabled: p.enabled } : {}),
+      ...(p.priceMmk != null ? { priceMmk: Math.max(0, Math.floor(Number(p.priceMmk))) } : {}),
+      ...(p.priceUsd != null ? { priceUsd: Math.max(0, Math.floor(Number(p.priceUsd))) } : {}),
+      ...(p.priceKrw != null ? { priceKrw: Math.max(0, Math.floor(Number(p.priceKrw))) } : {}),
+      ...(p.description?.trim() ? { description: p.description.trim().slice(0, 500) } : {}),
+    };
+  });
   await upsertText(POINT_PURCHASE_PACKAGES_JSON_KEY, JSON.stringify(packages));
 }
 

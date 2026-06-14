@@ -85,6 +85,8 @@ export const product = pgTable(
     metal: metalEnum("metal"),
     /** Jewellery only: total weight of piece in grams (metal + stones), e.g. from report "Total: 28.48 gm" */
     totalWeightGrams: decimal("total_weight_grams", { precision: 12, scale: 4 }),
+    /** Jewellery only: total number of stones/pieces in the piece */
+    pieceCount: integer("piece_count"),
     // Specifications
     weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }),
     dimensions: text("dimensions"),
