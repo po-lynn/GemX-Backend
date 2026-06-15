@@ -18,7 +18,7 @@ async function AdminUsersEditContent({ params }: Props) {
   const user = await getUserById(id);
   if (!user) notFound();
 
-  const permissions = user.role === "supervisor" ? await getUserPermissions(user.id) : {};
+  const permissions = user.role === "internal" ? await getUserPermissions(user.id) : {};
 
   return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} />;
 }

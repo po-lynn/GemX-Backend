@@ -34,7 +34,7 @@ const MAX_IMAGE_SIZE_MB = 5;
 
 const ROLES = [
   { value: "admin",      label: "Admin"      },
-  { value: "supervisor", label: "Supervisor" },
+  { value: "internal", label: "Internal" },
   { value: "user",       label: "User"       },
 ];
 
@@ -173,7 +173,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
   const [dirty,   setDirty]   = useState(false);
   const [tab,     setTab]     = useState<"profile" | "access" | "wallet" | "permissions" | "danger">("profile");
 
-  // permissions (supervisor only)
+  // permissions (internal only)
   const [perms, setPerms] = useState<Record<string, boolean>>(initialPermissions);
   const [error,   setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -297,7 +297,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
     try {
       const result = await updateUserAction(fd);
       if (result?.error) { setError(result.error); return; }
-      if (role === "supervisor") {
+      if (role === "internal") {
         const allKeys = FEATURE_GROUPS.flatMap((g) => g.features.map((f) => f.key));
         const completePerms = Object.fromEntries(allKeys.map((k) => [k, perms[k] ?? false]));
         const permsResult = await saveUserPermissionsAction(user.id, completePerms);
@@ -461,7 +461,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
 
           {/* Sub-tabs */}
           <div className="ud-tabs">
-            {(["profile", "access", "wallet", ...(role === "supervisor" ? ["permissions" as const] : []), "danger"] as const).map(t => (
+            {(["profile", "access", "wallet", ...(role === "internal" ? ["permissions" as const] : []), "danger"] as const).map(t => (
               <button
                 key={t} type="button"
                 className={`ud-tab${tab === t ? " on" : ""}`}
@@ -850,14 +850,14 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
           )}
 
           {/* ── PERMISSIONS TAB ── */}
-          {tab === "permissions" && role === "supervisor" && (
+          {tab === "permissions" && role === "internal" && (
             <section className="ud-sec">
               <div className="ud-sec-head" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div className="ud-sec-icon" data-tone="blue"><Shield style={{ width: 16, height: 16 }} /></div>
                   <div>
                     <div className="ud-sec-title">Feature permissions</div>
-                    <div className="ud-sec-sub">Control which features this supervisor can access</div>
+                    <div className="ud-sec-sub">Control which features this internal user can access</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>

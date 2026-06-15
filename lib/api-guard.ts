@@ -6,11 +6,11 @@ type GuardResult =
   | { session: { user: { role: string; id: string; [key: string]: unknown } } }
   | { error: Response }
 
-/** Allows admin or supervisor role (no per-feature RBAC check). */
+/** Allows admin or internal role (no per-feature RBAC check). */
 export async function requireAdminRole(request: NextRequest): Promise<GuardResult> {
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { error: jsonError("Unauthorized", 401) }
-  if (session.user.role !== "admin" && session.user.role !== "supervisor") {
+  if (session.user.role !== "admin" && session.user.role !== "internal") {
     return { error: jsonError("Forbidden", 403) }
   }
   return { session }
@@ -23,9 +23,9 @@ export async function requireAdminOrFeature(
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) return { error: jsonError("Unauthorized", 401) }
   if (session.user.role === "admin") return { session }
-  if (session.user.role === "supervisor") {
-    const { checkSupervisorAccess } = await import("@/features/rbac/db/permissions")
-    if (await checkSupervisorAccess(session.user.id, featureKey)) {
+  if (session.user.role === "internal") {
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
+    if (await checkInternalAccess(session.user.id, featureKey)) {
       return { session }
     }
   }

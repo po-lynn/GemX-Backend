@@ -12,7 +12,7 @@ export const user = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
-export const supervisor = ac.newRole({
+export const internal = ac.newRole({
   ...userAc.statements,
   user: [...userAc.statements.user, "list"],
 })

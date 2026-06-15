@@ -1,6 +1,6 @@
-// Feature keys for configurable supervisor permissions.
+// Feature keys for configurable internal permissions.
 // NOTE: categories and users management are ALWAYS admin-only and intentionally
-// excluded — they cannot be granted to supervisors via the toggle system.
+// excluded — they cannot be granted to internal users via the toggle system.
 export const FEATURE_KEYS = {
   PRODUCTS:                  "products",
   CREDIT_PACKAGES:           "credit.packages",

@@ -14,7 +14,7 @@ export default async function AdminLayout({
   const session = await auth.api.getSession({ headers: await headers() })
   const role = session?.user.role ?? "user"
   const userId = session?.user.id ?? ""
-  const permissions = role === "supervisor" && userId ? await getUserPermissions(userId) : {}
+  const permissions = role === "internal" && userId ? await getUserPermissions(userId) : {}
 
   return (
     <AdminChatNotificationProvider>

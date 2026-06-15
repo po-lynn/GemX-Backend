@@ -13,7 +13,7 @@ vi.mock("@/drizzle/db", () => ({
 }))
 
 vi.mock("@/drizzle/schema/rbac-schema", () => ({
-  supervisorPermission: { userId: "user_id", featureKey: "feature_key", canAccess: "can_access" },
+  internalPermission: { userId: "user_id", featureKey: "feature_key", canAccess: "can_access" },
 }))
 
 vi.mock("drizzle-orm", () => ({
@@ -47,27 +47,27 @@ describe("getUserPermissions", () => {
   })
 })
 
-describe("checkSupervisorAccess", () => {
+describe("checkInternalAccess", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("returns true when user has canAccess true for featureKey", async () => {
     const { db } = await import("@/drizzle/db")
     vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(mockRows) }) } as never)
-    const { checkSupervisorAccess } = await import("@/features/rbac/db/permissions")
-    expect(await checkSupervisorAccess("u1", "products")).toBe(true)
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
+    expect(await checkInternalAccess("u1", "products")).toBe(true)
   })
 
   it("returns false for unknown featureKey", async () => {
     const { db } = await import("@/drizzle/db")
     vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(mockRows) }) } as never)
-    const { checkSupervisorAccess } = await import("@/features/rbac/db/permissions")
-    expect(await checkSupervisorAccess("u1", "settings.escrow")).toBe(false)
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
+    expect(await checkInternalAccess("u1", "settings.escrow")).toBe(false)
   })
 
   it("returns false when user has canAccess false for featureKey", async () => {
     const { db } = await import("@/drizzle/db")
     vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(mockRows) }) } as never)
-    const { checkSupervisorAccess } = await import("@/features/rbac/db/permissions")
-    expect(await checkSupervisorAccess("u1", "users")).toBe(false)
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
+    expect(await checkInternalAccess("u1", "users")).toBe(false)
   })
 })

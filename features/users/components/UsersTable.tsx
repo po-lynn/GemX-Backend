@@ -70,10 +70,10 @@ type UserRowX = UserRow & {
 
 // ─── View tabs ────────────────────────────────────────────
 
-const VIEW_IDS = ["all", "pending", "admins", "supervisors", "archived"] as const
+const VIEW_IDS = ["all", "pending", "admins", "internals", "archived"] as const
 
 const VIEW_LABELS: Record<string, string> = {
-  all: "All", pending: "Pending", admins: "Admins", supervisors: "Supervisors", archived: "Archived",
+  all: "All", pending: "Pending", admins: "Admins", internals: "Internal", archived: "Archived",
 }
 
 // ─── Column defs ──────────────────────────────────────────

@@ -9,12 +9,12 @@ vi.mock("next/headers", () => ({
 }))
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }))
 vi.mock("@/features/rbac/db/permissions", () => ({
-  checkSupervisorAccess: vi.fn(),
+  checkInternalAccess: vi.fn(),
 }))
 
 import { requireAdmin, requireFeatureAccess } from "@/lib/admin-guard"
 import { auth } from "@/lib/auth"
-import { checkSupervisorAccess } from "@/features/rbac/db/permissions"
+import { checkInternalAccess } from "@/features/rbac/db/permissions"
 
 // ReturnType of the real getSession — used to satisfy mockResolvedValue's type
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
@@ -23,7 +23,7 @@ const mockSession = (role: string, id: string): SessionResult =>
   ({ user: { role, id } }) as unknown as SessionResult
 
 const adminSess = () => mockSession("admin", "u1")
-const supSess   = () => mockSession("supervisor", "u2")
+const supSess   = () => mockSession("internal", "u2")
 
 describe("requireAdmin", () => {
   beforeEach(() => vi.clearAllMocks())
@@ -32,7 +32,7 @@ describe("requireAdmin", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
     await expect(requireAdmin()).rejects.toThrow("REDIRECT:/login")
   })
-  it("redirects to /admin when role is supervisor", async () => {
+  it("redirects to /admin when role is internal", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(supSess())
     await expect(requireAdmin()).rejects.toThrow("REDIRECT:/admin")
   })
@@ -54,20 +54,20 @@ describe("requireFeatureAccess", () => {
     const s = adminSess()
     vi.mocked(auth.api.getSession).mockResolvedValue(s)
     expect(await requireFeatureAccess("products")).toBe(s)
-    expect(checkSupervisorAccess).not.toHaveBeenCalled()
+    expect(checkInternalAccess).not.toHaveBeenCalled()
   })
-  it("returns session for supervisor when feature is permitted", async () => {
+  it("returns session for internal when feature is permitted", async () => {
     const s = supSess()
     vi.mocked(auth.api.getSession).mockResolvedValue(s)
-    vi.mocked(checkSupervisorAccess).mockResolvedValue(true)
+    vi.mocked(checkInternalAccess).mockResolvedValue(true)
     expect(await requireFeatureAccess("products")).toBe(s)
-    expect(checkSupervisorAccess).toHaveBeenCalledWith("u2", "products")
+    expect(checkInternalAccess).toHaveBeenCalledWith("u2", "products")
   })
-  it("redirects to /admin for supervisor when feature is denied", async () => {
+  it("redirects to /admin for internal when feature is denied", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(supSess())
-    vi.mocked(checkSupervisorAccess).mockResolvedValue(false)
+    vi.mocked(checkInternalAccess).mockResolvedValue(false)
     await expect(requireFeatureAccess("products")).rejects.toThrow("REDIRECT:/admin")
-    expect(checkSupervisorAccess).toHaveBeenCalledWith("u2", "products")
+    expect(checkInternalAccess).toHaveBeenCalledWith("u2", "products")
   })
   it("redirects to /admin for unknown role", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(mockSession("user", "u3"))

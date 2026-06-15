@@ -73,7 +73,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     {
       label: "Points in circulation",
       value: fmtCompact(stats.totalPoints),
-      delta: `${viewCounts.admins + viewCounts.supervisors} staff accounts`,
+      delta: `${viewCounts.admins + viewCounts.internals} staff accounts`,
       tone: "purple",
     },
   ]

@@ -6,7 +6,7 @@ This guide explains how to work with the admin panel's role-based access control
 
 ## Where permissions are configured
 
-Navigate to `/admin/permissions` (admin login required). Each feature has an on/off toggle. Saving applies the change immediately — supervisors see the updated sidebar and page access on their next request.
+Navigate to `/admin/permissions` (admin login required). Each feature has an on/off toggle. Saving applies the change immediately — internal users see the updated sidebar and page access on their next request.
 
 ---
 
@@ -53,7 +53,7 @@ Add to an existing group if the feature fits there. Only create a new group if t
 { href: "/admin/my-new-feature", label: "My New Feature", icon: SomeIcon, color: "#...", featureKey: FEATURE_KEYS.MY_NEW_FEATURE },
 ```
 
-Do **not** set `adminOnly: true` — that would permanently hide it from supervisors regardless of the permission toggle.
+Do **not** set `adminOnly: true` — that would permanently hide it from internal users regardless of the permission toggle.
 
 ### Step 4 — Guard every page in the feature
 
@@ -69,11 +69,11 @@ export default async function MyNewFeaturePage() {
 }
 ```
 
-Admins pass through unconditionally. Supervisors are checked against the DB cache.
+Admins pass through unconditionally. Internal users are checked against the DB cache.
 
 ### Step 5 — Guard any API routes the feature uses
 
-If you have API routes under `app/api/admin/` that supervisors need to call:
+If you have API routes under `app/api/admin/` that internal users need to call:
 
 ```ts
 import { requireAdminOrFeature } from "@/lib/api-guard"
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-Apply this to every HTTP method handler on the route that supervisors should be able to reach.
+Apply this to every HTTP method handler on the route that internal users should be able to reach.
 
 ---
 
@@ -136,12 +136,12 @@ async function requireAdminInline(request: NextRequest) {
 
 1. Log in as an admin. Go to `/admin/permissions`.
 2. Toggle the target feature off. Save.
-3. Open a private/incognito window and log in as a supervisor account.
+3. Open a private/incognito window and log in as an internal account.
 4. **Sidebar check:** the feature's nav item should not appear.
 5. **Direct URL check:** navigate to the feature's page URL directly (e.g. `/admin/products`). You should be redirected to `/admin`.
 6. **API check (if applicable):** call the feature's API route. You should receive `403 Forbidden`.
 7. Go back to `/admin/permissions` as admin, toggle the feature on, save.
-8. Reload the supervisor session. The nav item should reappear and the page should be accessible.
+8. Reload the internal session. The nav item should reappear and the page should be accessible.
 
 ---
 
@@ -149,11 +149,11 @@ async function requireAdminInline(request: NextRequest) {
 
 **Adding `adminOnly: true` to a configurable feature**
 
-If you set `adminOnly: true` on a sidebar item that also has a `featureKey`, the item will never appear for supervisors regardless of the permissions toggle. Remove `adminOnly` and rely solely on `featureKey`.
+If you set `adminOnly: true` on a sidebar item that also has a `featureKey`, the item will never appear for internal users regardless of the permissions toggle. Remove `adminOnly` and rely solely on `featureKey`.
 
 **Guarding only the list page but not new/edit pages**
 
-Every page in a feature must call `requireFeatureAccess()`. A supervisor with no access to Products could still reach `/admin/products/new` if that page is not guarded.
+Every page in a feature must call `requireFeatureAccess()`. An internal user with no access to Products could still reach `/admin/products/new` if that page is not guarded.
 
 **Forgetting to add the key to `FEATURE_GROUPS`**
 
@@ -161,7 +161,7 @@ The feature will be fully functional but invisible in the permissions UI — adm
 
 **Using `requireAdmin()` instead of `requireFeatureAccess()` for a configurable feature**
 
-`requireAdmin()` blocks supervisors unconditionally. Use `requireFeatureAccess()` for features that should be toggleable.
+`requireAdmin()` blocks internal users unconditionally. Use `requireFeatureAccess()` for features that should be toggleable.
 
 ---
 
@@ -186,7 +186,7 @@ The feature will be fully functional but invisible in the permissions UI — adm
 
 ## Reference: permanently admin-only features
 
-These are not in `FEATURE_KEYS` and cannot be enabled for supervisors:
+These are not in `FEATURE_KEYS` and cannot be enabled for internal users:
 
 - **Categories** — `adminOnly: true` in sidebar, `requireAdmin()` on all pages
 - **Users** — `adminOnly: true` in sidebar, `requireAdmin()` on all pages; `/api/admin/users/suggest` inline-guarded
