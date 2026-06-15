@@ -64,7 +64,7 @@ const navGroups: (NavItem | NavGroup)[] = [
     items: [
       {
         href: "/admin/credit/purchase-requests",
-        label: "Purchase Requests",
+        label: "Payment Transactions",
         icon: ClipboardList,
         color: "#f59e0b",
         featureKey: FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS,
@@ -92,7 +92,7 @@ const navGroups: (NavItem | NavGroup)[] = [
       },
       {
         href: "/admin/credit/transactions",
-        label: "Payment Transactions",
+        label: "Point Transactions",
         icon: Coins,
         color: "#8b5cf6",
         featureKey: FEATURE_KEYS.CREDIT_TRANSACTIONS,

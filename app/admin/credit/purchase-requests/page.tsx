@@ -52,10 +52,10 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
             <ChevronRight />
             <Link href="/admin/credit">Settings</Link>
             <ChevronRight />
-            <span className="lv-here">Credit Purchase Requests</span>
+            <span className="lv-here">Payment Transactions</span>
           </nav>
           <h1 className="lv-h1">
-            Credit Purchase Requests
+            Payment Transactions
             <span className="lv-h1-count">{counts.all} total</span>
           </h1>
           <p className="lv-subhead">

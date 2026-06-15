@@ -889,19 +889,40 @@ export async function rejectPointPurchaseRequest(
 export async function resetPointPurchaseRequestToPending(
   requestId: string
 ): Promise<{ success: false; reason: "not_found" } | { success: true }> {
-  const [existing] = await db
-    .select({ id: pointPurchaseRequest.id })
-    .from(pointPurchaseRequest)
-    .where(eq(pointPurchaseRequest.id, requestId))
-    .limit(1);
-  if (!existing) return { success: false, reason: "not_found" };
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: pointPurchaseRequest.id,
+        userId: pointPurchaseRequest.userId,
+        points: pointPurchaseRequest.points,
+        status: pointPurchaseRequest.status,
+      })
+      .from(pointPurchaseRequest)
+      .where(eq(pointPurchaseRequest.id, requestId))
+      .limit(1);
+    if (!existing) return { success: false, reason: "not_found" as const };
 
-  await db
-    .update(pointPurchaseRequest)
-    .set({ status: "pending", adminNote: null, reviewedByAdminId: null, reviewedAt: null })
-    .where(eq(pointPurchaseRequest.id, requestId));
+    if (existing.status === "approved") {
+      // Reverse the credit — deduct up to what's available (floor at 0)
+      await tx
+        .update(user)
+        .set({ points: sql`GREATEST(0, ${user.points} - ${existing.points})` })
+        .where(eq(user.id, existing.userId));
+    }
 
-  return { success: true };
+    // Reset linked transaction back to pending
+    await tx
+      .update(pointTransaction)
+      .set({ status: "pending" })
+      .where(eq(pointTransaction.referenceId, requestId));
+
+    await tx
+      .update(pointPurchaseRequest)
+      .set({ status: "pending", adminNote: null, reviewedByAdminId: null, reviewedAt: null })
+      .where(eq(pointPurchaseRequest.id, requestId));
+
+    return { success: true as const };
+  });
 }
 
 export async function overrideApprovePointPurchaseRequest(
@@ -931,20 +952,41 @@ export async function overrideRejectPointPurchaseRequest(
   adminId: string,
   adminNote?: string | null
 ): Promise<{ success: false; reason: "not_found" | "already_rejected" } | { success: true }> {
-  const [existing] = await db
-    .select({ id: pointPurchaseRequest.id, status: pointPurchaseRequest.status })
-    .from(pointPurchaseRequest)
-    .where(eq(pointPurchaseRequest.id, requestId))
-    .limit(1);
-  if (!existing) return { success: false, reason: "not_found" };
-  if (existing.status === "rejected") return { success: false, reason: "already_rejected" };
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: pointPurchaseRequest.id,
+        userId: pointPurchaseRequest.userId,
+        points: pointPurchaseRequest.points,
+        status: pointPurchaseRequest.status,
+      })
+      .from(pointPurchaseRequest)
+      .where(eq(pointPurchaseRequest.id, requestId))
+      .limit(1);
+    if (!existing) return { success: false, reason: "not_found" as const };
+    if (existing.status === "rejected") return { success: false, reason: "already_rejected" as const };
 
-  await db
-    .update(pointPurchaseRequest)
-    .set({ status: "rejected", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
-    .where(eq(pointPurchaseRequest.id, requestId));
+    if (existing.status === "approved") {
+      // Reverse the credit — deduct up to what's available (floor at 0)
+      await tx
+        .update(user)
+        .set({ points: sql`GREATEST(0, ${user.points} - ${existing.points})` })
+        .where(eq(user.id, existing.userId));
+    }
 
-  return { success: true };
+    // Mark linked transaction as rejected
+    await tx
+      .update(pointTransaction)
+      .set({ status: "rejected" })
+      .where(eq(pointTransaction.referenceId, requestId));
+
+    await tx
+      .update(pointPurchaseRequest)
+      .set({ status: "rejected", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+      .where(eq(pointPurchaseRequest.id, requestId));
+
+    return { success: true as const };
+  });
 }
 
 export type PremiumDealerSubscriptionRow = {

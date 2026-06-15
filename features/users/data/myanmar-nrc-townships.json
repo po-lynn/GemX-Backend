@@ -151,10 +151,6 @@
       "label": "YaTaNa"
     },
     {
-      "value": "MaSaNa",
-      "label": "MaSaNa"
-    },
-    {
       "value": "YaThaNa",
       "label": "YaThaNa"
     }
@@ -457,10 +453,6 @@
       "label": "LaYaNa"
     },
     {
-      "value": "MaMaNa",
-      "label": "MaMaNa"
-    },
-    {
       "value": "MaPaLa",
       "label": "MaPaLa"
     },
@@ -557,10 +549,6 @@
       "label": "AhPhaNa"
     },
     {
-      "value": "AhPhaNa",
-      "label": "AhPhaNa"
-    },
-    {
       "value": "AhTaNa",
       "label": "AhTaNa"
     },
@@ -587,10 +575,6 @@
     {
       "value": "KaTaKha",
       "label": "KaTaKha"
-    },
-    {
-      "value": "KaKaNa",
-      "label": "KaKaNa"
     },
     {
       "value": "MaDaNa",
@@ -949,20 +933,12 @@
       "label": "PaOuLa"
     },
     {
-      "value": "PaMaNa",
-      "label": "PaMaNa"
-    },
-    {
       "value": "SaKaTa",
       "label": "SaKaTa"
     },
     {
       "value": "SaKaNa",
       "label": "SaKaNa"
-    },
-    {
-      "value": "TaKaNa",
-      "label": "TaKaNa"
     },
     {
       "value": "TaTaOu",
@@ -991,10 +967,6 @@
     {
       "value": "NgaZaNa",
       "label": "NgaZaNa"
-    },
-    {
-      "value": "PaBaNa",
-      "label": "PaBaNa"
     },
     {
       "value": "OoTaYa",
@@ -1441,10 +1413,6 @@
       "label": "MaNaNa"
     },
     {
-      "value": "MaKaNa",
-      "label": "MaKaNa"
-    },
-    {
       "value": "MaSaTa",
       "label": "MaSaTa"
     },
@@ -1551,10 +1519,6 @@
     {
       "value": "KaLaHta",
       "label": "KaLaHta"
-    },
-    {
-      "value": "KaLaNa",
-      "label": "KaLaNa"
     },
     {
       "value": "MaHtaNa",

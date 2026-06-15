@@ -37,7 +37,7 @@ export const FEATURE_GROUPS: Array<{
     label: "Points & Credits",
     features: [
       { key: FEATURE_KEYS.CREDIT_PACKAGES,          label: "Point Packages" },
-      { key: FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS, label: "Purchase Requests" },
+      { key: FEATURE_KEYS.CREDIT_PURCHASE_REQUESTS, label: "Payment Transactions" },
       { key: FEATURE_KEYS.CREDIT_SUBSCRIPTIONS,     label: "Dealer Subscriptions" },
       { key: FEATURE_KEYS.CREDIT_TRANSACTIONS,      label: "All Transactions" },
     ],
