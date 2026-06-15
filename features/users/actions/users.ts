@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { normalizeMyanmarPhone } from "@/lib/phone";
 import { headers } from "next/headers";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
@@ -51,6 +52,8 @@ export async function createUserAction(formData: FormData) {
     return { error: "Email is required to create a user." };
   }
   const imageUrl = (parsed.data.image ?? "").trim() || undefined;
+  const rawPhone = (parsed.data.phone ?? "").trim() || undefined;
+  const phone = rawPhone ? (normalizeMyanmarPhone(rawPhone) ?? rawPhone) : undefined;
   // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
   const result = await auth.api.signUpEmail({
     body: {
@@ -58,7 +61,7 @@ export async function createUserAction(formData: FormData) {
       password: parsed.data.password,
       name: parsed.data.name,
       image: imageUrl,
-      phone: (parsed.data.phone ?? "").trim() || undefined,
+      phone,
       gender: (parsed.data.gender ?? "").trim() || undefined,
       dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
       nrc: (parsed.data.nrc ?? "").trim() || undefined,
@@ -133,6 +136,9 @@ export async function updateUserAction(formData: FormData) {
   }
   const { userId, ...rest } = parsed.data;
   const data: UpdateUserInput = { ...rest };
+  if (data.phone) {
+    data.phone = normalizeMyanmarPhone(data.phone) ?? data.phone;
+  }
   if (rest.role === "user") {
     data.verified = rest.verified === true;
   }

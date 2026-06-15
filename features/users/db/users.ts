@@ -96,7 +96,7 @@ export async function getUserStatsFromDb(): Promise<UserStats> {
 }
 
 export type ViewCounts = {
-  all: number; pending: number; admins: number; internals: number; archived: number;
+  all: number; pending: number; admins: number; internals: number; portals: number; archived: number;
 };
 
 export async function getViewCountsFromDb(): Promise<ViewCounts> {
@@ -105,7 +105,8 @@ export async function getViewCountsFromDb(): Promise<ViewCounts> {
       all:         sql<number>`sum(case when ${user.archived} = false then 1 else 0 end)::int`,
       pending:     sql<number>`sum(case when ${user.archived} = false and ${user.emailVerified} = false then 1 else 0 end)::int`,
       admins:      sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'admin' then 1 else 0 end)::int`,
-      internals: sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'internal' then 1 else 0 end)::int`,
+      internals:   sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'internal' then 1 else 0 end)::int`,
+      portals:     sql<number>`sum(case when ${user.archived} = false and ${user.role} = 'portal' then 1 else 0 end)::int`,
       archived:    sql<number>`sum(case when ${user.archived} = true  then 1 else 0 end)::int`,
     })
     .from(user);
@@ -113,7 +114,8 @@ export async function getViewCountsFromDb(): Promise<ViewCounts> {
     all:         row?.all         ?? 0,
     pending:     row?.pending     ?? 0,
     admins:      row?.admins      ?? 0,
-    internals: row?.internals ?? 0,
+    internals:   row?.internals   ?? 0,
+    portals:     row?.portals     ?? 0,
     archived:    row?.archived    ?? 0,
   };
 }
@@ -140,7 +142,8 @@ export async function getUsersPaginatedFromDb(options: {
     switch (view) {
       case "pending":     return and(eq(user.archived, false), eq(user.emailVerified, false));
       case "admins":      return and(eq(user.archived, false), eq(user.role, "admin"));
-      case "internals": return and(eq(user.archived, false), eq(user.role, "internal"));
+      case "internals":   return and(eq(user.archived, false), eq(user.role, "internal"));
+      case "portals":     return and(eq(user.archived, false), eq(user.role, "portal"));
       case "archived":    return eq(user.archived, true);
       default:         return eq(user.archived, false);
     }
@@ -187,6 +190,15 @@ export async function getUserByEmail(email: string): Promise<{ id: string } | nu
     .where(eq(user.email, email.trim()))
     .limit(1);
   return row ?? null;
+}
+
+export async function getUserEmailByPhone(phone: string): Promise<string | null> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.phone, phone))
+    .limit(1);
+  return row?.email ?? null;
 }
 
 export async function getUserById(id: string): Promise<UserForEdit | null> {

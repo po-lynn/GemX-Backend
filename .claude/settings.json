@@ -9,10 +9,14 @@
       "Bash(PATH=__TRACKED_VAR__:/home/po/.nvm/versions/node/v22.12.0/bin rtk git commit -m ' *)",
       "Bash(PATH=__TRACKED_VAR__:/home/po/.nvm/versions/node/v22.12.0/bin rtk git add docs/superpowers/specs/2026-06-13-admin-motion-skeleton-design.md components/admin/list-view/ListViewCard.tsx)",
       "Bash(/home/po/.nvm/versions/node/v20.18.1/bin/npm run *)",
-      "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk git commit -m ' *)"
+      "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk git commit -m ' *)",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/portal/products/new /home/po/me/2026/Jade/infinity-gemx/app/portal/products/\\\\[id\\\\]/edit /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\])",
+      "Bash(rm /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/route.ts /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\]/route.ts /home/po/me/2026/Jade/infinity-gemx/tests/api/portal-products.test.ts)",
+      "Bash(rmdir /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\] /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products /home/po/me/2026/Jade/infinity-gemx/app/api/portal)"
     ],
     "additionalDirectories": [
-      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs"
+      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
+      "/home/po/me/2026/Jade/infinity-gemx/app/portal/products/[id]"
     ]
   },
   "enabledPlugins": {

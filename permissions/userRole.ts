@@ -17,4 +17,9 @@ export const internal = ac.newRole({
   user: [...userAc.statements.user, "list"],
 })
 
+export const portal = ac.newRole({
+  ...userAc.statements,
+  user: [...userAc.statements.user, "list"],
+})
+
 export const admin = ac.newRole(adminAc.statements)

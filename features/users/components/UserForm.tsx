@@ -33,9 +33,10 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
 const MAX_IMAGE_SIZE_MB = 5;
 
 const ROLES = [
-  { value: "admin",      label: "Admin"      },
+  { value: "admin",    label: "Admin"    },
   { value: "internal", label: "Internal" },
-  { value: "user",       label: "User"       },
+  { value: "portal",   label: "Portal"   },
+  { value: "user",     label: "User"     },
 ];
 
 const GENDERS = [
@@ -362,7 +363,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
             Unsaved changes
           </span>
         ) : (
-          <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>
+          <span style={{ fontSize: 12, color: "var(--lv-text-3)" }} suppressHydrationWarning>
             Saved · {fmtRelative(user.updatedAt)}
           </span>
         )}

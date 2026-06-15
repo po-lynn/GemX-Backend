@@ -25,7 +25,7 @@ export const user = pgTable("user", {
   role: text("role").notNull(),
   nrc: text("nrc"),
   address: text("address"),
-  phone: text("phone"),
+  phone: text("phone").unique(),
   city: text("city"),
   state: text("state"),
   country: text("country"),

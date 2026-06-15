@@ -475,6 +475,7 @@ export async function activatePremiumDealer(
     await tx
       .update(user)
       .set({
+        role: "portal",
         premiumDealerPackageName: pkg.name,
         premiumDealerExpiresAt: expiresAt,
       })
@@ -1083,11 +1084,11 @@ export async function deactivatePremiumDealerSubscription(
       .set({ status: "cancelled" })
       .where(eq(premiumDealersPackage.id, subscriptionId));
 
-    // Clear user cache only when this subscription's endDate still matches
+    // Clear user cache and revert role only when this subscription's endDate still matches
     // (guards against clearing a newer active subscription if somehow out of sync)
     await tx
       .update(user)
-      .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+      .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
       .where(and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate)));
 
     return { success: true as const };
@@ -1258,10 +1259,10 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
           .returning({ points: user.points });
 
         if (!updatedUser) {
-          // Insufficient points — clear user cache and do not renew
+          // Insufficient points — clear user cache and revert role
           await tx
             .update(user)
-            .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+            .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
             .where(
               and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
             );
@@ -1290,10 +1291,10 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
           description: `Premium renewal · ${pkg.name}`,
         });
 
-        // Update user cache fields
+        // Update user cache fields and ensure role stays portal
         await tx
           .update(user)
-          .set({ premiumDealerPackageName: pkg.name, premiumDealerExpiresAt: newExpiry })
+          .set({ role: "portal", premiumDealerPackageName: pkg.name, premiumDealerExpiresAt: newExpiry })
           .where(eq(user.id, row.userId));
 
         return true;
@@ -1305,7 +1306,7 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
         failed++;
       }
     } else {
-      // No auto-renew or package no longer configured — just expire
+      // No auto-renew or package no longer configured — expire and revert role
       await db.transaction(async (tx) => {
         await tx
           .update(premiumDealersPackage)
@@ -1314,7 +1315,7 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
 
         await tx
           .update(user)
-          .set({ premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+          .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
           .where(
             and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
           );

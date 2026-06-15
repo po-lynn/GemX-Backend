@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { authClient } from "@/lib/auth-client"
+import { looksLikePhone } from "@/lib/login-detect"
+import { getEmailForPhoneLoginAction } from "@/features/users/actions/phone-login"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,7 +17,7 @@ import { Gem } from "lucide-react"
 
 export function LoginForm() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -26,19 +28,40 @@ export function LoginForm() {
     setLoading(true)
 
     try {
+      const raw = identifier.trim()
+      let emailToUse: string
+
+      if (looksLikePhone(raw)) {
+        const resolved = await getEmailForPhoneLoginAction(raw)
+        if (!resolved) {
+          setError("Invalid credentials")
+          setLoading(false)
+          return
+        }
+        emailToUse = resolved
+      } else {
+        emailToUse = raw
+      }
+
       const result = await authClient.signIn.email({
-        email: email.trim(),
+        email: emailToUse,
         password,
-        callbackURL: "/admin",
       })
 
-      if (result.error) {
-        setError(result.error.message ?? "Invalid email or password")
+      if (result?.error) {
+        setError("Invalid credentials")
         setLoading(false)
         return
       }
 
-      router.push("/admin")
+      const role = (result.data as { user?: { role?: string } } | null)?.user?.role
+      if (role === "admin" || role === "internal") {
+        router.push("/admin")
+      } else if (role === "portal") {
+        router.push("/portal")
+      } else {
+        router.push("/")
+      }
       router.refresh()
     } catch {
       setError("Something went wrong. Please try again.")
@@ -52,29 +75,29 @@ export function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center gap-3 text-xl">
           <Gem className="h-8 w-8 text-primary" aria-hidden />
-          GemX Admin
+          GemX
         </CardTitle>
         <CardDescription>
-          Sign in with your GemX admin account
+          Sign in to your GemX account
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="space-y-2">
             <label
-              htmlFor="email"
+              htmlFor="identifier"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Email
+              Email or Phone Number
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Email or phone number"
               required
-              autoComplete="email"
+              autoComplete="username"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
             />
           </div>
@@ -98,12 +121,12 @@ export function LoginForm() {
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          <div className="space-y-1 text-center">   
+          <div className="space-y-1 text-center">
             <Button type="submit" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </div>
-          
+
         </form>
       </CardContent>
     </Card>
