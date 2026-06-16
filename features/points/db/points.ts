@@ -45,6 +45,19 @@ export type PremiumDealersSettings = {
   packages: PremiumDealerPackage[];
 };
 
+export type AdminCreatePurchaseRequestInput = {
+  userId: string;
+  packageName: string;
+  points: number;
+  price: number;
+  currency: "mmk" | "usd" | "krw";
+  paymentMethod: string;
+  transferredAmount?: number | null;
+  transferredName?: string | null;
+  transactionReference?: string | null;
+  transferNote?: string | null;
+};
+
 /** Credit point package available for purchase. Prices are per-currency and optional. */
 export type PointPurchasePackage = {
   name: string;
@@ -1510,4 +1523,43 @@ export async function getUserPointHistory(
   ]);
 
   return { transactions: rows, total };
+}
+
+export async function adminCreatePointPurchaseRequest(
+  input: AdminCreatePurchaseRequestInput
+): Promise<{ id: string; status: string; createdAt: Date }> {
+  const [row] = await db
+    .insert(pointPurchaseRequest)
+    .values({
+      userId: input.userId,
+      packageName: input.packageName,
+      points: input.points,
+      price: input.price,
+      currency: input.currency,
+      paymentMethod: input.paymentMethod,
+      status: "pending",
+      transferredAmount: input.transferredAmount ?? null,
+      transferredName: input.transferredName ?? null,
+      transactionReference: input.transactionReference ?? null,
+      transferNote: input.transferNote ?? null,
+    })
+    .returning({
+      id: pointPurchaseRequest.id,
+      status: pointPurchaseRequest.status,
+      createdAt: pointPurchaseRequest.createdAt,
+    });
+
+  await logPointTransaction({
+    userId: input.userId,
+    type: "topup",
+    direction: "credit",
+    amount: input.points,
+    status: "pending",
+    referenceId: row.id,
+    referenceType: "purchase_request",
+    description: `Top-up via ${input.paymentMethod}`,
+    paymentMethod: input.paymentMethod,
+  });
+
+  return row;
 }
