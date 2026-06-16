@@ -19,6 +19,9 @@ import {
   overrideRejectPointPurchaseRequest,
   deactivatePremiumDealerSubscription,
   updatePremiumDealerSubscriptionExpiry,
+  getPremiumDealersSettings,
+  activatePremiumDealer,
+  adminCreatePointPurchaseRequest,
 } from "@/features/points/db/points";
 import type { PointPurchasePackagesSettings } from "@/features/points/db/points";
 import { requireActionRole } from "@/lib/action-guard";
@@ -342,4 +345,63 @@ export async function adminTopUpUserPointsAction(
   });
 
   return { success: true, updatedPoints: credited.updatedPoints ?? 0 };
+}
+
+export async function adminCreatePointPurchaseRequestAction(formData: FormData) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) return { error: "Unauthorized" };
+
+  const userId = (formData.get("userId") as string) || "";
+  const packageName = (formData.get("packageName") as string) || "";
+  const paymentMethod = (formData.get("paymentMethod") as string) || "";
+  const points = parseIntForm(formData.get("points"), 0);
+  const price = parseIntForm(formData.get("price"), 0);
+  const currency = (formData.get("currency") as string) || "mmk";
+  const transferredAmount = formData.get("transferredAmount")
+    ? parseIntForm(formData.get("transferredAmount"), 0)
+    : null;
+  const transferredName = (formData.get("transferredName") as string) || null;
+  const transactionReference = (formData.get("transactionReference") as string) || null;
+  const transferNote = (formData.get("transferNote") as string) || null;
+
+  if (!userId || !packageName || !paymentMethod || points <= 0 || price <= 0) {
+    return { error: "Missing required fields" };
+  }
+  if (!["mmk", "usd", "krw"].includes(currency)) {
+    return { error: "Invalid currency" };
+  }
+
+  const row = await adminCreatePointPurchaseRequest({
+    userId,
+    packageName,
+    points,
+    price,
+    currency: currency as "mmk" | "usd" | "krw",
+    paymentMethod,
+    transferredAmount,
+    transferredName,
+    transactionReference,
+    transferNote,
+  });
+  return { success: true, id: row.id };
+}
+
+export async function adminActivatePremiumDealerAction(formData: FormData) {
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) return { error: "Unauthorized" };
+
+  const userId = (formData.get("userId") as string) || "";
+  const packageName = (formData.get("packageName") as string) || "";
+  const autoRenew = formData.get("autoRenew") === "true";
+
+  if (!userId || !packageName) return { error: "Missing required fields" };
+
+  const settings = await getPremiumDealersSettings();
+  const pkg = settings.packages.find((p) => p.name === packageName && p.enabled !== false);
+  if (!pkg) return { error: "Package not found or disabled" };
+
+  const result = await activatePremiumDealer(userId, pkg, autoRenew);
+  if (!result) return { error: "Insufficient points — approve a purchase request first" };
+
+  return { success: true, ...result };
 }
