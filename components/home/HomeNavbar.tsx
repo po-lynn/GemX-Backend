@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Gem } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import HomeNavbarAuthButton from "@/components/home/HomeNavbarAuthButton"
 
 export function HomeNavbar() {
   return (
@@ -36,10 +36,7 @@ export function HomeNavbar() {
           </Link>
         </nav>
         <div className="flex items-center gap-3">
-          <Button size="sm" asChild>
-            <Link href="/login">Sign in</Link>
-          </Button>
-      
+          <HomeNavbarAuthButton />
         </div>
       </div>
     </header>
