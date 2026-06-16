@@ -1,6 +1,7 @@
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { getProductsBySellerId } from "@/features/products/db/products"
+import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -75,9 +76,11 @@ export default async function PortalProductsPage({
             return (
               <div key={product.id} className="flex items-center gap-4 px-5 py-4">
                 {product.imageUrl ? (
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt=""
+                    width={48}
+                    height={48}
                     className="h-12 w-12 shrink-0 rounded-lg object-cover"
                   />
                 ) : (
