@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { connection } from "next/server"
-import { requireAdmin } from "@/lib/admin-guard"
+import { requireFeatureAccess } from "@/lib/admin-guard"
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,14 +31,15 @@ function fmtCompact(n: number): string {
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   await connection()
-  await requireAdmin()
+  const session = await requireFeatureAccess(FEATURE_KEYS.USERS)
+  const isInternal = session.user.role === "internal"
   const params = await searchParams
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const search  = params.search?.trim() ?? ""
   const view    = params.view?.trim() ?? "all"
 
   const [{ users, total }, stats, viewCounts] = await Promise.all([
-    getUsersPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, search: search || undefined, view }),
+    getUsersPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, search: search || undefined, view, excludeAdminRole: isInternal }),
     getUserStatsFromDb(),
     getViewCountsFromDb(),
   ])
@@ -125,6 +127,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         pushTokensByUserId={pushTokensByUserId}
         view={view}
         viewCounts={viewCounts}
+        hideAdminView={isInternal}
       />
     </div>
     </FadeUp>

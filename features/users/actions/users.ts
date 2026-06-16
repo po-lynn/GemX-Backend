@@ -47,6 +47,10 @@ export async function createUserAction(formData: FormData) {
   if (!session) {
     return { error: "Unauthorized" };
   }
+  const INTERNAL_ALLOWED_ROLES = ["portal", "user"];
+  if (session.user.role === "internal" && !INTERNAL_ALLOWED_ROLES.includes(parsed.data.role ?? "")) {
+    return { error: "Unauthorized" };
+  }
   const email = (parsed.data.email ?? "").trim();
   if (!email) {
     return { error: "Email is required to create a user." };
@@ -135,6 +139,10 @@ export async function updateUserAction(formData: FormData) {
     return { error: "Unauthorized" };
   }
   const { userId, ...rest } = parsed.data;
+  const INTERNAL_ALLOWED_ROLES = ["portal", "user"];
+  if (session.user.role === "internal" && rest.role !== undefined && !INTERNAL_ALLOWED_ROLES.includes(rest.role)) {
+    return { error: "Unauthorized" };
+  }
   const data: UpdateUserInput = { ...rest };
   if (data.phone) {
     data.phone = normalizeMyanmarPhone(data.phone) ?? data.phone;

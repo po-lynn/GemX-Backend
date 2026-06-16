@@ -21,10 +21,10 @@ const Skeleton = () => (
 )
 
 export default function HomeNavbarAuthButton() {
-  const { data: session, error } = authClient.useSession()
+  const { data: session, isPending } = authClient.useSession()
   const mounted = useIsMounted()
 
-  if (!mounted || (!session && !error)) {
+  if (!mounted || isPending) {
     return <Skeleton />
   }
 
@@ -38,7 +38,7 @@ export default function HomeNavbarAuthButton() {
     )
   }
 
-  if (role === "user") {
+  if (role === "portal") {
     return (
       <Button size="sm" asChild>
         <Link href="/portal">My Account</Link>

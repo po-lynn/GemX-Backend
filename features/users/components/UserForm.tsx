@@ -14,6 +14,7 @@ import {
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
 import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
+import { COUNTRY_LOCATIONS } from "@/features/users/data/country-locations";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, ArrowLeftRight, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
@@ -47,13 +48,7 @@ const GENDERS = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
-const COUNTRIES = [
-  "Afghanistan","Australia","Brazil","Cambodia","China","Colombia",
-  "India","Indonesia","Japan","Madagascar","Malawi","Malaysia",
-  "Mozambique","Myanmar","Pakistan","Philippines","Russia",
-  "Singapore","South Korea","Sri Lanka","Tanzania","Thailand",
-  "UK","USA","Vietnam","Zambia","Zimbabwe",
-].sort();
+const COUNTRIES = ["Myanmar", "Thailand", "South Korea"];
 
 const MYANMAR_NRC_REGEX = /^(\d{1,2})\s*\/\s*([A-Za-z]{3,12})\s*\(\s*(N|NAING)\s*\)\s*(\d{6})$/i;
 const MYANMAR_NRC_DISTRICTS_BY_STATE = myanmarNrcTownships as Record<string, { value: string; label: string }[]>;
@@ -79,6 +74,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const FEATURE_ICONS: Record<string, React.ElementType> = {
+  "users":                    Users,
   "products":                 Package,
   "origin":                   Globe,
   "laboratory":               FlaskConical,
@@ -104,6 +100,7 @@ type Props = {
   mode: "create" | "edit";
   user?: UserForEdit | null;
   permissions?: Record<string, boolean>;
+  canAssignAdmin?: boolean;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -159,15 +156,15 @@ function parseMyanmarNrc(nrc: string | null | undefined) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function UserForm({ mode, user, permissions }: Props) {
-  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} />;
-  return <UserCreateForm />;
+export function UserForm({ mode, user, permissions, canAssignAdmin = true }: Props) {
+  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} canAssignAdmin={canAssignAdmin} />;
+  return <UserCreateForm canAssignAdmin={canAssignAdmin} />;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EDIT FORM — premium detail layout
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initialPermissions: Record<string, boolean> }) {
+function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: UserForEdit; initialPermissions: Record<string, boolean>; canAssignAdmin: boolean }) {
   const router = useRouter();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -202,6 +199,10 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
   const [nrcType,     setNrcType]     = useState(parsedNrc?.type === "NAING" ? "NAING" : "N");
   const [nrcNumber,   setNrcNumber]   = useState(parsedNrc?.number   ?? "");
   const isMyanmar = country === "Myanmar";
+  const availableStates = country ? Object.keys(COUNTRY_LOCATIONS[country] ?? {}) : [];
+  const availableCities = country && stateVal
+    ? (COUNTRY_LOCATIONS[country]?.[stateVal] ?? [])
+    : [];
   const myanmarNrcValue = isMyanmar && (nrcState || nrcDistrict || nrcNumber)
     ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}` : "";
   const nrcFinal = isMyanmar ? myanmarNrcValue : nrcText;
@@ -579,7 +580,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
                         value={role}
                         onChange={e => { setRole(e.target.value); mark(); }}
                       >
-                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        {ROLES.filter(r => canAssignAdmin || (r.value !== "admin" && r.value !== "internal")).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
                     </div>
                     <div className="ud-field">
@@ -637,31 +638,32 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
                         onChange={e => { setCountry(e.target.value); setStateVal(""); setCity(""); mark(); }}
                       >
                         <option value="">Select country</option>
-                        {user.country && !COUNTRIES.includes(user.country) && (
-                          <option value={user.country}>{user.country}</option>
-                        )}
                         {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                     <div className="ud-field">
                       <label className="ud-label">State / Region</label>
-                      <input
-                        className="ud-input"
-                        placeholder="State or region"
+                      <select
+                        className="ud-select"
                         value={stateVal}
-                        maxLength={100}
-                        onChange={e => { setStateVal(e.target.value); mark(); }}
-                      />
+                        disabled={!country || availableStates.length === 0}
+                        onChange={e => { setStateVal(e.target.value); setCity(""); mark(); }}
+                      >
+                        <option value="">Select state / region</option>
+                        {availableStates.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
                     </div>
                     <div className="ud-field">
                       <label className="ud-label">City</label>
-                      <input
-                        className="ud-input"
-                        placeholder="City"
+                      <select
+                        className="ud-select"
                         value={city}
-                        maxLength={100}
+                        disabled={!stateVal || availableCities.length === 0}
                         onChange={e => { setCity(e.target.value); mark(); }}
-                      />
+                      >
+                        <option value="">Select city</option>
+                        {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                     </div>
                   </div>
 
@@ -1143,7 +1145,7 @@ function UserEditForm({ user, initialPermissions }: { user: UserForEdit; initial
 // ═══════════════════════════════════════════════════════════════════════════════
 // CREATE FORM — premium detail layout
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserCreateForm() {
+function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
   const router = useRouter();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -1160,7 +1162,7 @@ function UserCreateForm() {
   const [gender,   setGender]   = useState("");
   const [dob,      setDob]      = useState("");
   const [address,  setAddress]  = useState("");
-  const [country,  setCountry]  = useState("");
+  const [country,  setCountry]  = useState("Myanmar");
   const [stateVal, setStateVal] = useState("");
   const [city,     setCity]     = useState("");
   const [archived, setArchived] = useState(false);
@@ -1172,6 +1174,10 @@ function UserCreateForm() {
   const [nrcType,     setNrcType]     = useState("N");
   const [nrcNumber,   setNrcNumber]   = useState("");
   const isMyanmar = country === "Myanmar";
+  const availableStates = country ? Object.keys(COUNTRY_LOCATIONS[country] ?? {}) : [];
+  const availableCities = country && stateVal
+    ? (COUNTRY_LOCATIONS[country]?.[stateVal] ?? [])
+    : [];
   const myanmarNrcValue = isMyanmar && (nrcState || nrcDistrict || nrcNumber)
     ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}` : "";
   const nrcFinal = isMyanmar ? myanmarNrcValue : nrcText;
@@ -1362,7 +1368,7 @@ function UserCreateForm() {
                     value={role}
                     onChange={e => setRole(e.target.value)}
                   >
-                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    {ROLES.filter(r => canAssignAdmin || r.value !== "admin").map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -1509,23 +1515,27 @@ function UserCreateForm() {
                 </div>
                 <div className="ud-field">
                   <label className="ud-label">State / Region</label>
-                  <input
-                    className="ud-input"
-                    placeholder="State or region"
+                  <select
+                    className="ud-select"
                     value={stateVal}
-                    maxLength={100}
-                    onChange={e => setStateVal(e.target.value)}
-                  />
+                    disabled={!country || availableStates.length === 0}
+                    onChange={e => { setStateVal(e.target.value); setCity(""); }}
+                  >
+                    <option value="">Select state / region</option>
+                    {availableStates.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
                 <div className="ud-field">
                   <label className="ud-label">City</label>
-                  <input
-                    className="ud-input"
-                    placeholder="City"
+                  <select
+                    className="ud-select"
                     value={city}
-                    maxLength={100}
+                    disabled={!stateVal || availableCities.length === 0}
                     onChange={e => setCity(e.target.value)}
-                  />
+                  >
+                    <option value="">Select city</option>
+                    {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
               </div>
 

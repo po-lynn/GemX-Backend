@@ -241,6 +241,7 @@ type Props = {
   pushTokensByUserId?: Record<string, { token: string; platform: string | null }[]>
   view?: string
   viewCounts?: ViewCounts
+  hideAdminView?: boolean
 }
 
 const BASE = "/admin/users"
@@ -256,6 +257,7 @@ export function UsersTable({
   pushTokensByUserId = {},
   view = "all",
   viewCounts,
+  hideAdminView = false,
 }: Props) {
   const router = useRouter()
 
@@ -271,11 +273,13 @@ export function UsersTable({
     [users, pushTokensByUserId]
   )
 
-  const views: ViewTab[] = VIEW_IDS.map((id) => ({
-    id,
-    label: VIEW_LABELS[id],
-    count: viewCounts?.[id],
-  }))
+  const views: ViewTab[] = VIEW_IDS
+    .filter((id) => !(hideAdminView && id === "admins"))
+    .map((id) => ({
+      id,
+      label: VIEW_LABELS[id],
+      count: viewCounts?.[id],
+    }))
 
   function buildViewHref(v: string): string {
     const p = new URLSearchParams()

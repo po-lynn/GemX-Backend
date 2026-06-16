@@ -1,10 +1,11 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { UserForm } from "@/features/users/components";
 import { getUserById } from "@/features/users/db/users";
 import { getUserPermissions } from "@/features/rbac/db/permissions";
-import { requireAdmin } from "@/lib/admin-guard";
+import { requireFeatureAccess } from "@/lib/admin-guard";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { FadeUp } from "@/components/admin/motion";
 
 type Props = {
@@ -13,14 +14,18 @@ type Props = {
 
 async function AdminUsersEditContent({ params }: Props) {
   await connection();
-  await requireAdmin();
+  const session = await requireFeatureAccess(FEATURE_KEYS.USERS);
+  const isInternal = session.user.role === "internal";
   const { id } = await params;
   const user = await getUserById(id);
   if (!user) notFound();
 
+  // Internal users cannot view or edit admin accounts.
+  if (isInternal && user.role === "admin") redirect("/admin/users");
+
   const permissions = user.role === "internal" ? await getUserPermissions(user.id) : {};
 
-  return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} />;
+  return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} canAssignAdmin={!isInternal} />;
 }
 
 export default function AdminUsersEditPage(props: Props) {

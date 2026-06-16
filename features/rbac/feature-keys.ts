@@ -1,7 +1,9 @@
 // Feature keys for configurable internal permissions.
-// NOTE: categories and users management are ALWAYS admin-only and intentionally
-// excluded — they cannot be granted to internal users via the toggle system.
+// NOTE: categories management is ALWAYS admin-only and intentionally excluded.
+// Users management is included but restricted: internal users cannot see or
+// assign the admin role.
 export const FEATURE_KEYS = {
+  USERS:                     "users",
   PRODUCTS:                  "products",
   CREDIT_PACKAGES:           "credit.packages",
   CREDIT_PURCHASE_REQUESTS:  "credit.purchase_requests",
@@ -24,6 +26,12 @@ export const FEATURE_GROUPS: Array<{
   label: string
   features: Array<{ key: FeatureKey; label: string }>
 }> = [
+  {
+    label: "Users",
+    features: [
+      { key: FEATURE_KEYS.USERS, label: "User Management" },
+    ],
+  },
   {
     label: "Marketplace",
     features: [

@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { and, eq, asc, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ne, asc, ilike, or, sql } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -126,8 +126,9 @@ export async function getUsersPaginatedFromDb(options: {
   limit: number;
   search?: string;
   view?: string;
+  excludeAdminRole?: boolean;
 }): Promise<{ users: UserRow[]; total: number }> {
-  const { page, limit, search, view } = options;
+  const { page, limit, search, view, excludeAdminRole } = options;
   const searchTrim = search?.trim();
   const searchCondition = searchTrim
     ? or(
@@ -148,7 +149,8 @@ export async function getUsersPaginatedFromDb(options: {
       default:         return eq(user.archived, false);
     }
   })();
-  const conditions = [viewCondition, searchCondition].filter(Boolean);
+  const excludeAdminCondition = excludeAdminRole ? ne(user.role, "admin") : undefined;
+  const conditions = [viewCondition, excludeAdminCondition, searchCondition].filter(Boolean);
   const condition = conditions.length > 0 ? and(...conditions) : undefined;
   const selectFields = {
     id: user.id,

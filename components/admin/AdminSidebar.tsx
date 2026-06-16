@@ -105,7 +105,7 @@ const navGroups: (NavItem | NavGroup)[] = [
     items: [
       { href: "/admin/messages",       label: "Messages",       icon: MessageSquare, color: "#d946ef", featureKey: FEATURE_KEYS.MESSAGES },
       { href: "/admin/chat-dashboard", label: "Chat Dashboard", icon: MessageCircle, color: "#0ea5e9", featureKey: FEATURE_KEYS.CHAT_DASHBOARD },
-      { href: "/admin/users",          label: "Users",          icon: Users,         color: "#ec4899", adminOnly: true },
+      { href: "/admin/users",          label: "Users",          icon: Users,         color: "#ec4899", featureKey: FEATURE_KEYS.USERS },
     ],
   },
   {

@@ -12,11 +12,20 @@
       "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk git commit -m ' *)",
       "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/portal/products/new /home/po/me/2026/Jade/infinity-gemx/app/portal/products/\\\\[id\\\\]/edit /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\])",
       "Bash(rm /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/route.ts /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\]/route.ts /home/po/me/2026/Jade/infinity-gemx/tests/api/portal-products.test.ts)",
-      "Bash(rmdir /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\] /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products /home/po/me/2026/Jade/infinity-gemx/app/api/portal)"
+      "Bash(rmdir /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products/\\\\[id\\\\] /home/po/me/2026/Jade/infinity-gemx/app/api/portal/products /home/po/me/2026/Jade/infinity-gemx/app/api/portal)",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans)",
+      "Bash(./node_modules/.bin/tsc --noEmit --moduleResolution bundler --module esnext --target esnext features/users/data/country-locations.ts)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk lint)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v20.18.1/bin:__TRACKED_VAR__ rtk git -C /home/po/me/2026/Jade/infinity-gemx commit -m ' *)",
+      "Bash(/usr/local/bin/npm run *)",
+      "Bash(~/.nvm/versions/node/v22.12.0/bin/npm run *)",
+      "Bash(grep -n ' \\\\$')",
+      "Bash(/home/po/.nvm/versions/node/v22.14.0/bin/npm run *)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
-      "/home/po/me/2026/Jade/infinity-gemx/app/portal/products/[id]"
+      "/home/po/me/2026/Jade/infinity-gemx/app/portal/products/[id]",
+      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans"
     ]
   },
   "enabledPlugins": {
