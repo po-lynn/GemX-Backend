@@ -4,7 +4,15 @@ export const userCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   email: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? undefined : v),
-    z.string().email("Invalid email").max(200).optional()
+    z.string().max(200).refine(
+      (v) => {
+        const clean = v.trim().replace(/[\s\-()]/g, "");
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+        const isPhone = /^(\+959\d{7,15}|09\d{7,15})$/.test(clean);
+        return isEmail || isPhone;
+      },
+      "Must be a valid email address or Myanmar phone number (09... or +959...)"
+    ).optional()
   ),
   password: z.string().min(6, "Password must be at least 6 characters").max(100),
   role: z.string().min(1, "Role is required").max(50),

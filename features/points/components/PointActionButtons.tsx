@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Search, Minus, X, ArrowDownToLine } from "lucide-react"
@@ -8,6 +8,7 @@ import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
 } from "@/features/points/actions/points"
+import { searchUsersForPickerAction } from "@/features/users/actions/users"
 
 type Mode = "topup" | "deduct"
 
@@ -20,9 +21,7 @@ type UserOption = {
   role: string
 }
 
-type Props = {
-  users: UserOption[]
-}
+type Props = Record<string, never>
 
 function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("")
@@ -42,11 +41,9 @@ const MODE_CONFIG: Record<Mode, { label: string; color: string; bg: string; bord
 
 function PointActionDrawer({
   mode,
-  users,
   onClose,
 }: {
   mode: Mode
-  users: UserOption[]
   onClose: () => void
 }) {
   const router = useRouter()
@@ -55,22 +52,29 @@ function PointActionDrawer({
   const [query, setQuery]           = useState("")
   const [selectedUser, setSelected] = useState<UserOption | null>(null)
   const [showList, setShowList]     = useState(false)
+  const [searchResults, setSearchResults] = useState<UserOption[]>([])
+  const [searching, setSearching]   = useState(false)
   const [amount, setAmount]         = useState("")
   const [note, setNote]             = useState("")
 
   const cfg = MODE_CONFIG[mode]
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim()
-    if (!q) return users.slice(0, 8)
-    return users
-      .filter((u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.phone ?? "").includes(q)
-      )
-      .slice(0, 8)
-  }, [query, users])
+  useEffect(() => {
+    if (!showList || !query.trim()) {
+      const timer = setTimeout(() => {
+        setSearchResults([])
+        setSearching(false)
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      const result = await searchUsersForPickerAction(query)
+      if (result.users) setSearchResults(result.users as UserOption[])
+      setSearching(false)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [query, showList])
 
   function selectUser(u: UserOption) {
     setSelected(u)
@@ -156,13 +160,15 @@ function PointActionDrawer({
                 />
               </div>
 
-              {showList && filtered.length > 0 && (
+              {showList && (searching || searchResults.length > 0) && (
                 <div style={{
                   position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
                   background: "#fff", border: "1px solid var(--lv-border)", borderRadius: 10,
                   boxShadow: "var(--lv-shadow-pop)", overflow: "hidden",
                 }}>
-                  {filtered.map((u) => (
+                  {searching ? (
+                    <div style={{ padding: "10px 14px", fontSize: 13, color: "var(--lv-text-3)" }}>Searching…</div>
+                  ) : searchResults.map((u) => (
                     <button
                       key={u.id}
                       type="button"
@@ -292,7 +298,7 @@ function PointActionDrawer({
 
 // ─── Main export ───────────────────────────────────────────
 
-export function PointActionButtons({ users }: Props) {
+export function PointActionButtons(_: Props) {
   const [openMode, setOpenMode] = useState<Mode | null>(null)
 
   return (
@@ -325,7 +331,6 @@ export function PointActionButtons({ users }: Props) {
       {openMode && (
         <PointActionDrawer
           mode={openMode}
-          users={users}
           onClose={() => setOpenMode(null)}
         />
       )}

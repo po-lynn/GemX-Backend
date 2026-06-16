@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Sparkles, Search } from "lucide-react"
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { adminActivatePremiumDealerAction } from "@/features/points/actions/points"
+import { searchUsersForPickerAction } from "@/features/users/actions/users"
 import type { PremiumDealerPackage } from "@/features/points/db/points"
 
 type UserOption = {
@@ -50,10 +51,8 @@ function getHue(str: string): number {
 }
 
 export function ActivatePremiumDealerDialog({
-  users,
   packages,
 }: {
-  users: UserOption[]
   packages: PremiumDealerPackage[]
 }) {
   const router = useRouter()
@@ -65,21 +64,25 @@ export function ActivatePremiumDealerDialog({
   const [query, setQuery] = useState("")
   const [showList, setShowList] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserOption | null>(null)
+  const [searchResults, setSearchResults] = useState<UserOption[]>([])
+  const [searching, setSearching] = useState(false)
   const [packageName, setPackageName] = useState("")
   const [autoRenew, setAutoRenew] = useState(false)
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim()
-    if (!q) return users.slice(0, 8)
-    return users
-      .filter(
-        (u) =>
-          (u.name ?? "").toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          (u.phone ?? "").includes(q)
-      )
-      .slice(0, 8)
-  }, [query, users])
+  useEffect(() => {
+    if (!showList || !query.trim()) {
+      setSearchResults([])
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      const result = await searchUsersForPickerAction(query)
+      if (result.users) setSearchResults(result.users)
+      setSearching(false)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [query, showList])
 
   const selectedPkg = packages.find((p) => p.name === packageName)
   const hasEnoughPoints =
@@ -185,7 +188,7 @@ export function ActivatePremiumDealerDialog({
                   style={{ ...inputStyle, paddingLeft: 34 }}
                   autoComplete="off"
                 />
-                {showList && filtered.length > 0 && (
+                {showList && (searching || searchResults.length > 0) && (
                   <div
                     style={{
                       position: "absolute",
@@ -200,7 +203,11 @@ export function ActivatePremiumDealerDialog({
                       overflow: "hidden",
                     }}
                   >
-                    {filtered.map((u) => (
+                    {searching ? (
+                      <div style={{ padding: "10px 14px", fontSize: 13, color: "var(--lv-text-3)" }}>
+                        Searching…
+                      </div>
+                    ) : searchResults.map((u) => (
                       <button
                         key={u.id}
                         type="button"

@@ -33,6 +33,32 @@ export type UserForEdit = UserRow & {
   country: string | null;
 };
 
+export type UserPickerOption = {
+  id: string
+  name: string | null
+  email: string
+  phone: string | null
+  points: number
+  role: string
+}
+
+export async function searchUsersForPicker(query: string, limit = 8): Promise<UserPickerOption[]> {
+  const q = query.trim()
+  const condition = q
+    ? or(
+        ilike(user.name, `%${q}%`),
+        ilike(user.email, `%${q}%`),
+        ilike(user.phone ?? "", `%${q}%`)
+      )
+    : undefined
+  return db
+    .select({ id: user.id, name: user.name, email: user.email, phone: user.phone, points: user.points, role: user.role })
+    .from(user)
+    .where(condition)
+    .orderBy(asc(user.name))
+    .limit(limit)
+}
+
 export async function getAllUsersFromDb(opts?: {
   search?: string;
 }): Promise<UserRow[]> {

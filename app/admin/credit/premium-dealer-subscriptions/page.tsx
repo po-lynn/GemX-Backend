@@ -8,7 +8,6 @@ import {
   getPremiumDealerSubscriptionCounts,
   getPremiumDealersSettings,
 } from "@/features/points/db/points"
-import { getAllUsersFromDb } from "@/features/users/db/users"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import { ActivatePremiumDealerDialog } from "@/features/points/components/ActivatePremiumDealerDialog"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -31,14 +30,13 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
     ? (params.status as StatusFilter)
     : "all"
 
-  const [current, counts, users, dealerSettings] = await Promise.all([
+  const [current, counts, dealerSettings] = await Promise.all([
     getPremiumDealerSubscriptionsPaginated({
       page,
       limit: PAGE_SIZE,
       status: status === "all" ? undefined : status,
     }),
     getPremiumDealerSubscriptionCounts(),
-    getAllUsersFromDb(),
     getPremiumDealersSettings(),
   ])
 
@@ -71,7 +69,6 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
         </div>
         <div className="lv-pagehead-actions">
           <ActivatePremiumDealerDialog
-            users={users}
             packages={dealerSettings.packages}
           />
           <PressButton className="lv-export-btn">

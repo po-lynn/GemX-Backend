@@ -9,7 +9,6 @@ import {
   getPointPurchasePackagesSettings,
   getPointManagementSettings,
 } from "@/features/points/db/points"
-import { getAllUsersFromDb } from "@/features/users/db/users"
 import { PointPurchaseRequestsTable } from "@/features/points/components/PointPurchaseRequestsTable"
 import { AdminCreatePurchaseRequestDialog } from "@/features/points/components/AdminCreatePurchaseRequestDialog"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -32,14 +31,13 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
     ? (params.status as StatusFilter)
     : "all"
 
-  const [current, counts, users, packagesSettings, managementSettings] = await Promise.all([
+  const [current, counts, packagesSettings, managementSettings] = await Promise.all([
     getPointPurchaseRequestsPaginated({
       page,
       limit: PAGE_SIZE,
       status: status === "all" ? undefined : status,
     }),
     getPointPurchaseRequestCounts(),
-    getAllUsersFromDb(),
     getPointPurchasePackagesSettings(),
     getPointManagementSettings(),
   ])
@@ -73,7 +71,6 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
         </div>
         <div className="lv-pagehead-actions">
           <AdminCreatePurchaseRequestDialog
-            users={users}
             pointPackages={packagesSettings.packages}
             paymentMethods={managementSettings.paymentMethods}
           />

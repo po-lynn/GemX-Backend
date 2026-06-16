@@ -1,8 +1,9 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import { normalizeMyanmarPhone } from "@/lib/phone";
+import { normalizeMyanmarPhone, internalEmailFromPhone } from "@/lib/phone";
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   userCreateSchema,
@@ -14,6 +15,7 @@ import {
   updateUserInDb,
   deleteUserInDb,
   getUserByEmail,
+  searchUsersForPicker,
 } from "@/features/users/db/users";
 import type { UpdateUserInput } from "@/features/users/db/users";
 import { applyDefaultPointsToNewUser } from "@/features/points/db/points";
@@ -51,12 +53,27 @@ export async function createUserAction(formData: FormData) {
   if (session.user.role === "internal" && !INTERNAL_ALLOWED_ROLES.includes(parsed.data.role ?? "")) {
     return { error: "Unauthorized" };
   }
-  const email = (parsed.data.email ?? "").trim();
-  if (!email) {
-    return { error: "Email is required to create a user." };
+  const emailInput = (parsed.data.email ?? "").trim();
+  if (!emailInput) {
+    return { error: "Email or phone is required to create a user." };
   }
   const imageUrl = (parsed.data.image ?? "").trim() || undefined;
-  const rawPhone = (parsed.data.phone ?? "").trim() || undefined;
+  let rawPhone = (parsed.data.phone ?? "").trim() || undefined;
+
+  // If the admin entered a phone number instead of an email, convert to internal email
+  const cleanInput = emailInput.replace(/[\s\-()]/g, "");
+  let email: string;
+  if (cleanInput.startsWith("+959") || cleanInput.startsWith("09")) {
+    const normalized = normalizeMyanmarPhone(emailInput);
+    if (!normalized) {
+      return { error: "Invalid Myanmar phone number format. Use 09... or +959..." };
+    }
+    email = internalEmailFromPhone(normalized);
+    if (!rawPhone) rawPhone = normalized;
+  } else {
+    email = emailInput;
+  }
+
   const phone = rawPhone ? (normalizeMyanmarPhone(rawPhone) ?? rawPhone) : undefined;
   // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
   const result = await auth.api.signUpEmail({
@@ -86,6 +103,7 @@ export async function createUserAction(formData: FormData) {
     }
     return { error: msg };
   }
+  revalidatePath("/admin/users/new");
   await applyDefaultPointsToNewUser(email);
   // Ensure role/profile image/archived are saved (better-auth may block custom roles on signup).
   const needUpdate =
@@ -156,7 +174,18 @@ export async function updateUserAction(formData: FormData) {
   if (rest.image !== undefined) {
     data.image = rest.image ?? null;
   }
-  await updateUserInDb(userId, data);
+  try {
+    await updateUserInDb(userId, data);
+  } catch (err) {
+    const msg = String(err);
+    if (msg.includes("user_phone_unique") || (msg.includes("unique") && msg.includes("phone"))) {
+      return { error: "This phone number is already associated with another account." };
+    }
+    if (msg.includes("user_email_unique") || (msg.includes("unique") && msg.includes("email"))) {
+      return { error: "This email address is already associated with another account." };
+    }
+    throw err;
+  }
   return { success: true, userId };
 }
 
@@ -214,4 +243,10 @@ export async function deleteUserAction(formData: FormData) {
   const deleted = await deleteUserInDb(parsed.data.userId);
   if (!deleted) return { error: "User not found" };
   return { success: true };
+}
+
+export async function searchUsersForPickerAction(query: string) {
+  await requireActionRole(canAdminManageUsers);
+  const users = await searchUsersForPicker(query, 8);
+  return { users };
 }

@@ -20,7 +20,8 @@
       "Bash(/usr/local/bin/npm run *)",
       "Bash(~/.nvm/versions/node/v22.12.0/bin/npm run *)",
       "Bash(grep -n ' \\\\$')",
-      "Bash(/home/po/.nvm/versions/node/v22.14.0/bin/npm run *)"
+      "Bash(/home/po/.nvm/versions/node/v22.14.0/bin/npm run *)",
+      "Bash(xargs cat)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

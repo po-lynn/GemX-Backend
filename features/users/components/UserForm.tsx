@@ -556,7 +556,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
 
                   <div className="ud-row" style={{ "--cols": 2 } as React.CSSProperties}>
                     <div className="ud-field">
-                      <label className="ud-label">Phone</label>
+                      <label className="ud-label">Mobile</label>
                       <input
                         className="ud-input mono"
                         placeholder="+95 9 123 456 789"
@@ -566,22 +566,26 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
                       />
                     </div>
                     <div className="ud-field">
-                      <label className="ud-label">Email</label>
-                      <input className="ud-input" readOnly value={user.email} />
-                      <span className="ud-help warn">Email cannot be changed.</span>
+                      <label className="ud-label">Login</label>
+                      <input className="ud-input mono" readOnly value={user.email} />
+                      <span className="ud-help">Login credential — cannot be changed.</span>
                     </div>
                   </div>
 
                   <div className="ud-row" style={{ "--cols": 3 } as React.CSSProperties}>
                     <div className="ud-field">
                       <label className="ud-label">Role <span className="req">*</span></label>
-                      <select
-                        className="ud-select"
-                        value={role}
-                        onChange={e => { setRole(e.target.value); mark(); }}
-                      >
-                        {ROLES.filter(r => canAssignAdmin || (r.value !== "admin" && r.value !== "internal")).map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                      </select>
+                      {canAssignAdmin ? (
+                        <select
+                          className="ud-select"
+                          value={role}
+                          onChange={e => { setRole(e.target.value); mark(); }}
+                        >
+                          {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        </select>
+                      ) : (
+                        <input className="ud-input" readOnly value={ROLES.find(r => r.value === role)?.label ?? role} />
+                      )}
                     </div>
                     <div className="ud-field">
                       <label className="ud-label">Gender</label>
@@ -1157,7 +1161,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [showPw,   setShowPw]   = useState(false);
-  const [role,     setRole]     = useState("buyer");
+  const [role,     setRole]     = useState("user");
   const [phone,    setPhone]    = useState("");
   const [gender,   setGender]   = useState("");
   const [dob,      setDob]      = useState("");
@@ -1246,6 +1250,13 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
     try {
       const result = await createUserAction(fd);
       if (result?.error) { setError(result.error); return; }
+      // Reset all fields before navigating so the router cache stores an empty form
+      setName(""); setEmail(""); setPassword(""); setShowPw(false);
+      setRole("user"); setPhone(""); setGender(""); setDob("");
+      setAddress(""); setCountry("Myanmar"); setStateVal(""); setCity("");
+      setArchived(false);
+      setNrcText(""); setNrcState(""); setNrcDistrict(""); setNrcType("N"); setNrcNumber("");
+      setImageUrl(""); setImageUploadError(null);
       router.push("/admin/users");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -1351,15 +1362,16 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
 
               <div className="ud-row" style={{ "--cols": 2 } as React.CSSProperties}>
                 <div className="ud-field">
-                  <label className="ud-label">Email <span className="req">*</span></label>
+                  <label className="ud-label">Email or phone <span className="req">*</span></label>
                   <input
                     className="ud-input mono"
-                    type="email"
+                    type="text"
                     value={email}
                     maxLength={200}
-                    placeholder="user@example.com"
+                    placeholder="user@example.com or 09xxxxxxx"
                     onChange={e => setEmail(e.target.value)}
                   />
+                  <span className="ud-help">Enter an email address or a Myanmar phone number (09... or +959...)</span>
                 </div>
                 <div className="ud-field">
                   <label className="ud-label">Role <span className="req">*</span></label>
@@ -1368,7 +1380,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
                     value={role}
                     onChange={e => setRole(e.target.value)}
                   >
-                    {ROLES.filter(r => canAssignAdmin || r.value !== "admin").map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    {ROLES.filter(r => canAssignAdmin || r.value === "user").map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -1411,7 +1423,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
             <div className="ud-sec-body">
               <div className="ud-row" style={{ "--cols": 3 } as React.CSSProperties}>
                 <div className="ud-field">
-                  <label className="ud-label">Phone</label>
+                  <label className="ud-label">Mobile</label>
                   <input
                     className="ud-input mono"
                     placeholder="+95 9 123 456 789"
