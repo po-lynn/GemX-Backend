@@ -3,8 +3,14 @@ import { ChevronRight, Download } from "lucide-react"
 import { connection } from "next/server"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-import { getPremiumDealerSubscriptionsPaginated, getPremiumDealerSubscriptionCounts } from "@/features/points/db/points"
+import {
+  getPremiumDealerSubscriptionsPaginated,
+  getPremiumDealerSubscriptionCounts,
+  getPremiumDealersSettings,
+} from "@/features/points/db/points"
+import { getAllUsersFromDb } from "@/features/users/db/users"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
+import { ActivatePremiumDealerDialog } from "@/features/points/components/ActivatePremiumDealerDialog"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
 
@@ -25,12 +31,16 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
     ? (params.status as StatusFilter)
     : "all"
 
-  const current = await getPremiumDealerSubscriptionsPaginated({
-    page,
-    limit: PAGE_SIZE,
-    status: status === "all" ? undefined : status,
-  })
-  const counts = await getPremiumDealerSubscriptionCounts()
+  const [current, counts, users, dealerSettings] = await Promise.all([
+    getPremiumDealerSubscriptionsPaginated({
+      page,
+      limit: PAGE_SIZE,
+      status: status === "all" ? undefined : status,
+    }),
+    getPremiumDealerSubscriptionCounts(),
+    getAllUsersFromDb(),
+    getPremiumDealersSettings(),
+  ])
 
   const views: ViewTab[] = [
     { id: "all",       label: "All",       count: counts.all },
@@ -60,6 +70,10 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
           </p>
         </div>
         <div className="lv-pagehead-actions">
+          <ActivatePremiumDealerDialog
+            users={users}
+            packages={dealerSettings.packages}
+          />
           <PressButton className="lv-export-btn">
             <Download /> Export Excel
           </PressButton>
