@@ -21,12 +21,24 @@
       "Bash(~/.nvm/versions/node/v22.12.0/bin/npm run *)",
       "Bash(grep -n ' \\\\$')",
       "Bash(/home/po/.nvm/versions/node/v22.14.0/bin/npm run *)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/review-package 817425a HEAD)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/task-brief /home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans/2026-06-17-product-prev-next-navigation.md 2)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git commit -m 'feat: add resolveAdjacentProducts helper for product edit navigation')",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/.git/sdd)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/review-package a7f8037 HEAD)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/task-brief /home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans/2026-06-17-product-prev-next-navigation.md 3)",
+      "Bash(bash -c 'source ~/.nvm/nvm.sh && git commit --allow-empty -m \"feat: wire resolveAdjacentProducts into product edit page\"')",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/task-brief /home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans/2026-06-17-product-prev-next-navigation.md 4)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git -C /home/po/me/2026/Jade/infinity-gemx commit -m ' *)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/review-package b1af4ef HEAD)",
+      "Bash(/home/po/.node/bin/npm run *)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
       "/home/po/me/2026/Jade/infinity-gemx/app/portal/products/[id]",
-      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans"
+      "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans",
+      "/home/po/me/2026/Jade/infinity-gemx/.git/sdd"
     ]
   },
   "enabledPlugins": {
