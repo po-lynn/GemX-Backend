@@ -125,6 +125,27 @@ function buildPageHref(page: number, view: string, search?: string, sp?: URLSear
   return `${BASE}?${p.toString()}`
 }
 
+export function buildEditHref(
+  id: string,
+  view: string,
+  search: string | undefined,
+  page: number,
+  priceMinUSD?: string,
+  priceMaxUSD?: string,
+  priceMinMMK?: string,
+  priceMaxMMK?: string,
+): string {
+  const p = new URLSearchParams()
+  if (view !== "all") p.set("view", view)
+  if (search?.trim()) p.set("search", search.trim())
+  p.set("page", String(page))
+  if (priceMinUSD) p.set("priceMinUSD", priceMinUSD)
+  if (priceMaxUSD) p.set("priceMaxUSD", priceMaxUSD)
+  if (priceMinMMK) p.set("priceMinMMK", priceMinMMK)
+  if (priceMaxMMK) p.set("priceMaxMMK", priceMaxMMK)
+  return `/admin/products/${id}/edit?${p.toString()}`
+}
+
 // ─── Main component ────────────────────────────────────────
 
 type Props = {
@@ -519,7 +540,11 @@ export function ProductsListView({
           default:           return ""
         }
       }}
-      onRowClick={(r) => router.push(`/admin/products/${r.id}/edit`)}
+      onRowClick={(r) =>
+        router.push(
+          buildEditHref(r.id, activeView, search, page, priceMinUSD, priceMaxUSD, priceMinMMK, priceMaxMMK)
+        )
+      }
       renderBulkActions={(rows, onClear) => {
         const ids = rows.map((r) => r.id)
         return (
