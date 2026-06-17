@@ -24,7 +24,6 @@ async function AdminUsersEditContent({ params }: Props) {
   if (isInternal && user.role === "admin") redirect("/admin/users");
 
   const permissions = user.role === "internal" ? await getUserPermissions(user.id) : {};
-
   return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} canAssignAdmin={!isInternal} />;
 }
 

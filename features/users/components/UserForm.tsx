@@ -188,8 +188,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
   const [city,      setCity]      = useState(user.city ?? "");
   const [verified,  setVerified]  = useState(user.verified);
   const [archived,  setArchived]  = useState(user.archived);
-  const [points,    setPoints]    = useState(user.points);
-  const [pointsDelta, setPointsDelta] = useState(100);
+  const points = user.points;
 
   // Myanmar NRC
   const parsedNrc  = parseMyanmarNrc(user.nrc);
@@ -294,7 +293,6 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
     fd.set("nrc",         nrcFinal);
     fd.set("verified",    verified ? "on" : "");
     fd.set("archived",    archived ? "on" : "");
-    fd.set("points",      String(points));
     if (imageUrl) fd.set("image", imageUrl);
     try {
       const result = await updateUserAction(fd);
@@ -811,7 +809,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
                 <div className="ud-sec-icon"><Gem style={{ width: 16, height: 16 }} /></div>
                 <div>
                   <div className="ud-sec-title">Points wallet</div>
-                  <div className="ud-sec-sub">Manual balance adjustments — saved with the rest of the form</div>
+                  <div className="ud-sec-sub">Balance is managed via point transactions and purchases</div>
                 </div>
               </div>
               <div className="ud-sec-body">
@@ -821,35 +819,6 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
                     <div className="ud-points-balance">
                       {points.toLocaleString()}<small>pts</small>
                     </div>
-                  </div>
-                  <div className="ud-points-actions">
-                    <input
-                      className="ud-input mono ud-points-input"
-                      type="number" min={1}
-                      value={pointsDelta}
-                      onChange={e => setPointsDelta(Math.max(1, parseInt(e.target.value) || 1))}
-                    />
-                    <button type="button" className="btn"
-                      onClick={() => { setPoints(p => Math.max(0, p - pointsDelta)); mark(); }}>
-                      − Deduct
-                    </button>
-                    <button type="button" className="btn btn-primary"
-                      onClick={() => { setPoints(p => p + pointsDelta); mark(); }}>
-                      + Grant
-                    </button>
-                  </div>
-                </div>
-
-                <div className="ud-field">
-                  <label className="ud-label">Set balance directly</label>
-                  <div className="ud-input-suffix">
-                    <input
-                      className="ud-input mono"
-                      type="number" min={0} step={1}
-                      value={points}
-                      onChange={e => { setPoints(Math.max(0, parseInt(e.target.value) || 0)); mark(); }}
-                    />
-                    <span className="suffix">pts</span>
                   </div>
                 </div>
               </div>

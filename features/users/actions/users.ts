@@ -157,8 +157,9 @@ export async function updateUserAction(formData: FormData) {
     return { error: "Unauthorized" };
   }
   const { userId, ...rest } = parsed.data;
+  const isSelf = session.user.id === userId;
   const INTERNAL_ALLOWED_ROLES = ["portal", "user"];
-  if (session.user.role === "internal" && rest.role !== undefined && !INTERNAL_ALLOWED_ROLES.includes(rest.role)) {
+  if (session.user.role === "internal" && !isSelf && rest.role !== undefined && !INTERNAL_ALLOWED_ROLES.includes(rest.role)) {
     return { error: "Unauthorized" };
   }
   const data: UpdateUserInput = { ...rest };

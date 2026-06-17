@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Coins, LogOut, Pencil, User } from "lucide-react"
+import { ChevronDown, Coins, LogOut, User } from "lucide-react"
 
 type UserType = {
   id: string
@@ -98,19 +98,9 @@ export function UserProfileMenu({
             asChild
             className="w-full justify-start gap-2.5 rounded-lg text-sm font-normal"
           >
-            <Link href={`/profile/${user.id}`}>
+            <Link href={`/admin/users/${user.id}/edit`}>
               <User className="h-4 w-4 text-muted-foreground" />
               View profile
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            asChild
-            className="w-full justify-start gap-2.5 rounded-lg text-sm font-normal"
-          >
-            <Link href={`/profile/${user.id}/edit`}>
-              <Pencil className="h-4 w-4 text-muted-foreground" />
-              Edit profile
             </Link>
           </Button>
           <div className="my-1 h-px bg-border" />

@@ -13,7 +13,7 @@ export async function saveUserPermissionsAction(
   userId: string,
   permissions: Record<string, boolean>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await requireActionRole((role) => role === "admin")
+  const session = await requireActionRole((role) => role === "admin" || role === "internal")
   if (!session) {
     return { ok: false, error: "Unauthorized" }
   }
