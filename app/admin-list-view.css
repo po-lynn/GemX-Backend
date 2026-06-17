@@ -1816,6 +1816,20 @@
 .pd-breadcrumbs a { color: var(--lv-text-3); text-decoration: none; transition: color .12s; }
 .pd-breadcrumbs a:hover { color: var(--lv-text-2); }
 .pd-breadcrumbs .pd-here { color: var(--lv-text); font-weight: 500; }
+.pd-listnav {
+  display: flex; align-items: center; gap: 2px;
+}
+.pd-listnav-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px;
+  color: var(--lv-text-2); text-decoration: none; cursor: pointer;
+  transition: background .12s;
+}
+.pd-listnav-btn:hover { background: var(--lv-panel-2); }
+.pd-listnav-count {
+  font-size: 12px; color: var(--lv-text-3);
+  padding: 0 4px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 
 /* ── Sticky save bar ──────────────────────────────────────────── */
 .pd-savebar {

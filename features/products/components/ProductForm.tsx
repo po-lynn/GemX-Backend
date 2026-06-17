@@ -318,6 +318,10 @@ type Props = {
   featurePricingTiers?: FeaturePricingTier[] | null
   backHref?: string | null
   backLabel?: string | null
+  prevHref?: string | null
+  nextHref?: string | null
+  listPosition?: number | null
+  listTotal?: number | null
 }
 
 export function ProductForm({
@@ -329,6 +333,10 @@ export function ProductForm({
   featurePricingTiers,
   backHref,
   backLabel = "Back",
+  prevHref,
+  nextHref,
+  listPosition,
+  listTotal,
 }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
@@ -682,6 +690,31 @@ export function ProductForm({
             {isEdit ? (product?.title || "Edit Product") : "New Product"}
           </span>
         </nav>
+        {(prevHref != null || nextHref != null || listPosition != null) && (
+          <div className="pd-listnav">
+            {prevHref ? (
+              <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous product">
+                <ChevronLeft size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronLeft size={14} />
+              </span>
+            )}
+            {listPosition != null && listTotal != null && (
+              <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+            )}
+            {nextHref ? (
+              <Link href={nextHref} className="pd-listnav-btn" aria-label="Next product">
+                <ChevronRight size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronRight size={14} />
+              </span>
+            )}
+          </div>
+        )}
         <div className="pd-topbar-spacer" />
         {isEdit && (
           <Link href="/admin/products/new" className="pd-btn">
