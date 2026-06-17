@@ -9,6 +9,7 @@ import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import { getFeatureSettings } from "@/features/points/db/points"
 import { FadeUp } from "@/components/admin/motion"
+import { resolveAdjacentProducts } from "./resolve-adjacent"
 
 const BACK_ROUTES: Record<string, { href: string; label: string }> = {
   "collector-requests": {
@@ -19,20 +20,41 @@ const BACK_ROUTES: Record<string, { href: string; label: string }> = {
 
 type Props = {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ from?: string }>
+  searchParams: Promise<{
+    from?: string
+    view?: string
+    search?: string
+    page?: string
+    priceMinUSD?: string
+    priceMaxUSD?: string
+    priceMinMMK?: string
+    priceMaxMMK?: string
+  }>
 }
 
 export default async function AdminProductsEditPage({ params, searchParams }: Props) {
   await connection()
   await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
   const { id } = await params
-  const { from } = await searchParams
-  const back = from ? (BACK_ROUTES[from] ?? null) : null
-  const product = await getCachedProduct(id)
-  const categories = await getAllCategories()
-  const laboratories = await getAllLaboratories()
-  const origins = await getAllOrigins()
-  const featureSettings = await getFeatureSettings()
+  const sp = await searchParams
+  const back = sp.from ? (BACK_ROUTES[sp.from] ?? null) : null
+
+  const [product, categories, laboratories, origins, featureSettings, adjacent] = await Promise.all([
+    getCachedProduct(id),
+    getAllCategories(),
+    getAllLaboratories(),
+    getAllOrigins(),
+    getFeatureSettings(),
+    resolveAdjacentProducts(id, {
+      view: sp.view,
+      search: sp.search,
+      page: sp.page,
+      priceMinUSD: sp.priceMinUSD,
+      priceMaxUSD: sp.priceMaxUSD,
+      priceMinMMK: sp.priceMinMMK,
+      priceMaxMMK: sp.priceMaxMMK,
+    }),
+  ])
 
   if (!product) notFound()
 
@@ -49,6 +71,10 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
           featurePricingTiers={featureSettings.pricingTiers}
           backHref={back?.href}
           backLabel={back?.label}
+          prevHref={adjacent.prevHref}
+          nextHref={adjacent.nextHref}
+          listPosition={adjacent.position}
+          listTotal={adjacent.total}
         />
       </div>
     </FadeUp>
