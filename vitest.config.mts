@@ -13,7 +13,7 @@ export default defineConfig({
     env: {
       AUTH_SECRET: "test-auth-secret",
       AUTH_URL: "http://localhost:3000",
-      DATABASE_URL: "postgresql://me:meadmin@localhost:5432/gemx_local",
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test",
     },
     coverage: {
       provider: "v8",

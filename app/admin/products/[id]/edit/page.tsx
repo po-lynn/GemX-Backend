@@ -39,24 +39,25 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
   const sp = await searchParams
   const back = sp.from ? (BACK_ROUTES[sp.from] ?? null) : null
 
-  const [product, categories, laboratories, origins, featureSettings, adjacent] = await Promise.all([
+  const [product, categories, laboratories, origins, featureSettings] = await Promise.all([
     getCachedProduct(id),
     getAllCategories(),
     getAllLaboratories(),
     getAllOrigins(),
     getFeatureSettings(),
-    resolveAdjacentProducts(id, {
-      view: sp.view,
-      search: sp.search,
-      page: sp.page,
-      priceMinUSD: sp.priceMinUSD,
-      priceMaxUSD: sp.priceMaxUSD,
-      priceMinMMK: sp.priceMinMMK,
-      priceMaxMMK: sp.priceMaxMMK,
-    }),
   ])
 
   if (!product) notFound()
+
+  const adjacent = await resolveAdjacentProducts(id, {
+    view: sp.view,
+    search: sp.search,
+    page: sp.page,
+    priceMinUSD: sp.priceMinUSD,
+    priceMaxUSD: sp.priceMaxUSD,
+    priceMinMMK: sp.priceMinMMK,
+    priceMaxMMK: sp.priceMaxMMK,
+  })
 
   return (
     <FadeUp>
