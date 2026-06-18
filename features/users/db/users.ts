@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { and, eq, ne, asc, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ne, asc, desc, ilike, or, sql } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -40,6 +40,14 @@ export type UserPickerOption = {
   phone: string | null
   points: number
   role: string
+}
+
+export async function getRecentUsersForPicker(limit = 5): Promise<UserPickerOption[]> {
+  return db
+    .select({ id: user.id, name: user.name, email: user.email, phone: user.phone, points: user.points, role: user.role })
+    .from(user)
+    .orderBy(desc(user.createdAt))
+    .limit(limit)
 }
 
 export async function searchUsersForPicker(query: string, limit = 8): Promise<UserPickerOption[]> {

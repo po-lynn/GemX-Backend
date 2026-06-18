@@ -12,8 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createProductAction, updateProductAction } from "@/features/products/actions/products"
+import { createProductAction, updateProductAction, searchSellersAction, getRecentSellersAction, searchSellersPagedAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
+import type { UserPickerOption } from "@/features/users/db/users"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
 import { formatDate } from "@/lib/formatters"
 import { toast } from "sonner"
@@ -21,8 +22,10 @@ import {
   AlertTriangle,
   Archive,
   Award,
+  User,
   BadgeDollarSign,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -309,6 +312,356 @@ function VideoViewer({
   )
 }
 
+function highlightMatch(text: string, query: string) {
+  if (!query) return <>{text}</>
+  const idx = text.toLowerCase().indexOf(query.toLowerCase())
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <strong style={{ fontWeight: 700 }}>{text.slice(idx, idx + query.length)}</strong>
+      {text.slice(idx + query.length)}
+    </>
+  )
+}
+
+const SELLER_MODAL_PAGE_SIZE = 20
+
+function SellerSearchModal({
+  open,
+  initialQuery,
+  onSelect,
+  onClose,
+}: {
+  open: boolean
+  initialQuery: string
+  onSelect: (u: UserPickerOption) => void
+  onClose: () => void
+}) {
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<UserPickerOption[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+
+  const totalPages = Math.max(1, Math.ceil(total / SELLER_MODAL_PAGE_SIZE))
+  const from = total === 0 ? 0 : (page - 1) * SELLER_MODAL_PAGE_SIZE + 1
+  const to = Math.min(page * SELLER_MODAL_PAGE_SIZE, total)
+
+  useEffect(() => {
+    if (open) { setQuery(initialQuery); setPage(1) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    const t = setTimeout(async () => {
+      if (cancelled) return
+      setLoading(true)
+      try {
+        const res = await searchSellersPagedAction(query.trim(), page)
+        if (!cancelled) { setResults(res.users); setTotal(res.total) }
+      } catch {
+        if (!cancelled) { setResults([]); setTotal(0) }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }, 250)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [open, query, page])
+
+  const roleChip = (role: string) => {
+    const styles: Record<string, { bg: string; color: string }> = {
+      admin:    { bg: "#fef2f2", color: "#dc2626" },
+      internal: { bg: "#f0fdf4", color: "#16a34a" },
+      portal:   { bg: "#f0f9ff", color: "#0284c7" },
+    }
+    const s = styles[role] ?? { bg: "#f8fafc", color: "#64748b" }
+    return (
+      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, fontWeight: 500, background: s.bg, color: s.color }}>
+        {role}
+      </span>
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent style={{ maxWidth: 740, padding: 0, gap: 0, overflow: "hidden" }}>
+        <DialogHeader style={{ padding: "14px 20px 12px", borderBottom: "1px solid #e2e8f0" }}>
+          <DialogTitle style={{ fontSize: 15, fontWeight: 600 }}>Search: Seller</DialogTitle>
+        </DialogHeader>
+
+        {/* toolbar: search + pagination */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid #f1f5f9" }}>
+          <input
+            type="text"
+            className="pd-input"
+            placeholder="Search by name, email or phone…"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+            style={{ flex: 1 }}
+            autoFocus
+          />
+          <span style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
+            {total === 0 ? "0 records" : `${from}–${to} / ${total}`}
+          </span>
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            style={{ padding: "4px 7px", border: "1px solid #e2e8f0", borderRadius: 4, background: "#fff", cursor: page <= 1 ? "not-allowed" : "pointer", color: page <= 1 ? "#cbd5e1" : "#475569", opacity: page <= 1 ? 0.5 : 1 }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            type="button"
+            disabled={page >= totalPages || total === 0}
+            onClick={() => setPage((p) => p + 1)}
+            style={{ padding: "4px 7px", border: "1px solid #e2e8f0", borderRadius: 4, background: "#fff", cursor: (page >= totalPages || total === 0) ? "not-allowed" : "pointer", color: (page >= totalPages || total === 0) ? "#cbd5e1" : "#475569", opacity: (page >= totalPages || total === 0) ? 0.5 : 1 }}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+
+        {/* results table */}
+        <div style={{ overflowY: "auto", maxHeight: 420 }}>
+          {loading && results.length === 0 ? (
+            <div style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Loading…</div>
+          ) : results.length === 0 ? (
+            <div style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>No sellers found</div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc" }}>
+                  {["Name", "Email", "Phone", "Role"].map((col) => (
+                    <th key={col} style={{ padding: "7px 14px", textAlign: "left", fontWeight: 500, color: "#64748b", borderBottom: "1px solid #e2e8f0", fontSize: 12 }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((u, i) => (
+                  <tr
+                    key={u.id}
+                    style={{ cursor: "pointer", background: i % 2 === 0 ? "#fff" : "#fafafa" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "#fff" : "#fafafa")}
+                    onClick={() => { onSelect(u); onClose() }}
+                  >
+                    <td style={{ padding: "8px 14px", borderBottom: "1px solid #f1f5f9" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 26, height: 26, borderRadius: "50%", background: "#e0e7ff", color: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                          {(u.name ?? "?")[0]?.toUpperCase() ?? "?"}
+                        </span>
+                        <span style={{ fontWeight: 500, color: "#1e293b" }}>
+                          {highlightMatch(u.name || "(no name)", query.trim())}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "8px 14px", borderBottom: "1px solid #f1f5f9", color: "#475569" }}>
+                      {highlightMatch(u.email, query.trim())}
+                    </td>
+                    <td style={{ padding: "8px 14px", borderBottom: "1px solid #f1f5f9", color: "#475569" }}>
+                      {u.phone ? highlightMatch(u.phone, query.trim()) : <span style={{ color: "#cbd5e1" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "8px 14px", borderBottom: "1px solid #f1f5f9" }}>
+                      {roleChip(u.role)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <DialogFooter style={{ padding: "10px 16px", borderTop: "1px solid #e2e8f0" }}>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SellerPicker({
+  selected,
+  onSelect,
+}: {
+  selected: UserPickerOption | null
+  onSelect: (user: UserPickerOption | null) => void
+}) {
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<UserPickerOption[]>([])
+  const [open, setOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [noResults, setNoResults] = useState(false)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalQuery, setModalQuery] = useState("")
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const syncPos = useCallback(() => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect()
+      setDropPos({ top: r.bottom + 2, left: r.left, width: r.width })
+    }
+  }, [])
+
+  const runSearch = useCallback(async (q: string) => {
+    syncPos()
+    setSearching(true)
+    setNoResults(false)
+    try {
+      const res = await searchSellersAction(q)
+      setResults(res)
+      setNoResults(res.length === 0)
+      setOpen(true)
+    } catch {
+      setResults([])
+      setNoResults(true)
+      setOpen(true)
+    } finally {
+      setSearching(false)
+    }
+  }, [syncPos])
+
+  const loadRecent = useCallback(async () => {
+    syncPos()
+    setSearching(true)
+    setNoResults(false)
+    try {
+      const res = await getRecentSellersAction()
+      setResults(res)
+      setNoResults(res.length === 0)
+      setOpen(true)
+    } catch {
+      setResults([])
+      setOpen(false)
+    } finally {
+      setSearching(false)
+    }
+  }, [syncPos])
+
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) { setOpen(false); return }
+    const t = setTimeout(() => runSearch(q), 300)
+    return () => clearTimeout(t)
+  }, [query, runSearch])
+
+  // Keep dropdown aligned when page scrolls
+  useEffect(() => {
+    if (!open) return
+    window.addEventListener("scroll", syncPos, { passive: true, capture: true })
+    return () => window.removeEventListener("scroll", syncPos, { capture: true } as EventListenerOptions)
+  }, [open, syncPos])
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onMouseDown)
+    return () => document.removeEventListener("mousedown", onMouseDown)
+  }, [])
+
+  if (selected) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px 7px 12px", background: "#f8fafc", borderRadius: 6, border: "1px solid var(--lv-border)" }}>
+        <span style={{ fontSize: 13, fontWeight: 500, flex: 1, color: "#1e293b" }}>{selected.name || "(no name)"}</span>
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>{selected.email}</span>
+        <button
+          type="button"
+          style={{ marginLeft: 4, padding: "2px 10px", fontSize: 12, color: "#64748b", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 4, cursor: "pointer" }}
+          onClick={() => { onSelect(null); setTimeout(() => inputRef.current?.focus(), 0) }}
+        >
+          Change
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={wrapRef}>
+      <div style={{ position: "relative" }}>
+        <input
+          ref={inputRef}
+          type="text"
+          className="pd-input"
+          placeholder="Search by name, email or phone…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => { if (query.trim()) { syncPos(); setOpen(true) } else { loadRecent() } }}
+          autoComplete="off"
+          style={{ paddingRight: 28 }}
+        />
+        {searching ? (
+          <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#94a3b8", pointerEvents: "none" }}>…</span>
+        ) : (
+          <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} />
+        )}
+      </div>
+      {open && (
+        <div style={{
+          position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width,
+          background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6,
+          boxShadow: "0 4px 16px rgba(0,0,0,.10)", zIndex: 9999,
+          maxHeight: 280, overflowY: "auto",
+        }}>
+          {results.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              style={{
+                display: "flex", alignItems: "center", width: "100%", height: 36,
+                padding: "0 12px", textAlign: "left", cursor: "pointer", gap: 10,
+                background: hovered === u.id ? "#f8fafc" : "#fff",
+                border: "none", borderBottom: "1px solid #f1f5f9",
+              }}
+              onMouseEnter={() => setHovered(u.id)}
+              onMouseLeave={() => setHovered(null)}
+              onMouseDown={() => { onSelect(u); setQuery(""); setOpen(false) }}
+            >
+              <span style={{ fontSize: 13, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#1e293b" }}>
+                {highlightMatch(u.name || "(no name)", query.trim())}
+              </span>
+              <span style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+                {u.email.split("@")[0]}
+              </span>
+            </button>
+          ))}
+          {noResults && !searching && (
+            <div style={{ padding: "10px 12px", fontSize: 13, color: "#94a3b8" }}>No users found</div>
+          )}
+          {!query.trim() && results.length > 0 && (
+            <button
+              type="button"
+              style={{
+                display: "flex", alignItems: "center", width: "100%", height: 34,
+                padding: "0 12px", textAlign: "left", cursor: "pointer",
+                background: hovered === "__more__" ? "#eff6ff" : "#fff",
+                border: "none", borderTop: "1px solid #e2e8f0",
+                fontSize: 13, color: "#3b82f6", fontStyle: "italic",
+              }}
+              onMouseEnter={() => setHovered("__more__")}
+              onMouseLeave={() => setHovered(null)}
+              onMouseDown={(e) => { e.preventDefault(); setModalQuery(query); setOpen(false); setModalOpen(true) }}
+            >
+              Search more…
+            </button>
+          )}
+        </div>
+      )}
+      <SellerSearchModal
+        open={modalOpen}
+        initialQuery={modalQuery}
+        onSelect={(u) => { onSelect(u); setQuery(""); setOpen(false); setModalOpen(false) }}
+        onClose={() => setModalOpen(false)}
+      />
+    </div>
+  )
+}
+
 type Props = {
   mode: "create" | "edit"
   product?: ProductForEdit | null
@@ -388,6 +741,8 @@ export function ProductForm({
   const [dimensionsPart1, setDimensionsPart1] = useState(() => parseDimensions(product?.dimensions)[0])
   const [dimensionsPart2, setDimensionsPart2] = useState(() => parseDimensions(product?.dimensions)[1])
   const [dimensionsPart3, setDimensionsPart3] = useState(() => parseDimensions(product?.dimensions)[2])
+
+  const [sellerPick, setSellerPick] = useState<UserPickerOption | null>(null)
 
   const categoryOptions = categories.filter((c) => c.type === productType)
   const stoneOptions = categories.filter((c) => c.type === "loose_stone")
@@ -650,6 +1005,7 @@ export function ProductForm({
         setDimensionsPart2("")
         setDimensionsPart3("")
         setJewelleryGemstones([])
+        setSellerPick(null)
       }
       router.push("/admin/products")
       router.refresh()
@@ -716,6 +1072,16 @@ export function ProductForm({
           </div>
         )}
         <div className="pd-topbar-spacer" />
+        {isEdit && product?.sellerId && (
+          <Link
+            href={`/admin/users/${product.sellerId}/edit`}
+            className="pd-btn"
+            title="View seller details"
+          >
+            <span style={{ opacity: 0.6, fontSize: 11 }}>Seller:</span>{" "}
+            {product.sellerName ?? product.sellerId}
+          </Link>
+        )}
         {isEdit && (
           <Link href="/admin/products/new" className="pd-btn">
             <Plus size={13} /> New product
@@ -761,6 +1127,7 @@ export function ProductForm({
         >
           {/* ── Hidden inputs ── */}
           {isEdit && <input type="hidden" name="productId" value={product?.id ?? ""} />}
+          {!isEdit && <input type="hidden" name="sellerId" value={sellerPick?.id ?? ""} />}
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
           <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
@@ -846,6 +1213,26 @@ export function ProductForm({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ── Seller (create only) ── */}
+          {!isEdit && (
+            <section className="pd-sec">
+              <div className="pd-sec-head">
+                <div className="pd-sec-icon" data-tone="blue">
+                  <User size={16} />
+                </div>
+                <div>
+                  <div className="pd-sec-title">Seller</div>
+                  <div className="pd-sec-sub">Who is this product listed for? Leave blank to assign to yourself.</div>
+                </div>
+              </div>
+              <div className="pd-sec-body">
+                <div className="pd-field">
+                  <SellerPicker selected={sellerPick} onSelect={setSellerPick} />
+                </div>
+              </div>
+            </section>
           )}
 
           {/* ── Images & videos ── */}

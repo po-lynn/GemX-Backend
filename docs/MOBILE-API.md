@@ -98,7 +98,7 @@
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own collector-piece show requests (paginated). Query: `page`, `limit`. Each item includes **`productName`**, **`sellerName`**. See **5.4.4**.                                                               |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit an escrow service request. Body: `type` (`buyer`\|`seller`), optional `productId` (UUID), optional `packageName` (from premium-dealers-settings), optional `message`. Server validates package and resolves seller from DB. See **5.4.5**. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow service requests (paginated). Query: `page`, `limit`. See **5.4.5**. |
-| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow-service chat account from `escrow_service_setting.user_id` (`id`, `name`, `image`, `role` for **5.4.5a** / chat `recipientId`). |
+| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow officer account + service config (`id`, `name`, `image`, `role`, `serviceFee`, `serviceOverview`). Use `user.id` as chat `recipientId`. See **5.4.5a**. |
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark one product by `productId` (UUID). Idempotent for duplicates. See **5.4.6**. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List current user's favourite products (paginated). Query: `page`, `limit`. See **5.4.6**. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove one favourite by `productId` (UUID) in JSON body. See **5.4.6**. |
@@ -2303,7 +2303,7 @@ Submit an escrow service request to GemX admin. Admin will contact the requester
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-Returns the **GemX user account** configured for escrow-related in-app chat. That account is the **`user_id`** on the latest admin **`escrow_service_setting`** row (same user chosen in the admin escrow service settings UI).
+Returns the **GemX user account** configured for escrow-related in-app chat, along with the service fee and overview text set in the admin escrow service settings UI. That account is the **`user_id`** on the latest admin **`escrow_service_setting`** row.
 
 **Success (200):**
 
@@ -2318,7 +2318,9 @@ When a valid user is linked:
     "name": "GemX Escrow",
     "image": "https://…/profile.png",
     "role": "admin"
-  }
+  },
+  "serviceFee": "2.00",
+  "serviceOverview": "Our escrow service securely holds buyer funds until the gemstone is delivered and verified, protecting both parties throughout the transaction."
 }
 ```
 
@@ -2328,7 +2330,9 @@ When no row exists, `user_id` is unset, or the linked user no longer exists:
 {
   "success": true,
   "configured": false,
-  "user": null
+  "user": null,
+  "serviceFee": "0.00",
+  "serviceOverview": ""
 }
 ```
 
@@ -2337,6 +2341,8 @@ When no row exists, `user_id` is unset, or the linked user no longer exists:
 | `success` | boolean | Always `true` on 200. |
 | `configured` | boolean | `true` when a non-null `user_id` is set and the user row exists. |
 | `user` | object \| null | Public fields only: `id`, `name`, `image` (nullable URL), `role`. Use **`user.id`** as **`recipientId`** in **POST `/api/chat/messages`** and as **`userId`** in **GET `/api/chat/history`**; after messages exist, the same id appears as **`userId`** in **GET `/api/chat/conversations`**. |
+| `serviceFee` | string | Fee percentage charged per transaction (e.g. `"2.00"` = 2%). |
+| `serviceOverview` | string | Description of the escrow service shown to buyers and sellers before they opt in. Empty string if not set. |
 
 **Errors:**
 
@@ -3441,7 +3447,7 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`; each item includes `productName`, `sellerName`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
 | GET    | `/api/mobile/escrow-service-requests` | Yes  | List own escrow requests (paginated: `page`, `limit`). See 5.4.5. |
-| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow chat account from `escrow_service_setting` (`user` or `null`). See 5.4.5a. |
+| GET    | `/api/mobile/escrow-chat-user` | Yes  | Escrow officer account + service config (`user`, `serviceFee`, `serviceOverview`). See 5.4.5a. |
 | POST   | `/api/mobile/favourite-products` | Yes  | Save/bookmark a product by `productId` (idempotent). See 5.4.6. |
 | GET    | `/api/mobile/favourite-products` | Yes  | List own favourite products (paginated: `page`, `limit`). See 5.4.6. |
 | DELETE | `/api/mobile/favourite-products` | Yes  | Remove saved product by `productId`. See 5.4.6. |

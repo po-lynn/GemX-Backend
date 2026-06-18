@@ -14,8 +14,8 @@ export async function GET(_request: NextRequest) {
     const session = await auth.api.getSession({ headers: _request.headers })
     if (!session) return jsonError("Unauthorized", 401)
 
-    const { configured, user } = await getEscrowServiceChatUser()
-    return jsonUncached({ success: true, configured, user })
+    const { configured, user, serviceFee, serviceOverview } = await getEscrowServiceChatUser()
+    return jsonUncached({ success: true, configured, user, serviceFee, serviceOverview })
   } catch (e) {
     console.error("GET /api/mobile/escrow-chat-user:", e)
     return jsonError("Failed to load escrow chat user", 500)

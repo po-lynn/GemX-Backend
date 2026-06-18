@@ -593,6 +593,7 @@ export type ProductForEdit = {
   isPromotion: boolean
   promotionComparePrice: string | null
   sellerId: string
+  sellerName: string
   imageUrls: string[]
   videoUrls: string[]
   /** Newest first; status & price changes from admin saves */
@@ -639,10 +640,12 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       isPromotion: product.isPromotion,
       promotionComparePrice: product.promotionComparePrice,
       sellerId: product.sellerId,
+      sellerName: user.name,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     })
     .from(product)
+    .innerJoin(user, eq(product.sellerId, user.id))
     .where(eq(product.id, id))
 
   if (!row) return null
@@ -751,6 +754,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     promotionComparePrice:
       row.promotionComparePrice != null ? String(row.promotionComparePrice) : null,
     sellerId: row.sellerId,
+    sellerName: row.sellerName,
     imageUrls: images.map((i) => i.url),
     videoUrls: videos.map((v) => v.url),
     changeLog,

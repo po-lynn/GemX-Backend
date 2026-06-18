@@ -18,6 +18,8 @@ import { eq, inArray } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
 import { requireActionRole } from "@/lib/action-guard"
+import { searchUsersForPicker, getRecentUsersForPicker, getUsersPaginatedFromDb } from "@/features/users/db/users"
+import type { UserPickerOption } from "@/features/users/db/users"
 
 /** FormData: missing → undefined (skip on update); empty → clear; else trimmed string */
 function promotionComparePriceFromForm(fd: FormData): string | null | undefined {
@@ -139,7 +141,7 @@ export async function createProductAction(formData: FormData) {
     promotionComparePrice: parsed.data.promotionComparePrice ?? null,
     imageUrls: parsed.data.imageUrls,
     videoUrls: parsed.data.videoUrls,
-    sellerId: session.user.id,
+    sellerId: (String(formData.get("sellerId") ?? "").trim() || null) ?? session.user.id,
   })
 
   revalidateProductsCache(productId)
@@ -315,4 +317,40 @@ export async function bulkSetProductStatus(
   await db.update(product).set({ status }).where(inArray(product.id, ids))
   revalidateProductsCache()
   return { success: true, count: ids.length }
+}
+
+export async function searchSellersAction(query: string): Promise<UserPickerOption[]> {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) return []
+  return searchUsersForPicker(query, 8)
+}
+
+export async function getRecentSellersAction(): Promise<UserPickerOption[]> {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) return []
+  return getRecentUsersForPicker(5)
+}
+
+export async function searchSellersPagedAction(
+  query: string,
+  page: number
+): Promise<{ users: UserPickerOption[]; total: number }> {
+  const session = await requireActionRole(canAdminManageProducts)
+  if (!session) return { users: [], total: 0 }
+  const { users, total } = await getUsersPaginatedFromDb({
+    page,
+    limit: 20,
+    search: query || undefined,
+  })
+  return {
+    users: users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone ?? null,
+      points: u.points,
+      role: u.role,
+    })),
+    total,
+  }
 }
