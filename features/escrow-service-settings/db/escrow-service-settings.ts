@@ -17,20 +17,26 @@ export type EscrowServiceChatUserProfile = {
   role: string
 }
 
+export type EscrowServiceChatData = {
+  configured: boolean
+  user: EscrowServiceChatUserProfile | null
+  serviceFee: string
+  serviceOverview: string
+}
+
 /**
  * Latest `escrow_service_setting` row with a non-null `user_id` joined to `user`.
  * Mobile uses `user.id` as `recipientId` for **POST `/api/chat/messages`**.
  */
-export async function getEscrowServiceChatUser(): Promise<{
-  configured: boolean
-  user: EscrowServiceChatUserProfile | null
-}> {
+export async function getEscrowServiceChatUser(): Promise<EscrowServiceChatData> {
   const [row] = await db
     .select({
       id: user.id,
       name: user.name,
       image: user.image,
       role: user.role,
+      serviceFee: escrowServiceSetting.serviceFee,
+      serviceOverview: escrowServiceSetting.serviceOverview,
     })
     .from(escrowServiceSetting)
     .innerJoin(user, eq(user.id, escrowServiceSetting.userId))
@@ -38,7 +44,7 @@ export async function getEscrowServiceChatUser(): Promise<{
     .orderBy(desc(escrowServiceSetting.updatedAt), desc(escrowServiceSetting.createdAt))
     .limit(1)
 
-  if (!row) return { configured: false, user: null }
+  if (!row) return { configured: false, user: null, serviceFee: "0.00", serviceOverview: "" }
 
   return {
     configured: true,
@@ -48,6 +54,8 @@ export async function getEscrowServiceChatUser(): Promise<{
       image: row.image ?? null,
       role: row.role,
     },
+    serviceFee: row.serviceFee,
+    serviceOverview: row.serviceOverview ?? "",
   }
 }
 
