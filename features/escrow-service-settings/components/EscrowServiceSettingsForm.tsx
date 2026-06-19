@@ -17,6 +17,8 @@ type User = {
 type Props = {
   settings: EscrowServiceSettings | null
   users: User[]
+  /** When true, hides the standalone page header — used when embedded in the combined Settings page. */
+  embedded?: boolean
 }
 
 function getInitials(name: string) {
@@ -43,7 +45,7 @@ function InAppBadge() {
 const cardStyle = { background: "#fff", borderColor: "#ececf1" } as const
 const inputStyle = { background: "#f6f6f9", border: "1px solid #e8e8ee", color: "#1c1d2b" } as const
 
-export function EscrowServiceSettingsForm({ settings, users }: Props) {
+export function EscrowServiceSettingsForm({ settings, users, embedded = false }: Props) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -78,46 +80,47 @@ export function EscrowServiceSettingsForm({ settings, users }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-[840px] flex-col gap-[18px]">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-[14px]">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="mt-0.5 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border text-muted-foreground hover:bg-muted/50"
-            aria-label="Back"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-[25px] font-semibold leading-tight tracking-tight" style={{ color: "#1c1d2b" }}>
-              Escrow Service Settings
-            </h1>
-            <p className="mt-1 text-sm" style={{ color: "#8a8f9c" }}>
-              Assign the officer who manages escrow transactions between buyers and sellers.
-            </p>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
+      {!embedded && (
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-[14px]">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="mt-0.5 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border text-muted-foreground hover:bg-muted/50"
+              aria-label="Back"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-[25px] font-semibold leading-tight tracking-tight" style={{ color: "#1c1d2b" }}>
+                Escrow Service Settings
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: "#8a8f9c" }}>
+                Assign the officer who manages escrow transactions between buyers and sellers.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="cursor-pointer rounded-[10px] px-5 py-[11px] text-[13.5px] font-medium"
+              style={{ background: "#fff", color: "#6b7280", border: "1px solid #e5e5ec" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || users.length === 0}
+              className="cursor-pointer rounded-[10px] px-[22px] py-[11px] text-[13.5px] font-medium disabled:opacity-60"
+              style={{ background: "#7c5cff", color: "#fff", border: "none", boxShadow: "0 5px 14px rgba(124,92,255,.35)" }}
+            >
+              {loading ? "Saving…" : "Save settings"}
+            </button>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3 pt-1">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="cursor-pointer rounded-[10px] px-5 py-[11px] text-[13.5px] font-medium"
-            style={{ background: "#fff", color: "#6b7280", border: "1px solid #e5e5ec" }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading || users.length === 0}
-            className="cursor-pointer rounded-[10px] px-[22px] py-[11px] text-[13.5px] font-medium disabled:opacity-60"
-            style={{ background: "#7c5cff", color: "#fff", border: "none", boxShadow: "0 5px 14px rgba(124,92,255,.35)" }}
-          >
-            {loading ? "Saving…" : "Save settings"}
-          </button>
-        </div>
-      </div>
+      )}
 
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -278,6 +281,26 @@ export function EscrowServiceSettingsForm({ settings, users }: Props) {
         />
       </div>
 
+      {embedded && (
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="cursor-pointer rounded-[10px] px-5 py-[11px] text-[13.5px] font-medium"
+            style={{ background: "#fff", color: "#6b7280", border: "1px solid #e5e5ec", fontFamily: "Poppins, sans-serif" }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading || users.length === 0}
+            className="cursor-pointer rounded-[10px] px-[22px] py-[11px] text-[13.5px] font-medium disabled:opacity-60"
+            style={{ background: "#7c5cff", color: "#fff", border: "none", boxShadow: "0 5px 14px rgba(124,92,255,.35)", fontFamily: "Poppins, sans-serif" }}
+          >
+            {loading ? "Saving…" : "Save settings"}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

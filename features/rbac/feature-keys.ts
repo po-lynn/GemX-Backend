@@ -68,7 +68,7 @@ export const FEATURE_GROUPS: Array<{
     label: "Settings",
     features: [
       { key: FEATURE_KEYS.SETTINGS_RATING_TAGS, label: "Seller Rating Tags" },
-      { key: FEATURE_KEYS.SETTINGS_ESCROW,      label: "Escrow Service" },
+      { key: FEATURE_KEYS.SETTINGS_ESCROW,      label: "Settings" },
     ],
   },
 ]

@@ -20,6 +20,7 @@ import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
 import { requireActionRole } from "@/lib/action-guard"
 import { searchUsersForPicker, getRecentUsersForPicker, getUsersPaginatedFromDb } from "@/features/users/db/users"
 import type { UserPickerOption } from "@/features/users/db/users"
+import { getCompanySettings } from "@/features/company-settings/db/company-settings"
 
 /** FormData: missing → undefined (skip on update); empty → clear; else trimmed string */
 function promotionComparePriceFromForm(fd: FormData): string | null | undefined {
@@ -98,8 +99,17 @@ export async function createProductAction(formData: FormData) {
     return { error: "Unauthorized" }
   }
 
-  if ((parsed.data.isFeatured ?? false) && (parsed.data.featured ?? 0) > 0) {
-    const deduction = await deductUserPoints(session.user.id, parsed.data.featured ?? 0)
+  const isOwnProduct = formData.get("isOwnProduct") === "true" || formData.get("isOwnProduct") === "on"
+  let effectiveSellerId: string
+  if (isOwnProduct) {
+    const companySettings = await getCompanySettings()
+    effectiveSellerId = companySettings?.companyUserId ?? session.user.id
+  } else {
+    effectiveSellerId = (String(formData.get("sellerId") ?? "").trim() || null) ?? session.user.id
+  }
+
+  if (!isOwnProduct && (parsed.data.isFeatured ?? false) && (parsed.data.featured ?? 0) > 0) {
+    const deduction = await deductUserPoints(effectiveSellerId, parsed.data.featured ?? 0)
     if (!deduction.success) {
       return { error: "Insufficient points balance" }
     }
@@ -141,7 +151,7 @@ export async function createProductAction(formData: FormData) {
     promotionComparePrice: parsed.data.promotionComparePrice ?? null,
     imageUrls: parsed.data.imageUrls,
     videoUrls: parsed.data.videoUrls,
-    sellerId: (String(formData.get("sellerId") ?? "").trim() || null) ?? session.user.id,
+    sellerId: effectiveSellerId,
   })
 
   revalidateProductsCache(productId)

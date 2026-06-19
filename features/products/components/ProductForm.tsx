@@ -743,6 +743,7 @@ export function ProductForm({
   const [dimensionsPart3, setDimensionsPart3] = useState(() => parseDimensions(product?.dimensions)[2])
 
   const [sellerPick, setSellerPick] = useState<UserPickerOption | null>(null)
+  const [isOwnProduct, setIsOwnProduct] = useState(true)
 
   const categoryOptions = categories.filter((c) => c.type === productType)
   const stoneOptions = categories.filter((c) => c.type === "loose_stone")
@@ -1006,6 +1007,7 @@ export function ProductForm({
         setDimensionsPart3("")
         setJewelleryGemstones([])
         setSellerPick(null)
+        setIsOwnProduct(true)
       }
       router.push("/admin/products")
       router.refresh()
@@ -1127,7 +1129,7 @@ export function ProductForm({
         >
           {/* ── Hidden inputs ── */}
           {isEdit && <input type="hidden" name="productId" value={product?.id ?? ""} />}
-          {!isEdit && <input type="hidden" name="sellerId" value={sellerPick?.id ?? ""} />}
+          {!isEdit && !isOwnProduct && <input type="hidden" name="sellerId" value={sellerPick?.id ?? ""} />}
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
           <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
@@ -1224,13 +1226,29 @@ export function ProductForm({
                 </div>
                 <div>
                   <div className="pd-sec-title">Seller</div>
-                  <div className="pd-sec-sub">Who is this product listed for? Leave blank to assign to yourself.</div>
+                  <div className="pd-sec-sub">Who is this product listed for?</div>
                 </div>
               </div>
               <div className="pd-sec-body">
-                <div className="pd-field">
-                  <SellerPicker selected={sellerPick} onSelect={setSellerPick} />
+                <div className="pd-field" style={{ marginBottom: 10 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+                    <input
+                      type="checkbox"
+                      name="isOwnProduct"
+                      checked={isOwnProduct}
+                      onChange={(e) => {
+                        setIsOwnProduct(e.target.checked)
+                        if (e.target.checked) setSellerPick(null)
+                      }}
+                    />
+                    Own Product (company listing)
+                  </label>
                 </div>
+                {!isOwnProduct && (
+                  <div className="pd-field">
+                    <SellerPicker selected={sellerPick} onSelect={setSellerPick} />
+                  </div>
+                )}
               </div>
             </section>
           )}

@@ -461,7 +461,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
 
           {/* Sub-tabs */}
           <div className="ud-tabs">
-            {(["profile", "access", "wallet", ...(role === "internal" ? ["permissions" as const] : []), "danger"] as const).map(t => (
+            {(["profile", "access", "wallet", ...(role === "internal" && canAssignAdmin ? ["permissions" as const] : []), "danger"] as const).map(t => (
               <button
                 key={t} type="button"
                 className={`ud-tab${tab === t ? " on" : ""}`}
@@ -826,7 +826,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
           )}
 
           {/* ── PERMISSIONS TAB ── */}
-          {tab === "permissions" && role === "internal" && (
+          {tab === "permissions" && role === "internal" && canAssignAdmin && (
             <section className="ud-sec">
               <div className="ud-sec-head" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>

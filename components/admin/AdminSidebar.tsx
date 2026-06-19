@@ -25,6 +25,7 @@ import {
   Crown,
   Coins,
   ShoppingBag,
+  Settings2,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 
@@ -127,12 +128,12 @@ const navGroups: (NavItem | NavGroup)[] = [
         isActive: (p) => p === "/admin/credit" || p === "/admin/credit/",
       },
       {
-        href: "/admin/settings/escrow-service",
-        label: "Escrow Service",
-        icon: ShieldCheck,
-        color: "#f43f5e",
+        href: "/admin/settings",
+        label: "Settings",
+        icon: Settings2,
+        color: "#7c5cff",
         featureKey: FEATURE_KEYS.SETTINGS_ESCROW,
-        isActive: (p) => p.startsWith("/admin/settings/escrow-service"),
+        isActive: (p) => p === "/admin/settings" || p.startsWith("/admin/settings?"),
       },
       {
         href: "/admin/settings/rating-tags",
