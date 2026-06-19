@@ -737,6 +737,10 @@ export function ProductForm({
     const byPoints = pricingTiers.find((t) => t.points === featuredPointsDefault)
     return byPoints ? `${byPoints.durationDays}:${byPoints.points}` : ""
   })
+  const [featuredExpiresAtStr, setFeaturedExpiresAtStr] = useState<string>(() => {
+    if (!product?.featuredExpiresAt) return ""
+    return new Date(product.featuredExpiresAt).toISOString().slice(0, 10)
+  })
 
   const [dimensionsPart1, setDimensionsPart1] = useState(() => parseDimensions(product?.dimensions)[0])
   const [dimensionsPart2, setDimensionsPart2] = useState(() => parseDimensions(product?.dimensions)[1])
@@ -779,6 +783,27 @@ export function ProductForm({
   useEffect(() => {
     setIsFeatured(product?.isFeatured ?? false)
   }, [product?.id, product?.isFeatured])
+
+  useEffect(() => {
+    if (!product?.featuredExpiresAt) {
+      setFeaturedExpiresAtStr("")
+      return
+    }
+    setFeaturedExpiresAtStr(new Date(product.featuredExpiresAt).toISOString().slice(0, 10))
+  }, [product?.id, product?.featuredExpiresAt])
+
+  const tierAutoFillMounted = useRef(false)
+  useEffect(() => {
+    if (!tierAutoFillMounted.current) {
+      tierAutoFillMounted.current = true
+      return
+    }
+    if (!selectedFeatureTier) return
+    const days = Number(selectedFeatureTier.split(":")[0])
+    if (!Number.isFinite(days) || days <= 0) return
+    const expiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+    setFeaturedExpiresAtStr(expiry.toISOString().slice(0, 10))
+  }, [selectedFeatureTier])
 
   // ── Gemstone dialog ──
   type FormGemstoneEntry = {
@@ -1592,6 +1617,23 @@ export function ProductForm({
                       placeholder="e.g. 100"
                     />
                   )}
+                </div>
+              )}
+
+              {/* Feature expire date */}
+              {isFeatured && (
+                <div className="pd-field" style={{ maxWidth: 380 }}>
+                  <label className="pd-label">
+                    Expires on{" "}
+                    <span className="pd-label-hint">leave blank for indefinite</span>
+                  </label>
+                  <input
+                    className="pd-input"
+                    type="date"
+                    name="featuredExpiresAt"
+                    value={featuredExpiresAtStr}
+                    onChange={(e) => setFeaturedExpiresAtStr(e.target.value)}
+                  />
                 </div>
               )}
 
