@@ -7,9 +7,11 @@ import { UserProfileMenu } from "@/components/admin/user-profile-menu"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
+import { AdminSearchBox } from "@/components/admin/AdminSearchBox"
 
 const Skeleton = () => (
-  <div className="ml-auto flex items-center gap-2">
+  <div className="ml-auto flex items-center gap-1.5">
+    <div className="hidden md:block h-9 w-64 rounded-[10px] bg-accent/20 animate-pulse" />
     <div className="h-8 w-8 rounded-lg bg-accent/20 animate-pulse" />
     <div className="h-8 w-24 rounded-lg bg-accent/20 animate-pulse" />
   </div>
@@ -36,6 +38,8 @@ export default function AdminNavbarClient() {
 
   return (
     <div className="ml-auto flex items-center gap-1.5">
+      <AdminSearchBox />
+
       {/* Notification bell — placeholder */}
       <button
         className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"

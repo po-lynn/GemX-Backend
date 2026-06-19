@@ -34,7 +34,7 @@ export default async function AdminLayout({
             borderColor: "var(--admin-header-border)",
           }}
         >
-          <div className="flex h-14 items-center gap-3 px-4 md:px-6">
+          <div className="flex h-16 items-center gap-3 px-4 md:px-6">
             <AdminSidebarSheet role={role} permissions={permissions} />
 
             <div className="mr-auto flex items-center gap-2.5">

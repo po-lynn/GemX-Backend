@@ -1153,3 +1153,17 @@ export async function getAdminProductCountsFromDb(): Promise<{
     .from(product)
   return row ?? { all: 0, pending: 0, featured: 0, collector: 0, sold: 0, drafts: 0 }
 }
+
+export type AdminSearchProduct = { id: string; title: string; sku: string | null; status: string }
+
+export async function searchProductsForAdmin(q: string, limit = 5): Promise<AdminSearchProduct[]> {
+  const trimmed = q.trim()
+  if (trimmed.length < 2) return []
+  const pattern = `%${escapeLike(trimmed)}%`
+  return db
+    .select({ id: product.id, title: product.title, sku: product.sku, status: product.status })
+    .from(product)
+    .where(ilike(product.title, pattern))
+    .orderBy(desc(product.createdAt))
+    .limit(Math.min(limit, 10))
+}

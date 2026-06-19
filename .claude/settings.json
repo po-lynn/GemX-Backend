@@ -34,14 +34,18 @@
       "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/review-package b1af4ef HEAD)",
       "Bash(/home/po/.node/bin/npm run *)",
       "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/features/company-settings/db /home/po/me/2026/Jade/infinity-gemx/features/company-settings/schemas /home/po/me/2026/Jade/infinity-gemx/features/company-settings/actions /home/po/me/2026/Jade/infinity-gemx/features/company-settings/components)",
-      "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git commit -m ' *)"
+      "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git commit -m ' *)",
+      "Bash(node_modules/.bin/next lint *)",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/api/admin/search)",
+      "Bash(./node_modules/.bin/eslint app/admin/page.tsx)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
       "/home/po/me/2026/Jade/infinity-gemx/app/portal/products/[id]",
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans",
       "/home/po/me/2026/Jade/infinity-gemx/.git/sdd",
-      "/home/po/me/2026/Jade/infinity-gemx/features/company-settings"
+      "/home/po/me/2026/Jade/infinity-gemx/features/company-settings",
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/admin"
     ]
   },
   "enabledPlugins": {
