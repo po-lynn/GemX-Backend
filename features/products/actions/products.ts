@@ -51,6 +51,13 @@ function featureDurationDaysFromForm(fd: FormData): number | undefined {
   return Math.min(365, Math.max(0, Math.floor(n)))
 }
 
+function featuredExpiresAtFromForm(fd: FormData): string | null {
+  const raw = fd.get("featuredExpiresAt")
+  if (raw === null) return null
+  const s = String(raw).trim()
+  return s === "" ? null : s
+}
+
 export async function createProductAction(formData: FormData) {
   const parsed = productCreateSchema.safeParse({
     title: formData.get("title"),
@@ -192,6 +199,7 @@ export async function updateProductAction(formData: FormData) {
     isFeatured: formData.get("isFeatured") === "on" || formData.get("isFeatured") === "true",
     featured: featuredPointsFromForm(formData),
     featureDurationDays: featureDurationDaysFromForm(formData),
+    featuredExpiresAt: featuredExpiresAtFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
     isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
@@ -265,6 +273,7 @@ export async function updateProductAction(formData: FormData) {
       isFeatured: data.isFeatured,
       featured: data.featured,
       featureDurationDays: data.featureDurationDays,
+      featuredExpiresAt: data.featuredExpiresAt,
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
       isPromotion: data.isPromotion,

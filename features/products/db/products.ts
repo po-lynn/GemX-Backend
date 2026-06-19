@@ -927,6 +927,7 @@ export type UpdateProductInput = {
   isFeatured?: boolean
   featured?: number
   featureDurationDays?: number
+  featuredExpiresAt?: Date | null
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
   isPromotion?: boolean
@@ -1008,12 +1009,12 @@ export async function updateProductInDb(
   if (rest.featureDurationDays !== undefined) {
     const days = Math.min(365, Math.max(0, Math.floor(rest.featureDurationDays) || 0))
     updates.featuredDurationDays = days
-    const isFeaturedNext =
-      rest.isFeatured ?? updates.isFeatured ?? false
-    updates.featuredExpiresAt =
-      isFeaturedNext && days > 0
-        ? new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-        : null
+  }
+  const isFeaturedNext = rest.isFeatured !== undefined ? rest.isFeatured : (updates.isFeatured ?? false)
+  if (!isFeaturedNext) {
+    updates.featuredExpiresAt = null
+  } else if (rest.featuredExpiresAt !== undefined) {
+    updates.featuredExpiresAt = rest.featuredExpiresAt
   }
   if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
   if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist

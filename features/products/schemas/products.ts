@@ -255,6 +255,12 @@ export const productUpdateSchema = productCreateBaseSchema
   .partial()
   .extend({
     productId: z.string().uuid(),
+    featuredExpiresAt: z
+      .preprocess(
+        (v) => (!v || v === "" ? null : v),
+        z.coerce.date().nullable()
+      )
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.imageUrls && data.imageUrls.length > MAX_PRODUCT_IMAGES) {
