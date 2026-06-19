@@ -17,7 +17,6 @@ import {
   Globe,
   Newspaper,
   FileText,
-  ShieldCheck,
   ClipboardList,
   MessageSquare,
   MessageCircle,
