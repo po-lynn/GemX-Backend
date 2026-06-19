@@ -11,8 +11,10 @@ import { getUserPermissions } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys"
 import { DashboardActivityChart } from "@/components/admin/DashboardActivityChart"
 import { DashboardRangePicker } from "@/components/admin/DashboardRangePicker"
+import { withTimeout, safeAll } from "@/lib/db-timeout"
 
 async function getStats(since: Date) {
+  const z = [{ total: 0 }]
   const [
     [{ total: totalProducts }],
     [{ total: activeProducts }],
@@ -22,13 +24,13 @@ async function getStats(since: Date) {
     [{ total: pendingCollector }],
     [{ total: pendingPoints }],
   ] = await Promise.all([
-    db.select({ total: count() }).from(product),
-    db.select({ total: count() }).from(product).where(eq(product.status, "active")),
-    db.select({ total: count() }).from(user),
-    db.select({ total: count() }).from(product).where(gte(product.createdAt, since)),
-    db.select({ total: count() }).from(user).where(gte(user.createdAt, since)),
-    db.select({ total: count() }).from(collectorPieceShowRequest).where(eq(collectorPieceShowRequest.status, "pending")),
-    db.select({ total: count() }).from(pointPurchaseRequest).where(eq(pointPurchaseRequest.status, "pending")),
+    withTimeout(db.select({ total: count() }).from(product), z),
+    withTimeout(db.select({ total: count() }).from(product).where(eq(product.status, "active")), z),
+    withTimeout(db.select({ total: count() }).from(user), z),
+    withTimeout(db.select({ total: count() }).from(product).where(gte(product.createdAt, since)), z),
+    withTimeout(db.select({ total: count() }).from(user).where(gte(user.createdAt, since)), z),
+    withTimeout(db.select({ total: count() }).from(collectorPieceShowRequest).where(eq(collectorPieceShowRequest.status, "pending")), z),
+    withTimeout(db.select({ total: count() }).from(pointPurchaseRequest).where(eq(pointPurchaseRequest.status, "pending")), z),
   ])
   return { totalProducts, activeProducts, totalUsers, newProducts, newUsers, pendingCollector, pendingPoints }
 }
@@ -49,10 +51,10 @@ function relativeTime(date: Date): string {
 
 async function getRecentActivity(): Promise<ActivityItem[]> {
   const [recentUsers, recentProducts, recentRequests, recentPayments] = await Promise.all([
-    db.select({ name: user.name, createdAt: user.createdAt }).from(user).orderBy(desc(user.createdAt)).limit(3),
-    db.select({ title: product.title, createdAt: product.createdAt }).from(product).orderBy(desc(product.createdAt)).limit(3),
-    db.select({ createdAt: collectorPieceShowRequest.createdAt }).from(collectorPieceShowRequest).orderBy(desc(collectorPieceShowRequest.createdAt)).limit(3),
-    db.select({ points: pointPurchaseRequest.points, packageName: pointPurchaseRequest.packageName, createdAt: pointPurchaseRequest.createdAt }).from(pointPurchaseRequest).orderBy(desc(pointPurchaseRequest.createdAt)).limit(3),
+    withTimeout(db.select({ name: user.name, createdAt: user.createdAt }).from(user).orderBy(desc(user.createdAt)).limit(3), []),
+    withTimeout(db.select({ title: product.title, createdAt: product.createdAt }).from(product).orderBy(desc(product.createdAt)).limit(3), []),
+    withTimeout(db.select({ createdAt: collectorPieceShowRequest.createdAt }).from(collectorPieceShowRequest).orderBy(desc(collectorPieceShowRequest.createdAt)).limit(3), []),
+    withTimeout(db.select({ points: pointPurchaseRequest.points, packageName: pointPurchaseRequest.packageName, createdAt: pointPurchaseRequest.createdAt }).from(pointPurchaseRequest).orderBy(desc(pointPurchaseRequest.createdAt)).limit(3), []),
   ])
 
   const raw: (Omit<ActivityItem, "time"> & { createdAt: Date })[] = [
@@ -195,8 +197,12 @@ export default async function AdminPage({
     return permissions[item.featureKey] ?? false
   }
 
-  const [{ totalProducts, activeProducts, totalUsers, newProducts, newUsers, pendingCollector, pendingPoints }, recentActivity] =
-    await Promise.all([getStats(since), getRecentActivity()])
+  const fallbackStats = { totalProducts: 0, activeProducts: 0, totalUsers: 0, newProducts: 0, newUsers: 0, pendingCollector: 0, pendingPoints: 0 }
+  const [statsResult, recentActivity] = await safeAll([
+    { promise: getStats(since),     fallback: fallbackStats },
+    { promise: getRecentActivity(), fallback: [] as ActivityItem[] },
+  ])
+  const { totalProducts, activeProducts, totalUsers, newProducts, newUsers, pendingCollector, pendingPoints } = statsResult
 
   const showProducts  = canSee({ featureKey: FEATURE_KEYS.PRODUCTS })
   const showUsers     = canSee({ featureKey: FEATURE_KEYS.USERS })
