@@ -33,7 +33,8 @@
       "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git -C /home/po/me/2026/Jade/infinity-gemx commit -m ' *)",
       "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.0/skills/subagent-driven-development/scripts/review-package b1af4ef HEAD)",
       "Bash(/home/po/.node/bin/npm run *)",
-      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/features/company-settings/db /home/po/me/2026/Jade/infinity-gemx/features/company-settings/schemas /home/po/me/2026/Jade/infinity-gemx/features/company-settings/actions /home/po/me/2026/Jade/infinity-gemx/features/company-settings/components)"
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/features/company-settings/db /home/po/me/2026/Jade/infinity-gemx/features/company-settings/schemas /home/po/me/2026/Jade/infinity-gemx/features/company-settings/actions /home/po/me/2026/Jade/infinity-gemx/features/company-settings/components)",
+      "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git commit -m ' *)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
