@@ -1,38 +1,30 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Smartphone } from "lucide-react"
-
 export function CTASection() {
   return (
-    <section className="border-t border-border py-16 sm:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-primary px-6 py-16 text-primary-foreground sm:px-12 sm:py-20">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-20"
+    <section style={{ padding: "84px 7vw" }}>
+      <div className="home-cta-inner" style={{
+        borderRadius: 24, overflow: "hidden",
+        background: "linear-gradient(120deg,#6d5ce7,#9a86ff)",
+        padding: 64, textAlign: "center", color: "#fff",
+      }}>
+        <h2 className="home-cta-title" style={{ margin: 0, fontSize: 38, fontWeight: 800, letterSpacing: "-0.025em" }}>
+          Get the app to view &amp; sell
+        </h2>
+        <p style={{ margin: "16px auto 0", fontSize: 16, maxWidth: 540, color: "#efeaff", lineHeight: 1.6 }}>
+          Browse products, create listings, and manage your store from your phone — on iOS or Android.
+        </p>
+        <div style={{ marginTop: 30 }}>
+          <a
+            href="#app"
+            className="home-lift-hover"
             style={{
-              background:
-                "radial-gradient(circle at 20% 50%, white 0%, transparent 50%), radial-gradient(circle at 80% 80%, white 0%, transparent 40%)",
+              fontSize: 15, fontWeight: 700, color: "#6d5ce7", background: "#fff",
+              padding: "15px 30px", borderRadius: 13,
+              boxShadow: "0 10px 24px rgba(20,15,40,0.2)", display: "inline-block",
+              textDecoration: "none",
             }}
-          />
-          <div className="relative z-10 mx-auto max-w-2xl text-center">
-            <Smartphone className="mx-auto h-12 w-12 opacity-90" />
-            <h2 className="font-heading mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Get the app to view & sell
-            </h2>
-            <p className="mt-4 text-lg opacity-90">
-              Browse products, create listings, and manage your store from your phone. Download the GemX app for iOS or Android.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="gap-2 rounded-full bg-white text-primary hover:bg-white/90"
-                asChild
-              >
-                <Link href="/#app">Download mobile app</Link>
-              </Button>
-            </div>
-          </div>
+          >
+            Download mobile app
+          </a>
         </div>
       </div>
     </section>
