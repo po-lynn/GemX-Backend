@@ -37,7 +37,16 @@
       "Bash(PATH=/home/po/.nvm/versions/node/v22.12.0/bin:__TRACKED_VAR__ rtk git commit -m ' *)",
       "Bash(node_modules/.bin/next lint *)",
       "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/api/admin/search)",
-      "Bash(./node_modules/.bin/eslint app/admin/page.tsx)"
+      "Bash(./node_modules/.bin/eslint app/admin/page.tsx)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-19-featured-expire-date.md 1)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 6c0102b HEAD)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-19-featured-expire-date.md 2)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 458ce62 HEAD)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-19-featured-expire-date.md 3)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 29598e5 HEAD)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-19-featured-expire-date.md 4)",
+      "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 810ffec HEAD)",
+      "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/api/cron/expire-featured-products)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
@@ -45,7 +54,8 @@
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/plans",
       "/home/po/me/2026/Jade/infinity-gemx/.git/sdd",
       "/home/po/me/2026/Jade/infinity-gemx/features/company-settings",
-      "/home/po/me/2026/Jade/infinity-gemx/app/api/admin"
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/admin",
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/cron"
     ]
   },
   "enabledPlugins": {
