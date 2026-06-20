@@ -1168,3 +1168,26 @@ export async function searchProductsForAdmin(q: string, limit = 5): Promise<Admi
     .orderBy(desc(product.createdAt))
     .limit(Math.min(limit, 10))
 }
+
+export type FeaturedExpiryResult = {
+  expired: number
+}
+
+/**
+ * Finds all products whose featuredExpiresAt has passed and clears their
+ * featured status. Called daily by the expire-featured-products cron.
+ */
+export async function expireFeaturedProducts(): Promise<FeaturedExpiryResult> {
+  const rows = await db
+    .update(product)
+    .set({ isFeatured: false, featured: 0, featuredExpiresAt: null })
+    .where(
+      and(
+        eq(product.isFeatured, true),
+        lte(product.featuredExpiresAt, sql`now()`)
+      )
+    )
+    .returning({ id: product.id })
+
+  return { expired: rows.length }
+}
