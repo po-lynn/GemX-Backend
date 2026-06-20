@@ -1831,10 +1831,17 @@
   padding: 0 4px; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 
-/* ── Sticky save bar ──────────────────────────────────────────── */
-.pd-savebar {
+/* ── Sticky header wrapper ────────────────────────────────────── */
+.pd-stickybar {
   position: sticky;
+  top: 92px;
   z-index: 20;
+  background: var(--admin-main-bg);
+  box-shadow: 0 -28px 0 0 var(--admin-main-bg);
+}
+
+/* ── Save bar ─────────────────────────────────────────────────── */
+.pd-savebar {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 16px;
   background: rgba(255,255,255,0.92);

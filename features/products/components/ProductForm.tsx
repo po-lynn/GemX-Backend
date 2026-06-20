@@ -1053,6 +1053,7 @@ export function ProductForm({
   // ── Render ──
   return (
     <div className="pd-host">
+      <div className="pd-stickybar">
       {/* ─── Top bar ─────────────────────────────────────────────── */}
       <div className="pd-topbar">
         <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
@@ -1117,7 +1118,7 @@ export function ProductForm({
       </div>
 
       {/* ─── Save bar ────────────────────────────────────────────── */}
-      <div className="pd-savebar" style={{ top: 56 }}>
+      <div className="pd-savebar">
         {dirty ? (
           <span className="pd-savebar-dirty">
             <span className="pd-savebar-dirty-dot" />
@@ -1140,6 +1141,7 @@ export function ProductForm({
           {loading ? "Saving…" : "Save changes"}
         </button>
       </div>
+      </div>{/* end pd-stickybar */}
 
       {/* ─── Two-column grid ─────────────────────────────────────── */}
       <div className="pd-grid">
