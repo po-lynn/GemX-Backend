@@ -3,18 +3,18 @@ import { notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { getProductById } from "@/features/products/db/products"
 import { getAllCategories } from "@/features/categories/db/categories"
+import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import PortalProductForm from "@/components/portal/PortalProductForm"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 
 type Params = { params: Promise<{ id: string }> }
 
 export default async function EditPortalProductPage({ params }: Params) {
   const { id } = await params
-  const [session, product, categories] = await Promise.all([
+  const [session, product, categories, laboratories] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
     getProductById(id),
     getAllCategories(),
+    getAllLaboratories(),
   ])
 
   if (!product) notFound()
@@ -25,12 +25,16 @@ export default async function EditPortalProductPage({ params }: Params) {
     title:            product.title,
     sku:              product.sku ?? "",
     description:      product.description ?? "",
-    productType:      product.productType,
+    productType:      product.productType as "loose_stone" | "jewellery",
     categoryId:       product.categoryId ?? "",
     price:            product.price,
     currency:         product.currency,
     isNegotiable:     product.isNegotiable,
     identification:   product.identification ?? "Natural",
+    isFeatured:       product.isFeatured ?? false,
+    isCollectorPiece: product.isCollectorPiece ?? false,
+    isPrivilegeAssist: product.isPrivilegeAssist ?? false,
+    isPromotion:      product.isPromotion ?? false,
     weightCarat:      product.weightCarat ?? "",
     color:            product.color ?? "",
     origin:           product.origin ?? "",
@@ -40,28 +44,36 @@ export default async function EditPortalProductPage({ params }: Params) {
     metal:            product.metal ?? "",
     totalWeightGrams: product.totalWeightGrams ?? "",
     pieceCount:       product.pieceCount != null ? String(product.pieceCount) : "",
+    laboratoryId:     product.laboratoryId ?? "",
     certReportNumber: product.certReportNumber ?? "",
     certReportDate:   product.certReportDate ?? "",
     certReportUrl:    product.certReportUrl ?? "",
     additionalMemos:  product.additionalMemos ?? "",
-    imageUrls:        product.imageUrls.join("\n"),
-    videoUrls:        product.videoUrls.join("\n"),
+    imageUrls:        product.imageUrls,
+    videoUrls:        product.videoUrls,
+    jewelleryGemstones: (product.jewelleryGemstones ?? []).map((g) => ({
+      categoryId:   g.categoryId,
+      weightCarat:  g.weightCarat,
+      pieceCount:   g.pieceCount != null ? String(g.pieceCount) : "",
+      dimensions:   g.dimensions ?? "",
+      color:        g.color ?? "",
+      shape:        g.shape ?? "",
+      origin:       g.origin ?? "",
+      cut:          g.cut ?? "",
+      transparency: g.transparency ?? "",
+      comment:      g.comment ?? "",
+      inclusions:   g.inclusions ?? "",
+    })),
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/portal/products"
-          className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          My products
-        </Link>
-        <h1 className="text-xl font-semibold tracking-tight">Edit product</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Changes will go back into review before publishing.</p>
-      </div>
-      <PortalProductForm categories={categories} productId={id} initial={initial} />
-    </div>
+    <PortalProductForm
+      mode="edit"
+      categories={categories}
+      laboratories={laboratories}
+      productId={id}
+      initial={initial}
+      backHref="/portal/products"
+    />
   )
 }

@@ -19,13 +19,6 @@ export async function createPortalProductAction(input: Record<string, unknown>):
 
   const normalized = normalizeProductBody({
     ...input,
-    isFeatured: undefined,
-    featured: undefined,
-    featureDurationDays: undefined,
-    isCollectorPiece: undefined,
-    isPrivilegeAssist: undefined,
-    isPromotion: undefined,
-    promotionComparePrice: undefined,
     moderationStatus: "pending",
   })
   const parsed = productCreateSchema.safeParse(normalized)
@@ -60,13 +53,6 @@ export async function updatePortalProductAction(productId: string, input: Record
   const normalized = normalizeProductBody({
     ...input,
     productId,
-    isFeatured: undefined,
-    featured: undefined,
-    featureDurationDays: undefined,
-    isCollectorPiece: undefined,
-    isPrivilegeAssist: undefined,
-    isPromotion: undefined,
-    promotionComparePrice: undefined,
     moderationStatus: "pending",
   })
   const parsed = productUpdateSchema.safeParse(normalized)
@@ -78,35 +64,7 @@ export async function updatePortalProductAction(productId: string, input: Record
   const { productId: pid, ...data } = parsed.data
   await updateProductInDb(
     pid,
-    {
-      title: data.title,
-      sku: data.sku,
-      description: data.description,
-      identification: data.identification,
-      price: data.price,
-      currency: data.currency,
-      isNegotiable: data.isNegotiable,
-      productType: data.productType,
-      categoryId: data.categoryId,
-      stoneCut: data.stoneCut,
-      metal: data.metal,
-      jewelleryGemstones: data.jewelleryGemstones,
-      totalWeightGrams: data.totalWeightGrams,
-      pieceCount: data.pieceCount,
-      weightCarat: data.weightCarat,
-      dimensions: data.dimensions,
-      color: data.color,
-      shape: data.shape,
-      origin: data.origin,
-      laboratoryId: data.laboratoryId,
-      certReportNumber: data.certReportNumber,
-      certReportDate: data.certReportDate,
-      certReportUrl: data.certReportUrl,
-      additionalMemos: data.additionalMemos,
-      status: data.status,
-      imageUrls: data.imageUrls,
-      videoUrls: data.videoUrls,
-    },
+    data,
     { actorId: session.user.id }
   )
   revalidateProductsCache(pid)
