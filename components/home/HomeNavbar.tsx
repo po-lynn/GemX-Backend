@@ -1,4 +1,5 @@
 import Link from "next/link"
+import HomeNavbarAuthButton from "@/components/home/HomeNavbarAuthButton"
 
 export function HomeNavbar() {
   return (
@@ -32,7 +33,7 @@ export function HomeNavbar() {
       </nav>
 
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <Link href="/login" className="home-navbar-signin" style={{ fontSize: "14.5px", fontWeight: 600, color: "#191525", textDecoration: "none" }}>Sign in</Link>
+        <HomeNavbarAuthButton />
         <Link href="#app" style={{
           fontSize: 14, fontWeight: 700, color: "#fff",
           background: "#6d5ce7", padding: "10px 18px", borderRadius: 10,
