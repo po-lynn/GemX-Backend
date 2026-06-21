@@ -23,7 +23,6 @@ export default async function EditPortalProductPage({ params }: Params) {
 
   const initial = {
     title:            product.title,
-    sku:              product.sku ?? "",
     description:      product.description ?? "",
     productType:      product.productType as "loose_stone" | "jewellery",
     categoryId:       product.categoryId ?? "",

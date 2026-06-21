@@ -312,7 +312,6 @@ type Props = {
   productId?: string
   initial?: {
     title?: string
-    sku?: string
     description?: string
     productType?: "loose_stone" | "jewellery"
     categoryId?: string
@@ -566,7 +565,6 @@ export default function PortalProductForm({
 
     const input: Record<string, unknown> = {
       title: fd.get("title") as string,
-      sku: fd.get("sku") as string,
       description: fd.get("description") as string,
       productType,
       categoryId: fd.get("categoryId") as string,
@@ -646,7 +644,7 @@ export default function PortalProductForm({
   return (
     <div className="pd-host">
       {/* ─── Sticky bar ──────────────────────────────────────────────── */}
-      <div className="pd-stickybar">
+      <div className="pd-stickybar" style={{ top: "56px", background: "hsl(var(--background))", boxShadow: "0 -28px 0 0 hsl(var(--background))" }}>
         <div className="pd-topbar">
           <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
             {backHref && (
@@ -906,18 +904,6 @@ export default function PortalProductForm({
               />
             </div>
             <div className="pd-row" style={{ "--cols": 2 } as React.CSSProperties}>
-              <div className="pd-field">
-                <label htmlFor="sku" className="pd-label">SKU</label>
-                <input
-                  id="sku"
-                  name="sku"
-                  type="text"
-                  maxLength={100}
-                  defaultValue={initial?.sku ?? ""}
-                  placeholder="e.g. GEM-001"
-                  className="pd-input mono"
-                />
-              </div>
               <div className="pd-field">
                 <label htmlFor="identification" className="pd-label">
                   Identification <span className="req">*</span>
