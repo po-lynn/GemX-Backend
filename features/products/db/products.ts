@@ -8,6 +8,7 @@ import {
 } from "@/drizzle/schema/product-schema"
 import { category } from "@/drizzle/schema/category-schema"
 import { laboratory } from "@/drizzle/schema/laboratory-schema"
+import { companySetting } from "@/drizzle/schema/company-settings-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, desc } from "drizzle-orm"
@@ -1238,10 +1239,19 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
 }
 
 /**
- * Returns up to `limit` active own (isPrivilegeAssist) products for the
- * homepage, ordered newest first.
+ * Returns up to `limit` active own-product (company listing) products for the
+ * homepage, ordered newest first. "Own product" means the seller is the company
+ * account configured in company settings.
  */
 export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeaturedProduct[]> {
+  const [settings] = await db
+    .select({ companyUserId: companySetting.companyUserId })
+    .from(companySetting)
+    .orderBy(desc(companySetting.updatedAt))
+    .limit(1)
+
+  if (!settings?.companyUserId) return []
+
   const rows = await db
     .select({
       id: product.id,
@@ -1260,7 +1270,7 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
     .where(
       and(
         eq(product.status, "active"),
-        eq(product.isPrivilegeAssist, true)
+        eq(product.sellerId, settings.companyUserId)
       )
     )
     .orderBy(desc(product.createdAt))
