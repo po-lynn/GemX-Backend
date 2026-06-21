@@ -1173,6 +1173,127 @@ export type FeaturedExpiryResult = {
   expired: number
 }
 
+export type HomepageFeaturedProduct = {
+  id: string
+  title: string
+  price: string
+  currency: "USD" | "MMK"
+  categoryName: string | null
+  certLabName: string | null
+  weightCarat: string | null
+  origin: string | null
+  imageUrl: string | null
+  isPromotion: boolean
+  isCollectorPiece: boolean
+}
+
+/**
+ * Returns up to `limit` active, approved, currently-featured products for the
+ * public homepage. Sorted by featured sort-order descending then newest first.
+ */
+export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFeaturedProduct[]> {
+  const rows = await db
+    .select({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      currency: product.currency,
+      categoryName: category.name,
+      certLabName: product.certLabName,
+      weightCarat: product.weightCarat,
+      origin: product.origin,
+      isPromotion: product.isPromotion,
+      isCollectorPiece: product.isCollectorPiece,
+    })
+    .from(product)
+    .leftJoin(category, eq(product.categoryId, category.id))
+    .where(
+      and(
+        eq(product.status, "active"),
+        eq(product.moderationStatus, "approved"),
+        eq(product.isFeatured, true),
+        or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+      )
+    )
+    .orderBy(desc(product.featured), desc(product.createdAt))
+    .limit(limit)
+
+  const imageMap = await fetchFirstProductImages(rows.map((r) => r.id))
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    price: String(r.price),
+    currency: r.currency,
+    categoryName: r.categoryName ?? null,
+    certLabName: r.certLabName ?? null,
+    weightCarat: r.weightCarat ? String(r.weightCarat) : null,
+    origin: r.origin ?? null,
+    imageUrl: imageMap.get(r.id) ?? null,
+    isPromotion: r.isPromotion,
+    isCollectorPiece: r.isCollectorPiece,
+  }))
+}
+
+/**
+ * Returns up to `limit` active own (isPrivilegeAssist) products for the
+ * homepage, ordered newest first.
+ */
+export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeaturedProduct[]> {
+  const rows = await db
+    .select({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      currency: product.currency,
+      categoryName: category.name,
+      certLabName: product.certLabName,
+      weightCarat: product.weightCarat,
+      origin: product.origin,
+      isPromotion: product.isPromotion,
+      isCollectorPiece: product.isCollectorPiece,
+    })
+    .from(product)
+    .leftJoin(category, eq(product.categoryId, category.id))
+    .where(
+      and(
+        eq(product.status, "active"),
+        eq(product.isPrivilegeAssist, true)
+      )
+    )
+    .orderBy(desc(product.createdAt))
+    .limit(limit)
+
+  const imageMap = await fetchFirstProductImages(rows.map((r) => r.id))
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    price: String(r.price),
+    currency: r.currency,
+    categoryName: r.categoryName ?? null,
+    certLabName: r.certLabName ?? null,
+    weightCarat: r.weightCarat ? String(r.weightCarat) : null,
+    origin: r.origin ?? null,
+    imageUrl: imageMap.get(r.id) ?? null,
+    isPromotion: r.isPromotion,
+    isCollectorPiece: r.isCollectorPiece,
+  }))
+}
+
+/**
+ * Returns distinct lab names from approved active products for the homepage lab strip.
+ */
+export async function getHomepageLabNames(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ name: laboratory.name })
+    .from(laboratory)
+    .innerJoin(product, eq(product.laboratoryId, laboratory.id))
+    .where(and(eq(product.status, "active"), eq(product.moderationStatus, "approved")))
+    .orderBy(laboratory.name)
+  return rows.map((r) => r.name)
+}
+
 /**
  * Finds all products whose featuredExpiresAt has passed and clears their
  * featured status. Called daily by the expire-featured-products cron.
