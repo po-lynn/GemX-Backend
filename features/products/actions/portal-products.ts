@@ -1,5 +1,8 @@
 "use server"
 
+import { db } from "@/drizzle/db"
+import { product } from "@/drizzle/schema/product-schema"
+import { and, inArray, eq } from "drizzle-orm"
 import { requireActionRole } from "@/lib/action-guard"
 import {
   createProductInDb,
@@ -75,12 +78,29 @@ export async function deletePortalProductAction(productId: string): Promise<Acti
   const session = await requireActionRole((role) => role === "portal")
   if (!session) return { ok: false, error: "Unauthorized" }
 
-  const product = await getProductById(productId)
-  if (!product) return { ok: false, error: "Product not found" }
-  if (product.sellerId !== session.user.id) return { ok: false, error: "Forbidden" }
+  const productRecord = await getProductById(productId)
+  if (!productRecord) return { ok: false, error: "Product not found" }
+  if (productRecord.sellerId !== session.user.id) return { ok: false, error: "Forbidden" }
 
   const deleted = await deleteProductInDb(productId)
   if (!deleted) return { ok: false, error: "Product not found" }
   revalidateProductsCache(productId)
   return { ok: true }
+}
+
+export async function bulkDeletePortalProductAction(
+  ids: string[]
+): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
+  if (!ids.length) return { ok: false, error: "No products selected" }
+
+  const session = await requireActionRole((role) => role === "portal")
+  if (!session) return { ok: false, error: "Unauthorized" }
+
+  const result = await db
+    .delete(product)
+    .where(and(inArray(product.id, ids), eq(product.sellerId, session.user.id)))
+    .returning({ id: product.id })
+
+  revalidateProductsCache()
+  return { ok: true, deleted: result.length }
 }
