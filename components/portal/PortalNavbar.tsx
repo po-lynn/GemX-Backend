@@ -14,7 +14,7 @@ export default function PortalNavbar({ userName }: { userName: string }) {
   }
 
   return (
-    <header className="border-b bg-card shadow-sm">
+    <header className="sticky top-0 z-30 border-b bg-card shadow-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-2.5">
           <Gem className="h-5 w-5 text-violet-600" />

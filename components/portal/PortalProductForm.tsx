@@ -642,7 +642,7 @@ export default function PortalProductForm({
 
   // ── Render ──
   return (
-    <div className="pd-host">
+    <div className="pd-host" style={{ marginTop: "-32px" }}>
       {/* ─── Sticky bar ──────────────────────────────────────────────── */}
       <div className="pd-stickybar" style={{ top: "56px", background: "hsl(var(--background))", boxShadow: "0 -28px 0 0 hsl(var(--background))" }}>
         <div className="pd-topbar">
