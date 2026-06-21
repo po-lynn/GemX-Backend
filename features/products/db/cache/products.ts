@@ -3,6 +3,7 @@ import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
   getAdminProductCountsFromDb,
+  getPortalProductCountsFromDb,
   getProductById,
   getProductsBySellerId,
 } from "../products"
@@ -95,6 +96,19 @@ export async function getAdminProductCounts() {
   "use cache"
   cacheTag(getProductsGlobalTag())
   return getAdminProductCountsFromDb()
+}
+
+export async function getPortalProductCounts(sellerId: string): Promise<{
+  all: number
+  pending: number
+  featured: number
+  collector: number
+  sold: number
+  drafts: number
+}> {
+  "use cache"
+  cacheTag(getProductsGlobalTag())
+  return getPortalProductCountsFromDb(sellerId)
 }
 
 /** Invalidate products cache (use in Route Handlers or Server Actions). */

@@ -1158,6 +1158,28 @@ export async function getAdminProductCountsFromDb(): Promise<{
   return row ?? { all: 0, pending: 0, featured: 0, collector: 0, sold: 0, drafts: 0 }
 }
 
+export async function getPortalProductCountsFromDb(sellerId: string): Promise<{
+  all: number
+  pending: number
+  featured: number
+  collector: number
+  sold: number
+  drafts: number
+}> {
+  const [row] = await db
+    .select({
+      all:       sql<number>`count(*) filter (where ${product.status} != 'archive')::int`,
+      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} != 'archive')::int`,
+      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} != 'archive')::int`,
+      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} != 'archive')::int`,
+      sold:      sql<number>`count(*) filter (where ${product.status} = 'sold')::int`,
+      drafts:    sql<number>`count(*) filter (where ${product.status} = 'hidden')::int`,
+    })
+    .from(product)
+    .where(eq(product.sellerId, sellerId))
+  return row ?? { all: 0, pending: 0, featured: 0, collector: 0, sold: 0, drafts: 0 }
+}
+
 export type AdminSearchProduct = { id: string; title: string; sku: string | null; status: string }
 
 export async function searchProductsForAdmin(q: string, limit = 5): Promise<AdminSearchProduct[]> {
