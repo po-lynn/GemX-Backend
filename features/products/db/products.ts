@@ -1294,14 +1294,12 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
 }
 
 /**
- * Returns distinct lab names from approved active products for the homepage lab strip.
+ * Returns all lab names from the laboratory table for the homepage lab strip.
  */
 export async function getHomepageLabNames(): Promise<string[]> {
   const rows = await db
-    .selectDistinct({ name: laboratory.name })
+    .select({ name: laboratory.name })
     .from(laboratory)
-    .innerJoin(product, eq(product.laboratoryId, laboratory.id))
-    .where(and(eq(product.status, "active"), eq(product.moderationStatus, "approved")))
     .orderBy(laboratory.name)
   return rows.map((r) => r.name)
 }

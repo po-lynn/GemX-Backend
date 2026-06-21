@@ -40,21 +40,6 @@ export function HeroSection() {
           border: "1px solid #e6e4ee", padding: "14px 28px", borderRadius: 12, textDecoration: "none",
         }}>Why GemX</Link>
       </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 36 }}>
-        <span style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          width: 36, height: 36, borderRadius: "50%", background: "#efeafe", flexShrink: 0,
-        }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6d5ce7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/>
-          </svg>
-        </span>
-        <div style={{ textAlign: "left" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#191525" }}>Launching soon</div>
-          <div style={{ fontSize: 13, color: "#56536a", marginTop: 1 }}>Every stone lab-documented &amp; verified at launch</div>
-        </div>
-      </div>
     </section>
   )
 }
