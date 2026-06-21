@@ -104,3 +104,21 @@ export async function bulkDeletePortalProductAction(
   revalidateProductsCache()
   return { ok: true, deleted: result.length }
 }
+
+export async function bulkArchivePortalProductAction(
+  ids: string[]
+): Promise<{ ok: true; archived: number } | { ok: false; error: string }> {
+  if (!ids.length) return { ok: false, error: "No products selected" }
+
+  const session = await requireActionRole((role) => role === "portal")
+  if (!session) return { ok: false, error: "Unauthorized" }
+
+  const result = await db
+    .update(product)
+    .set({ status: "archive" })
+    .where(and(inArray(product.id, ids), eq(product.sellerId, session.user.id)))
+    .returning({ id: product.id })
+
+  revalidateProductsCache()
+  return { ok: true, archived: result.length }
+}

@@ -407,6 +407,10 @@ export async function getProductsBySellerId(
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
     isPromotion?: boolean
+    priceMinUSD?: number
+    priceMaxUSD?: number
+    priceMinMMK?: number
+    priceMaxMMK?: number
     sortByPublicPriority?: boolean
     /** Admin-style column sort (when not using sortByPublicPriority) */
     sortBy?: "createdAt" | "title" | "price" | "status"
@@ -436,6 +440,27 @@ export async function getProductsBySellerId(
     ? new Date(opts.createdTo + "T23:59:59.999Z")
     : undefined
 
+  const usdRangeSeller =
+    opts.priceMinUSD != null || opts.priceMaxUSD != null
+      ? and(
+          eq(product.currency, "USD"),
+          opts.priceMinUSD != null ? gte(product.price, String(opts.priceMinUSD)) : undefined,
+          opts.priceMaxUSD != null ? lte(product.price, String(opts.priceMaxUSD)) : undefined,
+        )
+      : undefined
+
+  const mmkRangeSeller =
+    opts.priceMinMMK != null || opts.priceMaxMMK != null
+      ? and(
+          eq(product.currency, "MMK"),
+          opts.priceMinMMK != null ? gte(product.price, String(opts.priceMinMMK)) : undefined,
+          opts.priceMaxMMK != null ? lte(product.price, String(opts.priceMaxMMK)) : undefined,
+        )
+      : undefined
+
+  const priceConditionSeller =
+    usdRangeSeller && mmkRangeSeller ? or(usdRangeSeller, mmkRangeSeller) : usdRangeSeller ?? mmkRangeSeller
+
   const filterConditions = [
     eq(product.sellerId, sellerId),
     searchCondition,
@@ -464,6 +489,7 @@ export async function getProductsBySellerId(
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
     opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
+    priceConditionSeller,
   ].filter(Boolean)
 
   const whereClause = and(...filterConditions)

@@ -17,6 +17,7 @@ type Props = {
     page?: string
     view?: string
     search?: string
+    status?: string
     priceMinUSD?: string
     priceMaxUSD?: string
     priceMinMMK?: string
@@ -45,9 +46,10 @@ export default async function PortalProductsPage({ searchParams }: Props) {
   const priceMaxUSD = parsePrice(params.priceMaxUSD)
   const priceMinMMK = parsePrice(params.priceMinMMK)
   const priceMaxMMK = parsePrice(params.priceMaxMMK)
+  const statusFilter = params.status?.trim() || undefined
 
   const viewFilter = {
-    all:       {} as const,
+    all:       statusFilter === "archive" ? { status: "archive" as const } : {},
     pending:   { moderationStatus: "pending" as const },
     featured:  { isFeatured: true as const },
     collector: { isCollectorPiece: true as const },
@@ -64,6 +66,10 @@ export default async function PortalProductsPage({ searchParams }: Props) {
       ...viewFilter,
       sortBy: "createdAt",
       sortOrder: "desc",
+      priceMinUSD,
+      priceMaxUSD,
+      priceMinMMK,
+      priceMaxMMK,
     }),
   ])
 

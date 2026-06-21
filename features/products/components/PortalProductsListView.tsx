@@ -10,10 +10,8 @@ import { ListViewCard } from "@/components/admin/list-view"
 import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
 import type { AdminProductRow } from "@/features/products/db/products"
 import {
-  bulkSetProductStatus,
-} from "@/features/products/actions/products"
-import {
   bulkDeletePortalProductAction,
+  bulkArchivePortalProductAction,
 } from "@/features/products/actions/portal-products"
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -522,7 +520,7 @@ export function PortalProductsListView({
             <button
               className="lv-bulkbtn"
               disabled={isPending}
-              onClick={() => runBulk("archive", () => bulkSetProductStatus(ids, "archive"), onClear, ids.length)}
+              onClick={() => runBulk("archive", () => bulkArchivePortalProductAction(ids), onClear, ids.length)}
             >
               <Archive /> {pendingAction === "archive" ? "Archiving…" : "Archive"}
             </button>
