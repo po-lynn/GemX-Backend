@@ -934,6 +934,7 @@ export type UpdateProductInput = {
   promotionComparePrice?: string | null
   imageUrls?: string[]
   videoUrls?: string[]
+  sellerId?: string
 }
 
 export async function updateProductInDb(
@@ -1016,6 +1017,7 @@ export async function updateProductInDb(
   } else if (rest.featuredExpiresAt !== undefined) {
     updates.featuredExpiresAt = rest.featuredExpiresAt
   }
+  if (rest.sellerId !== undefined) updates.sellerId = rest.sellerId
   if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
   if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist
   if (rest.isPromotion !== undefined) updates.isPromotion = rest.isPromotion

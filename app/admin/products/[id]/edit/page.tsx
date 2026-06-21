@@ -8,6 +8,7 @@ import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import { getFeatureSettings } from "@/features/points/db/points"
+import { getCompanySettings } from "@/features/company-settings/db/company-settings"
 import { FadeUp } from "@/components/admin/motion"
 import { resolveAdjacentProducts } from "./resolve-adjacent"
 
@@ -39,12 +40,13 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
   const sp = await searchParams
   const back = sp.from ? (BACK_ROUTES[sp.from] ?? null) : null
 
-  const [product, categories, laboratories, origins, featureSettings] = await Promise.all([
+  const [product, categories, laboratories, origins, featureSettings, companySettings] = await Promise.all([
     getCachedProduct(id),
     getAllCategories(),
     getAllLaboratories(),
     getAllOrigins(),
     getFeatureSettings(),
+    getCompanySettings(),
   ])
 
   if (!product) notFound()
@@ -70,6 +72,7 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
           laboratories={laboratories}
           origins={origins}
           featurePricingTiers={featureSettings.pricingTiers}
+          companyUserId={companySettings?.companyUserId ?? null}
           backHref={back?.href}
           backLabel={back?.label}
           prevHref={adjacent.prevHref}

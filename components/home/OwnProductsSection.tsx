@@ -63,7 +63,7 @@ export function OwnProductsSection({ products }: Props) {
             Our own picks
           </h2>
           <p style={{ margin: "8px 0 0", fontSize: 15, color: "#8a8799" }}>
-            Hand-selected pieces sourced and sold directly by GemX — full provenance, zero middlemen.
+            A taste of what&apos;s inside the GemX app — certified stones and fine jewellery, with full details and live pricing in-app.
           </p>
         </div>
         <Link href="#app" style={{ fontSize: 14, fontWeight: 700, color: "#6d5ce7", textDecoration: "none" }}>

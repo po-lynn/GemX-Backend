@@ -1,11 +1,6 @@
 import Link from "next/link"
-import type { HomepageFeaturedProduct } from "@/features/products/db/products"
 
-interface Props {
-  heroBadgeProduct?: HomepageFeaturedProduct | null
-}
-
-export function HeroSection({ heroBadgeProduct: _ }: Props) {
+export function HeroSection() {
   return (
     <section className="home-hero-section" style={{
       display: "flex",

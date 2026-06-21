@@ -675,6 +675,7 @@ type Props = {
   nextHref?: string | null
   listPosition?: number | null
   listTotal?: number | null
+  companyUserId?: string | null
 }
 
 export function ProductForm({
@@ -690,6 +691,7 @@ export function ProductForm({
   nextHref,
   listPosition,
   listTotal,
+  companyUserId,
 }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
@@ -747,7 +749,12 @@ export function ProductForm({
   const [dimensionsPart3, setDimensionsPart3] = useState(() => parseDimensions(product?.dimensions)[2])
 
   const [sellerPick, setSellerPick] = useState<UserPickerOption | null>(null)
-  const [isOwnProduct, setIsOwnProduct] = useState(true)
+  const [isOwnProduct, setIsOwnProduct] = useState(() => {
+    if (mode === "edit" && companyUserId && product?.sellerId) {
+      return product.sellerId === companyUserId
+    }
+    return true
+  })
 
   const categoryOptions = categories.filter((c) => c.type === productType)
   const stoneOptions = categories.filter((c) => c.type === "loose_stone")
@@ -1253,44 +1260,45 @@ export function ProductForm({
             </div>
           )}
 
-          {/* ── Seller (create only) ── */}
-          {!isEdit && (
-            <section className="pd-sec">
-              <div className="pd-sec-head">
-                <div className="pd-sec-icon" data-tone="blue">
-                  <User size={16} />
-                </div>
-                <div>
-                  <div className="pd-sec-title">Seller</div>
-                  <div className="pd-sec-sub">Who is this product listed for?</div>
+          {/* ── Seller ── */}
+          <section className="pd-sec">
+            <div className="pd-sec-head">
+              <div className="pd-sec-icon" data-tone="blue">
+                <User size={16} />
+              </div>
+              <div>
+                <div className="pd-sec-title">Seller</div>
+                <div className="pd-sec-sub">
+                  {isEdit
+                    ? isOwnProduct
+                      ? "Currently a company (own) listing"
+                      : `Currently listed for ${product?.sellerName ?? "an external seller"}`
+                    : "Who is this product listed for?"}
                 </div>
               </div>
-              <div className="pd-sec-body">
-                <div className="pd-field" style={{ marginBottom: 10 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
-                    <input
-                      type="checkbox"
-                      name="isOwnProduct"
-                      checked={isOwnProduct}
-                      onChange={(e) => {
-                        setIsOwnProduct(e.target.checked)
-                        if (e.target.checked) {
-                          setSellerPick(null)
-                          setIsPrivilegeAssist(true)
-                        }
-                      }}
-                    />
-                    Own Product (company listing)
-                  </label>
-                </div>
-                {!isOwnProduct && (
-                  <div className="pd-field">
-                    <SellerPicker selected={sellerPick} onSelect={setSellerPick} />
-                  </div>
-                )}
+            </div>
+            <div className="pd-sec-body">
+              <div className="pd-field" style={{ marginBottom: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+                  <input
+                    type="checkbox"
+                    name="isOwnProduct"
+                    checked={isOwnProduct}
+                    onChange={(e) => {
+                      setIsOwnProduct(e.target.checked)
+                      if (e.target.checked) setSellerPick(null)
+                    }}
+                  />
+                  Own Product (company listing)
+                </label>
               </div>
-            </section>
-          )}
+              {!isOwnProduct && !isEdit && (
+                <div className="pd-field">
+                  <SellerPicker selected={sellerPick} onSelect={setSellerPick} />
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* ── Images & videos ── */}
           <section className="pd-sec">

@@ -217,6 +217,13 @@ export async function updateProductAction(formData: FormData) {
     return { error: "Unauthorized" }
   }
 
+  const isOwnProductUpdate = formData.get("isOwnProduct") === "on" || formData.get("isOwnProduct") === "true"
+  let newSellerId: string | undefined
+  if (isOwnProductUpdate) {
+    const companySettings = await getCompanySettings()
+    newSellerId = companySettings?.companyUserId ?? undefined
+  }
+
   const { productId, ...data } = parsed.data
   const [currentRow] = await db
     .select({
@@ -280,6 +287,7 @@ export async function updateProductAction(formData: FormData) {
       promotionComparePrice: data.promotionComparePrice,
       imageUrls: data.imageUrls,
       videoUrls: data.videoUrls,
+      sellerId: newSellerId,
     },
     { actorId: session.user.id }
   )
