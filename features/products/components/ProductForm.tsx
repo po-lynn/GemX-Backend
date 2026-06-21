@@ -785,6 +785,14 @@ export function ProductForm({
   }, [product?.id, product?.isFeatured])
 
   useEffect(() => {
+    setIsCollectorPiece(product?.isCollectorPiece ?? false)
+  }, [product?.id, product?.isCollectorPiece])
+
+  useEffect(() => {
+    setIsPrivilegeAssist(product?.isPrivilegeAssist ?? false)
+  }, [product?.id, product?.isPrivilegeAssist])
+
+  useEffect(() => {
     if (!product?.featuredExpiresAt) {
       setFeaturedExpiresAtStr("")
       return
@@ -1158,6 +1166,7 @@ export function ProductForm({
           {isEdit && <input type="hidden" name="productId" value={product?.id ?? ""} />}
           {!isEdit && !isOwnProduct && <input type="hidden" name="sellerId" value={sellerPick?.id ?? ""} />}
           <input type="hidden" name="status" value={status} />
+          <input type="hidden" name="moderationStatus" value={moderationStatus} />
           <input type="hidden" name="imageUrls" value={imageUrlsList.join("\n")} />
           <input type="hidden" name="videoUrls" value={videoUrlsList.join("\n")} />
           <input type="hidden" name="certReportUrl" value={certReportUrl} />
@@ -1265,7 +1274,10 @@ export function ProductForm({
                       checked={isOwnProduct}
                       onChange={(e) => {
                         setIsOwnProduct(e.target.checked)
-                        if (e.target.checked) setSellerPick(null)
+                        if (e.target.checked) {
+                          setSellerPick(null)
+                          setIsPrivilegeAssist(true)
+                        }
                       }}
                     />
                     Own Product (company listing)
@@ -1716,11 +1728,12 @@ export function ProductForm({
                   </label>
                   <select
                     id="moderationStatus"
-                    name="moderationStatus"
                     value={moderationStatus}
-                    onChange={(e) =>
+                    onInput={(e) => e.stopPropagation()}
+                    onChange={(e) => {
                       setModerationStatus(e.target.value as "pending" | "approved" | "rejected")
-                    }
+                      setDirty(true)
+                    }}
                     className="pd-select"
                   >
                     {MODERATION_STATUS_OPTIONS.map((opt) => (
