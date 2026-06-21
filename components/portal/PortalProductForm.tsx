@@ -39,6 +39,7 @@ import {
 } from "lucide-react"
 import type { CategoryRow } from "@/features/categories/db/categories"
 import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
+import type { OriginOption } from "@/features/origin/db/origin"
 
 const MAX_PRODUCT_IMAGES = 10
 const MAX_PRODUCT_VIDEOS = 5
@@ -309,6 +310,7 @@ type Props = {
   mode: "create" | "edit"
   categories: CategoryRow[]
   laboratories: LaboratoryOption[]
+  origins: OriginOption[]
   productId?: string
   initial?: {
     title?: string
@@ -362,6 +364,7 @@ export default function PortalProductForm({
   mode,
   categories,
   laboratories,
+  origins,
   productId,
   initial,
   backHref,
@@ -1435,16 +1438,20 @@ export default function PortalProductForm({
                   <label htmlFor="origin" className="pd-label">
                     Origin <span className="req">*</span>
                   </label>
-                  <input
+                  <select
                     id="origin"
                     name="origin"
-                    type="text"
                     required
-                    maxLength={100}
                     defaultValue={initial?.origin ?? ""}
-                    placeholder="e.g. Burma"
-                    className="pd-input"
-                  />
+                    className="pd-select"
+                  >
+                    <option value="">Select origin</option>
+                    {origins.map((o) => (
+                      <option key={o.id} value={o.name}>
+                        {o.name}{o.country ? ` (${o.country})` : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
@@ -1697,16 +1704,21 @@ export default function PortalProductForm({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium">Origin</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Burma"
+                  <select
                     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
                     value={gemstoneDialogForm.origin}
                     onChange={(e) =>
                       setGemstoneDialogForm((p) => ({ ...p, origin: e.target.value }))
                     }
                     disabled={gemstoneDialogMode === "view"}
-                  />
+                  >
+                    <option value="">Select origin</option>
+                    {origins.map((o) => (
+                      <option key={o.id} value={o.name}>
+                        {o.name}{o.country ? ` (${o.country})` : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium">Cut</label>

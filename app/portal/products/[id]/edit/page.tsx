@@ -4,17 +4,19 @@ import { auth } from "@/lib/auth"
 import { getProductById } from "@/features/products/db/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
+import { getAllOrigins } from "@/features/origin/db/origin"
 import PortalProductForm from "@/components/portal/PortalProductForm"
 
 type Params = { params: Promise<{ id: string }> }
 
 export default async function EditPortalProductPage({ params }: Params) {
   const { id } = await params
-  const [session, product, categories, laboratories] = await Promise.all([
+  const [session, product, categories, laboratories, origins] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
     getProductById(id),
     getAllCategories(),
     getAllLaboratories(),
+    getAllOrigins(),
   ])
 
   if (!product) notFound()
@@ -70,6 +72,7 @@ export default async function EditPortalProductPage({ params }: Params) {
       mode="edit"
       categories={categories}
       laboratories={laboratories}
+      origins={origins}
       productId={id}
       initial={initial}
       backHref="/portal/products"

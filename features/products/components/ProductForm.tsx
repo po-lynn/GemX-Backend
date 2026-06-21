@@ -1789,7 +1789,7 @@ export function ProductForm({
                   <select
                     id="currency"
                     name="currency"
-                    defaultValue={product?.currency ?? "USD"}
+                    defaultValue={product?.currency ?? "MMK"}
                     className="pd-select"
                   >
                     <option value="USD">USD</option>
