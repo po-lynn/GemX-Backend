@@ -15,8 +15,8 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
   return (
     <div className="min-h-screen bg-background">
-      <PortalNavbar userName={session.user.name} />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <PortalNavbar userName={session.user.name} points={session.user.points ?? 0} />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {children}
       </main>
     </div>
