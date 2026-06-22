@@ -31,6 +31,10 @@ export const user = pgTable("user", {
   country: text("country"),
   gender: text("gender"),
   dateOfBirth: date("date_of_birth", { mode: "string" }),
+  nrcFrontUrl: text("nrc_front_url"),
+  nrcBackUrl: text("nrc_back_url"),
+  selfieUrl: text("selfie_url"),
+  businessLicenseUrl: text("business_license_url"),
   points: integer("points").notNull().default(0),
   /** Cumulative total points ever credited (never decremented) */
   pointsLifetime: integer("points_lifetime").notNull().default(0),

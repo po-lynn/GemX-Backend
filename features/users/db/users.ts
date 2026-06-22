@@ -31,6 +31,10 @@ export type UserForEdit = UserRow & {
   city: string | null;
   state: string | null;
   country: string | null;
+  nrcFrontUrl: string | null;
+  nrcBackUrl: string | null;
+  selfieUrl: string | null;
+  businessLicenseUrl: string | null;
 };
 
 export type UserPickerOption = {
@@ -261,6 +265,10 @@ export async function getUserById(id: string): Promise<UserForEdit | null> {
       city: user.city,
       state: user.state,
       country: user.country,
+      nrcFrontUrl: user.nrcFrontUrl,
+      nrcBackUrl: user.nrcBackUrl,
+      selfieUrl: user.selfieUrl,
+      businessLicenseUrl: user.businessLicenseUrl,
     })
     .from(user)
     .where(eq(user.id, id))
@@ -286,6 +294,10 @@ export type UpdateUserInput = {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  nrcFrontUrl?: string | null;
+  nrcBackUrl?: string | null;
+  selfieUrl?: string | null;
+  businessLicenseUrl?: string | null;
 };
 
 export async function updateUserInDb(
