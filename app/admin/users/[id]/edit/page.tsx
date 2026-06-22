@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { UserForm } from "@/features/users/components";
+import { KycDocumentsCard } from "@/features/users/components/KycDocumentsCard";
 import { getUserById } from "@/features/users/db/users";
 import { getUserPermissions } from "@/features/rbac/db/permissions";
 import { requireFeatureAccess } from "@/lib/admin-guard";
@@ -24,7 +25,12 @@ async function AdminUsersEditContent({ params }: Props) {
   if (isInternal && user.role === "admin") redirect("/admin/users");
 
   const permissions = user.role === "internal" ? await getUserPermissions(user.id) : {};
-  return <UserForm key={user.id} mode="edit" user={user} permissions={permissions} canAssignAdmin={!isInternal} />;
+  return (
+    <div className="space-y-6">
+      <UserForm key={user.id} mode="edit" user={user} permissions={permissions} canAssignAdmin={!isInternal} />
+      <KycDocumentsCard userId={user.id} user={user} />
+    </div>
+  );
 }
 
 export default function AdminUsersEditPage(props: Props) {
