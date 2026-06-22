@@ -120,7 +120,7 @@ function userStatus(u: UserForEdit): "active" | "pending" | "archived" {
 }
 
 function userKyc(u: UserForEdit): "verified" | "submitted" | "unverified" {
-  if (u.verified && u.emailVerified) return "verified";
+  if (u.verified) return "verified";
   if (u.emailVerified) return "submitted";
   return "unverified";
 }
