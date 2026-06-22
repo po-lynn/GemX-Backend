@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import { auth } from "@/lib/auth"
+import { db } from "@/drizzle/db"
 import { PATCH } from "@/app/api/mobile/profile/route"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -28,9 +29,15 @@ function makeReq(body: unknown): NextRequest {
 
 describe("PATCH /api/mobile/profile", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },
+    } as never)
+    vi.mocked(db.update).mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
     } as never)
   })
 
@@ -47,9 +54,22 @@ describe("PATCH /api/mobile/profile", () => {
     expect(body).toEqual({ ok: true })
   })
 
+  it("silently ignores verified and role fields sent in body", async () => {
+    // verified and role are not in profileUpdateSchema, so Zod strips them
+    // This results in an empty updates object, which skips the db.update call
+    const res = await PATCH(makeReq({ verified: true, role: "admin" }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual({ ok: true })
+    // Confirm db.update was not called (no valid fields provided)
+    expect(db.update).not.toHaveBeenCalled()
+  })
+
   it("returns 200 when body is an empty object (no-op)", async () => {
     const res = await PATCH(makeReq({}))
     expect(res.status).toBe(200)
+    // Confirm db.update was not called when no updates provided
+    expect(db.update).not.toHaveBeenCalled()
   })
 
   it("returns 400 when nrcFrontUrl is not a valid URL", async () => {
