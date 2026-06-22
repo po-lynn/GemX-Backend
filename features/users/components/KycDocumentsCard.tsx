@@ -109,6 +109,7 @@ export function KycDocumentsCard({ userId, user }: Props) {
                 NRC · FRONT
               </span>
               {user.nrcFrontUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={user.nrcFrontUrl} alt="NRC front document" className="w-full h-full object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full min-h-[100px]">
