@@ -8,26 +8,43 @@ import { getUserPermissions } from "@/features/rbac/db/permissions";
 import { requireFeatureAccess } from "@/lib/admin-guard";
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { FadeUp } from "@/components/admin/motion";
+import { resolveAdjacentUsers } from "./resolve-adjacent";
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string; search?: string; view?: string }>;
 };
 
-async function AdminUsersEditContent({ params }: Props) {
+async function AdminUsersEditContent({ params, searchParams }: Props) {
   await connection();
   const session = await requireFeatureAccess(FEATURE_KEYS.USERS);
   const isInternal = session.user.role === "internal";
   const { id } = await params;
+  const sp = await searchParams;
   const user = await getUserById(id);
   if (!user) notFound();
 
   // Internal users cannot view or edit admin accounts.
   if (isInternal && user.role === "admin") redirect("/admin/users");
 
-  const permissions = user.role === "internal" ? await getUserPermissions(user.id) : {};
+  const [permissions, adjacent] = await Promise.all([
+    user.role === "internal" ? getUserPermissions(user.id) : Promise.resolve({}),
+    resolveAdjacentUsers(id, { page: sp.page, search: sp.search, view: sp.view }),
+  ]);
+
   return (
     <div className="space-y-6">
-      <UserForm key={user.id} mode="edit" user={user} permissions={permissions} canAssignAdmin={!isInternal} />
+      <UserForm
+        key={user.id}
+        mode="edit"
+        user={user}
+        permissions={permissions}
+        canAssignAdmin={!isInternal}
+        prevHref={adjacent.prevHref}
+        nextHref={adjacent.nextHref}
+        listPosition={adjacent.position}
+        listTotal={adjacent.total}
+      />
       <KycDocumentsCard userId={user.id} user={user} />
     </div>
   );

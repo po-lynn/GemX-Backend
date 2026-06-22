@@ -3140,6 +3140,15 @@
 .ud-main { display: flex; flex-direction: column; gap: 18px; }
 .ud-side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 72px; }
 
+/* ─── Sticky header wrapper ──────────────────────────────────────────── */
+.ud-stickybar {
+  position: sticky;
+  top: 92px;
+  z-index: 20;
+  background: var(--admin-main-bg);
+  box-shadow: 0 -28px 0 0 var(--admin-main-bg);
+}
+
 /* ─── Top bar ────────────────────────────────────────────────────────── */
 .ud-topbar {
   display: flex; align-items: center; gap: 12px;
@@ -3147,9 +3156,8 @@
 }
 .ud-topbar-spacer { flex: 1; }
 
-/* ─── Sticky save bar ────────────────────────────────────────────────── */
+/* ─── Save bar ───────────────────────────────────────────────────────── */
 .ud-savebar {
-  position: sticky; top: 0; z-index: 12;
   display: flex; align-items: center; gap: 8px;
   padding: 9px 16px;
   background: rgba(255,255,255,0.88);

@@ -17,9 +17,9 @@ import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.jso
 import { COUNTRY_LOCATIONS } from "@/features/users/data/country-locations";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle, ArrowLeftRight, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
+  AlertTriangle, ArrowLeftRight, ChevronLeft, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
   FileText, FlaskConical, Gem, Globe, Info, KeyRound, MapPin, MessageSquare,
-  MessagesSquare, Newspaper, Package, Receipt, Shield, ShieldHalf, Tag, Tags,
+  MessagesSquare, Newspaper, Package, Plus, Receipt, Shield, ShieldHalf, Tag, Tags,
   Trash2, Upload, Users,
 } from "lucide-react";
 import {
@@ -101,6 +101,10 @@ type Props = {
   user?: UserForEdit | null;
   permissions?: Record<string, boolean>;
   canAssignAdmin?: boolean;
+  prevHref?: string | null;
+  nextHref?: string | null;
+  listPosition?: number | null;
+  listTotal?: number | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,15 +160,15 @@ function parseMyanmarNrc(nrc: string | null | undefined) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function UserForm({ mode, user, permissions, canAssignAdmin = true }: Props) {
-  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} canAssignAdmin={canAssignAdmin} />;
+export function UserForm({ mode, user, permissions, canAssignAdmin = true, prevHref, nextHref, listPosition, listTotal }: Props) {
+  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} canAssignAdmin={canAssignAdmin} prevHref={prevHref ?? null} nextHref={nextHref ?? null} listPosition={listPosition ?? null} listTotal={listTotal ?? null} />;
   return <UserCreateForm canAssignAdmin={canAssignAdmin} />;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EDIT FORM — premium detail layout
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: UserForEdit; initialPermissions: Record<string, boolean>; canAssignAdmin: boolean }) {
+function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, nextHref, listPosition, listTotal }: { user: UserForEdit; initialPermissions: Record<string, boolean>; canAssignAdmin: boolean; prevHref: string | null; nextHref: string | null; listPosition: number | null; listTotal: number | null }) {
   const router = useRouter();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -347,17 +351,46 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* Breadcrumb */}
+      <div className="ud-stickybar">
+      {/* Top bar */}
       <div className="ud-topbar">
-        <div className="lv-breadcrumbs">
+        <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
           <Link href="/admin/users">Users</Link>
-          <ChevronRight style={{ width: 11, height: 11, opacity: 0.45 }} />
-          <span className="lv-here">{displayName}</span>
-        </div>
+          <ChevronRight size={11} style={{ opacity: 0.5 }} />
+          <span className="pd-here">{displayName}</span>
+        </nav>
+        {(prevHref != null || nextHref != null || listPosition != null) && (
+          <div className="pd-listnav">
+            {prevHref ? (
+              <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous user">
+                <ChevronLeft size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronLeft size={14} />
+              </span>
+            )}
+            {listPosition != null && listTotal != null && (
+              <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+            )}
+            {nextHref ? (
+              <Link href={nextHref} className="pd-listnav-btn" aria-label="Next user">
+                <ChevronRight size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronRight size={14} />
+              </span>
+            )}
+          </div>
+        )}
         <div className="ud-topbar-spacer" />
+        <Link href="/admin/users/new" className="pd-btn">
+          <Plus size={13} /> New user
+        </Link>
       </div>
 
-      {/* Sticky save bar */}
+      {/* Save bar */}
       <div className="ud-savebar">
         {dirty ? (
           <span className="ud-savebar-dirty">
@@ -385,6 +418,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin }: { user: User
           <Link href="/admin/users">Back</Link>
         </Button>
       </div>
+      </div>{/* end ud-stickybar */}
 
       <div className="ud-grid">
 
@@ -1240,6 +1274,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
+      <div className="ud-stickybar">
       {/* Breadcrumb */}
       <div className="ud-topbar">
         <div className="lv-breadcrumbs">
@@ -1250,7 +1285,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
         <div className="ud-topbar-spacer" />
       </div>
 
-      {/* Sticky save bar */}
+      {/* Save bar */}
       <div className="ud-savebar">
         <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>
           New user — fill required fields
@@ -1268,6 +1303,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
           <Link href="/admin/users">Cancel</Link>
         </Button>
       </div>
+      </div>{/* end ud-stickybar */}
 
       <div className="ud-grid" style={{ "--ud-cols": 1 } as React.CSSProperties}>
         <div className="ud-main">

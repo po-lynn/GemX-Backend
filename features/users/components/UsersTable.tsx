@@ -341,7 +341,14 @@ export function UsersTable({
       getSortValue={getSortValue}
       filterRow={filterRow}
       getGroupKey={getGroupKey}
-      onRowClick={(u) => router.push(`${BASE}/${u.id}/edit`)}
+      onRowClick={(u) => {
+        const p = new URLSearchParams()
+        if (view !== "all") p.set("view", view)
+        if (searchQuery) p.set("search", searchQuery)
+        p.set("page", String(page))
+        const qs = p.toString()
+        router.push(`${BASE}/${u.id}/edit${qs ? `?${qs}` : ""}`)
+      }}
       renderBulkActions={(_rows, onClear) => (
         <>
           <button className="lv-bulkbtn approve" onClick={onClear}>Verify KYC</button>
