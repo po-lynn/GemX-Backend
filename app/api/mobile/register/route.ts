@@ -22,6 +22,10 @@ export async function POST(req: Request) {
     const country = body?.country != null ? String(body.country).trim() || null : null;
     const gender = body?.gender != null ? String(body.gender).trim() || null : null;
     const dateOfBirth = body?.dateOfBirth != null ? String(body.dateOfBirth).trim() || null : null;
+    const nrcFrontUrl = body?.nrcFrontUrl != null ? String(body.nrcFrontUrl).trim() || null : null;
+    const nrcBackUrl = body?.nrcBackUrl != null ? String(body.nrcBackUrl).trim() || null : null;
+    const selfieUrl = body?.selfieUrl != null ? String(body.selfieUrl).trim() || null : null;
+    const businessLicenseUrl = body?.businessLicenseUrl != null ? String(body.businessLicenseUrl).trim() || null : null;
 
     const phone = normalizeMyanmarPhone(rawPhone);
 
@@ -70,7 +74,14 @@ export async function POST(req: Request) {
       if (u?.id) {
         await db
           .update(userTable)
-          .set({ role: "user", updatedAt: new Date() })
+          .set({
+            role: "user",
+            updatedAt: new Date(),
+            ...(nrcFrontUrl ? { nrcFrontUrl } : {}),
+            ...(nrcBackUrl ? { nrcBackUrl } : {}),
+            ...(selfieUrl ? { selfieUrl } : {}),
+            ...(businessLicenseUrl ? { businessLicenseUrl } : {}),
+          })
           .where(eq(userTable.id, u.id));
       }
       if (u?.id) {
