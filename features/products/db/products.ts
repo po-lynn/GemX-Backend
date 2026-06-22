@@ -578,7 +578,7 @@ export async function getProductsBySellerId(
 export type ProductChangeLogEntry = {
   id: string
   createdAt: Date
-  changeType: "status" | "price"
+  changeType: "status" | "price" | "featured" | "seller" | "collector_piece" | "piece_count" | "privilege_assist"
   oldValue: string
   newValue: string
 }
@@ -977,6 +977,12 @@ export async function updateProductInDb(
       status: product.status,
       price: product.price,
       currency: product.currency,
+      isFeatured: product.isFeatured,
+      featuredExpiresAt: product.featuredExpiresAt,
+      sellerId: product.sellerId,
+      isCollectorPiece: product.isCollectorPiece,
+      pieceCount: product.pieceCount,
+      isPrivilegeAssist: product.isPrivilegeAssist,
     })
     .from(product)
     .where(eq(product.id, id))
@@ -1090,6 +1096,72 @@ export async function updateProductInDb(
           actorId,
         })
       }
+    }
+
+    const nextIsFeatured = rest.isFeatured !== undefined ? rest.isFeatured : currentRow.isFeatured
+    const nextExpiresAt = rest.featuredExpiresAt !== undefined ? rest.featuredExpiresAt : currentRow.featuredExpiresAt
+    const featuredChanged =
+      rest.isFeatured !== undefined && rest.isFeatured !== currentRow.isFeatured
+    const expiresChanged =
+      rest.featuredExpiresAt !== undefined &&
+      (nextExpiresAt?.toISOString() ?? null) !== (currentRow.featuredExpiresAt?.toISOString() ?? null)
+    if (featuredChanged || expiresChanged) {
+      const fmtDate = (d: Date | null | undefined) =>
+        d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "none"
+      const oldFeatured = currentRow.isFeatured
+      const oldExpiry = currentRow.featuredExpiresAt
+      logValues.push({
+        productId: id,
+        changeType: "featured",
+        oldValue: oldFeatured ? `featured, expires ${fmtDate(oldExpiry)}` : "not featured",
+        newValue: nextIsFeatured ? `featured, expires ${fmtDate(nextExpiresAt instanceof Date ? nextExpiresAt : nextExpiresAt ? new Date(String(nextExpiresAt)) : null)}` : "not featured",
+        actorId,
+      })
+    }
+
+    if (rest.sellerId !== undefined && rest.sellerId !== currentRow.sellerId) {
+      const sellerRows = await db
+        .select({ id: user.id, name: user.name })
+        .from(user)
+        .where(inArray(user.id, [currentRow.sellerId, rest.sellerId]))
+      const nameMap = new Map(sellerRows.map((u) => [u.id, u.name || u.id]))
+      logValues.push({
+        productId: id,
+        changeType: "seller",
+        oldValue: nameMap.get(currentRow.sellerId) ?? currentRow.sellerId,
+        newValue: nameMap.get(rest.sellerId) ?? rest.sellerId,
+        actorId,
+      })
+    }
+
+    if (rest.isCollectorPiece !== undefined && rest.isCollectorPiece !== currentRow.isCollectorPiece) {
+      logValues.push({
+        productId: id,
+        changeType: "collector_piece",
+        oldValue: currentRow.isCollectorPiece ? "collector piece" : "standard",
+        newValue: rest.isCollectorPiece ? "collector piece" : "standard",
+        actorId,
+      })
+    }
+
+    if (rest.pieceCount !== undefined && rest.pieceCount !== currentRow.pieceCount) {
+      logValues.push({
+        productId: id,
+        changeType: "piece_count",
+        oldValue: currentRow.pieceCount != null ? String(currentRow.pieceCount) : "—",
+        newValue: rest.pieceCount != null ? String(rest.pieceCount) : "—",
+        actorId,
+      })
+    }
+
+    if (rest.isPrivilegeAssist !== undefined && rest.isPrivilegeAssist !== currentRow.isPrivilegeAssist) {
+      logValues.push({
+        productId: id,
+        changeType: "privilege_assist",
+        oldValue: currentRow.isPrivilegeAssist ? "privilege assist" : "standard",
+        newValue: rest.isPrivilegeAssist ? "privilege assist" : "standard",
+        actorId,
+      })
     }
   }
 
@@ -1366,7 +1438,20 @@ export async function expireFeaturedProducts(): Promise<FeaturedExpiryResult> {
         lte(product.featuredExpiresAt, sql`now()`)
       )
     )
-    .returning({ id: product.id })
+    .returning({ id: product.id, featuredExpiresAt: product.featuredExpiresAt, featuredDurationDays: product.featuredDurationDays })
+
+  for (const row of rows) {
+    const end = row.featuredExpiresAt
+    const start =
+      end && row.featuredDurationDays > 0
+        ? new Date(new Date(end).setDate(new Date(end).getDate() - row.featuredDurationDays))
+        : null
+    console.log(
+      `[cron] expired featured product ${row.id}` +
+        (start ? ` | feature start: ${start.toISOString()}` : "") +
+        (end ? ` | feature end: ${new Date(end).toISOString()}` : "")
+    )
+  }
 
   return { expired: rows.length }
 }

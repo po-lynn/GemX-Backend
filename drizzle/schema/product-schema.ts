@@ -52,10 +52,15 @@ export const productIdentificationEnum = pgEnum("product_identification", [
   "Others",
 ]);
 
-/** Admin form: persisted history when listing status or price changes */
+/** Admin form: persisted history when listing fields change */
 export const productAdminChangeTypeEnum = pgEnum("product_admin_change_type", [
   "status",
   "price",
+  "featured",
+  "seller",
+  "collector_piece",
+  "piece_count",
+  "privilege_assist",
 ]);
 
 export { productTypeEnum } from "./category-schema";

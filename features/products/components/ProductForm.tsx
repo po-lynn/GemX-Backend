@@ -1659,6 +1659,21 @@ export function ProductForm({
                 </div>
               )}
 
+              {/* Feature date log */}
+              {isFeatured && product?.featuredExpiresAt && product.featuredDurationDays > 0 && (() => {
+                const end = new Date(product.featuredExpiresAt)
+                const start = new Date(product.featuredExpiresAt)
+                start.setDate(start.getDate() - product.featuredDurationDays)
+                const fmt = (d: Date) =>
+                  d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                return (
+                  <div style={{ maxWidth: 380, fontSize: 12, color: "var(--muted-foreground, #888)", display: "flex", flexDirection: "column", gap: 2, paddingTop: 2 }}>
+                    <span>Feature start: <strong>{fmt(start)}</strong></span>
+                    <span>Feature end: <strong>{fmt(end)}</strong></span>
+                  </div>
+                )
+              })()}
+
               {/* Promotion compare price */}
               {isPromotion && (
                 <div className="pd-field" style={{ maxWidth: 380 }}>
@@ -2386,8 +2401,49 @@ export function ProductForm({
             </div>
           </div>
 
+          {/* Featured log */}
+          {isEdit && product?.changeLog && product.changeLog.filter((e) => e.changeType === "featured").length > 0 && (
+            <div className="pd-sidecard">
+              <div className="pd-sidecard-head">
+                <div className="pd-sidecard-icon" style={{ background: "#FEF9C3", color: "#A16207" }}>
+                  <Sparkles size={13} />
+                </div>
+                <div>
+                  <div className="pd-sidecard-title">Featured log</div>
+                  <div className="pd-sidecard-sub">Feature date history</div>
+                </div>
+              </div>
+              <div className="pd-sidecard-body">
+                <div className="pd-activity">
+                  {product.changeLog
+                    .filter((e) => e.changeType === "featured")
+                    .map((entry) => {
+                      const at =
+                        typeof entry.createdAt === "string"
+                          ? new Date(entry.createdAt)
+                          : entry.createdAt
+                      return (
+                        <div key={entry.id} className="pd-activity-item">
+                          <span className="pd-activity-line" />
+                          <span className="pd-activity-dot" />
+                          <div>
+                            <div className="pd-activity-title">
+                              <span style={{ color: "var(--lv-text-3)" }}>{entry.oldValue}</span>
+                              {" → "}
+                              <strong>{entry.newValue}</strong>
+                            </div>
+                            <div className="pd-activity-when">{formatDate(at)}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Change log */}
-          {isEdit && product?.changeLog && product.changeLog.length > 0 && (
+          {isEdit && product?.changeLog && product.changeLog.filter((e) => e.changeType !== "featured").length > 0 && (
             <div className="pd-sidecard">
               <div className="pd-sidecard-head">
                 <div
@@ -2398,23 +2454,31 @@ export function ProductForm({
                 </div>
                 <div>
                   <div className="pd-sidecard-title">Change log</div>
-                  <div className="pd-sidecard-sub">Status &amp; price history</div>
+                  <div className="pd-sidecard-sub">Field change history</div>
                 </div>
               </div>
               <div className="pd-sidecard-body">
                 <div className="pd-activity">
-                  {product.changeLog.map((entry) => {
+                  {product.changeLog.filter((e) => e.changeType !== "featured").map((entry) => {
                     const at =
                       typeof entry.createdAt === "string"
                         ? new Date(entry.createdAt)
                         : entry.createdAt
+                    const label =
+                      entry.changeType === "status" ? "Status"
+                      : entry.changeType === "price" ? "Price"
+                      : entry.changeType === "seller" ? "Seller"
+                      : entry.changeType === "collector_piece" ? "Collector piece"
+                      : entry.changeType === "piece_count" ? "Pieces"
+                      : entry.changeType === "privilege_assist" ? "Privilege assist"
+                      : entry.changeType
                     return (
                       <div key={entry.id} className="pd-activity-item">
                         <span className="pd-activity-line" />
                         <span className="pd-activity-dot" />
                         <div>
                           <div className="pd-activity-title">
-                            {entry.changeType === "status" ? "Status" : "Price"}:{" "}
+                            {label}:{" "}
                             <span style={{ color: "var(--lv-text-3)" }}>{entry.oldValue}</span>
                             {" → "}
                             <strong>{entry.newValue}</strong>
