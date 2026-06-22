@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nrcSchema } from "@/lib/nrc";
 
 export const userCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
@@ -19,7 +20,7 @@ export const userCreateSchema = z.object({
   phone: z.string().max(50).optional().nullable(),
   gender: z.string().max(50).optional().nullable(),
   dateOfBirth: z.string().max(20).optional().nullable(),
-  nrc: z.string().max(100).optional().nullable(),
+  nrc: nrcSchema.optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),
@@ -44,7 +45,7 @@ export const userUpdateSchema = z.object({
   gender: z.string().max(50).optional().nullable(),
   username: z.string().max(100).optional().nullable(),
   displayUsername: z.string().max(100).optional().nullable(),
-  nrc: z.string().max(100).optional().nullable(),
+  nrc: nrcSchema.optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),

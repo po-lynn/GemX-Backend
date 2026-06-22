@@ -4,12 +4,13 @@ import { auth } from "@/lib/auth"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { db } from "@/drizzle/db"
 import { user as userTable } from "@/drizzle/schema"
-import { eq } from "drizzle-orm"
+import { eq, and, ne } from "drizzle-orm"
+import { nrcSchema } from "@/lib/nrc"
 
 const urlField = z.string().url().optional().nullable()
 
 const profileUpdateSchema = z.object({
-  nrc: z.string().max(100).optional().nullable(),
+  nrc: nrcSchema.optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),
@@ -32,6 +33,18 @@ export async function PATCH(request: NextRequest) {
   }
 
   const data = parsed.data
+
+  if (data.nrc != null) {
+    const existing = await db
+      .select({ id: userTable.id })
+      .from(userTable)
+      .where(and(eq(userTable.nrc, data.nrc), ne(userTable.id, session.user.id)))
+      .limit(1)
+    if (existing.length > 0) {
+      return jsonError("This NRC number is already registered to another account.", 409)
+    }
+  }
+
   const updates: Record<string, unknown> = {}
   if (data.nrc !== undefined) updates.nrc = data.nrc
   if (data.address !== undefined) updates.address = data.address

@@ -7,6 +7,7 @@ import { db } from "@/drizzle/db";
 import { user as userTable } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { normalizeMyanmarPhone, internalEmailFromPhone } from "@/lib/phone";
+import { validateNrc } from "@/lib/nrc";
 
 export async function POST(req: Request) {
   try {
@@ -32,6 +33,13 @@ export async function POST(req: Request) {
     if (!phone || !password) {
       return Response.json(
         { error: "Phone must start with 09 and password is required" },
+        { status: 400 },
+      );
+    }
+
+    if (nrc && !validateNrc(nrc)) {
+      return Response.json(
+        { error: "Invalid NRC format. Expected format: 12/ABC(N)123456" },
         { status: 400 },
       );
     }
@@ -64,8 +72,13 @@ export async function POST(req: Request) {
 
     if (result && "error" in result) {
       const msg = typeof result.error === "string" ? result.error : String((result as { error?: unknown }).error ?? "Registration failed");
-      const status = msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique") ? 409 : 400;
-      return Response.json({ error: msg }, { status });
+      if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
+        return Response.json({ error: "This NRC number is already registered to another account." }, { status: 409 });
+      }
+      if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+        return Response.json({ error: "This phone number is already registered." }, { status: 409 });
+      }
+      return Response.json({ error: msg }, { status: 400 });
     }
 
     let responseBody: unknown = result;
@@ -111,11 +124,11 @@ export async function POST(req: Request) {
     const e = err as { message?: string; cause?: { message?: string }; name?: string; stack?: string };
     const msg = String(e?.message ?? (e?.cause && typeof e.cause === "object" && "message" in e.cause ? (e.cause as { message?: string }).message : "") ?? "");
 
+    if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
+      return Response.json({ error: "This NRC number is already registered to another account." }, { status: 409 });
+    }
     if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
-      return Response.json(
-        { error: "This phone number is already registered" },
-        { status: 409 },
-      );
+      return Response.json({ error: "This phone number is already registered." }, { status: 409 });
     }
 
     const errorMessage = msg.trim() || "Registration failed";

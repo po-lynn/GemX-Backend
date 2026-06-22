@@ -94,6 +94,9 @@ export async function createUserAction(formData: FormData) {
   } as Parameters<typeof auth.api.signUpEmail>[0]);
   if (result && "error" in result && result.error) {
     const msg = String(result.error);
+    if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
+      return { error: "This NRC number is already registered to another account." };
+    }
     if (
       msg.toLowerCase().includes("duplicate") ||
       msg.toLowerCase().includes("unique") ||
@@ -179,6 +182,9 @@ export async function updateUserAction(formData: FormData) {
     await updateUserInDb(userId, data);
   } catch (err) {
     const msg = String(err);
+    if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
+      return { error: "This NRC number is already registered to another account." };
+    }
     if (msg.includes("user_phone_unique") || (msg.includes("unique") && msg.includes("phone"))) {
       return { error: "This phone number is already associated with another account." };
     }
