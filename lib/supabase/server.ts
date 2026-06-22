@@ -49,3 +49,6 @@ export const CHAT_MEDIA_BUCKET = "chat-media"
 
 /** Bucket for category images (public for direct links). */
 export const CATEGORY_IMAGES_BUCKET = "category-images"
+
+/** Bucket for KYC verification documents (NRC photos, selfies, business licenses). Create in Supabase Dashboard > Storage. */
+export const KYC_DOCUMENTS_BUCKET = "kyc-documents"
