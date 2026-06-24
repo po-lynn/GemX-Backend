@@ -112,7 +112,7 @@ export async function getChatConversationsForUser(
     .groupBy(messages.senderId);
 
   // Single query for both "active session" and "last seen" presence data.
-  const { activeMap, touchMap } = await getPresenceMapsForUserIds(peerIds);
+  const { activeMap } = await getPresenceMapsForUserIds(peerIds);
 
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const unreadByPeer = new Map<string, number>();
