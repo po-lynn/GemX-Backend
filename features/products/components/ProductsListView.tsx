@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useRef, useState } from "react"
-import { Check, X, Archive } from "lucide-react"
+import { Check, X, Archive, CircleCheck } from "lucide-react"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/formatters"
 import { ListViewCard } from "@/components/admin/list-view"
@@ -82,11 +82,11 @@ function ProductFlags({ row }: { row: AdminProductRow }) {
 // ─── Status pill with product-specific labels ──────────────
 
 const STATUS_LABELS: Record<string, string> = {
+  draft:    "Draft",
   active:   "Active",
   pending:  "Pending",
   sold:     "Sold",
   archive:  "Archived",
-  hidden:   "Hidden",
   approved: "Approved",
   rejected: "Rejected",
 }
@@ -377,7 +377,7 @@ export function ProductsListView({
       id: "status",
       label: "Status",
       type: "multi",
-      options: (["active", "pending", "sold", "hidden", "archive"] as const).map((s) => ({
+      options: (["draft", "active", "pending", "sold", "archive"] as const).map((s) => ({
         value: s,
         label: STATUS_LABELS[s] ?? s,
         count: products.filter((p) => p.status === s).length,
@@ -562,6 +562,13 @@ export function ProductsListView({
               onClick={() => runBulk("reject", () => bulkSetProductModeration(ids, "rejected"), onClear, ids.length)}
             >
               <X /> {pendingAction === "reject" ? "Rejecting…" : "Reject"}
+            </button>
+            <button
+              className="lv-bulkbtn"
+              disabled={isPending}
+              onClick={() => runBulk("active", () => bulkSetProductStatus(ids, "active"), onClear, ids.length)}
+            >
+              <CircleCheck /> {pendingAction === "active" ? "Activating…" : "Active"}
             </button>
             <button
               className="lv-bulkbtn"

@@ -50,12 +50,12 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   const viewFilter = {
     all:       statusFilter === "archive"
                  ? { status: "archive" as const }
-                 : { excludeStatuses: ["archive"] as const },
-    pending:   { moderationStatus: "pending" as const },
-    featured:  { isFeatured: true },
-    collector: { isCollectorPiece: true },
+                 : { excludeStatuses: ["archive", "draft"] as const },
+    pending:   { moderationStatus: "pending" as const, excludeStatuses: ["archive", "draft"] as const },
+    featured:  { isFeatured: true, excludeStatuses: ["archive", "draft"] as const },
+    collector: { isCollectorPiece: true, excludeStatuses: ["archive", "draft"] as const },
     sold:      { status: "sold" as const },
-    drafts:    { status: "hidden" as const },
+    drafts:    { status: "draft" as const },
   }[view]
 
   const [counts, { products, total }] = await Promise.all([

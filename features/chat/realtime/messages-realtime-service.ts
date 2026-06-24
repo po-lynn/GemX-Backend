@@ -26,9 +26,19 @@ class MessagesRealtimeService {
   private readonly userId: string;
   private channel: RealtimeChannel | null = null;
   private processedIds = new Set<string>();
+  private static readonly MAX_PROCESSED_IDS = 500;
 
   constructor(userId: string) {
     this.userId = userId;
+  }
+
+  private trackProcessed(id: string): boolean {
+    if (this.processedIds.has(id)) return false;
+    if (this.processedIds.size >= MessagesRealtimeService.MAX_PROCESSED_IDS) {
+      this.processedIds.delete(this.processedIds.keys().next().value as string);
+    }
+    this.processedIds.add(id);
+    return true;
   }
 
   subscribe(handlers: MessagesRealtimeHandlers): () => void {
@@ -47,8 +57,7 @@ class MessagesRealtimeService {
       .on("broadcast", { event: "new_message" }, ({ payload }) => {
         try {
           const row = normalizeChatMessageRow(payload as Record<string, unknown>);
-          if (this.processedIds.has(row.id)) return;
-          this.processedIds.add(row.id);
+          if (!this.trackProcessed(row.id)) return;
           handlers.onInsert?.(row);
         } catch (e) {
           chatRealtimeLogger.error("new_message handler failed", {
@@ -106,6 +115,7 @@ class MessagesRealtimeService {
     const supabase = getSupabaseBrowserClient();
     if (supabase) void supabase.removeChannel(this.channel);
     this.channel = null;
+    this.processedIds.clear();
     chatRealtimeLogger.info("Unsubscribed from chat broadcast channel", {
       userId: this.userId,
     });

@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { db } from "@/drizzle/db"
 import { user as userTable } from "@/drizzle/schema"
-import { eq, and, ne } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { nrcSchema } from "@/lib/nrc"
 
 const urlField = z.string().url().optional().nullable()
@@ -34,17 +34,6 @@ export async function PATCH(request: NextRequest) {
 
   const data = parsed.data
 
-  if (data.nrc != null) {
-    const existing = await db
-      .select({ id: userTable.id })
-      .from(userTable)
-      .where(and(eq(userTable.nrc, data.nrc), ne(userTable.id, session.user.id)))
-      .limit(1)
-    if (existing.length > 0) {
-      return jsonError("This NRC number is already registered to another account.", 409)
-    }
-  }
-
   const updates: Record<string, unknown> = {}
   if (data.nrc !== undefined) updates.nrc = data.nrc
   if (data.address !== undefined) updates.address = data.address
@@ -58,7 +47,15 @@ export async function PATCH(request: NextRequest) {
 
   if (Object.keys(updates).length > 0) {
     updates.updatedAt = new Date()
-    await db.update(userTable).set(updates).where(eq(userTable.id, session.user.id))
+    try {
+      await db.update(userTable).set(updates).where(eq(userTable.id, session.user.id))
+    } catch (err: unknown) {
+      const msg = String((err as { message?: string })?.message ?? "")
+      if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
+        return jsonError("This NRC number is already registered to another account.", 409)
+      }
+      throw err
+    }
   }
 
   return jsonUncached({ ok: true })

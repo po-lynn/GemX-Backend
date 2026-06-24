@@ -64,11 +64,11 @@ const MODERATION_STATUS_OPTIONS = [
 ]
 
 const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
   { value: "pending", label: "Pending" },
   { value: "active", label: "Active" },
   { value: "archive", label: "Archive" },
   { value: "sold", label: "Sold" },
-  { value: "hidden", label: "Hidden" },
 ]
 
 function getGemHue(categoryName?: string | null): number {
@@ -703,8 +703,8 @@ export function ProductForm({
   const [productType, setProductType] = useState<"loose_stone" | "jewellery">(
     product?.productType ?? "loose_stone"
   )
-  const [status, setStatus] = useState<"pending" | "active" | "archive" | "sold" | "hidden">(
-    (product?.status as "pending" | "active" | "archive" | "sold" | "hidden") ?? "active"
+  const [status, setStatus] = useState<"draft" | "pending" | "active" | "archive" | "sold">(
+    (product?.status as "draft" | "pending" | "active" | "archive" | "sold") ?? "draft"
   )
   const [moderationStatus, setModerationStatus] = useState<"pending" | "approved" | "rejected">(
     product?.moderationStatus ?? "pending"
@@ -1031,7 +1031,7 @@ export function ProductForm({
       if (!isEdit) {
         formRef.current?.reset()
         setProductType("loose_stone")
-        setStatus("active")
+        setStatus("draft")
         setModerationStatus("pending")
         setIsFeatured(false)
         setIsCollectorPiece(false)

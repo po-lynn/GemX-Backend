@@ -174,10 +174,10 @@ export function ProductFilters({
               className={fieldClass}
             >
               <option value="">All statuses</option>
+              <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="archive">Archive</option>
               <option value="sold">Sold</option>
-              <option value="hidden">Hidden</option>
             </select>
           </div>
 

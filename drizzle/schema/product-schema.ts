@@ -15,11 +15,11 @@ import { category, productTypeEnum } from "./category-schema";
 import { laboratory } from "./laboratory-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
+  "draft",    // Created but not published — not visible to buyers
   "pending",  // Waiting admin verification (collector pieces)
   "active",   // In Stock
   "archive",  // Archived
   "sold",     // Sold
-  "hidden",   // Reserved / hidden
 ]);
 
 export const productModerationEnum = pgEnum("product_moderation", [
@@ -108,7 +108,7 @@ export const product = pgTable(
     certReportUrl: text("cert_report_url"),
     /** Internal / cert-related notes (admin form; optional on listings) */
     additionalMemos: text("additional_memos"),
-    status: productStatusEnum("status").notNull().default("active"),
+    status: productStatusEnum("status").notNull().default("draft"),
     moderationStatus: productModerationEnum("moderation_status")
       .notNull()
       .default("pending"),

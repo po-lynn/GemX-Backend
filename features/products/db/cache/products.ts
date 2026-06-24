@@ -29,8 +29,8 @@ export async function getAdminProducts(opts: {
   search?: string
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
-  status?: "pending" | "active" | "archive" | "sold" | "hidden"
-  excludeStatuses?: ReadonlyArray<"pending" | "active" | "archive" | "sold" | "hidden">
+  status?: "draft" | "pending" | "active" | "archive" | "sold"
+  excludeStatuses?: ReadonlyArray<"draft" | "pending" | "active" | "archive" | "sold">
   moderationStatus?: "pending" | "approved" | "rejected"
   excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   stoneCut?: "Faceted" | "Cabochon"
@@ -68,7 +68,7 @@ export async function getCachedProductsBySellerId(
     search?: string
     productType?: "loose_stone" | "jewellery"
     categoryId?: string | null
-    status?: "pending" | "active" | "archive" | "sold" | "hidden"
+    status?: "draft" | "pending" | "active" | "archive" | "sold"
     moderationStatus?: "pending" | "approved" | "rejected"
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"

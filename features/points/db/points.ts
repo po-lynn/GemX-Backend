@@ -7,7 +7,7 @@ import {
   premiumDealersPackage,
 } from "@/drizzle/schema/points-schema";
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
-import { and, count, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, lte, ne, or, sql } from "drizzle-orm";
 
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
@@ -828,50 +828,60 @@ export async function approvePointPurchaseRequest(
   adminId: string,
   adminNote?: string | null
 ): Promise<{ success: false; reason: "not_found" | "not_pending" } | { success: true; pointsAdded: number; updatedPoints: number | null }> {
-  const [existing] = await db
-    .select({
-      id: pointPurchaseRequest.id,
-      userId: pointPurchaseRequest.userId,
-      points: pointPurchaseRequest.points,
-      status: pointPurchaseRequest.status,
-      packageName: pointPurchaseRequest.packageName,
-      paymentMethod: pointPurchaseRequest.paymentMethod,
-    })
-    .from(pointPurchaseRequest)
-    .where(eq(pointPurchaseRequest.id, requestId))
-    .limit(1);
-  if (!existing) return { success: false, reason: "not_found" };
-  if (existing.status !== "pending") return { success: false, reason: "not_pending" };
+  return db.transaction(async (tx) => {
+    // Atomic status flip: only succeeds if currently pending — prevents double-approval race.
+    const [approved] = await tx
+      .update(pointPurchaseRequest)
+      .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+      .where(and(eq(pointPurchaseRequest.id, requestId), eq(pointPurchaseRequest.status, "pending")))
+      .returning({
+        userId: pointPurchaseRequest.userId,
+        points: pointPurchaseRequest.points,
+        packageName: pointPurchaseRequest.packageName,
+        paymentMethod: pointPurchaseRequest.paymentMethod,
+      });
 
-  await db
-    .update(pointPurchaseRequest)
-    .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
-    .where(eq(pointPurchaseRequest.id, requestId));
+    if (!approved) {
+      const [existing] = await tx
+        .select({ id: pointPurchaseRequest.id })
+        .from(pointPurchaseRequest)
+        .where(eq(pointPurchaseRequest.id, requestId))
+        .limit(1);
+      return { success: false as const, reason: (existing ? "not_pending" : "not_found") as "not_found" | "not_pending" };
+    }
 
-  const credited = await creditUserPoints(existing.userId, existing.points);
+    const safe = Math.max(0, Math.floor(Number(approved.points)) || 0);
+    const [credited] = await tx
+      .update(user)
+      .set({
+        points: sql`${user.points} + ${safe}`,
+        pointsLifetime: sql`${user.pointsLifetime} + ${safe}`,
+      })
+      .where(eq(user.id, approved.userId))
+      .returning({ points: user.points });
 
-  // Update the pending transaction row (created when request was submitted) to completed,
-  // or insert a new completed row if the request predates the ledger.
-  const updated = await db
-    .update(pointTransaction)
-    .set({ status: "completed" })
-    .where(and(eq(pointTransaction.referenceId, requestId), eq(pointTransaction.status, "pending")))
-    .returning({ id: pointTransaction.id });
-  if (updated.length === 0) {
-    await logPointTransaction({
-      userId: existing.userId,
-      type: "topup",
-      direction: "credit",
-      amount: existing.points,
-      status: "completed",
-      referenceId: requestId,
-      referenceType: "purchase_request",
-      description: existing.paymentMethod ? `Top-up via ${existing.paymentMethod}` : `Top-up · ${existing.packageName}`,
-      paymentMethod: existing.paymentMethod ?? null,
-    });
-  }
+    // Update the pending transaction row to completed, or insert a new one if the request predates the ledger.
+    const updatedLedger = await tx
+      .update(pointTransaction)
+      .set({ status: "completed" })
+      .where(and(eq(pointTransaction.referenceId, requestId), eq(pointTransaction.status, "pending")))
+      .returning({ id: pointTransaction.id });
+    if (updatedLedger.length === 0) {
+      await tx.insert(pointTransaction).values({
+        userId: approved.userId,
+        type: "topup",
+        direction: "credit",
+        amount: approved.points,
+        status: "completed",
+        referenceId: requestId,
+        referenceType: "purchase_request",
+        description: approved.paymentMethod ? `Top-up via ${approved.paymentMethod}` : `Top-up · ${approved.packageName}`,
+        paymentMethod: approved.paymentMethod ?? null,
+      });
+    }
 
-  return { success: true, pointsAdded: existing.points, updatedPoints: credited.updatedPoints };
+    return { success: true as const, pointsAdded: approved.points, updatedPoints: credited?.points ?? null };
+  });
 }
 
 export async function rejectPointPurchaseRequest(
@@ -944,21 +954,37 @@ export async function overrideApprovePointPurchaseRequest(
   adminId: string,
   adminNote?: string | null
 ): Promise<{ success: false; reason: "not_found" | "already_approved" } | { success: true; pointsAdded: number }> {
-  const [existing] = await db
-    .select({ id: pointPurchaseRequest.id, userId: pointPurchaseRequest.userId, points: pointPurchaseRequest.points, status: pointPurchaseRequest.status })
-    .from(pointPurchaseRequest)
-    .where(eq(pointPurchaseRequest.id, requestId))
-    .limit(1);
-  if (!existing) return { success: false, reason: "not_found" };
-  if (existing.status === "approved") return { success: false, reason: "already_approved" };
+  return db.transaction(async (tx) => {
+    // Atomic status flip: only succeeds if not already approved — prevents double-credit race.
+    const [approved] = await tx
+      .update(pointPurchaseRequest)
+      .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
+      .where(and(eq(pointPurchaseRequest.id, requestId), ne(pointPurchaseRequest.status, "approved")))
+      .returning({
+        userId: pointPurchaseRequest.userId,
+        points: pointPurchaseRequest.points,
+      });
 
-  await db
-    .update(pointPurchaseRequest)
-    .set({ status: "approved", adminNote: adminNote ?? null, reviewedByAdminId: adminId, reviewedAt: new Date() })
-    .where(eq(pointPurchaseRequest.id, requestId));
+    if (!approved) {
+      const [existing] = await tx
+        .select({ id: pointPurchaseRequest.id })
+        .from(pointPurchaseRequest)
+        .where(eq(pointPurchaseRequest.id, requestId))
+        .limit(1);
+      return { success: false as const, reason: (existing ? "already_approved" : "not_found") as "not_found" | "already_approved" };
+    }
 
-  await creditUserPoints(existing.userId, existing.points);
-  return { success: true, pointsAdded: existing.points };
+    const safe = Math.max(0, Math.floor(Number(approved.points)) || 0);
+    await tx
+      .update(user)
+      .set({
+        points: sql`${user.points} + ${safe}`,
+        pointsLifetime: sql`${user.pointsLifetime} + ${safe}`,
+      })
+      .where(eq(user.id, approved.userId));
+
+    return { success: true as const, pointsAdded: approved.points };
+  });
 }
 
 export async function overrideRejectPointPurchaseRequest(
@@ -1223,23 +1249,26 @@ export type AutoRenewalResult = {
  * Returns counts for monitoring/logging.
  */
 export async function processAutoRenewals(): Promise<AutoRenewalResult> {
-  const expiredRows = await db
-    .select({
-      id: premiumDealersPackage.id,
-      userId: premiumDealersPackage.userId,
-      packageName: premiumDealersPackage.packageName,
-      endDate: premiumDealersPackage.endDate,
-      autoRenew: premiumDealersPackage.autoRenew,
-    })
-    .from(premiumDealersPackage)
+  // Atomically claim all expired-active rows in one statement — concurrent cron runs
+  // find nothing to claim because the rows are already marked expired.
+  const claimed = await db
+    .update(premiumDealersPackage)
+    .set({ status: "expired" })
     .where(
       and(
         eq(premiumDealersPackage.status, "active"),
         lte(premiumDealersPackage.endDate, sql`now()`)
       )
-    );
+    )
+    .returning({
+      id: premiumDealersPackage.id,
+      userId: premiumDealersPackage.userId,
+      packageName: premiumDealersPackage.packageName,
+      endDate: premiumDealersPackage.endDate,
+      autoRenew: premiumDealersPackage.autoRenew,
+    });
 
-  if (expiredRows.length === 0) return { renewed: 0, expired: 0, failed: 0 };
+  if (claimed.length === 0) return { renewed: 0, expired: 0, failed: 0 };
 
   const settings = await getPremiumDealersSettings();
   const packagesByName = new Map(settings.packages.map((p) => [p.name, p]));
@@ -1248,22 +1277,16 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
   let expired = 0;
   let failed = 0;
 
-  for (const row of expiredRows) {
+  for (const row of claimed) {
     const pkg = row.autoRenew ? packagesByName.get(row.packageName) : undefined;
 
     if (pkg) {
       const cost = Math.max(0, Math.floor(pkg.pointsRequired));
       const newStart = new Date();
       const newExpiry = new Date(newStart.getTime() + pkg.durationDays * 24 * 60 * 60 * 1000);
-
       const renewedSubId = crypto.randomUUID();
-      const didRenew = await db.transaction(async (tx) => {
-        // Mark old subscription expired
-        await tx
-          .update(premiumDealersPackage)
-          .set({ status: "expired" })
-          .where(eq(premiumDealersPackage.id, row.id));
 
+      const didRenew = await db.transaction(async (tx) => {
         // Attempt point deduction
         const [updatedUser] = await tx
           .update(user)
@@ -1272,7 +1295,7 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
           .returning({ points: user.points });
 
         if (!updatedUser) {
-          // Insufficient points — clear user cache and revert role
+          // Insufficient points — revert role (row already expired above)
           await tx
             .update(user)
             .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
@@ -1282,7 +1305,7 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
           return false;
         }
 
-        // Insert new subscription
+        // Insert new active subscription
         await tx.insert(premiumDealersPackage).values({
           id: renewedSubId,
           userId: row.userId,
@@ -1304,7 +1327,6 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
           description: `Premium renewal · ${pkg.name}`,
         });
 
-        // Update user cache fields and ensure role stays portal
         await tx
           .update(user)
           .set({ role: "portal", premiumDealerPackageName: pkg.name, premiumDealerExpiresAt: newExpiry })
@@ -1319,20 +1341,13 @@ export async function processAutoRenewals(): Promise<AutoRenewalResult> {
         failed++;
       }
     } else {
-      // No auto-renew or package no longer configured — expire and revert role
-      await db.transaction(async (tx) => {
-        await tx
-          .update(premiumDealersPackage)
-          .set({ status: "expired" })
-          .where(eq(premiumDealersPackage.id, row.id));
-
-        await tx
-          .update(user)
-          .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
-          .where(
-            and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
-          );
-      });
+      // No auto-renew or package no longer configured — revert role (row already expired above)
+      await db
+        .update(user)
+        .set({ role: "user", premiumDealerPackageName: null, premiumDealerExpiresAt: null })
+        .where(
+          and(eq(user.id, row.userId), eq(user.premiumDealerExpiresAt, row.endDate))
+        );
       expired++;
     }
   }

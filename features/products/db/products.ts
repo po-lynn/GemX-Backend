@@ -106,7 +106,7 @@ export type AdminProductRow = {
   categoryName: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
-  status: "pending" | "active" | "archive" | "sold" | "hidden"
+  status: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   /** When featured listing expires (`featured_expires_at`); null if no expiry set */
@@ -130,8 +130,8 @@ export async function getAdminProductsFromDb(opts: {
   search?: string
   productType?: "loose_stone" | "jewellery"
   categoryId?: string | null
-  status?: "pending" | "active" | "archive" | "sold" | "hidden"
-  excludeStatuses?: ReadonlyArray<"pending" | "active" | "archive" | "sold" | "hidden">
+  status?: "draft" | "pending" | "active" | "archive" | "sold"
+  excludeStatuses?: ReadonlyArray<"draft" | "pending" | "active" | "archive" | "sold">
   moderationStatus?: "pending" | "approved" | "rejected"
   excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   stoneCut?: "Faceted" | "Cabochon"
@@ -392,7 +392,7 @@ export async function getProductsBySellerId(
     search?: string
     productType?: "loose_stone" | "jewellery"
     categoryId?: string | null
-    status?: "pending" | "active" | "archive" | "sold" | "hidden"
+    status?: "draft" | "pending" | "active" | "archive" | "sold"
     moderationStatus?: "pending" | "approved" | "rejected"
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
@@ -609,7 +609,7 @@ export type ProductForEdit = {
   certReportDate: string | null
   certReportUrl: string | null
   additionalMemos: string | null
-  status: "pending" | "active" | "archive" | "sold" | "hidden"
+  status: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
   featured: number
@@ -837,7 +837,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
     additionalMemos: input.additionalMemos ?? null,
-    status: input.isCollectorPiece === true ? "pending" : (input.status ?? "active"),
+    status: input.isCollectorPiece === true ? "pending" : (input.status ?? "draft"),
     moderationStatus: input.moderationStatus ?? "pending",
     isFeatured: input.isFeatured ?? false,
     featured: input.featured ?? 0,
@@ -949,7 +949,7 @@ export type UpdateProductInput = {
   certReportDate?: string | null
   certReportUrl?: string | null
   additionalMemos?: string | null
-  status?: "pending" | "active" | "archive" | "sold" | "hidden"
+  status?: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus?: "pending" | "approved" | "rejected"
   isFeatured?: boolean
   featured?: number
@@ -1165,7 +1165,14 @@ export async function updateProductInDb(
     }
   }
 
-  if (Object.keys(updates).length > 0 || logValues.length > 0) {
+  const hasAnyChange =
+    Object.keys(updates).length > 0 ||
+    logValues.length > 0 ||
+    jewelleryGemstones !== undefined ||
+    imageUrls !== undefined ||
+    videoUrls !== undefined
+
+  if (hasAnyChange) {
     await db.transaction(async (tx) => {
       if (Object.keys(updates).length > 0) {
         await tx.update(product).set(updates).where(eq(product.id, id))
@@ -1173,56 +1180,56 @@ export async function updateProductInDb(
       if (logValues.length > 0) {
         await tx.insert(productAdminChangeLog).values(logValues)
       }
+
+      if (jewelleryGemstones !== undefined) {
+        await tx.delete(productJewelleryGemstone).where(eq(productJewelleryGemstone.productId, id))
+        const gemstonesWithCategory = jewelleryGemstones.filter((g) => g.categoryId)
+        if (gemstonesWithCategory.length > 0) {
+          await tx.insert(productJewelleryGemstone).values(
+            gemstonesWithCategory.map((g) => ({
+              productId: id,
+              categoryId: g.categoryId!,
+              pieceCount: g.pieceCount ?? null,
+              weightCarat: g.weightCarat,
+              dimensions: g.dimensions ?? null,
+              color: g.color ?? null,
+              shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
+              origin: g.origin ?? null,
+              cut: g.cut ?? null,
+              transparency: g.transparency ?? null,
+              comment: g.comment ?? null,
+              inclusions: g.inclusions ?? null,
+            }))
+          )
+        }
+      }
+
+      if (imageUrls !== undefined) {
+        await tx.delete(productImage).where(eq(productImage.productId, id))
+        if (imageUrls.length > 0) {
+          await tx.insert(productImage).values(
+            imageUrls.map((url, i) => ({
+              productId: id,
+              url,
+              sortOrder: i,
+            }))
+          )
+        }
+      }
+
+      if (videoUrls !== undefined) {
+        await tx.delete(productVideo).where(eq(productVideo.productId, id))
+        if (videoUrls.length > 0) {
+          await tx.insert(productVideo).values(
+            videoUrls.map((url: string, i: number) => ({
+              productId: id,
+              url,
+              sortOrder: i,
+            }))
+          )
+        }
+      }
     })
-  }
-
-  if (jewelleryGemstones !== undefined) {
-    await db.delete(productJewelleryGemstone).where(eq(productJewelleryGemstone.productId, id))
-    const gemstonesWithCategory = jewelleryGemstones.filter((g) => g.categoryId)
-    if (gemstonesWithCategory.length > 0) {
-      await db.insert(productJewelleryGemstone).values(
-        gemstonesWithCategory.map((g) => ({
-          productId: id,
-          categoryId: g.categoryId!,
-          pieceCount: g.pieceCount ?? null,
-          weightCarat: g.weightCarat,
-          dimensions: g.dimensions ?? null,
-          color: g.color ?? null,
-          shape: (g.shape as (typeof productJewelleryGemstone.$inferInsert)["shape"]) ?? null,
-          origin: g.origin ?? null,
-          cut: g.cut ?? null,
-          transparency: g.transparency ?? null,
-          comment: g.comment ?? null,
-          inclusions: g.inclusions ?? null,
-        }))
-      )
-    }
-  }
-
-  if (imageUrls !== undefined) {
-    await db.delete(productImage).where(eq(productImage.productId, id))
-    if (imageUrls.length > 0) {
-      await db.insert(productImage).values(
-        imageUrls.map((url, i) => ({
-          productId: id,
-          url,
-          sortOrder: i,
-        }))
-      )
-    }
-  }
-
-  if (videoUrls !== undefined) {
-    await db.delete(productVideo).where(eq(productVideo.productId, id))
-    if (videoUrls.length > 0) {
-      await db.insert(productVideo).values(
-        videoUrls.map((url: string, i: number) => ({
-          productId: id,
-          url,
-          sortOrder: i,
-        }))
-      )
-    }
   }
 }
 
@@ -1245,12 +1252,12 @@ export async function getAdminProductCountsFromDb(): Promise<{
 }> {
   const [row] = await db
     .select({
-      all:       sql<number>`count(*) filter (where ${product.status} != 'archive')::int`,
-      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} != 'archive')::int`,
-      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} != 'archive')::int`,
-      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} != 'archive')::int`,
+      all:       sql<number>`count(*) filter (where ${product.status} not in ('archive', 'draft'))::int`,
+      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} not in ('archive', 'draft'))::int`,
+      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} not in ('archive', 'draft'))::int`,
+      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} not in ('archive', 'draft'))::int`,
       sold:      sql<number>`count(*) filter (where ${product.status} = 'sold')::int`,
-      drafts:    sql<number>`count(*) filter (where ${product.status} = 'hidden')::int`,
+      drafts:    sql<number>`count(*) filter (where ${product.status} = 'draft')::int`,
     })
     .from(product)
   return row ?? { all: 0, pending: 0, featured: 0, collector: 0, sold: 0, drafts: 0 }
@@ -1266,12 +1273,12 @@ export async function getPortalProductCountsFromDb(sellerId: string): Promise<{
 }> {
   const [row] = await db
     .select({
-      all:       sql<number>`count(*) filter (where ${product.status} != 'archive')::int`,
-      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} != 'archive')::int`,
-      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} != 'archive')::int`,
-      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} != 'archive')::int`,
+      all:       sql<number>`count(*) filter (where ${product.status} not in ('archive', 'draft'))::int`,
+      pending:   sql<number>`count(*) filter (where ${product.moderationStatus} = 'pending' and ${product.status} not in ('archive', 'draft'))::int`,
+      featured:  sql<number>`count(*) filter (where ${product.isFeatured} = true and ${product.status} not in ('archive', 'draft'))::int`,
+      collector: sql<number>`count(*) filter (where ${product.isCollectorPiece} = true and ${product.status} not in ('archive', 'draft'))::int`,
       sold:      sql<number>`count(*) filter (where ${product.status} = 'sold')::int`,
-      drafts:    sql<number>`count(*) filter (where ${product.status} = 'hidden')::int`,
+      drafts:    sql<number>`count(*) filter (where ${product.status} = 'draft')::int`,
     })
     .from(product)
     .where(eq(product.sellerId, sellerId))

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const invalid = validateUploadFile(file, ALLOWED_CERT_TYPES, MAX_CERT_SIZE_BYTES)
+    const invalid = await validateUploadFile(file, ALLOWED_CERT_TYPES, MAX_CERT_SIZE_BYTES)
     if (invalid) return invalid
 
     const fallbackExt = file.type === "application/pdf" ? "pdf" : "jpg"

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return jsonError("Invalid input", 400)
 
     const settings = await getPremiumDealersSettings()
-    const pkg = settings.packages.find((p) => p.name === parsed.data.packageName)
+    const pkg = settings.packages.find((p) => p.name === parsed.data.packageName && p.enabled !== false)
     if (!pkg) return jsonError("Package not found", 400)
 
     const result = await activatePremiumDealer(

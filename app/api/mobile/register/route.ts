@@ -8,8 +8,24 @@ import { user as userTable } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { normalizeMyanmarPhone, internalEmailFromPhone } from "@/lib/phone";
 import { validateNrc } from "@/lib/nrc";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: "Too many registration attempts. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   try {
     const body = await req.json();
 

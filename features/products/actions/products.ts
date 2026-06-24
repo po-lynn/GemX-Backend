@@ -14,7 +14,8 @@ import {
 } from "@/features/products/db/products"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
-import { eq, inArray } from "drizzle-orm"
+import { user } from "@/drizzle/schema/auth-schema"
+import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
 import { requireActionRole } from "@/lib/action-guard"
@@ -242,10 +243,22 @@ export async function updateProductAction(formData: FormData) {
   const nextPoints = data.isFeatured === true ? Math.max(0, data.featured ?? previousPoints) : 0
   const additionalPointsNeeded = Math.max(0, nextPoints - previousPoints)
   if (additionalPointsNeeded > 0) {
-    const deduction = await deductUserPoints(currentRow.sellerId, additionalPointsNeeded)
-    if (!deduction.success) {
-      return { error: "Insufficient points balance" }
-    }
+    const safe = Math.max(0, Math.floor(additionalPointsNeeded))
+    const ok = await db.transaction(async (tx) => {
+      const [deducted] = await tx
+        .update(user)
+        .set({ points: sql`${user.points} - ${safe}` })
+        .where(and(eq(user.id, currentRow.sellerId), gte(user.points, safe)))
+        .returning({ id: user.id })
+      if (!deducted) return false
+      // Set featured flag atomically with the deduction so neither can succeed without the other.
+      // updateProductInDb below will write the same values again via its own transaction (idempotent).
+      await tx.update(product)
+        .set({ isFeatured: true, featured: nextPoints })
+        .where(eq(product.id, productId))
+      return true
+    })
+    if (!ok) return { error: "Insufficient points balance" }
   }
 
   await updateProductInDb(
@@ -332,7 +345,7 @@ export async function bulkSetProductModeration(
 
 export async function bulkSetProductStatus(
   ids: string[],
-  status: "pending" | "active" | "archive" | "sold" | "hidden"
+  status: "draft" | "pending" | "active" | "archive" | "sold"
 ) {
   if (!ids.length) return { error: "No products selected" }
 

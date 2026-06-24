@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const urls: string[] = []
     for (const file of files) {
-      const invalid = validateUploadFile(file, allowedTypes, maxSize)
+      const invalid = await validateUploadFile(file, allowedTypes, maxSize)
       if (invalid) return invalid
 
       const result = await uploadFileToBucket(ctx.supabase, {

@@ -3,8 +3,24 @@ import { auth } from "@/lib/auth";
 import { mobileDevicePayloadSchema } from "@/features/notifications/schemas/device";
 import { handleAuthDeviceAndNotifications } from "@/features/notifications/services/register-device-on-auth";
 import { normalizeMyanmarPhone, internalEmailFromPhone } from "@/lib/phone";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  const rl = rateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
+  if (!rl.allowed) {
+    return Response.json(
+      { error: "Too many login attempts. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
+
   try {
     const body = await req.json();
 

@@ -7,12 +7,12 @@ type View = (typeof VALID_VIEWS)[number]
 
 function buildViewFilter(view: View) {
   switch (view) {
-    case "pending":   return { moderationStatus: "pending" as const }
-    case "featured":  return { isFeatured: true as const }
-    case "collector": return { isCollectorPiece: true as const }
+    case "pending":   return { moderationStatus: "pending" as const, excludeStatuses: ["archive", "draft"] as const }
+    case "featured":  return { isFeatured: true as const, excludeStatuses: ["archive", "draft"] as const }
+    case "collector": return { isCollectorPiece: true as const, excludeStatuses: ["archive", "draft"] as const }
     case "sold":      return { status: "sold" as const }
-    case "drafts":    return { status: "hidden" as const }
-    default:          return { excludeStatuses: ["archive"] as const }
+    case "drafts":    return { status: "draft" as const }
+    default:          return { excludeStatuses: ["archive", "draft"] as const }
   }
 }
 

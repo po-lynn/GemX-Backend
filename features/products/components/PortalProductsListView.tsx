@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useRef, useState } from "react"
-import { Archive, Trash2 } from "lucide-react"
+import { Archive, CircleCheck, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/formatters"
 import { ListViewCard } from "@/components/admin/list-view"
@@ -12,6 +12,7 @@ import type { AdminProductRow } from "@/features/products/db/products"
 import {
   bulkDeletePortalProductAction,
   bulkArchivePortalProductAction,
+  bulkActivatePortalProductAction,
 } from "@/features/products/actions/portal-products"
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -71,11 +72,11 @@ function ProductFlags({ row }: { row: AdminProductRow }) {
 // ─── Status pill with product-specific labels ──────────────
 
 const STATUS_LABELS: Record<string, string> = {
+  draft:    "Draft",
   active:   "Active",
   pending:  "Pending",
   sold:     "Sold",
   archive:  "Archived",
-  hidden:   "Hidden",
   approved: "Approved",
   rejected: "Rejected",
 }
@@ -348,7 +349,7 @@ export function PortalProductsListView({
       id: "status",
       label: "Status",
       type: "multi",
-      options: (["active", "pending", "sold", "hidden", "archive"] as const).map((s) => ({
+      options: (["draft", "active", "pending", "sold", "archive"] as const).map((s) => ({
         value: s,
         label: STATUS_LABELS[s] ?? s,
         count: products.filter((p) => p.status === s).length,
@@ -517,6 +518,13 @@ export function PortalProductsListView({
         const ids = rows.map((r) => r.id)
         return (
           <>
+            <button
+              className="lv-bulkbtn"
+              disabled={isPending}
+              onClick={() => runBulk("active", () => bulkActivatePortalProductAction(ids), onClear, ids.length)}
+            >
+              <CircleCheck /> {pendingAction === "active" ? "Activating…" : "Active"}
+            </button>
             <button
               className="lv-bulkbtn"
               disabled={isPending}

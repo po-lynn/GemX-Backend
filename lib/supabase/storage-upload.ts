@@ -34,12 +34,27 @@ export async function requireUploadContext(
   return { ctx: { user: session.user as SessionUser, supabase } }
 }
 
-/** Validate MIME type and size; returns a 400 Response on failure, null when valid. */
-export function validateUploadFile(
+/** Magic-byte signatures for every MIME type accepted by upload routes. */
+const MAGIC: Record<string, (b: Uint8Array) => boolean> = {
+  "image/jpeg":        (b) => b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF,
+  "image/png":         (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47,
+  "image/gif":         (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38,
+  // WebP: RIFF....WEBP (12 bytes)
+  "image/webp":        (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46
+                            && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+  "application/pdf":   (b) => b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46,
+  // MP4 and MOV both use an ISO base media ftyp box at offset 4
+  "video/mp4":         (b) => b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70,
+  "video/quicktime":   (b) => b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70,
+  "video/webm":        (b) => b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3,
+}
+
+/** Validate MIME type, magic bytes, and size; returns a 400 Response on failure, null when valid. */
+export async function validateUploadFile(
   file: File,
   allowedTypes: readonly string[],
   maxSizeBytes: number
-): Response | null {
+): Promise<Response | null> {
   if (!allowedTypes.includes(file.type)) {
     return jsonError(
       `Invalid file type: ${file.name}. Allowed: ${allowedTypes.join(", ")}`,
@@ -51,6 +66,16 @@ export function validateUploadFile(
       `File too large: ${file.name}. Max size: ${maxSizeBytes / 1024 / 1024} MB`,
       400
     )
+  }
+  const checker = MAGIC[file.type]
+  if (checker) {
+    const header = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+    if (!checker(header)) {
+      return jsonError(
+        `File content does not match declared type: ${file.name}`,
+        400
+      )
+    }
   }
   return null
 }

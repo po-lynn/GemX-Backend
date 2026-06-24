@@ -5,10 +5,10 @@ import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { user } from "@/drizzle/schema/auth-schema"
+import { pointTransaction } from "@/drizzle/schema/points-schema"
 import {
   getFeatureSettings,
   getUserPointBalance,
-  logPointTransaction,
 } from "@/features/points/db/points"
 import { CACHE_CONTROL_NO_STORE, jsonError, jsonUncached } from "@/lib/api"
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
@@ -129,23 +129,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         })
         .where(eq(product.id, id))
 
+      await tx.insert(pointTransaction).values({
+        userId: session.user.id,
+        type: "feature_activation",
+        direction: "debit",
+        amount: selectedTier.points,
+        status: "completed",
+        referenceId: id,
+        referenceType: "product",
+        description: `Featured · ${selectedTier.durationDays}d`,
+      })
+
       return { ok: true as const, remainingPoints: updatedUser.points }
     })
 
     if (!result.ok) {
       return jsonError("Insufficient points balance", 400)
     }
-
-    await logPointTransaction({
-      userId: session.user.id,
-      type: "feature_activation",
-      direction: "debit",
-      amount: selectedTier.points,
-      status: "completed",
-      referenceId: id,
-      referenceType: "product",
-      description: `Featured · ${selectedTier.durationDays}d`,
-    })
 
     revalidateProductsCache(id)
     return jsonUncached({

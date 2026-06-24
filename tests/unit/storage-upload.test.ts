@@ -58,30 +58,41 @@ describe("requireUploadContext", () => {
 
 describe("validateUploadFile", () => {
   const ALLOWED = ["image/png"]
+  // Minimal valid PNG: starts with the 8-byte PNG signature
+  const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
 
   // Disallowed MIME types are rejected with a 400 listing the allowed types
   it("returns 400 for a disallowed MIME type", async () => {
     const file = new File(["x"], "a.exe", { type: "application/octet-stream" })
-    const res = validateUploadFile(file, ALLOWED, 1024)
+    const res = await validateUploadFile(file, ALLOWED, 1024)
     expect(res?.status).toBe(400)
     const data = await res!.json()
     expect(data.error).toContain("Invalid file type")
     expect(data.error).toContain("image/png")
   })
 
-  // Oversized files are rejected with the max size in MB
+  // Oversized files are rejected before reaching the magic-byte check
   it("returns 400 for an oversized file", async () => {
-    const file = new File(["xx"], "a.png", { type: "image/png" })
-    const res = validateUploadFile(file, ALLOWED, 1)
+    const file = new File([PNG_HEADER], "a.png", { type: "image/png" })
+    const res = await validateUploadFile(file, ALLOWED, 1)
     expect(res?.status).toBe(400)
     const data = await res!.json()
     expect(data.error).toContain("File too large")
   })
 
-  // Valid files return null (no error Response)
-  it("returns null for a valid file", () => {
-    const file = new File(["x"], "a.png", { type: "image/png" })
-    expect(validateUploadFile(file, ALLOWED, 1024)).toBeNull()
+  // Files whose bytes don't match the declared MIME type are rejected
+  it("returns 400 when file content does not match declared type", async () => {
+    const file = new File(["not a png"], "a.png", { type: "image/png" })
+    const res = await validateUploadFile(file, ALLOWED, 1024)
+    expect(res?.status).toBe(400)
+    const data = await res!.json()
+    expect(data.error).toContain("does not match declared type")
+  })
+
+  // Valid files with correct magic bytes return null (no error Response)
+  it("returns null for a valid file with correct magic bytes", async () => {
+    const file = new File([PNG_HEADER], "a.png", { type: "image/png" })
+    expect(await validateUploadFile(file, ALLOWED, 1024)).toBeNull()
   })
 })
 

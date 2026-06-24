@@ -2,7 +2,7 @@
 
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
-import { and, inArray, eq } from "drizzle-orm"
+import { and, inArray, eq, notInArray } from "drizzle-orm"
 import { requireActionRole } from "@/lib/action-guard"
 import {
   createProductInDb,
@@ -121,4 +121,28 @@ export async function bulkArchivePortalProductAction(
 
   revalidateProductsCache()
   return { ok: true, archived: result.length }
+}
+
+export async function bulkActivatePortalProductAction(
+  ids: string[]
+): Promise<{ ok: true; activated: number } | { ok: false; error: string }> {
+  if (!ids.length) return { ok: false, error: "No products selected" }
+
+  const session = await requireActionRole((role) => role === "portal")
+  if (!session) return { ok: false, error: "Unauthorized" }
+
+  const result = await db
+    .update(product)
+    .set({ status: "active" })
+    .where(
+      and(
+        inArray(product.id, ids),
+        eq(product.sellerId, session.user.id),
+        notInArray(product.status, ["sold", "archive"]),
+      )
+    )
+    .returning({ id: product.id })
+
+  revalidateProductsCache()
+  return { ok: true, activated: result.length }
 }

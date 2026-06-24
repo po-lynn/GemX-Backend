@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update KYC fields — `nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; types: N/P/T/E, serial 6 digits); returns **400** on invalid format. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
 - **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **POST `/api/products`** and **PATCH `/api/products/:id`** apply the same rule when creating or updating with **`isFeatured: true`** and a **`featured`** point cost: seller balance is checked first; **no** deduction and **no** product create/update on failure. See **5.5** and **5.6**.
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
@@ -78,7 +79,7 @@
 
 | Method | Path                   | Auth | Description                                                                                                                                                                                              |
 | ------ | ---------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/mobile/register` | No   | Register (phone, password, name)                                                                                                                                                                         |
+| POST   | `/api/mobile/register` | No   | Register (phone, password, name; optional nrc with format validation, address, city, state, country, gender, dateOfBirth, **nrcFrontUrl**, **nrcBackUrl**, **selfieUrl**, **businessLicenseUrl**). NRC must be unique. See **3.1**. |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
@@ -122,6 +123,8 @@
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                                                                                                        |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
+| POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license). Allowed: `jpeg`, `png`, `webp`, `pdf`; max 10 MB. Returns `{ "url": "..." }`. See **4.6**.                                           |
+| PATCH  | `/api/mobile/profile`       | Yes  | Update KYC profile fields: `nrc` (validated Myanmar format), `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
@@ -173,23 +176,31 @@ List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/
   "state": "Yangon",
   "country": "Myanmar",
   "gender": "male",
-  "dateOfBirth": "1990-01-15"
+  "dateOfBirth": "1990-01-15",
+  "nrcFrontUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-front.jpg",
+  "nrcBackUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-back.jpg",
+  "selfieUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../selfie.jpg",
+  "businessLicenseUrl": null
 }
 ```
 
 
-| Field           | Type   | Required | Description                                                            |
-| --------------- | ------ | -------- | ---------------------------------------------------------------------- |
-| **phone**       | string | Yes      | Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`). |
-| **password**    | string | Yes      | User password.                                                         |
-| **name**        | string | No       | Display name; defaults to `"Mobile User"`.                             |
-| **nrc**         | string | No       | National Registration Card number.                                     |
-| **address**     | string | No       | Street address.                                                        |
-| **city**        | string | No       | City.                                                                  |
-| **state**       | string | No       | State / region.                                                        |
-| **country**     | string | No       | Country.                                                               |
-| **gender**      | string | No       | Gender (e.g. `male`, `female`, `other`).                               |
-| **dateOfBirth** | string | No       | Date of birth (e.g. `YYYY-MM-DD`).                                     |
+| Field                   | Type   | Required | Description                                                                                                  |
+| ----------------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------ |
+| **phone**               | string | Yes      | Myanmar phone, must start with `09`, 9–17 digits (e.g. `09123456789`).                                       |
+| **password**            | string | Yes      | User password.                                                                                               |
+| **name**                | string | No       | Display name; defaults to `"Mobile User"`.                                                                   |
+| **nrc**                 | string | No       | Myanmar NRC number. Format: `StateNo/TownshipCode(Type)Serial` — e.g. `12/ABC(N)123456`. State: 1–14; Township: 3 uppercase letters; Type: `N`/`P`/`T`/`E`; Serial: 6 digits. Returns **400** on invalid format; returns **409** if already registered to another account. |
+| **address**             | string | No       | Street address.                                                                                              |
+| **city**                | string | No       | City.                                                                                                        |
+| **state**               | string | No       | State / region.                                                                                              |
+| **country**             | string | No       | Country.                                                                                                     |
+| **gender**              | string | No       | Gender (e.g. `male`, `female`, `other`).                                                                     |
+| **dateOfBirth**         | string | No       | Date of birth (e.g. `YYYY-MM-DD`).                                                                           |
+| **nrcFrontUrl**         | string | No       | URL of uploaded NRC front image (from **POST `/api/upload/kyc-document`**). See **4.6**.                     |
+| **nrcBackUrl**          | string | No       | URL of uploaded NRC back image.                                                                              |
+| **selfieUrl**           | string | No       | URL of uploaded selfie photo.                                                                                |
+| **businessLicenseUrl**  | string | No       | URL of uploaded business license document.                                                                   |
 
 
 **Success (201):** Response body is the auth result (user + session). Store the **session token** from the response for the `Authorization: Bearer` header.
@@ -198,8 +209,8 @@ After successful register, backend also auto-adds the configured **default regis
 
 **Errors:**
 
-- **400** – `{ "error": "Phone must start with 09 and password is required" }` or other validation message (e.g. `"Password is too short"` from the auth provider).
-- **409** – `{ "error": "This phone number is already registered" }` when the phone is already in use.
+- **400** – `{ "error": "Phone must start with 09 and password is required" }` or other validation message (e.g. `"Password is too short"` from the auth provider, or `"Invalid NRC format. Expected format: 12/ABC(N)123456"`).
+- **409** – `{ "error": "This phone number is already registered" }` or `{ "error": "This NRC number is already registered to another account." }`.
 - **4xx/5xx** – Response body includes an `error` string with the actual message (e.g. auth validation errors).
 
 **Note:** If default registration points are configured as `0`, no points are added.
@@ -499,6 +510,45 @@ Use this `url` as `certReportUrl` when creating or updating the product.
 - **401** – Unauthorized.
 - **503** – Supabase not configured.
 - **500** – Upload failed.
+
+---
+
+### 4.6 KYC document upload
+
+Upload a single KYC identity document — NRC front, NRC back, selfie, or business license. Get back a URL, then pass it in `nrcFrontUrl` / `nrcBackUrl` / `selfieUrl` / `businessLicenseUrl` when registering (**POST `/api/mobile/register`**) or updating your profile (**PATCH `/api/mobile/profile`**).
+
+**POST** `/api/upload/kyc-document`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Content-Type:** `multipart/form-data`
+
+**Form fields:**
+
+| Field  | Type | Required | Description                                                        |
+| ------ | ---- | -------- | ------------------------------------------------------------------ |
+| `file` | file | Yes      | One KYC document (`image/jpeg`, `image/png`, `image/webp`, `application/pdf`), max 10 MB. |
+
+**Success (200):**
+
+```json
+{
+  "url": "https://...supabase.co/storage/v1/object/public/kyc-documents/<userId>/<uuid>.jpg"
+}
+```
+
+Use the returned `url` as:
+- `nrcFrontUrl` — NRC front photo
+- `nrcBackUrl` — NRC back photo
+- `selfieUrl` — selfie holding NRC
+- `businessLicenseUrl` — business registration document
+
+**Errors:**
+
+- **400** – `{ "error": "No file provided." }` / invalid file type / file too large.
+- **401** – Unauthorized.
+- **503** – Supabase storage not configured.
+- **500** – `{ "error": "Upload failed" }`.
 
 ---
 
@@ -1127,6 +1177,65 @@ At least one of `name`, `address`, `image` is required.
 - **401** – `{ "error": "Unauthorized" }`.
 - **404** – `{ "error": "Profile not found" }`.
 - **500** – `{ "error": "Failed to update profile" }`.
+
+---
+
+### 5.4c.2 Update KYC profile fields (mobile)
+
+**PATCH** `/api/mobile/profile`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+**Content-Type:** `application/json`
+
+Update KYC identity fields and address on the current user's profile. All fields are optional — send only the ones you want to change. At least one must be present (empty body returns `{ "ok": true }` with no DB write).
+
+**Request body (JSON):**
+
+```json
+{
+  "nrc": "12/ABC(N)123456",
+  "address": "No. 12, Main Road, Yangon",
+  "city": "Yangon",
+  "state": "Yangon Region",
+  "country": "Myanmar",
+  "nrcFrontUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-front.jpg",
+  "nrcBackUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-back.jpg",
+  "selfieUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../selfie.jpg",
+  "businessLicenseUrl": null
+}
+```
+
+| Field                  | Type            | Description                                                                                                                                         |
+| ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nrc`                  | string \| null  | Myanmar NRC. Format: `StateNo/TownshipCode(Type)Serial` — e.g. `12/ABC(N)123456`. State 1–14; township 3 uppercase letters; type `N`/`P`/`T`/`E`; serial 6 digits. Send `null` to clear. |
+| `address`              | string \| null  | Street address (max 500). Send `null` or `""` to clear.                                                                                             |
+| `city`                 | string \| null  | City (max 100).                                                                                                                                     |
+| `state`                | string \| null  | State / region (max 100).                                                                                                                           |
+| `country`              | string \| null  | Country (max 100).                                                                                                                                  |
+| `nrcFrontUrl`          | string \| null  | URL from **POST `/api/upload/kyc-document`** for NRC front photo. Send `null` to clear.                                                             |
+| `nrcBackUrl`           | string \| null  | URL from **POST `/api/upload/kyc-document`** for NRC back photo.                                                                                    |
+| `selfieUrl`            | string \| null  | URL from **POST `/api/upload/kyc-document`** for selfie.                                                                                            |
+| `businessLicenseUrl`   | string \| null  | URL from **POST `/api/upload/kyc-document`** for business license.                                                                                  |
+
+**Typical KYC submission flow:**
+
+1. Upload each document image via **POST `/api/upload/kyc-document`** — get back a URL per file.
+2. Call **PATCH `/api/mobile/profile`** with the NRC string plus all four document URLs.
+3. Admin reviews documents in the admin panel and sets `user.verified = true` on approval.
+4. Check `profile.verified` (from **GET `/api/profile`**) to know if the account is verified.
+
+**Success (200):**
+
+```json
+{ "ok": true }
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid NRC format — expected e.g. 12/ABC(N)123456" }` or other Zod validation message.
+- **401** – `{ "error": "Unauthorized" }`.
+- **409** – `{ "error": "This NRC number is already registered to another account." }`.
 
 ---
 
@@ -3389,6 +3498,7 @@ Returns a single published article by ID. Draft items return **404**.
   - Get profile and own products: `GET /api/profile` (optional: `?page=1&limit=20` and same filter params; with Bearer token). Response **`profile`** includes **`verified`** and **`isPremiumDealer`**.
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
+  - **Submit KYC documents:** upload each document via `POST /api/upload/kyc-document` (multipart `file`) → receive `{ "url": "..." }`, then `PATCH /api/mobile/profile` with `{ "nrc": "12/ABC(N)123456", "nrcFrontUrl": "<url>", "nrcBackUrl": "<url>", "selfieUrl": "<url>", "businessLicenseUrl": "<url>" }`. Admin reviews and sets `verified = true` on approval — check `profile.verified` from `GET /api/profile`. See **5.4c.2**.
   - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
   - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first). For **live** list updates from the server without polling JSON yourself, use **`GET /api/chat/conversations?stream=1`** (SSE; see **5.4d**).
   - Chat realtime: subscribe to `chat:<currentUserId>` via Supabase **Broadcast** for `new_message`, `message_updated`, `message_deleted`, and `read_update` events (see **5.4d**).
@@ -3428,7 +3538,7 @@ Returns a single published article by ID. Draft items return **404**.
 
 | Method | Path                   | Auth | Description                                                                                                 |
 | ------ | ---------------------- | ---- | ----------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/mobile/register` | No   | Register                                                                                                    |
+| POST   | `/api/mobile/register` | No   | Register (phone, password; optional nrc with format/uniqueness validation, nrcFrontUrl, nrcBackUrl, selfieUrl, businessLicenseUrl). See 3.1. |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
 | GET    | `/api/mobile/feature-settings` | No   | Full feature settings: `homeFeaturedLimit` + `pricingTiers` (with optional `enabled`). See 5.4.1b.         |
@@ -3470,6 +3580,8 @@ Returns a single published article by ID. Draft items return **404**.
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
+| POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license); `jpeg`/`png`/`webp`/`pdf`, max 10 MB. Returns `{ "url": "..." }`. See 4.6. |
+| PATCH  | `/api/mobile/profile`       | Yes  | Update KYC profile fields (`nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`). NRC validated + unique. See 5.4c.2. |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
 | GET    | `/api/products/:id`    | No†  | Get one product (includes `seller` details with `image` + `rating`). **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
 | GET    | `/api/products/mine`   | Yes  | List my products (all listing statuses by default; optional `moderationStatus`). Collector pieces are owner-visible (not public-masked). See 5.3.                                   |

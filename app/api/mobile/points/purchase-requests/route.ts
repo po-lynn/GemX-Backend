@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     } = parsed.data
 
     const settings = await getPointPurchasePackagesSettings()
-    const pkg = settings.packages.find((p) => p.name === packageName)
+    const pkg = settings.packages.find((p) => p.name === packageName && p.enabled !== false)
     if (!pkg) return jsonError("Package not found", 400)
 
     const paymentMethods = (await getPaymentMethods()).filter((m) => m.enabled !== false)
@@ -114,13 +114,15 @@ export async function POST(request: NextRequest) {
       return jsonError(`Package does not have a price set for ${currency.toUpperCase()}`, 400)
     }
 
+    const totalPoints = pkg.points + (pkg.bonus ?? 0)
+
     const [row] = await db
       .insert(pointPurchaseRequest)
       .values({
         userId: session.user.id,
         packageName: pkg.name,
         paymentMethod: paymentMethod.name,
-        points: pkg.points,
+        points: totalPoints,
         price,
         currency,
         status: "pending",
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       type: "topup",
       direction: "credit",
-      amount: pkg.points,
+      amount: totalPoints,
       status: "pending",
       referenceId: row.id,
       referenceType: "purchase_request",
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
       requestId: row.id,
       package_name: pkg.name,
       payment_method: paymentMethod.name,
-      points: pkg.points,
+      points: totalPoints,
       price,
       currency,
       status: row.status,

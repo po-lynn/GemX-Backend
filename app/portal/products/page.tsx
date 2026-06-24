@@ -49,12 +49,14 @@ export default async function PortalProductsPage({ searchParams }: Props) {
   const statusFilter = params.status?.trim() || undefined
 
   const viewFilter = {
-    all:       statusFilter === "archive" ? { status: "archive" as const } : {},
-    pending:   { moderationStatus: "pending" as const },
-    featured:  { isFeatured: true as const },
-    collector: { isCollectorPiece: true as const },
+    all:       statusFilter === "archive"
+                 ? { status: "archive" as const }
+                 : { excludeStatuses: ["archive", "draft"] as const },
+    pending:   { moderationStatus: "pending" as const, excludeStatuses: ["archive", "draft"] as const },
+    featured:  { isFeatured: true as const, excludeStatuses: ["archive", "draft"] as const },
+    collector: { isCollectorPiece: true as const, excludeStatuses: ["archive", "draft"] as const },
     sold:      { status: "sold" as const },
-    drafts:    { status: "hidden" as const },
+    drafts:    { status: "draft" as const },
   }[view]
 
   const [counts, { products, total }] = await Promise.all([

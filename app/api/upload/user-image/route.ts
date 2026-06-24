@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "No file provided." }, { status: 400 })
     }
 
-    const invalid = validateUploadFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES)
+    const invalid = await validateUploadFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES)
     if (invalid) return invalid
 
     const result = await uploadFileToBucket(ctx.supabase, {

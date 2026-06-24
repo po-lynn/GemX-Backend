@@ -73,9 +73,11 @@ export async function searchUsersForPicker(query: string, limit = 8): Promise<Us
 
 export async function getAllUsersFromDb(opts?: {
   search?: string;
+  role?: string;
+  limit?: number;
 }): Promise<UserRow[]> {
   const search = opts?.search?.trim();
-  const condition = search
+  const searchCondition = search
     ? or(
         ilike(user.name, `%${search}%`),
         ilike(user.email, `%${search}%`),
@@ -83,6 +85,11 @@ export async function getAllUsersFromDb(opts?: {
         ilike(user.role, `%${search}%`)
       )
     : undefined;
+  const roleCondition = opts?.role ? eq(user.role, opts.role) : undefined;
+  const condition =
+    searchCondition && roleCondition
+      ? and(searchCondition, roleCondition)
+      : searchCondition ?? roleCondition;
   const rows = await db
     .select({
       id: user.id,
@@ -102,7 +109,8 @@ export async function getAllUsersFromDb(opts?: {
     })
     .from(user)
     .where(condition)
-    .orderBy(asc(user.name));
+    .orderBy(asc(user.name))
+    .limit(opts?.limit ?? 500);
   return rows;
 }
 

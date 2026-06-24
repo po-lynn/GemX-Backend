@@ -45,7 +45,7 @@ export const userUpdateSchema = z.object({
   gender: z.string().max(50).optional().nullable(),
   username: z.string().max(100).optional().nullable(),
   displayUsername: z.string().max(100).optional().nullable(),
-  nrc: nrcSchema.optional().nullable(),
+  nrc: z.string().max(50).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(100).optional().nullable(),

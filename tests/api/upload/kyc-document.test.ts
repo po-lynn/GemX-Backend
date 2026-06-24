@@ -27,7 +27,7 @@ describe("POST /api/upload/kyc-document", () => {
 
   beforeEach(() => {
     vi.mocked(requireUploadContext).mockResolvedValue({ ctx: fakeCtx as never })
-    vi.mocked(validateUploadFile).mockReturnValue(null)
+    vi.mocked(validateUploadFile).mockResolvedValue(null)
     vi.mocked(uploadFileToBucket).mockResolvedValue({ url: "https://example.com/kyc-documents/user-1/abc.jpg", error: undefined })
   })
 
@@ -50,7 +50,7 @@ describe("POST /api/upload/kyc-document", () => {
   })
 
   it("returns 400 when file type is invalid", async () => {
-    vi.mocked(validateUploadFile).mockReturnValue(
+    vi.mocked(validateUploadFile).mockResolvedValue(
       Response.json({ error: "Invalid file type" }, { status: 400 })
     )
     const fd = new FormData()

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { jewelleryGemstoneItemSchema, productShapeSchema } from "./gemstone-spec"
 
 
-const productStatusSchema = z.enum(["pending", "active", "archive", "sold", "hidden"])
+const productStatusSchema = z.enum(["draft", "pending", "active", "archive", "sold"])
 const productModerationSchema = z.enum([
   "pending",
   "approved",

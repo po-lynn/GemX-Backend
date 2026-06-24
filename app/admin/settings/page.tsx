@@ -21,11 +21,10 @@ export default async function AdminSettingsPage({ searchParams }: Props) {
   const [companySettings, escrowSettings, allUsers] = await Promise.all([
     getCompanySettings(),
     getEscrowServiceSettings(),
-    getAllUsersFromDb(),
+    getAllUsersFromDb({ role: "internal" }),
   ])
 
   const internalUsers = allUsers
-    .filter((u) => u.role === "internal")
     .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }))
 
   return (
