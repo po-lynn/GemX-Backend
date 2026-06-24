@@ -39,7 +39,7 @@ describe("autoSaveNewsAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRequireActionRole.mockResolvedValue({ user: { id: "admin-1" } } as never);
-    mockUpdateNewsInDb.mockResolvedValue(undefined);
+    mockUpdateNewsInDb.mockResolvedValue(true);
   });
 
   it("returns error when newsId is not a valid uuid", async () => {
