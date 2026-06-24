@@ -184,18 +184,19 @@ const COLUMN_DEFS: ColumnDef<UserRowX>[] = [
 
 // ─── Filter defs ──────────────────────────────────────────
 
-const FILTER_DEFS: FilterDef[] = [
-  {
-    id: "role", label: "Role", type: "multi",
-    options: [
-      { value: "admin",    label: "Admin" },
-      { value: "dealer",   label: "Dealer" },
-      { value: "seller",   label: "Seller" },
-      { value: "buyer",    label: "Buyer" },
-      { value: "user",     label: "User" },
-      { value: "collector",label: "Collector" },
-    ],
-  },
+const ALL_ROLE_OPTIONS = [
+  { value: "user",     label: "User" },
+  { value: "internal", label: "Internal" },
+  { value: "portal",   label: "Portal" },
+  { value: "admin",    label: "Admin" },
+]
+
+function buildFilterDefs(hideAdminView: boolean): FilterDef[] {
+  const roleOptions = hideAdminView
+    ? ALL_ROLE_OPTIONS.filter((o) => o.value !== "admin")
+    : ALL_ROLE_OPTIONS
+  return [
+    { id: "role", label: "Role", type: "multi", options: roleOptions },
   {
     id: "status", label: "Status", type: "multi",
     options: [
@@ -219,7 +220,8 @@ const FILTER_DEFS: FilterDef[] = [
     ],
   },
   { id: "joined", label: "Joined", type: "daterange" },
-]
+  ]
+}
 
 // ─── Group options ─────────────────────────────────────────
 
@@ -335,7 +337,7 @@ export function UsersTable({
       views={views}
       activeView={view}
       buildViewHref={buildViewHref}
-      filterDefs={FILTER_DEFS}
+      filterDefs={buildFilterDefs(hideAdminView)}
       groupOptions={GROUP_OPTIONS}
       defaultSort={{ id: "joined", dir: "desc" }}
       getSortValue={getSortValue}

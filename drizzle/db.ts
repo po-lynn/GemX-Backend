@@ -17,10 +17,12 @@ const client =
   globalForDb.dbClient ??
   postgres(env.DATABASE_URL, {
     ssl: "require",
-    max: isPooler ? 10 : 5,
+    // PgBouncer transaction mode already pools — keep per-instance count low to
+    // avoid exhausting Supabase's connection limit across concurrent Vercel invocations.
+    max: isPooler ? 3 : 5,
     prepare: false,
     fetch_types: false,
-    connect_timeout: 10,
+    connect_timeout: 5,
     idle_timeout: 20,
     max_lifetime: 300,
     connection: {
@@ -29,8 +31,7 @@ const client =
     },
   })
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.dbClient = client
-}
+// Cache on globalThis so warm Vercel instances and Next.js HMR both reuse the pool.
+globalForDb.dbClient = client
 
 export const db = drizzle(client, { schema })

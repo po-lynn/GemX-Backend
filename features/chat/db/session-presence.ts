@@ -1,4 +1,4 @@
-import { and, gt, inArray, max } from "drizzle-orm"
+import { and, gt, inArray, max, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { session } from "@/drizzle/schema/auth-schema"
 
@@ -69,4 +69,37 @@ export async function getLastSessionTouchAnyExpiryByUserIds(
     if (d) map.set(r.userId, d)
   }
   return map
+}
+
+/**
+ * Single-query replacement for calling both presence functions separately.
+ * Returns activeMap (non-expired sessions) and touchMap (all sessions) in one round-trip.
+ */
+export async function getPresenceMapsForUserIds(
+  userIds: string[]
+): Promise<{ activeMap: Map<string, Date>; touchMap: Map<string, Date> }> {
+  const empty = { activeMap: new Map<string, Date>(), touchMap: new Map<string, Date>() }
+  if (userIds.length === 0) return empty
+
+  const rows = await db
+    .select({
+      userId: session.userId,
+      activeLast: sql<unknown>`max(${session.updatedAt}) FILTER (WHERE ${session.expiresAt} > now())`,
+      anyLast: max(session.updatedAt),
+    })
+    .from(session)
+    .where(inArray(session.userId, userIds))
+    .groupBy(session.userId)
+
+  const activeMap = new Map<string, Date>()
+  const touchMap = new Map<string, Date>()
+
+  for (const r of rows) {
+    const active = asSessionTouchDate(r.activeLast)
+    if (active) activeMap.set(r.userId, active)
+    const any = asSessionTouchDate(r.anyLast)
+    if (any) touchMap.set(r.userId, any)
+  }
+
+  return { activeMap, touchMap }
 }

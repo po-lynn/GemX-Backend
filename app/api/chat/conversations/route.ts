@@ -7,6 +7,9 @@ const SSE_POLL_DEFAULT_MS = 4_000;
 const SSE_POLL_MIN_MS = 2_000;
 const SSE_POLL_MAX_MS = 30_000;
 const SSE_HEARTBEAT_MS = 25_000;
+// Gracefully close after this many ms so Vercel doesn't abruptly kill the function
+// and leave DB connections open until statement_timeout fires. Client reconnects.
+const SSE_MAX_LIFETIME_MS = 240_000; // 4 minutes
 
 const textEncoder = new TextEncoder();
 
@@ -59,12 +62,14 @@ export async function GET(request: NextRequest) {
         let lastJson = "";
         let pollTimer: ReturnType<typeof setInterval> | undefined;
         let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+        let lifetimeTimer: ReturnType<typeof setTimeout> | undefined;
 
         const close = () => {
           if (closed) return;
           closed = true;
           if (pollTimer) clearInterval(pollTimer);
           if (heartbeatTimer) clearInterval(heartbeatTimer);
+          if (lifetimeTimer) clearTimeout(lifetimeTimer);
           try {
             controller.close();
           } catch {
@@ -104,6 +109,7 @@ export async function GET(request: NextRequest) {
           if (closed) return;
           pollTimer = setInterval(() => void tick(), pollMs);
           heartbeatTimer = setInterval(() => safeEnqueue(sseCommentKeepAlive()), SSE_HEARTBEAT_MS);
+          lifetimeTimer = setTimeout(close, SSE_MAX_LIFETIME_MS);
         });
 
         request.signal.addEventListener("abort", close);

@@ -1,7 +1,6 @@
 import {
   SESSION_PRESENCE_ONLINE_WINDOW_MS,
-  getLastSessionActivityByUserIds,
-  getLastSessionTouchAnyExpiryByUserIds,
+  getPresenceMapsForUserIds,
 } from "@/features/chat/db/session-presence"
 import { formatRelativeLastSeenPast } from "@/lib/formatters"
 
@@ -49,8 +48,7 @@ export async function getPublicProfilePresenceMap(
   const out = new Map<string, PublicProfilePresence>()
   if (unique.length === 0) return out
 
-  const activeMap = await getLastSessionActivityByUserIds(unique)
-  const touchMap = await getLastSessionTouchAnyExpiryByUserIds(unique)
+  const { activeMap, touchMap } = await getPresenceMapsForUserIds(unique)
 
   for (const userId of unique) {
     out.set(userId, resolvePresenceFromMaps(userId, activeMap, touchMap))
