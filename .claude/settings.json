@@ -61,7 +61,8 @@
       "Bash(/home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 666d1dc HEAD)",
       "Bash(/home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-24-news-editor-auto-save.md 4)",
       "Bash(/home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package d9d2441 *)",
-      "Bash(command -v node npm npx)"
+      "Bash(command -v node npm npx)",
+      "Bash(rm -rf /home/po/me/2026/Jade/infinity-gemx/app/api/mobile/points/purchase)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
@@ -70,7 +71,8 @@
       "/home/po/me/2026/Jade/infinity-gemx/.git/sdd",
       "/home/po/me/2026/Jade/infinity-gemx/features/company-settings",
       "/home/po/me/2026/Jade/infinity-gemx/app/api/admin",
-      "/home/po/me/2026/Jade/infinity-gemx/app/api/cron"
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/cron",
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/mobile/points/purchase"
     ]
   },
   "enabledPlugins": {
