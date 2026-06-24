@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createNewsAction, updateNewsAction } from "@/features/news/actions/news";
+import { useAutoSave } from "@/features/news/hooks/useAutoSave";
 import type { NewsRow } from "@/features/news/db/news";
 import DatePicker from "@/components/date-picker/date-picker";
 
@@ -30,6 +31,49 @@ type Props = {
   news?: NewsRow | null;
 };
 
+function getSavebarStatusClass({
+  autoSaveState,
+  dirty,
+  isEdit,
+}: {
+  autoSaveState: string;
+  dirty: boolean;
+  isEdit: boolean;
+}): string {
+  if (autoSaveState === "pending" || autoSaveState === "saving") return " dirty";
+  if (autoSaveState === "saved") return " saved";
+  if (autoSaveState === "error") return " dirty";
+  return dirty ? " dirty" : isEdit ? " saved" : "";
+}
+
+function getSavebarLabel({
+  autoSaveState,
+  lastAutoSaved,
+  dirty,
+  isEdit,
+  updatedLabel,
+}: {
+  autoSaveState: string;
+  lastAutoSaved: Date | null;
+  dirty: boolean;
+  isEdit: boolean;
+  updatedLabel: string | null;
+}): string {
+  if (autoSaveState === "pending") return "Saving in a moment…";
+  if (autoSaveState === "saving") return "Saving…";
+  if (autoSaveState === "saved" && lastAutoSaved) {
+    const time = lastAutoSaved.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `Auto-saved · ${time}`;
+  }
+  if (autoSaveState === "error") return "Couldn't auto-save";
+  if (dirty) return "Unsaved changes";
+  if (isEdit) return `Saved · ${updatedLabel}`;
+  return "New article";
+}
+
 export function NewsForm({ mode, news }: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
@@ -41,6 +85,17 @@ export function NewsForm({ mode, news }: Props) {
   const [content, setContent] = useState(news?.content ?? "[]");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { autoSaveState, lastAutoSaved } = useAutoSave({
+    id: news?.id ?? "",
+    title,
+    content,
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (autoSaveState === "saved") setDirty(false);
+  }, [autoSaveState]);
 
   const publishDateValue = news?.publish ? new Date(news.publish).toISOString().slice(0, 10) : "";
   const articleId = news?.id ? news.id.slice(0, 8).toUpperCase() : null;
@@ -85,9 +140,9 @@ export function NewsForm({ mode, news }: Props) {
 
       {/* Sticky save bar */}
       <div className="n-savebar">
-        <span className={`n-savebar-status${dirty ? " dirty" : isEdit ? " saved" : ""}`}>
+        <span className={`n-savebar-status${getSavebarStatusClass({ autoSaveState, dirty, isEdit })}`}>
           <span className="n-savebar-status-dot" />
-          {dirty ? "Unsaved changes" : isEdit ? `Saved · ${updatedLabel}` : "New article"}
+          {getSavebarLabel({ autoSaveState, lastAutoSaved, dirty, isEdit, updatedLabel })}
         </span>
         <span className="n-savebar-stage">
           <span className={`n-savebar-stage-step${status === "draft" ? " on" : " done"}`}>Draft</span>
