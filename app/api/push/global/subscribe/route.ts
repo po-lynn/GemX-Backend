@@ -1,5 +1,7 @@
 import { NextRequest, connection } from "next/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonUncached } from "@/lib/api";
 import {
   subscribeTokenToGlobalTopic,
@@ -10,13 +12,25 @@ const bodySchema = z.object({
   token: z.string().trim().min(1, "token is required"),
 });
 
-/**
- * POST — subscribe a web/mobile FCM token to the `global` topic (no auth).
- * Web clients call this after obtaining a token; Flutter can use client SDK subscribe instead.
- */
+function getIp(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+}
+
+/** POST — subscribe a web/mobile FCM token to the `global` topic. */
 export async function POST(request: NextRequest) {
   await connection();
   try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) return jsonError("Unauthorized", 401);
+
+    const rl = rateLimit(`push-sub:${getIp(request)}`, 20, 60_000);
+    if (!rl.allowed) {
+      return Response.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      );
+    }
+
     const body = await request.json().catch(() => null);
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
@@ -41,10 +55,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** DELETE — unsubscribe token from global topic (optional, no auth). */
+/** DELETE — unsubscribe token from global topic. */
 export async function DELETE(request: NextRequest) {
   await connection();
   try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) return jsonError("Unauthorized", 401);
+
+    const rl = rateLimit(`push-unsub:${getIp(request)}`, 20, 60_000);
+    if (!rl.allowed) {
+      return Response.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {

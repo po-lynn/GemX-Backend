@@ -155,3 +155,24 @@ See `docs/` for domain-specific documentation:
 - `docs/technical/` — Per-change technical notes (auto-generated)
 - `docs/guides/` — Collaborator step-by-step guides (auto-generated)
 - `docs/api/` — Per-route API reference (auto-generated)
+
+
+Before approving this PR, check the diff for:
+
+SECURITY:
+[ ] No hardcoded secrets or API keys added
+[ ] New API routes have authentication middleware
+[ ] Input validation present on all request body fields
+[ ] No new `any` type casts that bypass validation
+[ ] No sensitive data (passwords, tokens) in API responses
+[ ] CORS headers not loosened without justification
+
+QUALITY:
+[ ] No unhandled async errors (missing try/catch or .catch())
+[ ] No N+1 queries introduced (check for DB calls inside loops)
+[ ] HTTP status codes are semantically correct
+[ ] New functions have TypeScript return types
+[ ] No console.log left in production code paths
+[ ] Response structure matches existing API envelope pattern
+
+If any item fails, comment with: file:line | issue | suggested fix

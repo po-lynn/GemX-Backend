@@ -48,7 +48,9 @@
       "Bash(bash /home/po/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 810ffec HEAD)",
       "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/app/api/cron/expire-featured-products)",
       "Skill(artifact-design)",
-      "Skill(artifact-design:*)"
+      "Skill(artifact-design:*)",
+      "Bash(sed -i 's/const invalid = validateUploadFile\\(file, ALLOWED_MEDIA_TYPES, MAX_MEDIA_SIZE_BYTES\\);/const invalid = await validateUploadFile\\(file, ALLOWED_MEDIA_TYPES, MAX_MEDIA_SIZE_BYTES\\);/' /home/po/me/2026/Jade/infinity-gemx/app/api/chat/media/route.ts)",
+      "Bash(sed -i 's/const invalid = validateUploadFile\\(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES\\);/const invalid = await validateUploadFile\\(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE_BYTES\\);/' /home/po/me/2026/Jade/infinity-gemx/app/api/profile/image/route.ts)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

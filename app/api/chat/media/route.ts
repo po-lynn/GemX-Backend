@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file");
     if (!(file instanceof File)) return jsonError("No file provided.", 400);
 
-    const invalid = validateUploadFile(file, ALLOWED_MEDIA_TYPES, MAX_MEDIA_SIZE_BYTES);
+    const invalid = await validateUploadFile(file, ALLOWED_MEDIA_TYPES, MAX_MEDIA_SIZE_BYTES);
     if (invalid) return invalid;
 
     const result = await uploadFileToBucket(ctx.supabase, {
