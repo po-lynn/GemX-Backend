@@ -22,7 +22,7 @@ const client =
     max: isPooler ? 3 : 5,
     prepare: false,
     fetch_types: false,
-    connect_timeout: 5,
+    connect_timeout: 20,
     idle_timeout: 20,
     max_lifetime: 300,
     connection: {

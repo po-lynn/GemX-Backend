@@ -70,7 +70,8 @@ export function ArticleForm({ mode, article }: Props) {
 
   return (
     <>
-      {/* Breadcrumbs */}
+      {/* Sticky header: breadcrumbs + save bar */}
+      <div className="ud-stickybar">
       <div className="ud-topbar">
         <nav className="lv-breadcrumbs">
           <Link href="/admin">Admin</Link>
@@ -85,8 +86,8 @@ export function ArticleForm({ mode, article }: Props) {
         </nav>
       </div>
 
-      {/* Sticky save bar */}
-      <div className="n-savebar">
+      {/* Save bar */}
+      <div className="n-savebar" style={{ position: "relative" }}>
         <span className={`n-savebar-status${dirty ? " dirty" : isEdit ? " saved" : ""}`}>
           <span className="n-savebar-status-dot" />
           {dirty ? "Unsaved changes" : isEdit ? `Saved · ${updatedLabel}` : "New article"}
@@ -114,6 +115,7 @@ export function ArticleForm({ mode, article }: Props) {
           {loading ? "Saving…" : status === "published" ? "Update article" : "Publish now"}
         </button>
       </div>
+      </div>{/* end ud-stickybar */}
 
       <form ref={formRef} onSubmit={e => { e.preventDefault(); submit(); }}>
         {isEdit && article && <input type="hidden" name="articleId" value={article.id} />}

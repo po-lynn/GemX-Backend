@@ -123,7 +123,8 @@ export function NewsForm({ mode, news }: Props) {
 
   return (
     <>
-      {/* Breadcrumbs */}
+      {/* Sticky header: breadcrumbs + save bar */}
+      <div className="ud-stickybar">
       <div className="ud-topbar">
         <nav className="lv-breadcrumbs">
           <Link href="/admin">Admin</Link>
@@ -138,8 +139,8 @@ export function NewsForm({ mode, news }: Props) {
         </nav>
       </div>
 
-      {/* Sticky save bar */}
-      <div className="n-savebar">
+      {/* Save bar */}
+      <div className="n-savebar" style={{ position: "relative" }}>
         <span className={`n-savebar-status${getSavebarStatusClass({ autoSaveState, dirty, isEdit })}`}>
           <span className="n-savebar-status-dot" />
           {getSavebarLabel({ autoSaveState, lastAutoSaved, dirty, isEdit, updatedLabel })}
@@ -163,6 +164,7 @@ export function NewsForm({ mode, news }: Props) {
           {loading ? "Saving…" : status === "published" ? "Update post" : "Publish now"}
         </button>
       </div>
+      </div>{/* end ud-stickybar */}
 
       <form ref={formRef} onSubmit={e => { e.preventDefault(); submit(); }}>
         {isEdit && news && <input type="hidden" name="newsId" value={news.id} />}
