@@ -38,6 +38,7 @@ export function NewsForm({ mode, news }: Props) {
   const [title, setTitle] = useState(news?.title ?? "");
   const [status, setStatus] = useState<Status>((news?.status as Status) ?? "draft");
   const [dirty, setDirty] = useState(false);
+  const [content, setContent] = useState(news?.content ?? "[]");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,7 +159,14 @@ export function NewsForm({ mode, news }: Props) {
 
               {/* Body editor */}
               <div style={{ marginTop: 18 }}>
-                <BlockNoteEditor name="content" initialContent={news?.content} />
+                <BlockNoteEditor
+                  name="content"
+                  initialContent={news?.content}
+                  onContentChange={(json) => {
+                    setContent(json);
+                    setDirty(true);
+                  }}
+                />
               </div>
 
               {/* HR + footer row */}

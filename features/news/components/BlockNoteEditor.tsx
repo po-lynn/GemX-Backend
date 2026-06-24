@@ -23,9 +23,10 @@ function parseInitialContent(content: string | null | undefined): PartialBlock[]
 type Props = {
   name: string;
   initialContent?: string | null;
+  onContentChange?: (json: string) => void;
 };
 
-export function BlockNoteEditor({ name, initialContent }: Props) {
+export function BlockNoteEditor({ name, initialContent, onContentChange }: Props) {
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const initial = parseInitialContent(initialContent);
 
@@ -79,7 +80,8 @@ export function BlockNoteEditor({ name, initialContent }: Props) {
     if (!editor.document || !hiddenInputRef.current) return;
     const json = JSON.stringify(editor.document);
     hiddenInputRef.current.value = json;
-  }, [editor]);
+    onContentChange?.(json);
+  }, [editor, onContentChange]);
 
   return (
     <MantineProvider>
