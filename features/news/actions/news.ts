@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { canAdminManageNews } from "@/features/news/permissions/news";
 import {
   newsCreateSchema,
@@ -98,5 +99,31 @@ export async function deleteNewsAction(formData: FormData) {
   }
   const deleted = await deleteNewsInDb(parsed.data.newsId);
   if (!deleted) return { error: "News not found" };
+  return { success: true };
+}
+
+export async function autoSaveNewsAction(formData: FormData) {
+  const parsed = z
+    .object({
+      newsId: z.string().uuid(),
+      title: z.string().min(1, "Title is required").max(500),
+      content: z.string().max(500_000),
+    })
+    .safeParse({
+      newsId: formData.get("newsId"),
+      title: formData.get("title"),
+      content: formData.get("content") ?? "[]",
+    });
+  if (!parsed.success) {
+    return { error: zodErrorMessage(parsed.error) };
+  }
+  const session = await requireActionRole(canAdminManageNews);
+  if (!session) {
+    return { error: "Unauthorized" };
+  }
+  await updateNewsInDb(parsed.data.newsId, {
+    title: parsed.data.title,
+    content: parsed.data.content,
+  });
   return { success: true };
 }
