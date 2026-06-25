@@ -98,6 +98,7 @@ A small "GemX Verified" badge on the product card when `isVerified = true`. Foll
 | DB migration | Generated via `db:generate`, applied manually |
 | `features/products/db/products.ts` | Include new fields in queries; `verifyProduct` / `unverifyProduct` mutation helpers |
 | Server action | `verifyProductAction` — validates permission + moderationStatus, writes fields + change log |
+| Existing moderation update action | When `moderationStatus` changes away from `approved`, auto-clear `isVerified` and write a `"verified"` change log entry |
 | `features/products/components/ProductForm.tsx` | Verified toggle in Visibility section; read-only verified-by line; RBAC guard |
 | `features/products/components/ProductsListView.tsx` | Verified pill in flags row |
 | Mobile API product endpoints | Add `isVerified` to response |
