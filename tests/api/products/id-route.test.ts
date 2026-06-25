@@ -115,6 +115,24 @@ describe("GET /api/products/[id]", () => {
     expect(data).not.toHaveProperty("changeLog")
   })
 
+  it("omits verifiedBy from GET JSON (internal staff ID must not be sent to buyers/sellers)", async () => {
+    // verifiedBy holds the staff user ID that verified the product — must stay server-side only
+    const product = {
+      id: "p1",
+      title: "Ruby",
+      sellerId: "u1",
+      isVerified: true,
+      verifiedBy: "staff-user-id-abc123",
+    }
+    vi.mocked(getCachedProduct).mockResolvedValue(product as never)
+    const res = await GET({} as NextRequest, params("p1"))
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data).not.toHaveProperty("verifiedBy")
+    // isVerified (boolean) is still present — only the staff ID is stripped
+    expect(data).toHaveProperty("isVerified", true)
+  })
+
   it("returns 404 when product not found", async () => {
     vi.mocked(getCachedProduct).mockResolvedValue(null)
     const res = await GET({} as NextRequest, params("missing"))

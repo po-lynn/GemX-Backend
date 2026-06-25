@@ -856,6 +856,7 @@ Both params are ignored when `search` is set (search always uses relevance order
       "isCollectorPiece": false,
       "isPrivilegeAssist": false,
       "isPromotion": false,
+      "isVerified": false,
       "sellerId": "uuid",
       "sellerName": "John",
       "sellerPhone": null,
@@ -867,7 +868,7 @@ Both params are ignored when `search` is set (search always uses relevance order
 }
 ```
 
-Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, and `isFeatured` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`). The API does not return a numeric `featured` field.
+Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isFeatured`, and `isVerified` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`). The API does not return a numeric `featured` field.
 
 > **⚠️ `jewelleryGemstones` is NOT included in list responses.** The list endpoint returns a lightweight shape — `jewelleryGemstones` (the array of gemstones for a jewellery product) is only present on the **single product detail** response (`GET /api/products/:id`). Call the detail endpoint to get that data.
 
@@ -916,7 +917,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`** (see **5.4.4**).
 
-**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, etc.). Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
+**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isVerified`, etc.). `isVerified` is `true` when a staff member has verified the product; the internal `verifiedBy` staff user ID is never included in this response. Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
 
 
 | Field             | Type          | Description                |

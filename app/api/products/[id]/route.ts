@@ -89,7 +89,7 @@ export async function GET(
           rating: sellerRatingSummary,
         }
       : null
-    const { changeLog: _adminChangeLog, ...publicProduct } = product
+    const { changeLog: _adminChangeLog, verifiedBy: _verifiedBy, ...publicProduct } = product
     return jsonCached({
       ...publicProduct,
       seller,
