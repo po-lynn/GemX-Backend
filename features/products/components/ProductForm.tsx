@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createProductAction, updateProductAction, searchSellersAction, getRecentSellersAction, searchSellersPagedAction } from "@/features/products/actions/products"
+import { createProductAction, updateProductAction, searchSellersAction, getRecentSellersAction, searchSellersPagedAction, verifyProductAction } from "@/features/products/actions/products"
 import type { ProductForEdit } from "@/features/products/db/products"
 import type { UserPickerOption } from "@/features/users/db/users"
 import { PRODUCT_IDENTIFICATION_OPTIONS } from "@/features/products/schemas/products"
@@ -676,6 +676,7 @@ type Props = {
   listPosition?: number | null
   listTotal?: number | null
   companyUserId?: string | null
+  canVerify?: boolean
 }
 
 export function ProductForm({
@@ -692,6 +693,7 @@ export function ProductForm({
   listPosition,
   listTotal,
   companyUserId,
+  canVerify = false,
 }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
@@ -713,6 +715,8 @@ export function ProductForm({
   const [isCollectorPiece, setIsCollectorPiece] = useState(product?.isCollectorPiece ?? false)
   const [isPrivilegeAssist, setIsPrivilegeAssist] = useState(product?.isPrivilegeAssist ?? false)
   const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
+  const [isVerified, setIsVerified] = useState(product?.isVerified ?? false)
+  const [verifiedAt, setVerifiedAt] = useState<Date | null>(product?.verifiedAt ?? null)
   const [isNegotiable, setIsNegotiable] = useState(product?.isNegotiable ?? false)
 
   const [imageUrlsList, setImageUrlsList] = useState<string[]>(product?.imageUrls ?? [])
@@ -1581,7 +1585,47 @@ export function ProductForm({
                     <span className="pd-toggle-sub">Flag as a promotional item</span>
                   </div>
                 </label>
+
+                {/* GemX Verified */}
+                {canVerify && product?.id && (
+                  <label
+                    htmlFor="ft-verified"
+                    className={`pd-toggle${isVerified ? " on" : ""}${moderationStatus !== "approved" ? " disabled" : ""}`}
+                    title={moderationStatus !== "approved" ? "Set moderation to Approved first" : undefined}
+                  >
+                    <input
+                      id="ft-verified"
+                      type="checkbox"
+                      checked={isVerified}
+                      disabled={moderationStatus !== "approved"}
+                      onChange={async (e) => {
+                        const next = e.target.checked
+                        setIsVerified(next)
+                        const result = await verifyProductAction(product.id, next)
+                        if ("error" in result) {
+                          setIsVerified(!next)
+                          toast.error(result.error)
+                        } else {
+                          setVerifiedAt(next ? new Date() : null)
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <span className="pd-toggle-chk"><Check size={10} /></span>
+                    <div className="pd-toggle-text">
+                      <span className="pd-toggle-label">GemX Verified</span>
+                      <span className="pd-toggle-sub">Physically authenticated by GemX staff</span>
+                    </div>
+                  </label>
+                )}
               </div>
+
+              {/* Verified on date */}
+              {canVerify && product?.id && isVerified && verifiedAt && (
+                <p className="pd-hint" style={{ marginTop: 4 }}>
+                  Verified on {new Date(verifiedAt).toLocaleDateString()}
+                </p>
+              )}
 
               {/* Feature duration */}
               {isFeatured && (

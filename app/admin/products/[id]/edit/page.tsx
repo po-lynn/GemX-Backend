@@ -2,6 +2,7 @@ import { connection } from "next/server"
 import { notFound } from "next/navigation"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
+import { checkInternalAccess } from "@/features/rbac/db/permissions"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getCachedProduct } from "@/features/products/db/cache/products"
 import { getAllCategories } from "@/features/categories/db/categories"
@@ -35,10 +36,15 @@ type Props = {
 
 export default async function AdminProductsEditPage({ params, searchParams }: Props) {
   await connection()
-  await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
+  const session = await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
   const { id } = await params
   const sp = await searchParams
   const back = sp.from ? (BACK_ROUTES[sp.from] ?? null) : null
+
+  const canVerify =
+    session.user.role === "admin" ||
+    (session.user.role === "internal" &&
+      (await checkInternalAccess(session.user.id, FEATURE_KEYS.PRODUCTS_VERIFY)))
 
   const [product, categories, laboratories, origins, featureSettings, companySettings] = await Promise.all([
     getCachedProduct(id),
@@ -73,6 +79,7 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
           origins={origins}
           featurePricingTiers={featureSettings.pricingTiers}
           companyUserId={companySettings?.companyUserId ?? null}
+          canVerify={canVerify}
           backHref={back?.href}
           backLabel={back?.label}
           prevHref={adjacent.prevHref}
