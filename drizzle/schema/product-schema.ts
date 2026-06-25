@@ -61,6 +61,7 @@ export const productAdminChangeTypeEnum = pgEnum("product_admin_change_type", [
   "collector_piece",
   "piece_count",
   "privilege_assist",
+  "verified",
 ]);
 
 export { productTypeEnum } from "./category-schema";
@@ -126,6 +127,9 @@ export const product = pgTable(
     isPromotion: boolean("is_promotion").notNull().default(false),
     /** Optional list / “was” price for promotions; savings = compare − sale `price` when greater */
     promotionComparePrice: decimal("promotion_compare_price", { precision: 14, scale: 2 }),
+    isVerified: boolean("is_verified").notNull().default(false),
+    verifiedAt: timestamp("verified_at"),
+    verifiedBy: text("verified_by").references(() => user.id, { onDelete: "set null" }),
     sellerId: text("seller_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
