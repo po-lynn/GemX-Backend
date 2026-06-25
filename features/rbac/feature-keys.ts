@@ -5,6 +5,7 @@
 export const FEATURE_KEYS = {
   USERS:                     "users",
   PRODUCTS:                  "products",
+  PRODUCTS_VERIFY:           "products.verify",
   CREDIT_PACKAGES:           "credit.packages",
   CREDIT_PURCHASE_REQUESTS:  "credit.purchase_requests",
   CREDIT_SUBSCRIPTIONS:      "credit.subscriptions",
@@ -36,6 +37,7 @@ export const FEATURE_GROUPS: Array<{
     label: "Marketplace",
     features: [
       { key: FEATURE_KEYS.PRODUCTS,           label: "Products" },
+      { key: FEATURE_KEYS.PRODUCTS_VERIFY,    label: "Verify Products" },
       { key: FEATURE_KEYS.ORIGIN,             label: "Origin" },
       { key: FEATURE_KEYS.LABORATORY,         label: "Laboratory" },
       { key: FEATURE_KEYS.COLLECTOR_REQUESTS, label: "Collector Requests" },
