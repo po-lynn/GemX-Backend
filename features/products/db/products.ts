@@ -116,6 +116,9 @@ export type AdminProductRow = {
   isPromotion: boolean
   /** List / “was” price when on promotion; used to compute savings vs `price` */
   promotionComparePrice: string | null
+  isVerified: boolean
+  verifiedAt: Date | null
+  verifiedBy: string | null
   laboratoryId: string | null
   sellerId: string
   sellerName: string
@@ -280,6 +283,9 @@ export async function getAdminProductsFromDb(opts: {
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
       promotionComparePrice: product.promotionComparePrice,
+      isVerified: product.isVerified,
+      verifiedAt: product.verifiedAt,
+      verifiedBy: product.verifiedBy,
       sellerId: product.sellerId,
       sellerName: user.name,
       sellerPhone: user.phone,
@@ -325,6 +331,9 @@ export async function getAdminProductsFromDb(opts: {
     isPromotion: p.isPromotion,
     promotionComparePrice:
       p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
+    isVerified: p.isVerified,
+    verifiedAt: p.verifiedAt,
+    verifiedBy: p.verifiedBy,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -519,6 +528,9 @@ export async function getProductsBySellerId(
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
       promotionComparePrice: product.promotionComparePrice,
+      isVerified: product.isVerified,
+      verifiedAt: product.verifiedAt,
+      verifiedBy: product.verifiedBy,
       sellerId: product.sellerId,
       sellerName: user.name,
       sellerPhone: user.phone,
@@ -564,6 +576,9 @@ export async function getProductsBySellerId(
     isPromotion: p.isPromotion,
     promotionComparePrice:
       p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
+    isVerified: p.isVerified,
+    verifiedAt: p.verifiedAt,
+    verifiedBy: p.verifiedBy,
     sellerId: p.sellerId,
     sellerName: p.sellerName,
     sellerPhone: p.sellerPhone,
@@ -619,6 +634,9 @@ export type ProductForEdit = {
   isPrivilegeAssist: boolean
   isPromotion: boolean
   promotionComparePrice: string | null
+  isVerified: boolean
+  verifiedAt: Date | null
+  verifiedBy: string | null
   sellerId: string
   sellerName: string
   imageUrls: string[]
@@ -666,6 +684,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       isPrivilegeAssist: product.isPrivilegeAssist,
       isPromotion: product.isPromotion,
       promotionComparePrice: product.promotionComparePrice,
+      isVerified: product.isVerified,
+      verifiedAt: product.verifiedAt,
+      verifiedBy: product.verifiedBy,
       sellerId: product.sellerId,
       sellerName: user.name,
       createdAt: product.createdAt,
@@ -780,6 +801,9 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     isPromotion: row.isPromotion,
     promotionComparePrice:
       row.promotionComparePrice != null ? String(row.promotionComparePrice) : null,
+    isVerified: row.isVerified,
+    verifiedAt: row.verifiedAt,
+    verifiedBy: row.verifiedBy,
     sellerId: row.sellerId,
     sellerName: row.sellerName,
     imageUrls: images.map((i) => i.url),
@@ -1461,4 +1485,46 @@ export async function expireFeaturedProducts(): Promise<FeaturedExpiryResult> {
   }
 
   return { expired: rows.length }
+}
+
+export async function verifyProductInDb(productId: string, adminId: string): Promise<void> {
+  const [prev] = await db
+    .select({ isVerified: product.isVerified })
+    .from(product)
+    .where(eq(product.id, productId))
+
+  await db
+    .update(product)
+    .set({ isVerified: true, verifiedAt: new Date(), verifiedBy: adminId })
+    .where(eq(product.id, productId))
+
+  await db.insert(productAdminChangeLog).values({
+    productId,
+    changeType: "verified",
+    oldValue: String(prev?.isVerified ?? false),
+    newValue: "true",
+    actorId: adminId,
+  })
+}
+
+export async function unverifyProductInDb(productId: string, adminId: string): Promise<void> {
+  const [prev] = await db
+    .select({ isVerified: product.isVerified })
+    .from(product)
+    .where(eq(product.id, productId))
+
+  if (!prev?.isVerified) return
+
+  await db
+    .update(product)
+    .set({ isVerified: false, verifiedAt: null, verifiedBy: null })
+    .where(eq(product.id, productId))
+
+  await db.insert(productAdminChangeLog).values({
+    productId,
+    changeType: "verified",
+    oldValue: "true",
+    newValue: "false",
+    actorId: adminId,
+  })
 }
