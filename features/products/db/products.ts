@@ -1007,6 +1007,8 @@ export async function updateProductInDb(
       isCollectorPiece: product.isCollectorPiece,
       pieceCount: product.pieceCount,
       isPrivilegeAssist: product.isPrivilegeAssist,
+      moderationStatus: product.moderationStatus,
+      isVerified: product.isVerified,
     })
     .from(product)
     .where(eq(product.id, id))
@@ -1254,6 +1256,16 @@ export async function updateProductInDb(
         }
       }
     })
+  }
+
+  // Auto-clear verified status when moderation changes away from approved
+  if (
+    rest.moderationStatus !== undefined &&
+    currentRow?.moderationStatus === "approved" &&
+    rest.moderationStatus !== "approved" &&
+    currentRow?.isVerified
+  ) {
+    await unverifyProductInDb(id, actorId ?? id)
   }
 }
 

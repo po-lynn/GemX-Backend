@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
-import { canAdminManageProducts } from "@/features/products/permissions/products"
+import { canAdminManageProducts, canVerifyProducts } from "@/features/products/permissions/products"
 import {
   productCreateSchema,
   productUpdateSchema,
@@ -11,6 +11,8 @@ import {
   createProductInDb,
   updateProductInDb,
   deleteProductInDb,
+  verifyProductInDb,
+  unverifyProductInDb,
 } from "@/features/products/db/products"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
@@ -393,4 +395,32 @@ export async function searchSellersPagedAction(
     })),
     total,
   }
+}
+
+export async function verifyProductAction(
+  productId: string,
+  isVerified: boolean
+): Promise<{ success: true } | { error: string }> {
+  const session = await requireActionRole(canVerifyProducts)
+  if (!session) return { error: "Unauthorized" }
+
+  const [p] = await db
+    .select({ moderationStatus: product.moderationStatus })
+    .from(product)
+    .where(eq(product.id, productId))
+
+  if (!p) return { error: "Product not found" }
+
+  if (isVerified && p.moderationStatus !== "approved") {
+    return { error: "Product must be approved before verifying" }
+  }
+
+  if (isVerified) {
+    await verifyProductInDb(productId, session.user.id)
+  } else {
+    await unverifyProductInDb(productId, session.user.id)
+  }
+
+  revalidateProductsCache(productId)
+  return { success: true }
 }
