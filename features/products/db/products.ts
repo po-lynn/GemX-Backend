@@ -593,7 +593,7 @@ export async function getProductsBySellerId(
 export type ProductChangeLogEntry = {
   id: string
   createdAt: Date
-  changeType: "status" | "price" | "featured" | "seller" | "collector_piece" | "piece_count" | "privilege_assist"
+  changeType: "status" | "price" | "featured" | "seller" | "collector_piece" | "piece_count" | "privilege_assist" | "verified"
   oldValue: string
   newValue: string
 }
