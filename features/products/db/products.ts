@@ -1265,7 +1265,7 @@ export async function updateProductInDb(
     rest.moderationStatus !== "approved" &&
     currentRow?.isVerified
   ) {
-    await unverifyProductInDb(id, actorId ?? id)
+    await unverifyProductInDb(id, actorId ?? "system")
   }
 }
 
