@@ -110,7 +110,7 @@ export function OwnProductsSection({ products }: Props) {
                 {item.isVerified && (
                   <span style={{
                     position: "absolute",
-                    top: item.isPrivilegeAssist ? 44 : 14,
+                    top: 44,
                     left: 14,
                     fontSize: 11,
                     fontWeight: 700,

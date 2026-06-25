@@ -63,6 +63,7 @@ export async function GET(
           currency: product.currency,
           imageUrls: product.imageUrls,
           maskedPrice: maskPrice(product.price),
+          isVerified: false,
           seller: sellerUser
             ? {
                 id: sellerUser.id,
