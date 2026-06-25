@@ -6,6 +6,7 @@ export type CACHE_TAG =
   | "laboratory"
   | "origin"
   | "ratingTag"
+  | "precautionTag"
   | "profile"
   | "home"
   | "rankedProducts"

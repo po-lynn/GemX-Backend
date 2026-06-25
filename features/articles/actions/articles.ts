@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { canAdminManageArticles } from "@/features/articles/permissions/articles";
 import {
   articleCreateSchema,
@@ -69,7 +70,7 @@ export async function updateArticleAction(formData: FormData) {
     articleId: formData.get("articleId"),
     title: emptyToNull(formData.get("title")),
     content: emptyToNull(formData.get("content")),
-    author: emptyToNull(formData.get("author")),
+    author: formData.get("author") ?? undefined,
     status: emptyToNull(formData.get("status")),
     publishDate: emptyToNull(formData.get("publishDate")),
   });
@@ -106,6 +107,31 @@ export async function updateArticleAction(formData: FormData) {
     );
   }
   return { success: true, articleId };
+}
+
+export async function autoSaveArticleAction(formData: FormData) {
+  const parsed = z
+    .object({
+      articleId: z.string().uuid(),
+      title: z.string().min(1, "Title is required").max(500),
+      author: z.string().max(200),
+      content: z.string().max(500_000),
+    })
+    .safeParse({
+      articleId: formData.get("articleId"),
+      title: formData.get("title"),
+      author: formData.get("author") ?? "",
+      content: formData.get("content") ?? "[]",
+    });
+  if (!parsed.success) return { error: zodErrorMessage(parsed.error) };
+  const session = await requireActionRole(canAdminManageArticles);
+  if (!session) return { error: "Unauthorized" };
+  await updateArticleInDb(parsed.data.articleId, {
+    title: parsed.data.title,
+    author: parsed.data.author,
+    content: parsed.data.content,
+  });
+  return { success: true };
 }
 
 export async function deleteArticleAction(formData: FormData) {

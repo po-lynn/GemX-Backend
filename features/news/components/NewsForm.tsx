@@ -152,9 +152,11 @@ export function NewsForm({ mode, news }: Props) {
         </span>
         <span style={{ flex: 1 }} />
         {error && <span style={{ fontSize: 12, color: "#B91C1C", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{error}</span>}
-        <button type="button" className="btn" onClick={() => submit()} disabled={loading}>
-          Save draft
-        </button>
+        {status !== "published" && (
+          <button type="button" className="btn" onClick={() => submit()} disabled={loading}>
+            Save draft
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-primary"

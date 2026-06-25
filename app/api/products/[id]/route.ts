@@ -16,6 +16,7 @@ import { normalizeProductBody } from "@/features/products/api/normalize-product-
 import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { getCollectorPieceShowRequestForUser } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import { maskPrice } from "@/lib/formatters"
+import { getCachedPublicPrecautionTags } from "@/features/precaution-tags/db/cache/precaution-tags"
 import { db } from "@/drizzle/db"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
 import { eq, sql } from "drizzle-orm"
@@ -89,9 +90,25 @@ export async function GET(
           rating: sellerRatingSummary,
         }
       : null
+    const isCertified = !!(
+      product.laboratoryId ||
+      product.certReportNumber ||
+      product.certReportDate ||
+      product.certReportUrl
+    )
+    const allPrecautions = await getCachedPublicPrecautionTags()
+    const precautions = allPrecautions
+      .filter((t) =>
+        isCertified
+          ? t.appliesTo === "certified" || t.appliesTo === "both"
+          : t.appliesTo === "non_certified" || t.appliesTo === "both"
+      )
+      .map(({ id, name, severity }) => ({ id, name, severity }))
+
     const { changeLog: _adminChangeLog, verifiedBy: _verifiedBy, ...publicProduct } = product
     return jsonCached({
       ...publicProduct,
+      precautions,
       seller,
       requestStatus,
     })

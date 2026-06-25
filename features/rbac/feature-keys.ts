@@ -18,6 +18,7 @@ export const FEATURE_KEYS = {
   CHAT_DASHBOARD:            "chat_dashboard",
   COLLECTOR_REQUESTS:        "collector_requests",
   SETTINGS_RATING_TAGS:      "settings.rating_tags",
+  SETTINGS_PRECAUTION_TAGS:  "settings.precaution_tags",
   SETTINGS_ESCROW:           "settings.escrow",
 } as const
 
@@ -69,8 +70,9 @@ export const FEATURE_GROUPS: Array<{
   {
     label: "Settings",
     features: [
-      { key: FEATURE_KEYS.SETTINGS_RATING_TAGS, label: "Seller Rating Tags" },
-      { key: FEATURE_KEYS.SETTINGS_ESCROW,      label: "Settings" },
+      { key: FEATURE_KEYS.SETTINGS_RATING_TAGS,     label: "Seller Rating Tags" },
+      { key: FEATURE_KEYS.SETTINGS_PRECAUTION_TAGS, label: "Precaution Tags" },
+      { key: FEATURE_KEYS.SETTINGS_ESCROW,          label: "Settings" },
     ],
   },
 ]

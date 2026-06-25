@@ -4223,3 +4223,62 @@
 .pt-pay-name { font-size: 15px; font-weight: 700; color: var(--lv-text); margin-bottom: 4px; }
 .pt-pay-detail { font-size: 13px; color: var(--lv-text-2); line-height: 1.6; }
 .pt-pay-detail strong { color: var(--lv-text); font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PRECAUTION TAGS  (pct-*)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Severity pill ───────────────────────────────────────── */
+.pct-sevpill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 999px; white-space: nowrap;
+  background: #F8FAFC; border: 1px solid rgba(71,85,105,0.18); color: #475569;
+}
+.pct-sevpill[data-severity="critical"] { background: #FEF2F2; border-color: rgba(185,28,28,0.2);  color: #B91C1C; }
+.pct-sevpill[data-severity="warning"]  { background: #FFFBEB; border-color: rgba(180,92,9,0.2);   color: #92400E; }
+.pct-sevpill[data-severity="info"]     { background: #EFF6FF; border-color: rgba(37,99,235,0.2);  color: #1D4ED8; }
+.pct-sevpill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* ── Applies-to pill ─────────────────────────────────────── */
+.pct-applies-pill {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 999px; white-space: nowrap;
+  background: #F8FAFC; border: 1px solid rgba(71,85,105,0.18); color: #475569;
+}
+.pct-applies-pill[data-applies="certified"]    { background: #ECFDF5; border-color: rgba(4,120,87,0.2);   color: #065F46; }
+.pct-applies-pill[data-applies="non_certified"] { background: #FFFBEB; border-color: rgba(180,92,9,0.2);  color: #92400E; }
+.pct-applies-pill[data-applies="both"]          { background: #F1ECFD; border-color: rgba(109,74,255,0.2); color: #5B21B6; }
+
+/* ── Tag chip (badge in list + form preview) ─────────────── */
+.pct-tag-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 8px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid transparent;
+}
+.pct-tag-chip[data-severity="critical"] { background: #FEF2F2; border-color: rgba(185,28,28,0.18);  color: #991B1B; }
+.pct-tag-chip[data-severity="warning"]  { background: #FFFBEB; border-color: rgba(180,92,9,0.18);   color: #78350F; }
+.pct-tag-chip[data-severity="info"]     { background: #EFF6FF; border-color: rgba(37,99,235,0.18);  color: #1E40AF; }
+.pct-tag-chip svg { flex-shrink: 0; }
+
+/* ── Edit page hero card ───────────────────────────────────── */
+.pct-headcard {
+  background: #fff; border: 1px solid var(--lv-border);
+  border-radius: 14px; padding: 20px 24px; margin-bottom: 18px;
+  box-shadow: var(--lv-shadow-sm);
+}
+.pct-headcard[data-severity="critical"] { border-color: rgba(185,28,28,0.18);  background: rgba(185,28,28,0.02); }
+.pct-headcard[data-severity="warning"]  { border-color: rgba(180,92,9,0.18);   background: rgba(180,92,9,0.02); }
+.pct-headcard[data-severity="info"]     { border-color: rgba(37,99,235,0.18);  background: rgba(37,99,235,0.02); }
+
+.pct-head-icon {
+  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #F1F5F9; color: #64748B;
+}
+.pct-head-icon svg { width: 24px; height: 24px; }
+.pct-head-icon[data-severity="critical"] { background: #FEF2F2; color: #B91C1C; }
+.pct-head-icon[data-severity="warning"]  { background: #FFFBEB; color: #B45309; }
+.pct-head-icon[data-severity="info"]     { background: #EFF6FF; color: #2563EB; }

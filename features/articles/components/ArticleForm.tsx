@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createArticleAction, updateArticleAction } from "@/features/articles/actions/articles";
+import { useAutoSave } from "@/features/articles/hooks/useAutoSave";
 import type { ArticleRow } from "@/features/articles/db/articles";
 import DatePicker from "@/components/date-picker/date-picker";
 
@@ -25,6 +26,49 @@ function fmtDate(d: Date | string | null | undefined): string | null {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function getSavebarStatusClass({
+  autoSaveState,
+  dirty,
+  isEdit,
+}: {
+  autoSaveState: string;
+  dirty: boolean;
+  isEdit: boolean;
+}): string {
+  if (autoSaveState === "pending" || autoSaveState === "saving") return " dirty";
+  if (autoSaveState === "saved") return " saved";
+  if (autoSaveState === "error") return " dirty";
+  return dirty ? " dirty" : isEdit ? " saved" : "";
+}
+
+function getSavebarLabel({
+  autoSaveState,
+  lastAutoSaved,
+  dirty,
+  isEdit,
+  updatedLabel,
+}: {
+  autoSaveState: string;
+  lastAutoSaved: Date | null;
+  dirty: boolean;
+  isEdit: boolean;
+  updatedLabel: string | null;
+}): string {
+  if (autoSaveState === "pending") return "Saving in a moment…";
+  if (autoSaveState === "saving") return "Saving…";
+  if (autoSaveState === "saved" && lastAutoSaved) {
+    const time = lastAutoSaved.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `Auto-saved · ${time}`;
+  }
+  if (autoSaveState === "error") return "Couldn't auto-save";
+  if (dirty) return "Unsaved changes";
+  if (isEdit) return `Saved · ${updatedLabel}`;
+  return "New article";
+}
+
 type Props = {
   mode: "create" | "edit";
   article?: ArticleRow | null;
@@ -37,10 +81,23 @@ export function ArticleForm({ mode, article }: Props) {
 
   const [title, setTitle] = useState(article?.title ?? "");
   const [author, setAuthor] = useState(article?.author ?? "");
+  const [content, setContent] = useState(article?.content ?? "[]");
   const [status, setStatus] = useState<Status>((article?.status as Status) ?? "draft");
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { autoSaveState, lastAutoSaved } = useAutoSave({
+    id: article?.id ?? "",
+    title,
+    author,
+    content,
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (autoSaveState === "saved") setDirty(false);
+  }, [autoSaveState]);
 
   const publishDateValue = article?.publishDate
     ? new Date(article.publishDate).toISOString().slice(0, 10)
@@ -88,9 +145,9 @@ export function ArticleForm({ mode, article }: Props) {
 
       {/* Save bar */}
       <div className="n-savebar" style={{ position: "relative" }}>
-        <span className={`n-savebar-status${dirty ? " dirty" : isEdit ? " saved" : ""}`}>
+        <span className={`n-savebar-status${getSavebarStatusClass({ autoSaveState, dirty, isEdit })}`}>
           <span className="n-savebar-status-dot" />
-          {dirty ? "Unsaved changes" : isEdit ? `Saved · ${updatedLabel}` : "New article"}
+          {getSavebarLabel({ autoSaveState, lastAutoSaved, dirty, isEdit, updatedLabel })}
         </span>
         <span className="n-savebar-stage">
           <span className={`n-savebar-stage-step${status === "draft" ? " on" : " done"}`}>Draft</span>
@@ -103,9 +160,11 @@ export function ArticleForm({ mode, article }: Props) {
             {error}
           </span>
         )}
-        <button type="button" className="btn" onClick={() => submit()} disabled={loading}>
-          Save draft
-        </button>
+        {status !== "published" && (
+          <button type="button" className="btn" onClick={() => submit()} disabled={loading}>
+            Save draft
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-primary"
@@ -187,7 +246,14 @@ export function ArticleForm({ mode, article }: Props) {
 
               {/* Body editor */}
               <div style={{ marginTop: 18 }}>
-                <BlockNoteEditor name="content" initialContent={article?.content} />
+                <BlockNoteEditor
+                  name="content"
+                  initialContent={article?.content}
+                  onContentChange={(json) => {
+                    setContent(json);
+                    setDirty(true);
+                  }}
+                />
               </div>
 
               {/* HR + footer row */}

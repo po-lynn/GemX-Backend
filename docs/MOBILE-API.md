@@ -11,6 +11,8 @@
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
 - **Feature settings (full, mobile)** – **GET `/api/mobile/feature-settings`** (no auth): returns both **`homeFeaturedLimit`** (admin-configured max homepage featured slots) and the full **`pricingTiers`** array (same tiers as **GET `/api/mobile/feature-pricing-tiers`** but with optional **`enabled`** flag per tier). Use when you need to show remaining capacity alongside tier selection. See **5.4.1b**.
+- **Product precautions** – **GET `/api/products/:id`** full response now includes **`precautions`**: an array of `{ id, name, severity }` safety advisories to show the buyer before they chat, call, or pay. Severity is `"critical"` | `"warning"` | `"info"`. Tags are filtered by certification context — certified products (any of `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` set) receive `appliesTo = "certified"` + `"both"` tags; non-certified products receive `appliesTo = "non_certified"` + `"both"` tags. Only active tags are included; array is empty when none are configured. See **5.2**.
+- **Removed `POST /api/mobile/points/purchase`** — legacy endpoint that credited points immediately without admin approval has been removed. Use the package + purchase-request flow (**POST `/api/mobile/points/purchase-requests`** → admin approves) for all new integrations. See **5.4.2**.
 - **Point purchase requests — `payment_method`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** now include **`payment_method`** (name from `GET /api/mobile/points/packages` → `paymentMethods`). **POST** requires **`payment_method`** in the body; **`paymentMethod`** is accepted as an alias. Stored in **`point_purchase_request.payment_method`**. See **5.4.2**.
 - **Point purchase requests — `package_name`** – **GET `/api/mobile/points/purchase-requests`**, **GET `/api/mobile/points/purchase-history`**, and **POST `/api/mobile/points/purchase-requests`** success responses now include **`package_name`** (snake_case) on each item. **POST** request body uses **`package_name`** (required); **`packageName`** is still accepted as an alias. See **5.4.2**.
 - **Collector piece show requests — list enrichment** – **GET `/api/mobile/collector-piece-show-requests`** each **`requests`** item now includes **`productName`** (from **`product.title`**) and **`sellerName`** (from the listing seller’s **`user.name`**). See **5.4.4**.
@@ -90,7 +92,6 @@
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
-| POST   | `/api/mobile/points/purchase` | Yes  | Purchase points by amount/currency. Converts by point settings and credits user points balance.                                                                                                       |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit a credit point purchase request after transferring payment. Creates a pending request for admin approval. See **5.4.2**.                                                                       |
 | GET    | `/api/mobile/points/purchase-requests` | Yes  | List current user's own credit point purchase request history (all statuses). See **5.4.2**.                                                                                                         |
@@ -917,7 +918,24 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`** (see **5.4.4**).
 
-**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isVerified`, etc.). `isVerified` is `true` when a staff member has verified the product; the internal `verifiedBy` staff user ID is never included in this response. Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`). The response includes a `seller` object (or `null` if seller not found) with:
+**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isVerified`, etc.). `isVerified` is `true` when a staff member has verified the product; the internal `verifiedBy` staff user ID is never included in this response. Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`).
+
+**`precautions`** — array of safety advisories to display to the buyer before they chat, call, or pay. The set returned depends on whether the product is certified (has any of `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` set):
+
+| Certification status | Tags returned |
+| -------------------- | ------------- |
+| Certified (cert fields present) | `appliesTo = "certified"` + `appliesTo = "both"` |
+| Non-certified (all cert fields null) | `appliesTo = "non_certified"` + `appliesTo = "both"` |
+
+Only active tags (`isActive = true`) are included. The array is empty when no applicable tags are configured. Each item:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | string | Tag UUID |
+| `name` | string | Advisory text shown to the buyer (e.g. "No lab certificate") |
+| `severity` | `"critical"` \| `"warning"` \| `"info"` | Controls urgency styling in the app |
+
+The response includes a `seller` object (or `null` if seller not found) with:
 
 
 | Field             | Type          | Description                |
@@ -2929,54 +2947,14 @@ Returns the user's current balance alongside a paginated transaction ledger (new
 
 ---
 
-#### POST `/api/mobile/points/purchase` *(legacy)*
+#### ~~POST `/api/mobile/points/purchase`~~ *(removed)*
 
-**POST** `/api/mobile/points/purchase`
+This endpoint has been removed. Use the package + purchase-request flow instead:
 
-**Auth:** Required. `Authorization: Bearer <session_token>`.
-
-Legacy endpoint — credits points immediately based on a payment amount and currency, without admin approval. Use the package + purchase-request flow above for new integrations.
-
-**Request body (JSON):**
-
-```json
-{
-  "currency": "mmk",
-  "amount": 100000
-}
-```
-
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `currency` | string | Yes | One of: `mmk`, `usd`, `krw`. |
-| `amount` | number | Yes | Purchase amount in selected currency. Must be positive. |
-
-**Business rules:**
-
-- Conversion uses admin-configured point settings (`point-management` currency conversion).
-- Calculated points are floored to integer.
-- If calculated points <= 0, request is rejected.
-- On success, points are added immediately to user balance.
-
-**Success (200):**
-
-```json
-{
-  "success": true,
-  "currency": "mmk",
-  "amount": 100000,
-  "pointsAdded": 100,
-  "pointsBalance": 1350
-}
-```
-
-**Errors:**
-
-- **400** – `{ "error": "Invalid input" }`
-- **400** – `{ "error": "Point conversion is not configured" }`
-- **400** – `{ "error": "Amount is too low to earn points" }`
-- **401** – `{ "error": "Unauthorized" }`
-- **500** – `{ "error": "Failed to purchase points" }`
+1. Call **GET `/api/mobile/points/packages`** to load available packages and payment methods.
+2. User transfers payment out-of-band (KBZ Pay, etc.).
+3. Submit **POST `/api/mobile/points/purchase-requests`** with transfer details.
+4. Admin approves at `/admin/credit/purchase-requests`; points are credited only on approval.
 
 ---
 
@@ -3553,7 +3531,6 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`package_name`, `payment_method`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |
 | GET    | `/api/mobile/points/purchase-requests` | Yes  | List own credit point purchase request history. See 5.4.2.                                                   |
-| POST   | `/api/mobile/points/purchase` | Yes  | *(Legacy)* Purchase points and add to user balance based on configured conversion. See 5.4.2.                 |
 | POST   | `/api/mobile/collector-piece-show-requests` | Yes  | Submit show-request for a collector piece (`productId`, optional `message`). User info auto-captured from session. See 5.4.4. |
 | GET    | `/api/mobile/collector-piece-show-requests` | Yes  | List own show requests (paginated: `page`, `limit`; each item includes `productName`, `sellerName`). See 5.4.4.                                            |
 | POST   | `/api/mobile/escrow-service-requests` | Yes  | Submit escrow request (`type`, optional `productId`, optional `packageName`, optional `message`). Server validates package and resolves seller from product. See 5.4.5. |
