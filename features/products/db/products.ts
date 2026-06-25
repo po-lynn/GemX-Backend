@@ -1351,6 +1351,8 @@ export type HomepageFeaturedProduct = {
   imageUrl: string | null
   isPromotion: boolean
   isCollectorPiece: boolean
+  isPrivilegeAssist: boolean
+  isVerified: boolean
 }
 
 /**
@@ -1370,6 +1372,8 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
       origin: product.origin,
       isPromotion: product.isPromotion,
       isCollectorPiece: product.isCollectorPiece,
+      isPrivilegeAssist: product.isPrivilegeAssist,
+      isVerified: product.isVerified,
     })
     .from(product)
     .leftJoin(category, eq(product.categoryId, category.id))
@@ -1398,6 +1402,8 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
     imageUrl: imageMap.get(r.id) ?? null,
     isPromotion: r.isPromotion,
     isCollectorPiece: r.isCollectorPiece,
+    isPrivilegeAssist: r.isPrivilegeAssist,
+    isVerified: r.isVerified,
   }))
 }
 
@@ -1427,6 +1433,8 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
       origin: product.origin,
       isPromotion: product.isPromotion,
       isCollectorPiece: product.isCollectorPiece,
+      isPrivilegeAssist: product.isPrivilegeAssist,
+      isVerified: product.isVerified,
     })
     .from(product)
     .leftJoin(category, eq(product.categoryId, category.id))
@@ -1453,6 +1461,8 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
     imageUrl: imageMap.get(r.id) ?? null,
     isPromotion: r.isPromotion,
     isCollectorPiece: r.isCollectorPiece,
+    isPrivilegeAssist: r.isPrivilegeAssist,
+    isVerified: r.isVerified,
   }))
 }
 

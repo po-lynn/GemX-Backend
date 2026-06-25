@@ -1768,6 +1768,7 @@
 .prod-flag.collector  { background: #F3EEFF; color: #6D28D9; border-color: rgba(109,40,217,0.18); }
 .prod-flag.privilege  { background: #ECFDF5; color: #047857; border-color: rgba(4,120,87,0.18); }
 .prod-flag.promotion  { background: #FEF2F2; color: #B91C1C; border-color: rgba(185,28,28,0.18); }
+.prod-flag.verified   { background: #ccfbf1; color: #0f766e; border-color: rgba(15,118,110,0.18); }
 
 /* ── Drawer thumbnail ──────────────────────────────────── */
 .prod-drawer-thumb {

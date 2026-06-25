@@ -107,6 +107,20 @@ export function OwnProductsSection({ products }: Props) {
                   color: "#6d5ce7", background: "rgba(255,255,255,0.95)", padding: "4px 10px",
                   borderRadius: 20, zIndex: 1,
                 }}>Own Pick</span>
+                {item.isVerified && (
+                  <span style={{
+                    position: "absolute",
+                    top: item.isPrivilegeAssist ? 44 : 14,
+                    left: 14,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#0f766e",
+                    background: "rgba(255,255,255,0.95)",
+                    padding: "4px 10px",
+                    borderRadius: 20,
+                    zIndex: 1,
+                  }}>GemX Verified</span>
+                )}
               </div>
               <div style={{ padding: "18px 18px 20px" }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#191525", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.title}</div>

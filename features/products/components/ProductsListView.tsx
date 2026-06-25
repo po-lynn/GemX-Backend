@@ -74,6 +74,7 @@ function ProductFlags({ row }: { row: AdminProductRow }) {
     row.isCollectorPiece && <span key="c" className="prod-flag collector">Collector</span>,
     row.isPrivilegeAssist && <span key="p" className="prod-flag privilege">Privilege</span>,
     row.isPromotion      && <span key="r" className="prod-flag promotion">Promo</span>,
+    row.isVerified       && <span key="v" className="prod-flag verified">Verified</span>,
   ].filter(Boolean)
   if (!flags.length) return <span style={{ color: "var(--lv-text-4)", fontSize: 12 }}>—</span>
   return <span className="prod-flags">{flags}</span>

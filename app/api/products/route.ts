@@ -33,7 +33,7 @@ function maskCollectorPiece(p: { id: string; price: string; currency: string; st
     stoneCut: null, metal: null,
     status: p.status, moderationStatus: null,
     isFeatured: false, featured_expires_at: null, isCollectorPiece: true,
-    isPrivilegeAssist: false, isPromotion: false,
+    isPrivilegeAssist: false, isPromotion: false, isVerified: false,
     promotionComparePrice: null,
     sellerId: null, sellerName: null, sellerPhone: null,
     imageUrl: p.imageUrl, createdAt: null,
