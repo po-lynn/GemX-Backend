@@ -19,7 +19,7 @@ const client =
     ssl: "require",
     // PgBouncer transaction mode already pools — keep per-instance count low to
     // avoid exhausting Supabase's connection limit across concurrent Vercel invocations.
-    max: isPooler ? 3 : 5,
+    max: isPooler ? 10 : 15,
     prepare: false,
     fetch_types: false,
     connect_timeout: 20,
