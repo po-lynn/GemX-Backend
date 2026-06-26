@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-import { getCachedLaboratories } from "@/features/laboratory/db/cache/laboratory"
+import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { LaboratoryListView } from "@/features/laboratory/components/LaboratoryListView"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
@@ -11,7 +11,7 @@ import { FadeUp, PressButton } from "@/components/admin/motion"
 export default async function AdminLaboratoryPage() {
   await connection()
   await requireFeatureAccess(FEATURE_KEYS.LABORATORY)
-  const laboratories = await getCachedLaboratories()
+  const laboratories = await getAllLaboratories()
 
   const views: ViewTab[] = [
     { id: "all", label: "All", count: laboratories.length },

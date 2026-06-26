@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ChevronRight, Plus, Download } from "lucide-react"
-import { getCachedPrecautionTags } from "@/features/precaution-tags/db/cache/precaution-tags"
+import { getAllPrecautionTags } from "@/features/precaution-tags/db/precaution-tags"
 import { PrecautionTagsListView } from "@/features/precaution-tags/components"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
@@ -23,7 +23,7 @@ export default async function AdminPrecautionTagsPage({ searchParams }: Props) {
     ? (params.view as View)
     : "all"
 
-  const allTags = await getCachedPrecautionTags()
+  const allTags = await getAllPrecautionTags()
 
   const certifiedCount   = allTags.filter((t) => t.appliesTo === "certified" || t.appliesTo === "both").length
   const nonCertifiedCount = allTags.filter((t) => t.appliesTo === "non_certified" || t.appliesTo === "both").length

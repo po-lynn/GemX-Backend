@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ChevronRight, Plus, Download } from "lucide-react"
-import { getCachedRatingTags } from "@/features/rating-tags/db/cache/rating-tags"
+import { getAllRatingTags } from "@/features/rating-tags/db/rating-tags"
 import { RatingTagsListView } from "@/features/rating-tags/components/RatingTagsListView"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
@@ -23,7 +23,7 @@ export default async function AdminRatingTagsPage({ searchParams }: Props) {
     ? (params.view as View)
     : "all"
 
-  const allTags = await getCachedRatingTags()
+  const allTags = await getAllRatingTags()
 
   const positiveCount = allTags.filter((t) => t.type === "positive").length
   const neutralCount  = allTags.filter((t) => t.type === "neutral").length

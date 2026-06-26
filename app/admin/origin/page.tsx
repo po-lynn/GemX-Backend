@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-import { getCachedOrigins } from "@/features/origin/db/cache/origin"
+import { getAllOrigins } from "@/features/origin/db/origin"
 import { OriginListView } from "@/features/origin/components/OriginListView"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
@@ -23,7 +23,7 @@ export default async function AdminOriginPage({ searchParams }: Props) {
     ? (params.view as View)
     : "all"
 
-  const allOrigins = await getCachedOrigins()
+  const allOrigins = await getAllOrigins()
 
   const myanmarCount = allOrigins.filter((o) => o.country === "Myanmar").length
   const otherCount   = allOrigins.filter((o) => o.country !== "Myanmar").length

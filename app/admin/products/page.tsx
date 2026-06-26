@@ -3,7 +3,7 @@ import { connection } from "next/server"
 import { ChevronRight, Plus, Download } from "lucide-react"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-import { getAdminProducts, getAdminProductCounts } from "@/features/products/db/cache/products"
+import { getAdminProductsFromDb, getAdminProductCountsFromDb } from "@/features/products/db/products"
 import { ProductsListView } from "@/features/products/components/ProductsListView"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
@@ -59,8 +59,8 @@ export default async function AdminProductsPage({ searchParams }: Props) {
   }[view]
 
   const [counts, { products, total }] = await Promise.all([
-    getAdminProductCounts(),
-    getAdminProducts({
+    getAdminProductCountsFromDb(),
+    getAdminProductsFromDb({
       page,
       limit: PAGE_SIZE,
       search,
