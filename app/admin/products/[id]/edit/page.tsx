@@ -4,7 +4,7 @@ import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { checkInternalAccess } from "@/features/rbac/db/permissions"
 import { ProductForm } from "@/features/products/components/ProductForm"
-import { getCachedProduct } from "@/features/products/db/cache/products"
+import { getProductById } from "@/features/products/db/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
@@ -47,7 +47,7 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
       (await checkInternalAccess(session.user.id, FEATURE_KEYS.PRODUCTS_VERIFY)))
 
   const [product, categories, laboratories, origins, featureSettings, companySettings] = await Promise.all([
-    getCachedProduct(id),
+    getProductById(id),
     getAllCategories(),
     getAllLaboratories(),
     getAllOrigins(),

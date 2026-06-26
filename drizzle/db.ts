@@ -25,10 +25,18 @@ const client =
     connect_timeout: 20,
     idle_timeout: 20,
     max_lifetime: 300,
-    connection: {
-      statement_timeout: 15_000,
-      idle_in_transaction_session_timeout: 10_000,
-    },
+    // session-level settings only persist on direct connections (port 5432).
+    // PgBouncer transaction mode (port 6543) resets session state per transaction,
+    // so statement_timeout set here would be silently ignored in production.
+    // Use onnotice/transforms or SET per-query if you need timeouts on the pooler.
+    ...(isPooler
+      ? {}
+      : {
+          connection: {
+            statement_timeout: 15_000,
+            idle_in_transaction_session_timeout: 10_000,
+          },
+        }),
   })
 
 // Cache on globalThis so warm Vercel instances and Next.js HMR both reuse the pool.
