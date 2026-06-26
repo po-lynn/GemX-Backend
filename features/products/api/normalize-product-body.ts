@@ -34,9 +34,6 @@ export function normalizeProductBody(body: unknown): Record<string, unknown> {
   if (typeof b.price === "number") {
     out.price = String(b.price)
   }
-  if (typeof b.promotionComparePrice === "number") {
-    out.promotionComparePrice = String(b.promotionComparePrice)
-  }
   if (typeof b.featured === "number") {
     out.featured = Math.max(0, Math.floor(b.featured))
   }
@@ -45,9 +42,6 @@ export function normalizeProductBody(body: unknown): Record<string, unknown> {
   }
   if (typeof b.isFeatured === "string") {
     out.isFeatured = b.isFeatured === "true" || b.isFeatured === "1"
-  }
-  if (typeof b.isPromotion === "string") {
-    out.isPromotion = b.isPromotion === "true" || b.isPromotion === "1"
   }
   return out
 }

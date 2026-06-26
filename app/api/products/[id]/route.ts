@@ -34,15 +34,19 @@ export async function GET(
     if (!product) return jsonError("Product not found", 404)
 
     let requestStatus: { id: string; status: string; createdAt: Date } | null = null
-    const session = await auth.api.getSession({ headers: request.headers })
-    const sellerUser = await getUserById(product.sellerId)
-    const [sellerRatingAgg] = await db
-      .select({
-        averageScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
-        totalRatings: sql<number>`count(*)::int`,
-      })
-      .from(sellerRating)
-      .where(eq(sellerRating.sellerUserId, product.sellerId))
+    const [session, sellerUser, sellerRatingResult, allPrecautions] = await Promise.all([
+      auth.api.getSession({ headers: request.headers }),
+      getUserById(product.sellerId),
+      db
+        .select({
+          averageScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
+          totalRatings: sql<number>`count(*)::int`,
+        })
+        .from(sellerRating)
+        .where(eq(sellerRating.sellerUserId, product.sellerId)),
+      getCachedPublicPrecautionTags(),
+    ])
+    const [sellerRatingAgg] = sellerRatingResult
     const sellerRatingSummary = {
       averageScore: Number(sellerRatingAgg?.averageScore ?? 0),
       totalRatings: sellerRatingAgg?.totalRatings ?? 0,
@@ -96,7 +100,6 @@ export async function GET(
       product.certReportDate ||
       product.certReportUrl
     )
-    const allPrecautions = await getCachedPublicPrecautionTags()
     const precautions = allPrecautions
       .filter((t) =>
         isCertified
@@ -196,8 +199,6 @@ export async function PATCH(
         featured: data.featured,
         isCollectorPiece: data.isCollectorPiece,
         isPrivilegeAssist: data.isPrivilegeAssist,
-        isPromotion: data.isPromotion,
-        promotionComparePrice: data.promotionComparePrice,
         imageUrls: data.imageUrls,
         videoUrls: data.videoUrls,
       },

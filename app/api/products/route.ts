@@ -1,11 +1,8 @@
 import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
-import { createProductInDb } from "@/features/products/db/products"
-import {
-  getAdminProducts,
-  revalidateProductsCache,
-} from "@/features/products/db/cache/products"
+import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
+import { revalidateProductsCache } from "@/features/products/db/cache/products"
 import { productCreateSchema } from "@/features/products/schemas/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
@@ -33,8 +30,7 @@ function maskCollectorPiece(p: { id: string; price: string; currency: string; st
     stoneCut: null, metal: null,
     status: p.status, moderationStatus: null,
     isFeatured: false, featured_expires_at: null, isCollectorPiece: true,
-    isPrivilegeAssist: false, isPromotion: false, isVerified: false,
-    promotionComparePrice: null,
+    isPrivilegeAssist: false, isVerified: false,
     sellerId: null, sellerName: null, sellerPhone: null,
     imageUrl: p.imageUrl, createdAt: null,
   }
@@ -66,10 +62,6 @@ export async function GET(request: NextRequest) {
         undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
-      isPromotion:
-        searchParams.get("isPromotion") ||
-        searchParams.get("promotion") ||
-        undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
     const data: SearchParams = (parsed.success ? parsed.data : { page: 1 }) as SearchParams
@@ -91,7 +83,6 @@ export async function GET(request: NextRequest) {
       isFeatured,
       isCollectorPiece,
       isPrivilegeAssist,
-      isPromotion,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
@@ -109,7 +100,7 @@ export async function GET(request: NextRequest) {
     let sortOrderArg: "asc" | "desc" | undefined
 
     if (hasSearch) {
-      // Search + filters: collector → privilege → featured → promotion → createdAt (and relevance when searching)
+      // Search + filters: collector → privilege → featured → createdAt (and relevance when searching)
       sortByPublicPriority = true
     } else if (explicitSort) {
       sortByPublicPriority = false
@@ -143,7 +134,6 @@ export async function GET(request: NextRequest) {
       createdTo: createdTo ?? undefined,
       isCollectorPiece: isCollectorPiece ?? undefined,
       isPrivilegeAssist: isPrivilegeAssist ?? undefined,
-      isPromotion: isPromotion ?? undefined,
       sortByPublicPriority,
       ...(sortByPublicPriority
         ? {}
@@ -154,7 +144,7 @@ export async function GET(request: NextRequest) {
     const collectorPieceFilter = isCollectorPiece === true
     if (collectorPieceFilter) {
       const session = await auth.api.getSession({ headers: request.headers })
-      const { products, total } = await getAdminProducts(listOpts)
+      const { products, total } = await getAdminProductsFromDb(listOpts)
       if (session) {
         const approvedIds = await getApprovedCollectorPieceProductIds(session.user.id)
         const result = products.map((p) =>
@@ -165,9 +155,9 @@ export async function GET(request: NextRequest) {
       return jsonCached({ products: products.map(maskCollectorPiece), total })
     }
 
-    const { products, total } = await getAdminProducts(listOpts)
+    const { products, total } = await getAdminProductsFromDb(listOpts)
     // Only mask collector pieces in the general browse; skip masking when explicitly filtering for another type
-    const maskInBrowse = !isPrivilegeAssist && !isPromotion && !isFeatured
+    const maskInBrowse = !isPrivilegeAssist && !isFeatured
     return jsonCached({
       products: products.map((p) =>
         maskInBrowse && p.isCollectorPiece

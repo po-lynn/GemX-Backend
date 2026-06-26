@@ -2,7 +2,7 @@ import { NextRequest, connection } from "next/server"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { getUserById } from "@/features/users/db/users"
 import { getPublicProfilePresence } from "@/features/users/db/profile-presence"
-import { getCachedProductsBySellerId } from "@/features/products/db/cache/products"
+import { getProductsBySellerId } from "@/features/products/db/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import { isUserActivePremiumDealer } from "@/features/points/db/points"
 import type { z } from "zod"
@@ -30,7 +30,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       laboratoryId: searchParams.get("laboratoryId") || undefined,
       isCollectorPiece: searchParams.get("isCollectorPiece") || undefined,
       isPrivilegeAssist: searchParams.get("isPrivilegeAssist") || undefined,
-      isPromotion: searchParams.get("isPromotion") || undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
     const data: SearchParams = (parsed.success ? parsed.data : { page: 1 }) as SearchParams
@@ -45,27 +44,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       laboratoryId,
       isCollectorPiece,
       isPrivilegeAssist,
-      isPromotion,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
 
-    const { products, total } = await getCachedProductsBySellerId(id, {
-      page,
-      limit,
-      search: search ?? undefined,
-      productType: productType ?? undefined,
-      categoryId: categoryId ?? undefined,
-      status: "active",
-      stoneCut: stoneCut ?? undefined,
-      shape: shape ?? undefined,
-      origin: origin ?? undefined,
-      laboratoryId: laboratoryId ?? undefined,
-      isCollectorPiece: isCollectorPiece === true ? true : undefined,
-      isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
-      isPromotion: isPromotion === true ? true : undefined,
-    })
-    const presence = await getPublicProfilePresence(id)
-    const isPremiumDealer = await isUserActivePremiumDealer(id)
+    const [{ products, total }, presence, isPremiumDealer] = await Promise.all([
+      getProductsBySellerId(id, {
+        page,
+        limit,
+        search: search ?? undefined,
+        productType: productType ?? undefined,
+        categoryId: categoryId ?? undefined,
+        status: "active",
+        stoneCut: stoneCut ?? undefined,
+        shape: shape ?? undefined,
+        origin: origin ?? undefined,
+        laboratoryId: laboratoryId ?? undefined,
+        isCollectorPiece: isCollectorPiece === true ? true : undefined,
+        isPrivilegeAssist: isPrivilegeAssist === true ? true : undefined,
+      }),
+      getPublicProfilePresence(id),
+      isUserActivePremiumDealer(id),
+    ])
 
     const profile = {
       id: user.id,

@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import Link from "next/link"
 import { Plus } from "lucide-react"
-import { getPortalProductCounts } from "@/features/products/db/cache/products"
+import { getPortalProductCountsFromDb } from "@/features/products/db/products"
 import { getProductsBySellerId } from "@/features/products/db/products"
 import { PortalProductsListView } from "@/features/products/components"
 import type { ViewTab } from "@/components/admin/list-view"
@@ -60,7 +60,7 @@ export default async function PortalProductsPage({ searchParams }: Props) {
   }[view]
 
   const [counts, { products, total }] = await Promise.all([
-    getPortalProductCounts(userId),
+    getPortalProductCountsFromDb(userId),
     getProductsBySellerId(userId, {
       page,
       limit: PAGE_SIZE,

@@ -28,7 +28,6 @@ const minProduct = {
   isFeatured: false,
   isCollectorPiece: false,
   isPrivilegeAssist: false,
-  isPromotion: false,
   isNegotiable: false,
   price: "100",
   currency: "USD",

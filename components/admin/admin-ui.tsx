@@ -29,7 +29,6 @@ const statusStyles: Record<string, string> = {
   rejected:  "bg-red-50      text-red-700     ring-red-200/60",
   featured:  "bg-violet-50   text-violet-700  ring-violet-200/60",
   collector: "bg-amber-50    text-amber-700   ring-amber-200/60",
-  promotion: "bg-orange-50   text-orange-700  ring-orange-200/60",
   privilege: "bg-indigo-50   text-indigo-700  ring-indigo-200/60",
   buyer:     "bg-blue-50     text-blue-700    ring-blue-200/60",
   seller:    "bg-purple-50   text-purple-700  ring-purple-200/60",

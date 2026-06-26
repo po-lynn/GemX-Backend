@@ -73,7 +73,6 @@ function ProductFlags({ row }: { row: AdminProductRow }) {
     row.isFeatured      && <span key="f" className="prod-flag featured">Featured</span>,
     row.isCollectorPiece && <span key="c" className="prod-flag collector">Collector</span>,
     row.isPrivilegeAssist && <span key="p" className="prod-flag privilege">Privilege</span>,
-    row.isPromotion      && <span key="r" className="prod-flag promotion">Promo</span>,
     row.isVerified       && <span key="v" className="prod-flag verified">Verified</span>,
   ].filter(Boolean)
   if (!flags.length) return <span style={{ color: "var(--lv-text-4)", fontSize: 12 }}>—</span>
@@ -284,11 +283,6 @@ export function ProductsListView({
             <span className="prod-price-main">
               {r.currency} {price.toLocaleString()}
             </span>
-            {r.promotionComparePrice && (
-              <span className="prod-price-sub promo">
-                was {Number(r.promotionComparePrice).toLocaleString()}
-              </span>
-            )}
           </span>
         )
       },
@@ -402,7 +396,6 @@ export function ProductsListView({
         { value: "featured",  label: "Featured",  count: products.filter((p) => p.isFeatured).length },
         { value: "collector", label: "Collector", count: products.filter((p) => p.isCollectorPiece).length },
         { value: "privilege", label: "Privilege", count: products.filter((p) => p.isPrivilegeAssist).length },
-        { value: "promotion", label: "Promotion", count: products.filter((p) => p.isPromotion).length },
       ].filter((o) => o.count > 0),
     },
     { id: "createdAt", label: "Created", type: "daterange" },
@@ -492,8 +485,7 @@ export function ProductsListView({
             return vals.every((f) =>
               (f === "featured"  && r.isFeatured)       ||
               (f === "collector" && r.isCollectorPiece) ||
-              (f === "privilege" && r.isPrivilegeAssist)||
-              (f === "promotion" && r.isPromotion)
+              (f === "privilege" && r.isPrivilegeAssist)
             )
           case "createdAt": {
             const from = vals.find((v) => v.startsWith("from:"))?.substring(5)

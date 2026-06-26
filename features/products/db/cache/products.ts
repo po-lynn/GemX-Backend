@@ -1,4 +1,4 @@
-import { cacheTag, revalidateTag } from "next/cache"
+import { cacheTag, updateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
@@ -45,7 +45,6 @@ export async function getAdminProducts(opts: {
   isCollectorPiece?: boolean
   collectorPieceApprovedForUserId?: string
   isPrivilegeAssist?: boolean
-  isPromotion?: boolean
   sortByPublicPriority?: boolean
   sortBy?: "createdAt" | "title" | "price" | "status"
   sortOrder?: "asc" | "desc"
@@ -81,7 +80,6 @@ export async function getCachedProductsBySellerId(
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
-    isPromotion?: boolean
     sortByPublicPriority?: boolean
     sortBy?: "createdAt" | "title" | "price" | "status"
     sortOrder?: "asc" | "desc"
@@ -113,8 +111,8 @@ export async function getPortalProductCounts(sellerId: string): Promise<{
 
 /** Invalidate products cache (use in Route Handlers or Server Actions). */
 export function revalidateProductsCache(id?: string) {
-  revalidateTag(getProductsGlobalTag(), "max")
+  updateTag(getProductsGlobalTag())
   if (id) {
-    revalidateTag(getProductIdTag(id), "max")
+    updateTag(getProductIdTag(id))
   }
 }

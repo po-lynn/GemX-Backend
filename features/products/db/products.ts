@@ -55,7 +55,6 @@ function buildProductOrderBy(
       desc(product.isPrivilegeAssist),
       desc(sql`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`),
       desc(product.featured),
-      desc(product.isPromotion),
       desc(product.createdAt),
     ]
     return search
@@ -113,9 +112,6 @@ export type AdminProductRow = {
   featuredExpiresAt: Date | null
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
-  isPromotion: boolean
-  /** List / “was” price when on promotion; used to compute savings vs `price` */
-  promotionComparePrice: string | null
   isVerified: boolean
   verifiedAt: Date | null
   verifiedBy: string | null
@@ -151,7 +147,6 @@ export async function getAdminProductsFromDb(opts: {
   /** When set with `isCollectorPiece: true`, only products with an approved `collector_piece_show_request` for this user are returned. */
   collectorPieceApprovedForUserId?: string
   isPrivilegeAssist?: boolean
-  isPromotion?: boolean
   priceMinUSD?: number
   priceMaxUSD?: number
   priceMinMMK?: number
@@ -251,7 +246,6 @@ export async function getAdminProductsFromDb(opts: {
         )
       : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
-    opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
     priceCondition,
   ].filter(Boolean)
 
@@ -281,8 +275,6 @@ export async function getAdminProductsFromDb(opts: {
       featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
-      isPromotion: product.isPromotion,
-      promotionComparePrice: product.promotionComparePrice,
       isVerified: product.isVerified,
       verifiedAt: product.verifiedAt,
       verifiedBy: product.verifiedBy,
@@ -328,9 +320,6 @@ export async function getAdminProductsFromDb(opts: {
     featuredExpiresAt: p.featuredExpiresAt,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
-    isPromotion: p.isPromotion,
-    promotionComparePrice:
-      p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
     isVerified: p.isVerified,
     verifiedAt: p.verifiedAt,
     verifiedBy: p.verifiedBy,
@@ -415,7 +404,6 @@ export async function getProductsBySellerId(
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
-    isPromotion?: boolean
     priceMinUSD?: number
     priceMaxUSD?: number
     priceMinMMK?: number
@@ -497,7 +485,6 @@ export async function getProductsBySellerId(
         : undefined,
     opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
-    opts.isPromotion === true ? eq(product.isPromotion, true) : undefined,
     priceConditionSeller,
   ].filter(Boolean)
 
@@ -526,8 +513,6 @@ export async function getProductsBySellerId(
       featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
-      isPromotion: product.isPromotion,
-      promotionComparePrice: product.promotionComparePrice,
       isVerified: product.isVerified,
       verifiedAt: product.verifiedAt,
       verifiedBy: product.verifiedBy,
@@ -573,9 +558,6 @@ export async function getProductsBySellerId(
     featuredExpiresAt: p.featuredExpiresAt,
     isCollectorPiece: p.isCollectorPiece,
     isPrivilegeAssist: p.isPrivilegeAssist,
-    isPromotion: p.isPromotion,
-    promotionComparePrice:
-      p.promotionComparePrice != null ? String(p.promotionComparePrice) : null,
     isVerified: p.isVerified,
     verifiedAt: p.verifiedAt,
     verifiedBy: p.verifiedBy,
@@ -632,8 +614,6 @@ export type ProductForEdit = {
   featuredExpiresAt: Date | null
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
-  isPromotion: boolean
-  promotionComparePrice: string | null
   isVerified: boolean
   verifiedAt: Date | null
   verifiedBy: string | null
@@ -682,8 +662,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       featuredExpiresAt: product.featuredExpiresAt,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
-      isPromotion: product.isPromotion,
-      promotionComparePrice: product.promotionComparePrice,
       isVerified: product.isVerified,
       verifiedAt: product.verifiedAt,
       verifiedBy: product.verifiedBy,
@@ -798,9 +776,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     featuredExpiresAt: row.featuredExpiresAt,
     isCollectorPiece: row.isCollectorPiece,
     isPrivilegeAssist: row.isPrivilegeAssist,
-    isPromotion: row.isPromotion,
-    promotionComparePrice:
-      row.promotionComparePrice != null ? String(row.promotionComparePrice) : null,
     isVerified: row.isVerified,
     verifiedAt: row.verifiedAt,
     verifiedBy: row.verifiedBy,
@@ -875,12 +850,6 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
         : null,
     isCollectorPiece: input.isCollectorPiece ?? false,
     isPrivilegeAssist: input.isPrivilegeAssist ?? false,
-    isPromotion: input.isPromotion ?? false,
-    promotionComparePrice:
-      input.promotionComparePrice != null &&
-      String(input.promotionComparePrice).trim() !== ""
-        ? String(input.promotionComparePrice).trim()
-        : null,
     sellerId: input.sellerId,
   }
 
@@ -981,8 +950,6 @@ export type UpdateProductInput = {
   featuredExpiresAt?: Date | null
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
-  isPromotion?: boolean
-  promotionComparePrice?: string | null
   imageUrls?: string[]
   videoUrls?: string[]
   sellerId?: string
@@ -1079,14 +1046,6 @@ export async function updateProductInDb(
   if (rest.sellerId !== undefined) updates.sellerId = rest.sellerId
   if (rest.isCollectorPiece !== undefined) updates.isCollectorPiece = rest.isCollectorPiece
   if (rest.isPrivilegeAssist !== undefined) updates.isPrivilegeAssist = rest.isPrivilegeAssist
-  if (rest.isPromotion !== undefined) updates.isPromotion = rest.isPromotion
-  if (rest.promotionComparePrice !== undefined) {
-    updates.promotionComparePrice =
-      rest.promotionComparePrice != null &&
-      String(rest.promotionComparePrice).trim() !== ""
-        ? String(rest.promotionComparePrice).trim()
-        : null
-  }
 
   const logValues: (typeof productAdminChangeLog.$inferInsert)[] = []
   if (currentRow) {
@@ -1349,7 +1308,6 @@ export type HomepageFeaturedProduct = {
   weightCarat: string | null
   origin: string | null
   imageUrl: string | null
-  isPromotion: boolean
   isCollectorPiece: boolean
   isPrivilegeAssist: boolean
   isVerified: boolean
@@ -1370,7 +1328,6 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
       certLabName: product.certLabName,
       weightCarat: product.weightCarat,
       origin: product.origin,
-      isPromotion: product.isPromotion,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isVerified: product.isVerified,
@@ -1400,7 +1357,6 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
     weightCarat: r.weightCarat ? String(r.weightCarat) : null,
     origin: r.origin ?? null,
     imageUrl: imageMap.get(r.id) ?? null,
-    isPromotion: r.isPromotion,
     isCollectorPiece: r.isCollectorPiece,
     isPrivilegeAssist: r.isPrivilegeAssist,
     isVerified: r.isVerified,
@@ -1431,7 +1387,6 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
       certLabName: product.certLabName,
       weightCarat: product.weightCarat,
       origin: product.origin,
-      isPromotion: product.isPromotion,
       isCollectorPiece: product.isCollectorPiece,
       isPrivilegeAssist: product.isPrivilegeAssist,
       isVerified: product.isVerified,
@@ -1459,7 +1414,6 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
     weightCarat: r.weightCarat ? String(r.weightCarat) : null,
     origin: r.origin ?? null,
     imageUrl: imageMap.get(r.id) ?? null,
-    isPromotion: r.isPromotion,
     isCollectorPiece: r.isCollectorPiece,
     isPrivilegeAssist: r.isPrivilegeAssist,
     isVerified: r.isVerified,

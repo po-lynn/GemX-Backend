@@ -28,7 +28,6 @@ function formatPrice(price: string, currency: "USD" | "MMK") {
 
 function productBadge(p: HomepageFeaturedProduct): { label: string; color: string } {
   if (p.isCollectorPiece) return { label: "Collector", color: "#6d5ce7" }
-  if (p.isPromotion) return { label: "On Sale", color: "#e0408a" }
   return { label: "Featured", color: "#6d5ce7" }
 }
 

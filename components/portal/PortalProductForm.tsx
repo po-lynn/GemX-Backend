@@ -324,7 +324,6 @@ type Props = {
     isFeatured?: boolean
     isCollectorPiece?: boolean
     isPrivilegeAssist?: boolean
-    isPromotion?: boolean
     weightCarat?: string
     color?: string
     origin?: string
@@ -381,7 +380,6 @@ export default function PortalProductForm({
   const [isFeatured, setIsFeatured] = useState(initial?.isFeatured ?? false)
   const [isCollectorPiece, setIsCollectorPiece] = useState(initial?.isCollectorPiece ?? false)
   const [isPrivilegeAssist, setIsPrivilegeAssist] = useState(initial?.isPrivilegeAssist ?? false)
-  const [isPromotion, setIsPromotion] = useState(initial?.isPromotion ?? false)
   const [isNegotiable, setIsNegotiable] = useState(initial?.isNegotiable ?? false)
 
   const [imageUrlsList, setImageUrlsList] = useState<string[]>(initial?.imageUrls ?? [])
@@ -578,7 +576,6 @@ export default function PortalProductForm({
       isFeatured,
       isCollectorPiece,
       isPrivilegeAssist,
-      isPromotion,
       weightCarat: fd.get("weightCarat") as string,
       color: fd.get("color") as string,
       origin: fd.get("origin") as string,
@@ -1081,22 +1078,6 @@ export default function PortalProductForm({
                 </div>
               </label>
 
-              {/* Promotion */}
-              <label htmlFor="ft-promotion" className={`pd-toggle${isPromotion ? " on" : ""}`}>
-                <input
-                  id="ft-promotion"
-                  type="checkbox"
-                  name="isPromotion"
-                  checked={isPromotion}
-                  onChange={(e) => setIsPromotion(e.target.checked)}
-                  className="sr-only"
-                />
-                <span className="pd-toggle-chk"><Check size={10} /></span>
-                <div className="pd-toggle-text">
-                  <span className="pd-toggle-label">Promotion</span>
-                  <span className="pd-toggle-sub">Flag as a promotional item</span>
-                </div>
-              </label>
             </div>
           </div>
         </section>

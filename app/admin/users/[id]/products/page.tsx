@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getCachedProductsBySellerId } from "@/features/products/db/cache/products"
+import { getProductsBySellerId } from "@/features/products/db/products"
 import {
   ProductFilters,
   ProductsSearchInput,
@@ -47,7 +47,6 @@ type Props = {
     isFeatured?: string
     isCollectorPiece?: string
     isPrivilegeAssist?: string
-    isPromotion?: string
   }>
 }
 
@@ -76,7 +75,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
     isFeatured: paramsQuery.isFeatured,
     isCollectorPiece: paramsQuery.isCollectorPiece,
     isPrivilegeAssist: paramsQuery.isPrivilegeAssist,
-    isPromotion: paramsQuery.isPromotion,
   })
 
   const {
@@ -96,7 +94,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
     isFeatured,
     isCollectorPiece,
     isPrivilegeAssist,
-    isPromotion,
   } = parsed
 
   const categories = await getAllCategories()
@@ -104,7 +101,7 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
   const laboratories = await getAllLaboratories()
 
   const limit = ADMIN_PRODUCTS_PAGE_SIZE
-  const { products, total } = await getCachedProductsBySellerId(userId, {
+  const { products, total } = await getProductsBySellerId(userId, {
     page,
     limit,
     search: search || undefined,
@@ -122,7 +119,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
     isFeatured: isFeatured ?? undefined,
     isCollectorPiece: isCollectorPiece ?? undefined,
     isPrivilegeAssist: isPrivilegeAssist ?? undefined,
-    isPromotion: isPromotion ?? undefined,
   })
 
   const totalPages = Math.ceil(total / limit)
@@ -142,7 +138,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
     isFeatured: isFeatured === true ? "true" : "",
     isCollectorPiece: isCollectorPiece === true ? "true" : "",
     isPrivilegeAssist: isPrivilegeAssist === true ? "true" : "",
-    isPromotion: isPromotion === true ? "true" : "",
   }
 
   const listPath = `/admin/users/${userId}/products`
@@ -205,7 +200,6 @@ export default async function AdminUserProductsPage({ params, searchParams }: Pr
                 isFeatured={filters.isFeatured === "true"}
                 isCollectorPiece={filters.isCollectorPiece === "true"}
                 isPrivilegeAssist={filters.isPrivilegeAssist === "true"}
-                isPromotion={filters.isPromotion === "true"}
                 listPath={listPath}
               />
             </Suspense>

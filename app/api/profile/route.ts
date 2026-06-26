@@ -4,9 +4,9 @@ import { eq } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import { jsonCached, jsonError, jsonUncached } from "@/lib/api"
+import { jsonError, jsonUncached } from "@/lib/api"
 import { getUserById } from "@/features/users/db/users"
-import { getCachedProductsBySellerId } from "@/features/products/db/cache/products"
+import { getProductsBySellerId } from "@/features/products/db/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import { isUserActivePremiumDealer } from "@/features/points/db/points"
 
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const user = await getUserById(userId)
     if (!user) return jsonError("Profile not found", 404)
 
-    const { products, total } = await getCachedProductsBySellerId(userId, {
+    const { products, total } = await getProductsBySellerId(userId, {
       page,
       limit,
       search: search ?? undefined,
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       isPremiumDealer,
     }
 
-    return jsonCached({
+    return jsonUncached({
       profile,
       products: { products, total },
     })

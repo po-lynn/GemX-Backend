@@ -25,15 +25,6 @@ import { searchUsersForPicker, getRecentUsersForPicker, getUsersPaginatedFromDb 
 import type { UserPickerOption } from "@/features/users/db/users"
 import { getCompanySettings } from "@/features/company-settings/db/company-settings"
 
-/** FormData: missing → undefined (skip on update); empty → clear; else trimmed string */
-function promotionComparePriceFromForm(fd: FormData): string | null | undefined {
-  const raw = fd.get("promotionComparePrice")
-  if (raw === null) return undefined
-  const s = String(raw).trim()
-  if (s === "") return null
-  return s
-}
-
 function featuredPointsFromForm(fd: FormData): number | undefined {
   const raw = fd.get("featured")
   if (raw === null) return undefined
@@ -94,8 +85,6 @@ export async function createProductAction(formData: FormData) {
     featureDurationDays: featureDurationDaysFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
-    isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
-    promotionComparePrice: promotionComparePriceFromForm(formData),
     imageUrls: formData.get("imageUrls") || undefined,
     videoUrls: formData.get("videoUrls") || undefined,
   })
@@ -157,8 +146,6 @@ export async function createProductAction(formData: FormData) {
     featureDurationDays: parsed.data.featureDurationDays,
     isCollectorPiece: parsed.data.isCollectorPiece,
     isPrivilegeAssist: parsed.data.isPrivilegeAssist,
-    isPromotion: parsed.data.isPromotion,
-    promotionComparePrice: parsed.data.promotionComparePrice ?? null,
     imageUrls: parsed.data.imageUrls,
     videoUrls: parsed.data.videoUrls,
     sellerId: effectiveSellerId,
@@ -205,8 +192,6 @@ export async function updateProductAction(formData: FormData) {
     featuredExpiresAt: featuredExpiresAtFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
-    isPromotion: formData.get("isPromotion") === "on" || formData.get("isPromotion") === "true",
-    promotionComparePrice: promotionComparePriceFromForm(formData),
     imageUrls: formData.get("imageUrls") || undefined,
     videoUrls: formData.get("videoUrls") || undefined,
   })
@@ -298,8 +283,6 @@ export async function updateProductAction(formData: FormData) {
       featuredExpiresAt: data.featuredExpiresAt,
       isCollectorPiece: data.isCollectorPiece,
       isPrivilegeAssist: data.isPrivilegeAssist,
-      isPromotion: data.isPromotion,
-      promotionComparePrice: data.promotionComparePrice,
       imageUrls: data.imageUrls,
       videoUrls: data.videoUrls,
       sellerId: newSellerId,

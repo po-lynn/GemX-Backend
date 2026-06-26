@@ -32,7 +32,6 @@ export type AdminProductFilters = {
   isFeatured: string
   isCollectorPiece: string
   isPrivilegeAssist: string
-  isPromotion: string
 }
 
 type Props = {
@@ -64,21 +63,12 @@ function buildQueryString(page: number, filters: AdminProductFilters): string {
   if (filters.isFeatured === "true") sp.set("isFeatured", "true")
   if (filters.isCollectorPiece === "true") sp.set("isCollectorPiece", "true")
   if (filters.isPrivilegeAssist === "true") sp.set("isPrivilegeAssist", "true")
-  if (filters.isPromotion === "true") sp.set("isPromotion", "true")
   sp.set("sortBy", filters.sortBy?.trim() || "createdAt")
   sp.set("sortOrder", filters.sortOrder?.trim() || "desc")
   return sp.toString()
 }
 
-function promotionSavingsAmount(p: AdminProductRow): number | null {
-  if (!p.isPromotion || p.promotionComparePrice == null || p.promotionComparePrice === "")
-    return null
-  const compare = Number(p.promotionComparePrice)
-  const sale = Number(p.price)
-  if (!Number.isFinite(compare) || !Number.isFinite(sale)) return null
-  const save = compare - sale
-  return save > 0 ? save : null
-}
+
 
 type SortCol = "title" | "price" | "status" | "createdAt"
 
@@ -224,14 +214,6 @@ export function ProductsTable({
                   <div className="font-medium tabular-nums text-slate-800">
                     {formatPriceWithCurrency(Number(p.price), p.currency)}
                   </div>
-                  {(() => {
-                    const save = promotionSavingsAmount(p)
-                    return save != null ? (
-                      <div className="mt-0.5 text-[11px] font-medium text-emerald-600">
-                        Save {formatPriceWithCurrency(save, p.currency)}
-                      </div>
-                    ) : null
-                  })()}
                 </td>
 
                 {/* Status */}
@@ -248,10 +230,9 @@ export function ProductsTable({
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {p.isFeatured && <AdminStatusBadge status="featured" label="Featured" />}
-                    {p.isPromotion && <AdminStatusBadge status="promotion" label="Promo" />}
                     {p.isCollectorPiece && <AdminStatusBadge status="collector" label="Collector" />}
                     {p.isPrivilegeAssist && <AdminStatusBadge status="privilege" label="Privilege" />}
-                    {!p.isFeatured && !p.isPromotion && !p.isCollectorPiece && !p.isPrivilegeAssist && (
+                    {!p.isFeatured && !p.isCollectorPiece && !p.isPrivilegeAssist && (
                       <span className="text-slate-300 text-xs">—</span>
                     )}
                   </div>

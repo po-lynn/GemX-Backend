@@ -33,7 +33,6 @@ type FilterKey =
   | "isFeatured"
   | "isCollectorPiece"
   | "isPrivilegeAssist"
-  | "isPromotion"
 
 type Props = {
   categories: Category[]
@@ -51,7 +50,6 @@ type Props = {
   isFeatured?: boolean
   isCollectorPiece?: boolean
   isPrivilegeAssist?: boolean
-  isPromotion?: boolean
   listPath?: string
 }
 
@@ -76,7 +74,6 @@ export function ProductFilters({
   isFeatured = false,
   isCollectorPiece = false,
   isPrivilegeAssist = false,
-  isPromotion = false,
   listPath = "/admin/products",
 }: Props) {
   const router = useRouter()
@@ -97,7 +94,7 @@ export function ProductFilters({
   const hasActiveFilters =
     !!productType || !!categoryId || !!status || !!stoneCut || !!shape ||
     !!origin || !!laboratoryId || !!createdFrom || !!createdTo ||
-    !!isFeatured || !!isCollectorPiece || !!isPrivilegeAssist || !!isPromotion
+    !!isFeatured || !!isCollectorPiece || !!isPrivilegeAssist
 
   const activeCount = [
     productType, categoryId, status, stoneCut, shape, origin, laboratoryId,
@@ -105,7 +102,6 @@ export function ProductFilters({
     isFeatured ? "1" : "",
     isCollectorPiece ? "1" : "",
     isPrivilegeAssist ? "1" : "",
-    isPromotion ? "1" : "",
   ].filter(Boolean).length
 
   const clearFilters = useCallback(() => {
@@ -264,7 +260,6 @@ export function ProductFilters({
                 { key: "isFeatured" as FilterKey, label: "Featured", checked: isFeatured },
                 { key: "isCollectorPiece" as FilterKey, label: "Collector Piece", checked: isCollectorPiece },
                 { key: "isPrivilegeAssist" as FilterKey, label: "Privilege Assist", checked: isPrivilegeAssist },
-                { key: "isPromotion" as FilterKey, label: "Promotion", checked: isPromotion },
               ].map(({ key, label, checked }) => (
                 <label
                   key={key}

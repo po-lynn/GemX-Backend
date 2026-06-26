@@ -58,8 +58,6 @@ export const adminProductsSearchSchema = z.object({
   isCollectorPiece: z.coerce.boolean().optional(),
   /** When true, only return Privilege Assist products (sold by us). */
   isPrivilegeAssist: z.coerce.boolean().optional(),
-  /** When true, only return promotion items. */
-  isPromotion: z.coerce.boolean().optional(),
 })
 
 export type AdminProductsSearchParams = z.infer<typeof adminProductsSearchSchema>
@@ -170,17 +168,6 @@ const productCreateBaseSchema = z.object({
   featureDurationDays: z.coerce.number().int().min(0).max(365).optional(),
   isCollectorPiece: z.coerce.boolean().optional(),
   isPrivilegeAssist: z.coerce.boolean().optional(),
-  isPromotion: z.coerce.boolean().optional(),
-  /** List / “was” price for promotions; savings shown when greater than sale `price` */
-  promotionComparePrice: z
-    .string()
-    .optional()
-    .nullable()
-    .refine(
-      (v) =>
-        !v || v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
-      { message: "Compare price must be a valid number" }
-    ),
   imageUrls: z
     .string()
     .optional()

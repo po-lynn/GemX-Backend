@@ -12,7 +12,7 @@ vi.mock("@/drizzle/schema", async (importOriginal) => {
 })
 
 const mockValues = vi.fn().mockResolvedValue([])
-const mockInsert = vi.fn(() => ({ values: mockValues }))
+const _mockInsert = vi.fn(() => ({ values: mockValues }))
 
 function makeUpdateChain() {
   const chain: Record<string, unknown> = {}

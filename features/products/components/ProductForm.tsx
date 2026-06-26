@@ -714,7 +714,6 @@ export function ProductForm({
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false)
   const [isCollectorPiece, setIsCollectorPiece] = useState(product?.isCollectorPiece ?? false)
   const [isPrivilegeAssist, setIsPrivilegeAssist] = useState(product?.isPrivilegeAssist ?? false)
-  const [isPromotion, setIsPromotion] = useState(product?.isPromotion ?? false)
   const [isVerified, setIsVerified] = useState(product?.isVerified ?? false)
   const [verifiedAt, setVerifiedAt] = useState<Date | null>(product?.verifiedAt ?? null)
   const [isNegotiable, setIsNegotiable] = useState(product?.isNegotiable ?? false)
@@ -786,10 +785,6 @@ export function ProductForm({
   useEffect(() => {
     setCertReportUrl(product?.certReportUrl ?? "")
   }, [product?.certReportUrl])
-
-  useEffect(() => {
-    setIsPromotion(product?.isPromotion ?? false)
-  }, [product?.id, product?.isPromotion])
 
   useEffect(() => {
     setIsFeatured(product?.isFeatured ?? false)
@@ -1040,7 +1035,6 @@ export function ProductForm({
         setIsFeatured(false)
         setIsCollectorPiece(false)
         setIsPrivilegeAssist(false)
-        setIsPromotion(false)
         setIsNegotiable(false)
         setImageUrlsList([])
         setVideoUrlsList([])
@@ -1187,7 +1181,6 @@ export function ProductForm({
             value={[dimensionsPart1, dimensionsPart2, dimensionsPart3].filter(Boolean).join(" × ")}
           />
           {!isFeatured && <input type="hidden" name="featured" value={0} />}
-          {!isPromotion && <input type="hidden" name="promotionComparePrice" value="" />}
 
           {/* ── Hero card (edit only) ── */}
           {isEdit && product && (
@@ -1483,7 +1476,7 @@ export function ProductForm({
             </div>
           </section>
 
-          {/* ── Visibility & promotion ── */}
+          {/* ── Visibility ── */}
           <section className="pd-sec">
             <div className="pd-sec-head">
               <div className="pd-sec-icon" data-tone="purple">
@@ -1561,28 +1554,6 @@ export function ProductForm({
                   <div className="pd-toggle-text">
                     <span className="pd-toggle-label">Privilege Assist</span>
                     <span className="pd-toggle-sub">Premium concierge support</span>
-                  </div>
-                </label>
-
-                {/* Promotion */}
-                <label
-                  htmlFor="ft-promotion"
-                  className={`pd-toggle${isPromotion ? " on" : ""}`}
-                >
-                  <input
-                    id="ft-promotion"
-                    type="checkbox"
-                    name="isPromotion"
-                    checked={isPromotion}
-                    onChange={(e) => setIsPromotion(e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span className="pd-toggle-chk">
-                    <Check size={10} />
-                  </span>
-                  <div className="pd-toggle-text">
-                    <span className="pd-toggle-label">Promotion</span>
-                    <span className="pd-toggle-sub">Flag as a promotional item</span>
                   </div>
                 </label>
 
@@ -1718,20 +1689,6 @@ export function ProductForm({
                 )
               })()}
 
-              {/* Promotion compare price */}
-              {isPromotion && (
-                <div className="pd-field" style={{ maxWidth: 380 }}>
-                  <label className="pd-label">Original price before discount</label>
-                  <input
-                    className="pd-input mono"
-                    name="promotionComparePrice"
-                    type="text"
-                    inputMode="decimal"
-                    defaultValue={product?.promotionComparePrice ?? ""}
-                    placeholder="e.g. original price before discount"
-                  />
-                </div>
-              )}
             </div>
           </section>
 

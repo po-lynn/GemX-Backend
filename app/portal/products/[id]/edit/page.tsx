@@ -35,7 +35,6 @@ export default async function EditPortalProductPage({ params }: Params) {
     isFeatured:       product.isFeatured ?? false,
     isCollectorPiece: product.isCollectorPiece ?? false,
     isPrivilegeAssist: product.isPrivilegeAssist ?? false,
-    isPromotion:      product.isPromotion ?? false,
     weightCarat:      product.weightCarat ?? "",
     color:            product.color ?? "",
     origin:           product.origin ?? "",
