@@ -1,0 +1,1 @@
+ALTER TYPE "public"."product_admin_change_type" ADD VALUE 'featured';

@@ -42,4 +42,4 @@ yarn-error.log*
 next-env.d.ts
 
 # drizzle migrations (local db)
-drizzle/migrations/
+# drizzle/migrations/

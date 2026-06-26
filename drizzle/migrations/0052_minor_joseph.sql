@@ -1,0 +1,2 @@
+ALTER TABLE "internal_permission" DROP CONSTRAINT "supervisor_permission_user_id_feature_key_pk";--> statement-breakpoint
+ALTER TABLE "internal_permission" ADD CONSTRAINT "internal_permission_user_id_feature_key_pk" PRIMARY KEY("user_id","feature_key");

@@ -1,0 +1,2 @@
+ALTER TABLE "escrow_service_request" ADD COLUMN "seller_id" text;--> statement-breakpoint
+ALTER TABLE "escrow_service_request" ADD CONSTRAINT "escrow_service_request_seller_id_user_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
