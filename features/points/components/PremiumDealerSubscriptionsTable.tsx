@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { CalendarClock, Ban, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -94,7 +95,9 @@ function DetailDrawer({
             {row.initials}
           </span>
           <div>
-            <div className="lv-drawer-title">{row.userName ?? "Unknown"}</div>
+            <Link href={`/admin/users/${row.userId}/edit?page=1`} className="lv-drawer-title hover:underline">
+              {row.userName ?? "Unknown"}
+            </Link>
             <div className="lv-drawer-sub">{row.userEmail ?? "—"}</div>
           </div>
           <div className="lv-drawer-actions">
@@ -108,6 +111,12 @@ function DetailDrawer({
           <section>
             <h3 className="lv-drawer-section-h">Subscription</h3>
             <dl className="lv-kv">
+              <dt>Seller name</dt>
+              <dd>
+                <Link href={`/admin/users/${row.userId}/edit?page=1`} className="hover:underline" style={{ color: "var(--lv-accent)" }}>
+                  {row.userName ?? "—"}
+                </Link>
+              </dd>
               <dt>Package</dt>
               <dd>
                 <span className="lv-pkg">
