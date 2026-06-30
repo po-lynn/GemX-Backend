@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAdminChatNotifications } from "@/features/chat/context/admin-chat-notification-context";
@@ -26,6 +27,7 @@ import {
   Coins,
   ShoppingBag,
   Settings2,
+  ChevronDown,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 
@@ -161,9 +163,45 @@ type Props = {
   permissions: Record<string, boolean>;
 };
 
+const STORAGE_KEY = "admin-sidebar-collapsed-groups";
+
+// Module-level mini-store so useSyncExternalStore can subscribe to it
+const storeListeners = new Set<() => void>();
+let storeSnapshot = "[]";
+let storeInitialized = false;
+
+function subscribeStore(listener: () => void) {
+  storeListeners.add(listener);
+  return () => { storeListeners.delete(listener); };
+}
+
+function getSnapshot() {
+  if (!storeInitialized) {
+    storeInitialized = true;
+    try { storeSnapshot = localStorage.getItem(STORAGE_KEY) ?? "[]"; } catch {}
+  }
+  return storeSnapshot;
+}
+
+function getServerSnapshot() { return "[]"; }
+
+function writeStore(groups: Set<string>) {
+  storeSnapshot = JSON.stringify([...groups]);
+  try { localStorage.setItem(STORAGE_KEY, storeSnapshot); } catch {}
+  storeListeners.forEach((l) => l());
+}
+
 export function AdminSidebar({ className, role, permissions }: Props) {
   const pathname = usePathname();
   const { totalUnread } = useAdminChatNotifications();
+  const raw = useSyncExternalStore(subscribeStore, getSnapshot, getServerSnapshot);
+  const collapsed = new Set<string>(JSON.parse(raw) as string[]);
+
+  const toggleGroup = useCallback((label: string) => {
+    const next = new Set<string>(JSON.parse(storeSnapshot) as string[]);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    writeStore(next);
+  }, []);
 
   function canSee(item: NavItem): boolean {
     if (role === "admin") return true;
@@ -268,10 +306,15 @@ export function AdminSidebar({ className, role, permissions }: Props) {
             const visibleItems = item.items.filter(canSee);
             if (visibleItems.length === 0) return null;
 
+            const isCollapsed = collapsed.has(item.label);
             return (
               <div key={item.label} className="mt-3.5">
-                {/* Group label: text left, line extends right */}
-                <div className="mb-2 flex items-center gap-[10px] px-2.5 pb-2 pt-1.5">
+                {/* Group label with collapse toggle */}
+                <button
+                  onClick={() => toggleGroup(item.label)}
+                  className="mb-2 flex w-full cursor-pointer items-center gap-[10px] rounded-md px-2.5 pb-2 pt-1.5 hover:opacity-70"
+                  aria-expanded={!isCollapsed}
+                >
                   <span
                     className="whitespace-nowrap text-[10.5px] font-bold uppercase"
                     style={{
@@ -285,10 +328,19 @@ export function AdminSidebar({ className, role, permissions }: Props) {
                     className="h-px flex-1"
                     style={{ backgroundColor: "var(--admin-sidebar-border)" }}
                   />
-                </div>
-                <div className="space-y-0.5">
-                  {visibleItems.map((nav) => renderNavLink(nav))}
-                </div>
+                  <ChevronDown
+                    className="h-3 w-3 shrink-0 transition-transform duration-200"
+                    style={{
+                      color: "var(--admin-sidebar-muted)",
+                      transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                    }}
+                  />
+                </button>
+                {!isCollapsed && (
+                  <div className="space-y-0.5">
+                    {visibleItems.map((nav) => renderNavLink(nav))}
+                  </div>
+                )}
               </div>
             );
           })}
