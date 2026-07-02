@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { articles } from "@/drizzle/schema/articles-schema";
-import { eq, desc, sql, type SQL } from "drizzle-orm";
+import { and, eq, ilike, desc, sql, type SQL } from "drizzle-orm";
 
 export type ArticleRow = {
   id: string;
@@ -8,6 +8,9 @@ export type ArticleRow = {
   slug: string;
   content: string;
   author: string;
+  category: string;
+  coverImage: string | null;
+  isFeatured: boolean;
   status: string;
   publishDate: Date | null;
   createdAt: Date;
@@ -29,23 +32,54 @@ export async function getArticlesPaginatedFromDb(options: {
   limit: number;
   status?: "draft" | "published";
   view?: string;
+  search?: string;
+  category?: string;
+  featured?: boolean;
+  /** "publish" orders the public feed by publish date; default preserves admin updatedAt order. */
+  sort?: "publish" | "updated";
 }): Promise<{ items: ArticleRow[]; total: number }> {
-  const { page, limit, status, view } = options;
-  let where: SQL | undefined
-  if (view === "published")   where = eq(articles.status, "published")
-  else if (view === "drafts") where = eq(articles.status, "draft")
-  else if (view === "all")    where = undefined
-  else if (status !== undefined) where = eq(articles.status, status)
+  const { page, limit, status, view, search, category, featured, sort } = options;
+  let statusWhere: SQL | undefined
+  if (view === "published")   statusWhere = eq(articles.status, "published")
+  else if (view === "drafts") statusWhere = eq(articles.status, "draft")
+  else if (view === "all")    statusWhere = undefined
+  else if (status !== undefined) statusWhere = eq(articles.status, status)
+  const filters: SQL[] = []
+  if (statusWhere) filters.push(statusWhere)
+  if (search?.trim()) filters.push(ilike(articles.title, `%${search.trim()}%`))
+  if (category) filters.push(eq(articles.category, category))
+  if (featured !== undefined) filters.push(eq(articles.isFeatured, featured))
+  const where = filters.length > 0 ? and(...filters) : undefined
+  const orderBy =
+    sort === "publish"
+      ? desc(sql`coalesce(${articles.publishDate}, ${articles.createdAt})`)
+      : desc(articles.updatedAt)
   const items = await db
     .select()
     .from(articles)
     .where(where)
-    .orderBy(desc(articles.updatedAt))
+    .orderBy(orderBy)
     .limit(limit)
     .offset((page - 1) * limit)
   const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where)
   const total = countResult[0]?.count ?? 0;
   return { items, total };
+}
+
+/** Published-article counts per category for the mobile category chips. */
+export async function getArticleCategoryCountsFromDb(): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ category: articles.category, count: sql<number>`count(*)::int` })
+    .from(articles)
+    .where(eq(articles.status, "published"))
+    .groupBy(articles.category)
+  const counts: Record<string, number> = {}
+  let all = 0
+  for (const r of rows) {
+    counts[r.category] = r.count
+    all += r.count
+  }
+  return { all, ...counts }
 }
 
 export type ArticleStatusCounts = {
@@ -75,6 +109,9 @@ export async function createArticleInDb(input: {
   author: string;
   status: string;
   publishDate?: Date | null;
+  category?: string;
+  coverImage?: string | null;
+  isFeatured?: boolean;
 }): Promise<string> {
   const [inserted] = await db
     .insert(articles)
@@ -85,6 +122,9 @@ export async function createArticleInDb(input: {
       author: input.author,
       status: input.status,
       publishDate: input.publishDate ?? null,
+      ...(input.category !== undefined ? { category: input.category } : {}),
+      coverImage: input.coverImage ?? null,
+      isFeatured: input.isFeatured ?? false,
     })
     .returning({ id: articles.id });
   return inserted!.id;
@@ -99,6 +139,9 @@ export async function updateArticleInDb(
     author?: string;
     status?: string;
     publishDate?: Date | null;
+    category?: string;
+    coverImage?: string | null;
+    isFeatured?: boolean;
   }
 ): Promise<boolean> {
   const updates = Object.fromEntries(

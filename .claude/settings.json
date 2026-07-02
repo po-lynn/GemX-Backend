@@ -66,7 +66,9 @@
       "Bash(mkdir -p /home/po/me/2026/Jade/infinity-gemx/features/articles/hooks)",
       "Bash(node_modules/.bin/tsc --noEmit --skipLibCheck)",
       "Bash(sed -n '1,120p' app/api/products/[id]/route.ts)",
-      "Bash(node_modules/.bin/tsc --noEmit --project tsconfig.json)"
+      "Bash(node_modules/.bin/tsc --noEmit --project tsconfig.json)",
+      "Bash(sed -i 's/z\\\\.string\\(\\)\\\\.url\\(\\)\\\\.max\\(2_000\\)/z.url\\(\\).max\\(2_000\\)/g' features/news/schemas/news.ts features/articles/schemas/articles.ts && rtk grep -n \"z.url\" features/news/schemas/news.ts features/articles/schemas/articles.ts)",
+      "Bash(rtk ls *)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
@@ -78,7 +80,9 @@
       "/home/po/me/2026/Jade/infinity-gemx/app/api/cron",
       "/home/po/me/2026/Jade/infinity-gemx/app/api/mobile/points/purchase",
       "/home/po/me/2026/Jade/infinity-gemx/features/articles",
-      "/home/po/me/2026/Jade/infinity-gemx/app/api/products/[id]"
+      "/home/po/me/2026/Jade/infinity-gemx/app/api/products/[id]",
+      "/home/po/me/2026/Jade/infinity-gemx/features/news/schemas",
+      "/home/po/me/2026/Jade/infinity-gemx/tests/component"
     ]
   },
   "enabledPlugins": {

@@ -22,6 +22,10 @@ export async function createNewsAction(formData: FormData) {
   const parsed = newsCreateSchema.safeParse({
     title: formData.get("title"),
     content: formData.get("content") ?? "[]",
+    author: formData.get("author") || "Gem X Newsroom",
+    category: formData.get("category") || "general",
+    coverImage: emptyToNull(formData.get("coverImage")),
+    isFeatured: formData.get("isFeatured") === "true",
     status: formData.get("status") || "draft",
     publish: emptyToNull(formData.get("publish")),
   });
@@ -41,6 +45,10 @@ export async function createNewsAction(formData: FormData) {
   const newsId = await createNewsInDb({
     title: parsed.data.title,
     content: parsed.data.content,
+    author: parsed.data.author,
+    category: parsed.data.category,
+    coverImage: parsed.data.coverImage,
+    isFeatured: parsed.data.isFeatured,
     status: parsed.data.status,
     publish: publishDate,
   });
@@ -57,6 +65,14 @@ export async function updateNewsAction(formData: FormData) {
     newsId: formData.get("newsId"),
     title: emptyToNull(formData.get("title")),
     content: emptyToNull(formData.get("content")),
+    author: emptyToNull(formData.get("author")) ?? undefined,
+    category: emptyToNull(formData.get("category")) ?? undefined,
+    coverImage: formData.has("coverImage")
+      ? emptyToNull(formData.get("coverImage"))
+      : undefined,
+    isFeatured: formData.has("isFeatured")
+      ? formData.get("isFeatured") === "true"
+      : undefined,
     status: emptyToNull(formData.get("status")),
     publish: emptyToNull(formData.get("publish")),
   });

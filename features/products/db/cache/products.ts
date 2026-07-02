@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache"
+import { cacheTag, revalidateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
@@ -109,10 +109,14 @@ export async function getPortalProductCounts(sellerId: string): Promise<{
   return getPortalProductCountsFromDb(sellerId)
 }
 
-/** Invalidate products cache (use in Route Handlers or Server Actions). */
+/**
+ * Invalidate products cache (use in Route Handlers or Server Actions).
+ * Must use revalidateTag(tag, "max"), NOT updateTag: this is called from
+ * Route Handlers (POST /api/products etc.) where updateTag throws in Next 16.
+ */
 export function revalidateProductsCache(id?: string) {
-  updateTag(getProductsGlobalTag())
+  revalidateTag(getProductsGlobalTag(), "max")
   if (id) {
-    updateTag(getProductIdTag(id))
+    revalidateTag(getProductIdTag(id), "max")
   }
 }

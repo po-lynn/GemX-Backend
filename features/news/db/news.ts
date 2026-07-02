@@ -1,11 +1,15 @@
 import { db } from "@/drizzle/db";
 import { news } from "@/drizzle/schema/news-schema";
-import { eq, ne, desc, sql, type SQL } from "drizzle-orm";
+import { and, eq, ne, ilike, desc, sql, type SQL } from "drizzle-orm";
 
 export type NewsRow = {
   id: string;
   title: string;
   content: string;
+  author: string;
+  category: string;
+  coverImage: string | null;
+  isFeatured: boolean;
   status: string;
   publish: Date | null;
   createdAt: Date;
@@ -23,25 +27,56 @@ export async function getNewsPaginatedFromDb(options: {
   limit: number;
   status?: "draft" | "published";
   view?: string;
+  search?: string;
+  category?: string;
+  featured?: boolean;
+  /** "publish" orders the public feed by publish date; default preserves admin updatedAt order. */
+  sort?: "publish" | "updated";
 }): Promise<{ items: NewsRow[]; total: number }> {
-  const { page, limit, status, view } = options;
-  let where: SQL | undefined
-  if (view === "published")  where = eq(news.status, "published")
-  else if (view === "scheduled") where = eq(news.status, "scheduled")
-  else if (view === "drafts")    where = eq(news.status, "draft")
-  else if (view === "archived")  where = eq(news.status, "archived")
-  else if (view === "all")       where = ne(news.status, "archived")
-  else if (status !== undefined) where = eq(news.status, status)
+  const { page, limit, status, view, search, category, featured, sort } = options;
+  let statusWhere: SQL | undefined
+  if (view === "published")  statusWhere = eq(news.status, "published")
+  else if (view === "scheduled") statusWhere = eq(news.status, "scheduled")
+  else if (view === "drafts")    statusWhere = eq(news.status, "draft")
+  else if (view === "archived")  statusWhere = eq(news.status, "archived")
+  else if (view === "all")       statusWhere = ne(news.status, "archived")
+  else if (status !== undefined) statusWhere = eq(news.status, status)
+  const filters: SQL[] = []
+  if (statusWhere) filters.push(statusWhere)
+  if (search?.trim()) filters.push(ilike(news.title, `%${search.trim()}%`))
+  if (category) filters.push(eq(news.category, category))
+  if (featured !== undefined) filters.push(eq(news.isFeatured, featured))
+  const where = filters.length > 0 ? and(...filters) : undefined
+  const orderBy =
+    sort === "publish"
+      ? desc(sql`coalesce(${news.publish}, ${news.createdAt})`)
+      : desc(news.updatedAt)
   const items = await db
     .select()
     .from(news)
     .where(where)
-    .orderBy(desc(news.updatedAt))
+    .orderBy(orderBy)
     .limit(limit)
     .offset((page - 1) * limit)
   const countResult = await db.select({ count: sql<number>`count(*)::int` }).from(news).where(where)
   const total = countResult[0]?.count ?? 0;
   return { items, total };
+}
+
+/** Published-news counts per category for the mobile category chips ("All 9, Market 4, ..."). */
+export async function getNewsCategoryCountsFromDb(): Promise<Record<string, number>> {
+  const rows = await db
+    .select({ category: news.category, count: sql<number>`count(*)::int` })
+    .from(news)
+    .where(eq(news.status, "published"))
+    .groupBy(news.category)
+  const counts: Record<string, number> = {}
+  let all = 0
+  for (const r of rows) {
+    counts[r.category] = r.count
+    all += r.count
+  }
+  return { all, ...counts }
 }
 
 export type NewsStatusCounts = {
@@ -75,6 +110,10 @@ export async function createNewsInDb(input: {
   content: string;
   status: string;
   publish?: Date | null;
+  author?: string;
+  category?: string;
+  coverImage?: string | null;
+  isFeatured?: boolean;
 }): Promise<string> {
   const [inserted] = await db
     .insert(news)
@@ -83,6 +122,10 @@ export async function createNewsInDb(input: {
       content: input.content,
       status: input.status,
       publish: input.publish ?? null,
+      ...(input.author !== undefined ? { author: input.author } : {}),
+      ...(input.category !== undefined ? { category: input.category } : {}),
+      coverImage: input.coverImage ?? null,
+      isFeatured: input.isFeatured ?? false,
     })
     .returning({ id: news.id });
   return inserted!.id;
@@ -95,6 +138,10 @@ export async function updateNewsInDb(
     content?: string;
     status?: string;
     publish?: Date | null;
+    author?: string;
+    category?: string;
+    coverImage?: string | null;
+    isFeatured?: boolean;
   }
 ): Promise<boolean> {
   const updates = Object.fromEntries(

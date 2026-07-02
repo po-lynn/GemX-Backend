@@ -93,13 +93,24 @@ export function ArticlesTable({ articles: items, page, total, pageSize, view, vi
         const shortId = row.id.slice(0, 8).toUpperCase()
         return (
           <div className="n-titlecell">
-            <div className="n-cover sm" data-g={String(g)}>
-              <span className="n-cover-glyph">{abbr}</span>
+            <div className="n-cover sm" data-g={String(g)} style={{ position: "relative", overflow: "hidden" }}>
+              {row.coverImage ? (
+                // eslint-disable-next-line @next/next/no-img-element -- tiny admin thumbnail from Supabase storage
+                <img src={row.coverImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span className="n-cover-glyph">{abbr}</span>
+              )}
             </div>
             <div className="n-titlecell-meta">
-              <span className="n-titlecell-title">{row.title}</span>
+              <span className="n-titlecell-title">
+                {row.isFeatured && <span title="Featured" style={{ color: "#D97706", marginRight: 5 }}>★</span>}
+                {row.title}
+              </span>
               <span className="n-titlecell-meta-row">
                 <span className="n-titlecell-id">{shortId}</span>
+                <span style={{ fontSize: 11, color: "var(--lv-text-3)", textTransform: "capitalize" }}>
+                  · {row.category}
+                </span>
                 {row.author ? (
                   <span style={{ color: "var(--lv-text-3)", fontSize: 11 }}>{row.author}</span>
                 ) : null}

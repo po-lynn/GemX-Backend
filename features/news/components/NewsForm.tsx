@@ -8,6 +8,7 @@ import { createNewsAction, updateNewsAction } from "@/features/news/actions/news
 import { useAutoSave } from "@/features/news/hooks/useAutoSave";
 import type { NewsRow } from "@/features/news/db/news";
 import DatePicker from "@/components/date-picker/date-picker";
+import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
 
 const BlockNoteEditor = dynamic(
   () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
@@ -80,6 +81,7 @@ export function NewsForm({ mode, news }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [title, setTitle] = useState(news?.title ?? "");
+  const [author, setAuthor] = useState(news?.author ?? "Gem X Newsroom");
   const [status, setStatus] = useState<Status>((news?.status as Status) ?? "draft");
   const [dirty, setDirty] = useState(false);
   const [content, setContent] = useState(news?.content ?? "[]");
@@ -199,6 +201,26 @@ export function NewsForm({ mode, news }: Props) {
                 maxLength={500}
               />
 
+              {/* Author byline */}
+              <div style={{ marginTop: 10, marginBottom: 4 }}>
+                <input
+                  name="author"
+                  value={author}
+                  onChange={e => { setAuthor(e.target.value); setDirty(true); }}
+                  placeholder="Author name"
+                  maxLength={200}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    fontSize: 13,
+                    color: "var(--lv-text-2)",
+                    width: "100%",
+                    padding: "2px 0",
+                  }}
+                />
+              </div>
+
               {/* Created / edited byline */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 10, marginTop: 14,
@@ -299,6 +321,14 @@ export function NewsForm({ mode, news }: Props) {
                 </button>
               </div>
             </div>
+
+            {/* Mobile display card: category, cover, featured */}
+            <ContentMetaCard
+              initialCategory={news?.category}
+              initialCoverImage={news?.coverImage}
+              initialIsFeatured={news?.isFeatured}
+              onChange={() => setDirty(true)}
+            />
 
             {/* Article info card (edit mode only) */}
             {isEdit && news && (

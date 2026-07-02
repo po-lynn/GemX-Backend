@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
 - **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update KYC fields — `nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; types: N/P/T/E, serial 6 digits); returns **400** on invalid format. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
 - **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **POST `/api/products`** and **PATCH `/api/products/:id`** apply the same rule when creating or updating with **`isFeatured: true`** and a **`featured`** point cost: seller balance is checked first; **no** deduction and **no** product create/update on failure. See **5.5** and **5.6**.
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
@@ -136,10 +137,10 @@
 | POST   | `/api/products`        | Yes  | Create product (JSON body)                                                                                                                                                                               |
 | PATCH  | `/api/products/:id`    | Yes  | Update product (owner or admin). JSON body.                                                                                                                                                              |
 | DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
-| GET    | `/api/news`            | No   | List news. Query: `page`, `limit`, `status` (optional)                                                                                                                                                   |
-| GET    | `/api/news/:id`        | No   | Get single news by ID (published only)                                                                                                                                                                   |
-| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status` (optional)                                                                                                                                               |
-| GET    | `/api/articles/:id`    | No   | Get single article by ID (published only)                                                                                                                                                                |
+| GET    | `/api/news`            | No   | List news. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                             |
+| GET    | `/api/news/:id`        | No   | Get single news by ID (published only). Includes `readTime`                                                                                                                                              |
+| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                         |
+| GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`                                                                                                                                           |
 | POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login.                                                                                             |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
 
@@ -3299,17 +3300,23 @@ News items are managed in the admin; the mobile app can list and read **publishe
 **Query:**
 
 
-| Param    | Type   | Default     | Description                                                               |
-| -------- | ------ | ----------- | ------------------------------------------------------------------------- |
-| `page`   | number | 1           | Page number (1-based).                                                    |
-| `limit`  | number | 20          | Items per page (max 100).                                                 |
-| `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+| Param      | Type   | Default     | Description                                                                                    |
+| ---------- | ------ | ----------- | ---------------------------------------------------------------------------------------------- |
+| `page`     | number | 1           | Page number (1-based).                                                                          |
+| `limit`    | number | 20          | Items per page (max 100).                                                                       |
+| `status`   | string | `published` | Filter by status: `published` or `draft`. Default returns only published.                       |
+| `search`   | string | —           | Case-insensitive match on title (search bar).                                                   |
+| `category` | string | —           | Filter chip: `general`, `market`, `gemology`, `guides`, or `product`. Invalid values = no filter. |
+| `featured` | string | —           | `true` returns only featured items (hero card); `false` returns only non-featured.              |
 
+Invalid query values never return an error — they fall back to the defaults above.
 
 **Examples:**
 
 - First page (published only): `GET /api/news`
 - With pagination: `GET /api/news?page=2&limit=10`
+- Featured hero card: `GET /api/news?featured=true&limit=1`
+- Search within a category: `GET /api/news?search=ruby&category=market`
 - Drafts (if needed for internal use): `GET /api/news?status=draft`
 
 **Success (200):**
@@ -3321,18 +3328,30 @@ News items are managed in the admin; the mobile app can list and read **publishe
       "id": "uuid",
       "title": "News title",
       "content": "[]",
+      "author": "Gem X Newsroom",
+      "category": "market",
+      "coverImage": "https://.../cover.jpg",
+      "isFeatured": true,
       "status": "published",
       "publish": "2025-01-15T00:00:00.000Z",
       "createdAt": "2025-01-10T12:00:00.000Z",
-      "updatedAt": "2025-01-15T00:00:00.000Z"
+      "updatedAt": "2025-01-15T00:00:00.000Z",
+      "readTime": 6
     }
   ],
-  "total": 42
+  "total": 42,
+  "categoryCounts": { "all": 42, "market": 20, "gemology": 12, "guides": 10 }
 }
 ```
 
-- **news:** Array of news items (ordered by publish date, then updatedAt).
+- **news:** Array of news items (ordered by publish date, newest first; falls back to createdAt when publish is null).
 - **total:** Total number of items matching the filter (for pagination).
+- **categoryCounts:** Published-news count per category plus `all`, for the filter chips. Not affected by `search`/`featured`. Categories with zero items are omitted.
+- **author:** Byline shown on the card and detail header (default `"Gem X Newsroom"`).
+- **category:** One of `general`, `market`, `gemology`, `guides`, `product` (category badge).
+- **coverImage:** Cover image URL or `null` (16:9 cover / thumbnail).
+- **isFeatured:** `true` for the hero card item.
+- **readTime:** Estimated reading time in whole minutes (computed server-side at 200 wpm, minimum 1) — render as "6 min".
 - **content:** Stored as JSON (e.g. BlockNote document); parse in the app if needed for rich text.
 
 ---
@@ -3345,17 +3364,22 @@ News items are managed in the admin; the mobile app can list and read **publishe
 
 Returns a single published news item by ID. Draft items return **404**.
 
-**Success (200):** Single news object.
+**Success (200):** Single news object (same shape as list items, including `readTime`).
 
 ```json
 {
   "id": "uuid",
   "title": "News title",
   "content": "[]",
+  "author": "Gem X Newsroom",
+  "category": "market",
+  "coverImage": "https://.../cover.jpg",
+  "isFeatured": true,
   "status": "published",
   "publish": "2025-01-15T00:00:00.000Z",
   "createdAt": "2025-01-10T12:00:00.000Z",
-  "updatedAt": "2025-01-15T00:00:00.000Z"
+  "updatedAt": "2025-01-15T00:00:00.000Z",
+  "readTime": 6
 }
 ```
 
@@ -3378,17 +3402,23 @@ Articles are managed in the admin; the mobile app can list and read **published*
 **Query:**
 
 
-| Param    | Type   | Default     | Description                                                               |
-| -------- | ------ | ----------- | ------------------------------------------------------------------------- |
-| `page`   | number | 1           | Page number (1-based).                                                    |
-| `limit`  | number | 20          | Items per page (max 100).                                                 |
-| `status` | string | `published` | Filter by status: `published` or `draft`. Default returns only published. |
+| Param      | Type   | Default     | Description                                                                                    |
+| ---------- | ------ | ----------- | ---------------------------------------------------------------------------------------------- |
+| `page`     | number | 1           | Page number (1-based).                                                                          |
+| `limit`    | number | 20          | Items per page (max 100).                                                                       |
+| `status`   | string | `published` | Filter by status: `published` or `draft`. Default returns only published.                       |
+| `search`   | string | —           | Case-insensitive match on title (search bar).                                                   |
+| `category` | string | —           | Filter chip: `general`, `market`, `gemology`, `guides`, or `product`. Invalid values = no filter. |
+| `featured` | string | —           | `true` returns only featured items (hero card); `false` returns only non-featured.              |
 
+Invalid query values never return an error — they fall back to the defaults above.
 
 **Examples:**
 
 - First page (published only): `GET /api/articles`
 - With pagination: `GET /api/articles?page=2&limit=10`
+- Featured hero card: `GET /api/articles?featured=true&limit=1`
+- Search within a category: `GET /api/articles?search=gemstone&category=gemology`
 
 **Success (200):**
 
@@ -3401,18 +3431,28 @@ Articles are managed in the admin; the mobile app can list and read **published*
       "slug": "article-slug",
       "content": "[]",
       "author": "Author name",
+      "category": "gemology",
+      "coverImage": "https://.../cover.jpg",
+      "isFeatured": false,
       "status": "published",
       "publishDate": "2025-01-15T00:00:00.000Z",
       "createdAt": "2025-01-10T12:00:00.000Z",
-      "updatedAt": "2025-01-15T00:00:00.000Z"
+      "updatedAt": "2025-01-15T00:00:00.000Z",
+      "readTime": 4
     }
   ],
-  "total": 42
+  "total": 42,
+  "categoryCounts": { "all": 42, "gemology": 22, "guides": 20 }
 }
 ```
 
-- **articles:** Array of articles (ordered by publishDate, then updatedAt).
+- **articles:** Array of articles (ordered by publishDate, newest first; falls back to createdAt when publishDate is null).
 - **total:** Total number of items matching the filter (for pagination).
+- **categoryCounts:** Published-article count per category plus `all`, for the filter chips. Not affected by `search`/`featured`. Categories with zero items are omitted.
+- **category:** One of `general`, `market`, `gemology`, `guides`, `product` (category badge).
+- **coverImage:** Cover image URL or `null` (16:9 cover / thumbnail).
+- **isFeatured:** `true` for the hero card item.
+- **readTime:** Estimated reading time in whole minutes (computed server-side at 200 wpm, minimum 1) — render as "4 min read".
 - **content:** Stored as JSON (e.g. BlockNote document); parse in the app for rich text.
 - **slug:** URL-friendly identifier; can be used for SEO or detail routes.
 
@@ -3426,7 +3466,7 @@ Articles are managed in the admin; the mobile app can list and read **published*
 
 Returns a single published article by ID. Draft items return **404**.
 
-**Success (200):** Single article object.
+**Success (200):** Single article object (same shape as list items, including `readTime`).
 
 ```json
 {
@@ -3435,10 +3475,14 @@ Returns a single published article by ID. Draft items return **404**.
   "slug": "article-slug",
   "content": "[]",
   "author": "Author name",
+  "category": "gemology",
+  "coverImage": "https://.../cover.jpg",
+  "isFeatured": false,
   "status": "published",
   "publishDate": "2025-01-15T00:00:00.000Z",
   "createdAt": "2025-01-10T12:00:00.000Z",
-  "updatedAt": "2025-01-15T00:00:00.000Z"
+  "updatedAt": "2025-01-15T00:00:00.000Z",
+  "readTime": 4
 }
 ```
 

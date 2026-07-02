@@ -33,6 +33,9 @@ export async function createArticleAction(formData: FormData) {
     title: formData.get("title"),
     content: formData.get("content") ?? "[]",
     author: formData.get("author") ?? "",
+    category: formData.get("category") || "general",
+    coverImage: emptyToNull(formData.get("coverImage")),
+    isFeatured: formData.get("isFeatured") === "true",
     status: formData.get("status") || "draft",
     publishDate: emptyToNull(formData.get("publishDate")),
   });
@@ -54,6 +57,9 @@ export async function createArticleAction(formData: FormData) {
     slug: slugify(parsed.data.title),
     content: parsed.data.content,
     author: parsed.data.author.trim(),
+    category: parsed.data.category,
+    coverImage: parsed.data.coverImage,
+    isFeatured: parsed.data.isFeatured,
     status: parsed.data.status,
     publishDate,
   });
@@ -71,6 +77,13 @@ export async function updateArticleAction(formData: FormData) {
     title: emptyToNull(formData.get("title")),
     content: emptyToNull(formData.get("content")),
     author: formData.get("author") ?? undefined,
+    category: emptyToNull(formData.get("category")) ?? undefined,
+    coverImage: formData.has("coverImage")
+      ? emptyToNull(formData.get("coverImage"))
+      : undefined,
+    isFeatured: formData.has("isFeatured")
+      ? formData.get("isFeatured") === "true"
+      : undefined,
     status: emptyToNull(formData.get("status")),
     publishDate: emptyToNull(formData.get("publishDate")),
   });

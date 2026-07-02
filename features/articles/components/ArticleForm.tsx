@@ -8,6 +8,7 @@ import { createArticleAction, updateArticleAction } from "@/features/articles/ac
 import { useAutoSave } from "@/features/articles/hooks/useAutoSave";
 import type { ArticleRow } from "@/features/articles/db/articles";
 import DatePicker from "@/components/date-picker/date-picker";
+import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
 
 const BlockNoteEditor = dynamic(
   () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
@@ -327,6 +328,14 @@ export function ArticleForm({ mode, article }: Props) {
                 </button>
               </div>
             </div>
+
+            {/* Mobile display card: category, cover, featured */}
+            <ContentMetaCard
+              initialCategory={article?.category}
+              initialCoverImage={article?.coverImage}
+              initialIsFeatured={article?.isFeatured}
+              onChange={() => setDirty(true)}
+            />
 
             {/* Article info card (edit mode only) */}
             {isEdit && article && (
