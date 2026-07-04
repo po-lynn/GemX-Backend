@@ -258,6 +258,26 @@
   pointer-events: none;
   font-family: var(--font-mono, monospace);
 }
+.lv-search-clear {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--lv-text-3);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.lv-search-clear:hover {
+  background: #f0f1f5;
+  color: var(--lv-text);
+}
+.lv-search-clear svg { width: 13px; height: 13px; }
 
 .lv-tbtn {
   display: inline-flex;

@@ -394,15 +394,39 @@ function SellerSearchModal({
 
         {/* toolbar: search + pagination */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: "1px solid #f1f5f9" }}>
-          <input
-            type="text"
-            className="pd-input"
-            placeholder="Search by name, email or phone…"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1) }}
-            style={{ flex: 1 }}
-            autoFocus
-          />
+          <div style={{ position: "relative", flex: 1, display: "flex" }}>
+            <input
+              type="text"
+              className="pd-input"
+              placeholder="Search by name, email or phone…"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+              style={{ flex: 1, paddingRight: 28 }}
+              autoFocus
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => { setQuery(""); setPage(1) }}
+                aria-label="Clear search"
+                style={{
+                  position: "absolute",
+                  right: 8,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <span style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap", minWidth: 90, textAlign: "right" }}>
             {total === 0 ? "0 records" : `${from}–${to} / ${total}`}
           </span>
@@ -597,6 +621,27 @@ function SellerPicker({
         />
         {searching ? (
           <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "#94a3b8", pointerEvents: "none" }}>…</span>
+        ) : query ? (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); inputRef.current?.focus() }}
+            aria-label="Clear search"
+            style={{
+              position: "absolute",
+              right: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              color: "#94a3b8",
+              cursor: "pointer",
+            }}
+          >
+            <X size={13} />
+          </button>
         ) : (
           <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} />
         )}

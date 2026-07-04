@@ -58,6 +58,7 @@ import {
   Trash2,
   User,
   Video,
+  X,
 } from "lucide-react"
 
 type ChatUser = {
@@ -1384,8 +1385,18 @@ export function ChatDashboard({
               placeholder="Chats search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 rounded-lg border-border bg-background pl-9 text-sm"
+              className="h-9 rounded-lg border-border bg-background pl-9 pr-8 text-sm"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">

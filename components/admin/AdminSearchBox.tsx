@@ -50,6 +50,15 @@ export function AdminSearchBox() {
     setResults(null)
   }
 
+  const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setQuery("")
+    setResults(null)
+    setOpen(false)
+    setLoading(false)
+    inputRef.current?.focus()
+  }
+
   // close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -86,6 +95,18 @@ export function AdminSearchBox() {
           <svg className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="10"/>
           </svg>
+        )}
+        {query.length > 0 && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear search"
+            className="flex shrink-0 items-center text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
         )}
       </div>
 

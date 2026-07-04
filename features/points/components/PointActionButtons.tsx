@@ -155,9 +155,34 @@ function PointActionDrawer({
                   onChange={(e) => { setQuery(e.target.value); setShowList(true); setSelected(null) }}
                   onFocus={() => setShowList(true)}
                   onBlur={() => setTimeout(() => setShowList(false), 150)}
-                  style={{ ...inputStyle, paddingLeft: 34 }}
+                  style={{ ...inputStyle, paddingLeft: 34, paddingRight: 32 }}
                   autoComplete="off"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => { setQuery(""); setSelected(null) }}
+                    aria-label="Clear search"
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 20,
+                      height: 20,
+                      padding: 0,
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--lv-text-3)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <X style={{ width: 13, height: 13 }} />
+                  </button>
+                )}
               </div>
 
               {showList && (searching || searchResults.length > 0) && (

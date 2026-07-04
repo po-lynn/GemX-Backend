@@ -616,7 +616,18 @@ function Toolbar<T>({
           onChange={(e) => { setQuery(e.target.value); onSearch?.(e.target.value) }}
           aria-label="Search"
         />
-        <span className="lv-search-kbd">⌘K</span>
+        {query ? (
+          <button
+            type="button"
+            className="lv-search-clear"
+            onClick={() => { setQuery(""); onSearch?.("") }}
+            aria-label="Clear search"
+          >
+            <X />
+          </button>
+        ) : (
+          <span className="lv-search-kbd">⌘K</span>
+        )}
       </div>
 
       <span className="lv-divider" aria-hidden="true" />

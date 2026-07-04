@@ -64,6 +64,22 @@ function getPkgTier(name: string): string {
   return "basic"
 }
 
+/**
+ * Group key resolver for the ListViewCard "Group by" control.
+ * Returns a display key for the "user" grouping (name with email to
+ * disambiguate same-named users); null falls back to the default
+ * string lookup for other group ids (status, packageName).
+ * Exported for unit testing.
+ */
+export function subscriptionGroupKey(
+  row: Pick<PremiumDealerSubscriptionRow, "userName" | "userEmail">,
+  groupBy: string
+): string | null {
+  if (groupBy !== "user") return null
+  if (row.userName && row.userEmail) return `${row.userName} (${row.userEmail})`
+  return row.userName ?? row.userEmail ?? "Unknown user"
+}
+
 // ─── Row type extended with derived fields ─────────────────
 type Row = PremiumDealerSubscriptionRow & {
   daysLeft: number
@@ -424,6 +440,7 @@ export function PremiumDealerSubscriptionsTable({
   ]
 
   const groupOptions: GroupOption[] = [
+    { id: "user",      label: "User" },
     { id: "status",    label: "Status" },
     { id: "packageName", label: "Package" },
   ]
@@ -438,6 +455,7 @@ export function PremiumDealerSubscriptionsTable({
         buildViewHref={buildViewHref}
         filterDefs={filterDefs}
         groupOptions={groupOptions}
+        getGroupKey={subscriptionGroupKey}
         defaultSort={{ id: "startDate", dir: "desc" }}
         getSortValue={(r, colId) => {
           switch (colId) {

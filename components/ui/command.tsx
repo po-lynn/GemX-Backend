@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon } from "lucide-react"
+import { SearchIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -62,8 +62,19 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  value,
+  onValueChange,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  const [search, setSearch] = React.useState("")
+  const isControlled = value !== undefined
+  const current = isControlled ? value : search
+
+  const handleValueChange = (next: string) => {
+    if (!isControlled) setSearch(next)
+    onValueChange?.(next)
+  }
+
   return (
     <div
       data-slot="command-input-wrapper"
@@ -76,8 +87,20 @@ function CommandInput({
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
+        value={current}
+        onValueChange={handleValueChange}
         {...props}
       />
+      {current ? (
+        <button
+          type="button"
+          onClick={() => handleValueChange("")}
+          aria-label="Clear search"
+          className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+        >
+          <XIcon className="size-4" />
+        </button>
+      ) : null}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { format, parseISO, startOfDay, endOfDay, isValid } from "date-fns";
-import { ArrowRight, Check, Flag, Loader2, Search, Trash2 } from "lucide-react";
+import { ArrowRight, Check, Flag, Loader2, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -503,8 +503,18 @@ export function MessagesAdminPanel({
                   value={draftSearch}
                   onChange={(e) => setDraftSearch(e.target.value)}
                   placeholder="Search…"
-                  className="pl-9"
+                  className="pl-9 pr-8"
                 />
+                {draftSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setDraftSearch("")}
+                    aria-label="Clear search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
