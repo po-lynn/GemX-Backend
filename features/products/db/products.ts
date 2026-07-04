@@ -792,6 +792,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
 export type CreateProductInput = ProductCreate & {
   sellerId: string
   categoryId: string
+  verifiedBy?: string | null
 }
 
 /** Generate SKU with category short code prefix, e.g. RUBY-5EE3A8CE04 */
@@ -850,6 +851,9 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
         : null,
     isCollectorPiece: input.isCollectorPiece ?? false,
     isPrivilegeAssist: input.isPrivilegeAssist ?? false,
+    isVerified: input.isVerified ?? false,
+    verifiedAt: input.isVerified ? new Date() : null,
+    verifiedBy: input.isVerified ? (input.verifiedBy ?? null) : null,
     sellerId: input.sellerId,
   }
 

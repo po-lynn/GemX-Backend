@@ -168,6 +168,7 @@ const productCreateBaseSchema = z.object({
   featureDurationDays: z.coerce.number().int().min(0).max(365).optional(),
   isCollectorPiece: z.coerce.boolean().optional(),
   isPrivilegeAssist: z.coerce.boolean().optional(),
+  isVerified: z.coerce.boolean().optional(),
   imageUrls: z
     .string()
     .optional()

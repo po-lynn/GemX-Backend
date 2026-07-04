@@ -68,7 +68,13 @@
       "Bash(sed -n '1,120p' app/api/products/[id]/route.ts)",
       "Bash(node_modules/.bin/tsc --noEmit --project tsconfig.json)",
       "Bash(sed -i 's/z\\\\.string\\(\\)\\\\.url\\(\\)\\\\.max\\(2_000\\)/z.url\\(\\).max\\(2_000\\)/g' features/news/schemas/news.ts features/articles/schemas/articles.ts && rtk grep -n \"z.url\" features/news/schemas/news.ts features/articles/schemas/articles.ts)",
-      "Bash(rtk ls *)"
+      "Bash(rtk ls *)",
+      "Bash(sed -E 's/\\(:\\\\/\\\\/[^:]+:\\)[^@]+\\(@\\)/\\\\1***\\\\2/')",
+      "Bash(env)",
+      "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres\" -c \"select current_user;\")",
+      "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select current_user, version\\(\\);\")",
+      "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")",
+      "Bash(PGCONNECT_TIMEOUT=8 psql \"postgresql://wrong_user:wrong_pass@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

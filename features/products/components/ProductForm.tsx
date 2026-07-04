@@ -1035,6 +1035,7 @@ export function ProductForm({
         setIsFeatured(false)
         setIsCollectorPiece(false)
         setIsPrivilegeAssist(false)
+        setIsVerified(false)
         setIsNegotiable(false)
         setImageUrlsList([])
         setVideoUrlsList([])
@@ -1558,7 +1559,7 @@ export function ProductForm({
                 </label>
 
                 {/* GemX Verified */}
-                {canVerify && product?.id && (
+                {canVerify && (!isEdit || product?.id) && (
                   <label
                     htmlFor="ft-verified"
                     className={`pd-toggle${isVerified ? " on" : ""}${moderationStatus !== "approved" ? " disabled" : ""}`}
@@ -1567,11 +1568,13 @@ export function ProductForm({
                     <input
                       id="ft-verified"
                       type="checkbox"
+                      name={isEdit ? undefined : "isVerified"}
                       checked={isVerified}
                       disabled={moderationStatus !== "approved"}
                       onChange={async (e) => {
                         const next = e.target.checked
                         setIsVerified(next)
+                        if (!isEdit || !product?.id) return
                         const result = await verifyProductAction(product.id, next)
                         if ("error" in result) {
                           setIsVerified(!next)
@@ -1755,7 +1758,9 @@ export function ProductForm({
                     value={moderationStatus}
                     onInput={(e) => e.stopPropagation()}
                     onChange={(e) => {
-                      setModerationStatus(e.target.value as "pending" | "approved" | "rejected")
+                      const next = e.target.value as "pending" | "approved" | "rejected"
+                      setModerationStatus(next)
+                      if (!isEdit && next !== "approved") setIsVerified(false)
                       setDirty(true)
                     }}
                     className="pd-select"

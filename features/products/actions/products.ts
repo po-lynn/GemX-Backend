@@ -85,6 +85,7 @@ export async function createProductAction(formData: FormData) {
     featureDurationDays: featureDurationDaysFromForm(formData),
     isCollectorPiece: formData.get("isCollectorPiece") === "on" || formData.get("isCollectorPiece") === "true",
     isPrivilegeAssist: formData.get("isPrivilegeAssist") === "on" || formData.get("isPrivilegeAssist") === "true",
+    isVerified: formData.get("isVerified") === "on" || formData.get("isVerified") === "true",
     imageUrls: formData.get("imageUrls") || undefined,
     videoUrls: formData.get("videoUrls") || undefined,
   })
@@ -97,6 +98,10 @@ export async function createProductAction(formData: FormData) {
   if (!session) {
     return { error: "Unauthorized" }
   }
+
+  const canApplyVerified =
+    canVerifyProducts(session.user.role) && parsed.data.moderationStatus === "approved"
+  const isVerifiedOnCreate = canApplyVerified && (parsed.data.isVerified ?? false)
 
   const isOwnProduct = formData.get("isOwnProduct") === "true" || formData.get("isOwnProduct") === "on"
   let effectiveSellerId: string
@@ -146,6 +151,8 @@ export async function createProductAction(formData: FormData) {
     featureDurationDays: parsed.data.featureDurationDays,
     isCollectorPiece: parsed.data.isCollectorPiece,
     isPrivilegeAssist: parsed.data.isPrivilegeAssist,
+    isVerified: isVerifiedOnCreate,
+    verifiedBy: isVerifiedOnCreate ? session.user.id : null,
     imageUrls: parsed.data.imageUrls,
     videoUrls: parsed.data.videoUrls,
     sellerId: effectiveSellerId,

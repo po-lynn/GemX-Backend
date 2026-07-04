@@ -1,5 +1,6 @@
 import { connection } from "next/server"
 import { requireFeatureAccess } from "@/lib/admin-guard"
+import { checkInternalAccess } from "@/features/rbac/db/permissions"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
@@ -10,7 +11,11 @@ import { FadeUp } from "@/components/admin/motion"
 
 export default async function AdminProductsNewPage() {
   await connection()
-  await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
+  const session = await requireFeatureAccess(FEATURE_KEYS.PRODUCTS)
+  const canVerify =
+    session.user.role === "admin" ||
+    (session.user.role === "internal" &&
+      (await checkInternalAccess(session.user.id, FEATURE_KEYS.PRODUCTS_VERIFY)))
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
   const origins = await getAllOrigins()
@@ -26,6 +31,7 @@ export default async function AdminProductsNewPage() {
           laboratories={laboratories}
           origins={origins}
           featurePricingTiers={featureSettings.pricingTiers}
+          canVerify={canVerify}
         />
       </div>
     </FadeUp>
