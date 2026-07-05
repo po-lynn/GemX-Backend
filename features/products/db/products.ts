@@ -116,6 +116,7 @@ export type AdminProductRow = {
   verifiedAt: Date | null
   verifiedBy: string | null
   laboratoryId: string | null
+  colorId: string | null
   sellerId: string
   sellerName: string
   sellerPhone: string | null
@@ -269,6 +270,7 @@ export async function getAdminProductsFromDb(opts: {
       stoneCut: product.stoneCut,
       metal: product.metal,
       laboratoryId: product.laboratoryId,
+      colorId: product.colorId,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
@@ -315,6 +317,7 @@ export async function getAdminProductsFromDb(opts: {
     metal: p.metal,
     status: p.status,
     laboratoryId: p.laboratoryId,
+    colorId: p.colorId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featuredExpiresAt: p.featuredExpiresAt,
@@ -507,6 +510,7 @@ export async function getProductsBySellerId(
       stoneCut: product.stoneCut,
       metal: product.metal,
       laboratoryId: product.laboratoryId,
+      colorId: product.colorId,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
@@ -553,6 +557,7 @@ export async function getProductsBySellerId(
     metal: p.metal,
     status: p.status,
     laboratoryId: p.laboratoryId,
+    colorId: p.colorId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featuredExpiresAt: p.featuredExpiresAt,
@@ -602,6 +607,7 @@ export type ProductForEdit = {
   shape: string | null
   origin: string | null
   laboratoryId: string | null
+  colorId: string | null
   certReportNumber: string | null
   certReportDate: string | null
   certReportUrl: string | null
@@ -650,6 +656,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       shape: product.shape,
       origin: product.origin,
       laboratoryId: product.laboratoryId,
+      colorId: product.colorId,
       certReportNumber: product.certReportNumber,
       certReportDate: product.certReportDate,
       certReportUrl: product.certReportUrl,
@@ -764,6 +771,7 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     shape: row.shape,
     origin: row.origin,
     laboratoryId: row.laboratoryId,
+    colorId: row.colorId,
     certReportNumber: row.certReportNumber,
     certReportDate: row.certReportDate ?? null,
     certReportUrl: row.certReportUrl,
@@ -833,6 +841,7 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     shape: input.shape ?? null,
     origin: input.origin ?? null,
     laboratoryId: input.laboratoryId ?? null,
+    colorId: input.colorId ?? null,
     certReportNumber: input.certReportNumber ?? null,
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
@@ -942,6 +951,7 @@ export type UpdateProductInput = {
   shape?: string | null
   origin?: string | null
   laboratoryId?: string | null
+  colorId?: string | null
   certReportNumber?: string | null
   certReportDate?: string | null
   certReportUrl?: string | null
@@ -1026,6 +1036,7 @@ export async function updateProductInDb(
     updates.shape = rest.shape as (typeof product.$inferInsert)["shape"]
   if (rest.origin !== undefined) updates.origin = rest.origin
   if (rest.laboratoryId !== undefined) updates.laboratoryId = rest.laboratoryId
+  if (rest.colorId !== undefined) updates.colorId = rest.colorId
   if (rest.certReportNumber !== undefined)
     updates.certReportNumber = rest.certReportNumber
   if (rest.certReportDate !== undefined) updates.certReportDate = rest.certReportDate

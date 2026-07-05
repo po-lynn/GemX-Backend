@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import { revalidateProductsCache } from "@/features/products/db/cache/products"
+import { getColorById } from "@/features/colors/db/color"
 import { productCreateSchema } from "@/features/products/schemas/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
@@ -194,6 +195,15 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { "Cache-Control": "no-store" } }
       )
     }
+    let resolvedColor = parsed.data.color
+    if (parsed.data.colorId) {
+      const colorRow = await getColorById(parsed.data.colorId)
+      if (!colorRow) {
+        return jsonError("Unknown colorId", 400)
+      }
+      resolvedColor = colorRow.name
+    }
+
     const featuredPoints =
       (parsed.data.isFeatured ?? false) ? Math.max(0, parsed.data.featured ?? 0) : 0
 
@@ -211,6 +221,7 @@ export async function POST(request: NextRequest) {
 
     const createInput = {
       ...parsed.data,
+      color: resolvedColor,
       sellerId: session.user.id,
       jewelleryGemstones: Array.isArray(parsed.data.jewelleryGemstones)
         ? parsed.data.jewelleryGemstones

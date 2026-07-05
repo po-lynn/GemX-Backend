@@ -17,6 +17,7 @@ import { deductUserPoints, getUserPointBalance } from "@/features/points/db/poin
 import { getCollectorPieceShowRequestForUser } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import { maskPrice } from "@/lib/formatters"
 import { getCachedPublicPrecautionTags } from "@/features/precaution-tags/db/cache/precaution-tags"
+import { getColorById } from "@/features/colors/db/color"
 import { db } from "@/drizzle/db"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
 import { eq, sql } from "drizzle-orm"
@@ -146,6 +147,14 @@ export async function PATCH(
       return jsonError(msg, 400)
     }
     const { productId, ...data } = parsed.data
+    let resolvedColor = data.color
+    if (data.colorId) {
+      const colorRow = await getColorById(data.colorId)
+      if (!colorRow) {
+        return jsonError("Unknown colorId", 400)
+      }
+      resolvedColor = colorRow.name
+    }
     const previousFeaturedPoints =
       typeof (product as { featured?: unknown }).featured === "number"
         ? ((product as { featured: number }).featured ?? 0)
@@ -185,10 +194,11 @@ export async function PATCH(
         pieceCount: data.pieceCount,
         weightCarat: data.weightCarat,
         dimensions: data.dimensions,
-        color: data.color,
+        color: data.colorId ? resolvedColor : data.color,
         shape: data.shape,
         origin: data.origin,
         laboratoryId: data.laboratoryId,
+        colorId: data.colorId,
         certReportNumber: data.certReportNumber,
         certReportDate: data.certReportDate,
         certReportUrl: data.certReportUrl,

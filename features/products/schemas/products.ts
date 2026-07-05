@@ -157,6 +157,11 @@ const productCreateBaseSchema = z.object({
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       return uuidRegex.test(v) ? v : null
     }),
+  colorId: z
+    .string()
+    .uuid("colorId must be a valid UUID")
+    .optional()
+    .nullable(),
   certReportNumber: z.string().max(100).optional().nullable(),
   certReportDate: z.string().max(50).optional().nullable(),
   certReportUrl: z.string().max(500).optional().nullable(),
@@ -206,7 +211,7 @@ export const productCreateSchema = productCreateBaseSchema
           path: ["weightCarat"],
         })
       }
-      if (!data.color?.trim()) {
+      if (!data.color?.trim() && !data.colorId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Color is required for loose stone",
