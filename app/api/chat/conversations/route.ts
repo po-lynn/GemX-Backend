@@ -1,12 +1,18 @@
 import { NextRequest, connection } from "next/server";
 import { auth } from "@/lib/auth";
-import { getChatConversationsForUser } from "@/features/chat/db/conversations-list";
+import {
+  getChatActivitySignature,
+  getChatConversationsForUser,
+} from "@/features/chat/db/conversations-list";
 import { jsonError, jsonUncached } from "@/lib/api";
 
 const SSE_POLL_DEFAULT_MS = 4_000;
 const SSE_POLL_MIN_MS = 2_000;
 const SSE_POLL_MAX_MS = 30_000;
 const SSE_HEARTBEAT_MS = 25_000;
+// isOnline is derived from session activity, not messages, so the cheap signature
+// can't see it change — force the full pipeline at least this often.
+const SSE_PRESENCE_REFRESH_MS = 30_000;
 // Gracefully close after this many ms so Vercel doesn't abruptly kill the function
 // and leave DB connections open until statement_timeout fires. Client reconnects.
 const SSE_MAX_LIFETIME_MS = 240_000; // 4 minutes
@@ -60,6 +66,8 @@ export async function GET(request: NextRequest) {
         let closed = false;
         let loading = false;
         let lastJson = "";
+        let lastSignature: string | null = null;
+        let lastFullRefreshAt = 0;
         let pollTimer: ReturnType<typeof setInterval> | undefined;
         let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
         let lifetimeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -90,8 +98,17 @@ export async function GET(request: NextRequest) {
           if (closed || loading) return;
           loading = true;
           try {
+            // Cheap fingerprint first: skip the full 3-query pipeline unless
+            // message activity changed or the presence refresh interval elapsed.
+            const signature = await getChatActivitySignature(userId);
+            if (closed) return;
+            const presenceStale = Date.now() - lastFullRefreshAt >= SSE_PRESENCE_REFRESH_MS;
+            if (signature === lastSignature && !presenceStale) return;
+
             const conversations = await getChatConversationsForUser(userId);
             if (closed) return;
+            lastSignature = signature;
+            lastFullRefreshAt = Date.now();
             const json = JSON.stringify({ success: true as const, conversations });
             if (json !== lastJson) {
               lastJson = json;

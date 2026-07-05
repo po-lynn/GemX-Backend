@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -22,13 +23,28 @@ export const messages = pgTable(
     /** When set (same-message gallery), includes every image URL; `file_url` mirrors `[0]` for older clients. */
     imageUrls: jsonb("image_urls").$type<string[] | null>(),
     messageType: messageTypeEnum("message_type").default("text").notNull(),
-    isRead: boolean("is_read").default(false),
-    starred: boolean("starred").default(false),
+    isRead: boolean("is_read").default(false).notNull(),
+    starred: boolean("starred").default(false).notNull(),
     editedAt: timestamp("edited_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    chatIdx: index("chat_idx").on(table.senderId, table.recipientId),
+    // Outgoing direction: history, latest-per-peer, and send rate-limit counting.
+    chatIdx: index("chat_idx").on(
+      table.senderId,
+      table.recipientId,
+      table.createdAt.desc()
+    ),
+    // Incoming direction: the recipient half of `sender = me OR recipient = me`.
+    recipientChatIdx: index("recipient_chat_idx").on(
+      table.recipientId,
+      table.senderId,
+      table.createdAt.desc()
+    ),
+    // Unread counts per peer — partial: only unread rows are indexed.
+    unreadByRecipientIdx: index("unread_by_recipient_idx")
+      .on(table.recipientId, table.senderId)
+      .where(sql`${table.isRead} = false`),
   })
 );
 

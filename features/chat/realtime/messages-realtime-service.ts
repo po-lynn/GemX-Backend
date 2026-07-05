@@ -15,6 +15,12 @@ export type MessagesRealtimeHandlers = {
   /** Batch read-receipt: the recipient marked these message IDs as read. */
   onReadUpdate?: (messageIds: string[], recipientId: string) => void;
   onSubscriptionError?: (channelName: string, status: string) => void;
+  /**
+   * Fired whenever the channel (re)connects, including the initial subscribe.
+   * Broadcast is ephemeral — events sent while the socket was down are lost —
+   * so consumers should resync server state (unread counts, open thread) here.
+   */
+  onResubscribe?: () => void;
 };
 
 /**
@@ -104,6 +110,13 @@ class MessagesRealtimeService {
           chatRealtimeLogger.info("Subscribed to chat broadcast channel", {
             userId: this.userId,
           });
+          try {
+            handlers.onResubscribe?.();
+          } catch (e) {
+            chatRealtimeLogger.error("onResubscribe handler failed", {
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         }
       });
 

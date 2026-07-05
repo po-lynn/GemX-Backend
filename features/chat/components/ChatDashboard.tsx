@@ -807,6 +807,8 @@ export function ChatDashboard({
         )
         scheduleUnreadSync()
       },
+      // Broadcast events sent while the socket was down are lost — resync counts on (re)connect.
+      onResubscribe: scheduleUnreadSync,
     })
 
     return () => {

@@ -54,6 +54,29 @@ function toIsoTime(value: Date | string): string {
 }
 
 /**
+ * Cheap change-detection fingerprint for the SSE conversations stream.
+ *
+ * One index-only aggregate over the user's messages: any new message (max created_at),
+ * edit (max edited_at), delete (total count), or read-state change (unread count)
+ * alters the signature. Presence (isOnline) is NOT covered — the stream forces a
+ * periodic full refresh for that. Roughly an order of magnitude cheaper than the
+ * full 3-query pipeline in getChatConversationsForUser.
+ */
+export async function getChatActivitySignature(currentUserId: string): Promise<string> {
+  const result = await db.execute(sql`
+    SELECT
+      max(m.created_at)  AS "lastCreated",
+      max(m.edited_at)   AS "lastEdited",
+      count(*)           AS "total",
+      count(*) FILTER (WHERE m.recipient_id = ${currentUserId} AND m.is_read = false) AS "unread"
+    FROM messages m
+    WHERE m.sender_id = ${currentUserId} OR m.recipient_id = ${currentUserId}
+  `);
+  const row = [...result][0] as Record<string, unknown> | undefined;
+  return JSON.stringify(row ?? {});
+}
+
+/**
  * One row per chat peer: latest message in the thread, unread count from that peer,
  * profile fields, and session-derived online flag.
  *
@@ -67,23 +90,27 @@ export async function getChatConversationsForUser(
 ): Promise<ChatConversationListItem[]> {
   // DISTINCT ON is PostgreSQL-specific: picks the first row per (peerId) after ORDER BY,
   // which is always the latest message — much cheaper than ROW_NUMBER on large tables.
+  //
+  // peerId is computed once in the subquery: Postgres requires the DISTINCT ON
+  // expression to be *structurally identical* to the leading ORDER BY expression
+  // (error 42P10), and each ${currentUserId} interpolation becomes a distinct
+  // bind placeholder ($1 vs $5), so repeating the CASE inline can never match.
   const latestResult = await db.execute(sql`
-    SELECT DISTINCT ON (
-      CASE WHEN m.sender_id = ${currentUserId} THEN m.recipient_id ELSE m.sender_id END
-    )
-      m.sender_id        AS "senderId",
-      m.recipient_id     AS "recipientId",
-      m.content,
-      m.file_url         AS "fileUrl",
-      m.image_urls       AS "imageUrls",
-      m.message_type     AS "messageType",
-      m.created_at       AS "createdAt",
-      CASE WHEN m.sender_id = ${currentUserId} THEN m.recipient_id ELSE m.sender_id END AS "peerId"
-    FROM messages m
-    WHERE m.sender_id = ${currentUserId} OR m.recipient_id = ${currentUserId}
-    ORDER BY
-      CASE WHEN m.sender_id = ${currentUserId} THEN m.recipient_id ELSE m.sender_id END,
-      m.created_at DESC
+    SELECT DISTINCT ON (t."peerId") t.*
+    FROM (
+      SELECT
+        m.sender_id        AS "senderId",
+        m.recipient_id     AS "recipientId",
+        m.content,
+        m.file_url         AS "fileUrl",
+        m.image_urls       AS "imageUrls",
+        m.message_type     AS "messageType",
+        m.created_at       AS "createdAt",
+        CASE WHEN m.sender_id = ${currentUserId} THEN m.recipient_id ELSE m.sender_id END AS "peerId"
+      FROM messages m
+      WHERE m.sender_id = ${currentUserId} OR m.recipient_id = ${currentUserId}
+    ) t
+    ORDER BY t."peerId", t."createdAt" DESC
   `);
 
   const latestRows = [...latestResult] as LatestSqlRow[];

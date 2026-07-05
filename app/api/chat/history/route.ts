@@ -32,36 +32,38 @@ export async function GET(request: NextRequest) {
       and(eq(messages.senderId, userId), eq(messages.recipientId, currentUserId))
     );
 
-    const rows = await db
-      .select({
-        id: messages.id,
-        senderId: messages.senderId,
-        recipientId: messages.recipientId,
-        content: messages.content,
-        fileUrl: messages.fileUrl,
-        imageUrls: messages.imageUrls,
-        messageType: messages.messageType,
-        isRead: messages.isRead,
-        starred: messages.starred,
-        editedAt: messages.editedAt,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(whereClause)
-      .orderBy(desc(messages.createdAt))
-      .limit(limit)
-      .offset(offset);
-
-    const countRows = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(messages)
-      .where(whereClause);
-
-    const [peerRow] = await db
-      .select({ image: user.image })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
+    // Independent queries — run in parallel instead of three sequential round-trips.
+    const [rows, countRows, peerRows] = await Promise.all([
+      db
+        .select({
+          id: messages.id,
+          senderId: messages.senderId,
+          recipientId: messages.recipientId,
+          content: messages.content,
+          fileUrl: messages.fileUrl,
+          imageUrls: messages.imageUrls,
+          messageType: messages.messageType,
+          isRead: messages.isRead,
+          starred: messages.starred,
+          editedAt: messages.editedAt,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .where(whereClause)
+        .orderBy(desc(messages.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(messages)
+        .where(whereClause),
+      db
+        .select({ image: user.image })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1),
+    ]);
+    const peerRow = peerRows[0];
 
     return jsonUncached({
       messages: rows.reverse(),

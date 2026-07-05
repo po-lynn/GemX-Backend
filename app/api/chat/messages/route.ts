@@ -1,5 +1,5 @@
 import { NextRequest, connection } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/drizzle/db";
@@ -10,6 +10,10 @@ import { sendChatMessageNotification } from "@/features/notifications/services/c
 import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 
 const messageTypeValues = messageTypeEnum.enumValues;
+
+// DB-counted sliding window (works across serverless instances, unlike in-memory limiters).
+const SEND_RATE_LIMIT_WINDOW_MS = 60_000;
+const SEND_RATE_LIMIT_MAX_MESSAGES = 30;
 
 const bodySchema = z
   .object({
@@ -56,12 +60,22 @@ export async function POST(request: NextRequest) {
     const { recipientId, content, fileUrl, imageUrls, tempId } = parsed.data;
     if (senderId === recipientId) return jsonError("Cannot send message to yourself", 400);
 
-    const [recipient] = await db
-      .select({ id: user.id })
-      .from(user)
-      .where(and(eq(user.id, recipientId), eq(user.archived, false)))
-      .limit(1);
-    if (!recipient) return jsonError("Recipient not found", 404);
+    const windowStart = new Date(Date.now() - SEND_RATE_LIMIT_WINDOW_MS);
+    const [recipientRows, recentRows] = await Promise.all([
+      db
+        .select({ id: user.id })
+        .from(user)
+        .where(and(eq(user.id, recipientId), eq(user.archived, false)))
+        .limit(1),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(messages)
+        .where(and(eq(messages.senderId, senderId), gt(messages.createdAt, windowStart))),
+    ]);
+    if (!recipientRows[0]) return jsonError("Recipient not found", 404);
+    if ((recentRows[0]?.count ?? 0) >= SEND_RATE_LIMIT_MAX_MESSAGES) {
+      return jsonError("Too many messages — please slow down", 429);
+    }
 
     const resolvedImageUrls =
       imageUrls && imageUrls.length > 0 ? imageUrls : null;
