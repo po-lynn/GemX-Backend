@@ -29,6 +29,7 @@ import {
   Settings2,
   SlidersHorizontal,
   ChevronDown,
+  Palette,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 
@@ -73,6 +74,7 @@ const navGroups: (NavItem | NavGroup)[] = [
           { href: "/admin/categories", label: "Category",    icon: FolderTree,   color: "#f59e0b", adminOnly: true },
           { href: "/admin/laboratory", label: "Laboratory",  icon: FlaskConical, color: "#22c55e", featureKey: FEATURE_KEYS.LABORATORY },
           { href: "/admin/origin",     label: "Origin",      icon: Globe,        color: "#14b8a6", featureKey: FEATURE_KEYS.ORIGIN },
+          { href: "/admin/colors",     label: "Color",       icon: Palette,      color: "#ec4899", featureKey: FEATURE_KEYS.COLOR },
           {
             href: "/admin/settings/rating-tags",
             label: "Seller Rating Tags",

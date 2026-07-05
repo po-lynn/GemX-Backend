@@ -44,7 +44,7 @@ describe("AdminSidebar Configuration sub-menu", () => {
     expect(screen.queryByRole("link", { name: "Category" })).not.toBeInTheDocument()
   })
 
-  // Validates the expand/collapse toggle: expanding reveals all five
+  // Validates the expand/collapse toggle: expanding reveals all six
   // sub-links with correct hrefs, collapsing hides them again.
   it("expands to show all Configuration links, then collapses", () => {
     render(<AdminSidebar role="admin" permissions={{}} />)
@@ -54,6 +54,7 @@ describe("AdminSidebar Configuration sub-menu", () => {
     expect(screen.getByRole("link", { name: "Category" })).toHaveAttribute("href", "/admin/categories")
     expect(screen.getByRole("link", { name: "Laboratory" })).toHaveAttribute("href", "/admin/laboratory")
     expect(screen.getByRole("link", { name: "Origin" })).toHaveAttribute("href", "/admin/origin")
+    expect(screen.getByRole("link", { name: "Color" })).toHaveAttribute("href", "/admin/colors")
     expect(screen.getByRole("link", { name: "Seller Rating Tags" })).toHaveAttribute("href", "/admin/settings/rating-tags")
     expect(screen.getByRole("link", { name: "Precaution Tags" })).toHaveAttribute("href", "/admin/settings/precaution-tags")
 
@@ -80,6 +81,22 @@ describe("AdminSidebar Configuration sub-menu", () => {
     expect(screen.queryByRole("link", { name: "Origin" })).not.toBeInTheDocument()
 
     fireEvent.click(configToggle())
+  })
+
+  // Validates RBAC scoping for the new Color entry: a non-admin holding only
+  // the color feature key sees Configuration with just the Color link.
+  it("shows only Color for a non-admin with just the color permission", () => {
+    render(
+      <AdminSidebar
+        role="internal"
+        permissions={{ [FEATURE_KEYS.COLOR]: true }}
+      />
+    )
+    fireEvent.click(configToggle())
+    expect(screen.getByRole("link", { name: "Color" })).toHaveAttribute("href", "/admin/colors")
+    expect(screen.queryByRole("link", { name: "Origin" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Category" })).not.toBeInTheDocument()
+    fireEvent.click(configToggle()) // reset module-level store for later tests
   })
 
   // Validates that the sub-menu remains user-collapsible even while a child
