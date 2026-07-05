@@ -4,7 +4,8 @@
 **Status:** Approved (amended same day: products link to colours via a
 `colorId` foreign key + denormalized name, replacing the original
 lookup-list-only decision — there is no production data yet and the mobile
-API can change)
+API can change; the link is product-level only, jewellery gemstones keep
+free-text colour)
 
 ## Goal
 
@@ -17,14 +18,15 @@ to populate colour pickers.
 
 ## Key decisions
 
-- **FK + denormalized name (the laboratory pattern).** `product` and
-  `product_jewellery_gemstone` gain a `colorId` uuid FK
-  (`onDelete: "set null"`) alongside their existing `color` text columns —
-  exactly how `laboratoryId` coexists with `certLabName`. When a request
-  supplies `colorId`, the server resolves it and writes the colour's name
-  into `color`; a plain `color` string without `colorId` is still accepted
-  and stored as-is. Responses keep the `color` string and add `colorId`, so
-  read paths don't break.
+- **FK + denormalized name (the laboratory pattern).** `product` gains a
+  `colorId` uuid FK (`onDelete: "set null"`) alongside its existing `color`
+  text column — exactly how `laboratoryId` coexists with `certLabName`.
+  When a request supplies `colorId`, the server resolves it and writes the
+  colour's name into `color`; a plain `color` string without `colorId` is
+  still accepted and stored as-is. Responses keep the `color` string and add
+  `colorId`, so read paths don't break.
+- **Jewellery gemstones are not linked.** `product_jewellery_gemstone.color`
+  stays plain free text, unchanged — no `colorId` there.
 - **Mirror the Origin feature.** Server actions for admin CRUD, admin pages,
   and a public cached `GET /api/colors` — not REST admin routes.
 - **Fields:** `name` + optional `hexCode` swatch. No sort order (alphabetical
@@ -52,19 +54,15 @@ export const color = pgTable("color", {
 
 ### Product links
 
-In `drizzle/schema/product-schema.ts`:
+In `drizzle/schema/product-schema.ts`, on `product` only (beside the
+existing `color: text("color")`):
 
 ```ts
-// on product (beside the existing color: text("color"))
-colorId: uuid("color_id").references(() => color.id, { onDelete: "set null" }),
-
-// on productJewelleryGemstone (beside its color text column)
 colorId: uuid("color_id").references(() => color.id, { onDelete: "set null" }),
 ```
 
-Plus indexes `product_colorId_idx` and
-`product_jewellery_gemstone_colorId_idx` (mirroring
-`product_laboratoryId_idx`).
+Plus index `product_colorId_idx` (mirroring `product_laboratoryId_idx`).
+`productJewelleryGemstone` is not touched.
 
 ### Seed data (in the generated migration)
 
@@ -132,12 +130,11 @@ through server actions.
   `color`; an unknown `colorId` → 400 with a clear message. A plain `color`
   string without `colorId` remains valid (stored with `colorId = null`).
   Sending both keeps the resolved name (colorId wins).
-- Each `jewelleryGemstones[]` item accepts optional `colorId` with the same
-  resolve-and-denormalize behaviour.
+- `jewelleryGemstones[]` items are unchanged — their `color` remains an
+  optional free-text string.
 - Loose-stone validation "color is required" is satisfied by either
   `colorId` or `color`.
-- Product responses additionally include `colorId` at product level and on
-  each jewellery gemstone.
+- Product responses additionally include `colorId` at product level.
 - `docs/MOBILE-API.md` is updated accordingly.
 
 ## Sidebar
@@ -159,9 +156,9 @@ Visibility follows the existing rules: admins always see it; staff need the
 - Duplicate name on create/update → unique-violation surfaced as a friendly
   "colour already exists" form error.
 - Invalid hex → Zod rejects before hitting the DB.
-- Deleting a colour sets `colorId` to null on referencing products and
-  jewellery gemstones; the denormalized `color` name text is untouched, so
-  listings keep displaying the colour.
+- Deleting a colour sets `colorId` to null on referencing products; the
+  denormalized `color` name text is untouched, so listings keep displaying
+  the colour.
 - Renaming a colour does not rewrite existing products' `color` text (the
   name was denormalized at save time) — documented as a known limitation.
 - Unknown `colorId` in a product request → 400, nothing persisted.
@@ -175,7 +172,7 @@ Visibility follows the existing rules: admins always see it; staff need the
   and DB-failure 500.
 - `tests/api/products-color-link.test.ts` — product create/update with a
   valid `colorId` (name denormalized), unknown `colorId` → 400, plain
-  `color` string still accepted, jewellery gemstone `colorId` handling.
+  `color` string still accepted.
 - `tests/component/color-list-form.test.tsx` — list renders rows with
   swatches; form validates and submits; edit pre-fills.
 - Sidebar coverage: extend the existing configuration sub-menu test with the
