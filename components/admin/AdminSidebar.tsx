@@ -27,6 +27,7 @@ import {
   Coins,
   ShoppingBag,
   Settings2,
+  SlidersHorizontal,
   ChevronDown,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
@@ -41,9 +42,16 @@ type NavItem = {
   adminOnly?: boolean;
 };
 
+type NavSubMenu = {
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  children: NavItem[];
+};
+
 type NavGroup = {
   label: string;
-  items: NavItem[];
+  items: (NavItem | NavSubMenu)[];
 };
 
 const navGroups: (NavItem | NavGroup)[] = [
@@ -57,9 +65,32 @@ const navGroups: (NavItem | NavGroup)[] = [
     label: "Master Data",
     items: [
       { href: "/admin/products",   label: "Products",    icon: Package,      color: "#3b82f6", featureKey: FEATURE_KEYS.PRODUCTS },
-      { href: "/admin/categories", label: "Categories",  icon: FolderTree,   color: "#f59e0b", adminOnly: true },
-      { href: "/admin/laboratory", label: "Laboratory",  icon: FlaskConical, color: "#22c55e", featureKey: FEATURE_KEYS.LABORATORY },
-      { href: "/admin/origin",     label: "Origin",      icon: Globe,        color: "#14b8a6", featureKey: FEATURE_KEYS.ORIGIN },
+      {
+        label: "Configuration",
+        icon: SlidersHorizontal,
+        color: "#6366f1",
+        children: [
+          { href: "/admin/categories", label: "Category",    icon: FolderTree,   color: "#f59e0b", adminOnly: true },
+          { href: "/admin/laboratory", label: "Laboratory",  icon: FlaskConical, color: "#22c55e", featureKey: FEATURE_KEYS.LABORATORY },
+          { href: "/admin/origin",     label: "Origin",      icon: Globe,        color: "#14b8a6", featureKey: FEATURE_KEYS.ORIGIN },
+          {
+            href: "/admin/settings/rating-tags",
+            label: "Seller Rating Tags",
+            icon: Tags,
+            color: "#ef4444",
+            featureKey: FEATURE_KEYS.SETTINGS_RATING_TAGS,
+            isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
+          },
+          {
+            href: "/admin/settings/precaution-tags",
+            label: "Precaution Tags",
+            icon: ShieldAlert,
+            color: "#f59e0b",
+            featureKey: FEATURE_KEYS.SETTINGS_PRECAUTION_TAGS,
+            isActive: (p) => p.startsWith("/admin/settings/precaution-tags"),
+          },
+        ],
+      },
     ],
   },
   {
@@ -136,22 +167,6 @@ const navGroups: (NavItem | NavGroup)[] = [
         color: "#7c5cff",
         featureKey: FEATURE_KEYS.SETTINGS_ESCROW,
         isActive: (p) => p === "/admin/settings" || p.startsWith("/admin/settings?"),
-      },
-      {
-        href: "/admin/settings/rating-tags",
-        label: "Seller Rating Tags",
-        icon: Tags,
-        color: "#ef4444",
-        featureKey: FEATURE_KEYS.SETTINGS_RATING_TAGS,
-        isActive: (p) => p.startsWith("/admin/settings/rating-tags"),
-      },
-      {
-        href: "/admin/settings/precaution-tags",
-        label: "Precaution Tags",
-        icon: ShieldAlert,
-        color: "#f59e0b",
-        featureKey: FEATURE_KEYS.SETTINGS_PRECAUTION_TAGS,
-        isActive: (p) => p.startsWith("/admin/settings/precaution-tags"),
       },
     ],
   },
@@ -246,6 +261,52 @@ export function AdminSidebar({ className, role, permissions }: Props) {
     );
   }
 
+  function renderSubMenu(sub: NavSubMenu, visibleChildren: NavItem[]) {
+    // Store key is prefixed so a sub-menu never collides with a group label.
+    // Inverted semantics vs groups: presence in the store means OPEN, so
+    // sub-menus default to collapsed.
+    const storeKey = `submenu:${sub.label}`;
+    const childActive = visibleChildren.some((c) => isActive(c.href, c.isActive));
+    const isOpen = collapsed.has(storeKey);
+    const Icon = sub.icon;
+    return (
+      <div key={sub.label}>
+        <button
+          onClick={() => toggleGroup(storeKey)}
+          aria-expanded={isOpen}
+          className={cn(
+            "flex w-full cursor-pointer items-center gap-3 rounded-[11px] px-[11px] py-[10px] text-[14.5px] font-semibold transition-colors duration-150",
+            childActive
+              ? "text-[var(--admin-sidebar-active)]"
+              : "text-[#444b5c] hover:bg-[var(--admin-sidebar-accent-hover)]"
+          )}
+        >
+          <Icon
+            className="h-[21px] w-[21px] shrink-0"
+            style={{ color: childActive ? "var(--admin-sidebar-active)" : sub.color }}
+            strokeWidth={1.8}
+          />
+          <span className="min-w-0 flex-1 truncate text-left">{sub.label}</span>
+          <ChevronDown
+            className="h-3.5 w-3.5 shrink-0 transition-transform duration-200"
+            style={{
+              color: "var(--admin-sidebar-muted)",
+              transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)",
+            }}
+          />
+        </button>
+        {isOpen && (
+          <div
+            className="ml-[21px] space-y-0.5 border-l pl-2"
+            style={{ borderColor: "var(--admin-sidebar-border)" }}
+          >
+            {visibleChildren.map((nav) => renderNavLink(nav))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <aside
       className={cn("flex h-full flex-col border-r", className)}
@@ -303,7 +364,9 @@ export function AdminSidebar({ className, role, permissions }: Props) {
               );
             }
 
-            const visibleItems = item.items.filter(canSee);
+            const visibleItems = item.items.filter((it) =>
+              "children" in it ? it.children.some(canSee) : canSee(it)
+            );
             if (visibleItems.length === 0) return null;
 
             const isCollapsed = collapsed.has(item.label);
@@ -338,7 +401,11 @@ export function AdminSidebar({ className, role, permissions }: Props) {
                 </button>
                 {!isCollapsed && (
                   <div className="space-y-0.5">
-                    {visibleItems.map((nav) => renderNavLink(nav))}
+                    {visibleItems.map((nav) =>
+                      "children" in nav
+                        ? renderSubMenu(nav, nav.children.filter(canSee))
+                        : renderNavLink(nav)
+                    )}
                   </div>
                 )}
               </div>
