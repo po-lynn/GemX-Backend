@@ -198,7 +198,7 @@ export async function PATCH(
         shape: data.shape,
         origin: data.origin,
         laboratoryId: data.laboratoryId,
-        colorId: data.colorId,
+        colorId: data.colorId !== undefined ? data.colorId : (data.color !== undefined ? null : undefined),
         certReportNumber: data.certReportNumber,
         certReportDate: data.certReportDate,
         certReportUrl: data.certReportUrl,

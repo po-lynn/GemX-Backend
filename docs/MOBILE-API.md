@@ -3234,6 +3234,8 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 **Featuring via PATCH:** When the update increases the seller’s **`featured`** point cost (e.g. `isFeatured: true` with a higher `featured` value than before), the server checks the **seller’s** available point balance (`user.points`) against the **additional** points required. If balance is insufficient, the request fails with **400** `{ "error": "Insufficient points balance" }` — **no points are deducted** and the product is **not** updated. A second check runs at deduction time for concurrent spends. Points are always charged to the **product seller**, not an admin editing on their behalf.
 
+**Updating colour:** Sending `colorId` (with no `color`) resolves and denormalizes the name as on create. Sending a plain `color` string **without** `colorId` stores that text **and clears any existing `colorId` link** (`colorId` → `null`), keeping the invariant that a non-null `colorId` always matches the denormalized `color` text. Sending `colorId: null` explicitly also clears the link. Omitting both fields leaves the product's colour untouched.
+
 **Example:** Change title and price only.
 
 ```json

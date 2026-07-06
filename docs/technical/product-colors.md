@@ -148,6 +148,12 @@ return `{ error: "Unauthorized" }`.
   denormalized at write time; updating `color.name` only affects future
   product writes that re-resolve `colorId`, and the admin colour edit form
   itself. Existing products keep their old text until re-saved.
+- **PATCH clears a stale `colorId` link when only `color` text is sent.**
+  If a product already has `colorId` set and a later `PATCH` request sends
+  `color` without a `colorId` key, the route sets `colorId = null` (in
+  addition to storing the new `color` text) so the two columns never
+  disagree. Sending `colorId: null` explicitly clears the link the same
+  way; omitting both fields leaves both columns untouched.
 - **Deleting a colour nulls `colorId` but keeps the text.** The FK is
   `ON DELETE SET NULL`; the product's `color` text field is untouched, so a
   deleted colour's name may linger as plain text on old listings with no

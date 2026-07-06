@@ -57,8 +57,14 @@ The server looks up the colour, writes its `name` into the product's
 `color` field automatically, and stores the `id` in `colorId` — you don't
 need to also send `color`. You can still send a plain `color` string
 instead of `colorId` if you don't have a matching managed colour (e.g. a
-custom shade); the two are independent, but if both are sent the resolved
-name from `colorId` wins.
+custom shade); if both are sent the resolved name from `colorId` wins.
+
+**On `PATCH /api/products/:id` (update), `color` and `colorId` are not
+independent:** sending a plain `color` string without `colorId` clears any
+previously-linked `colorId` (sets it to `null`), so the stored `colorId`
+never goes stale relative to the `color` text. Sending `colorId: null`
+explicitly also clears the link. Omitting both fields leaves the existing
+colour untouched.
 
 `colorId` only applies at the **product level** — it is not accepted on
 individual `jewelleryGemstones[]` items, which keep their own free-text
