@@ -21,6 +21,7 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
 import { requireActionRole } from "@/lib/action-guard"
+import { getColorById } from "@/features/colors/db/color"
 import { searchUsersForPicker, getRecentUsersForPicker, getUsersPaginatedFromDb } from "@/features/users/db/users"
 import type { UserPickerOption } from "@/features/users/db/users"
 import { getCompanySettings } from "@/features/company-settings/db/company-settings"
@@ -71,6 +72,7 @@ export async function createProductAction(formData: FormData) {
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
     color: emptyToNull(formData.get("color")),
+    colorId: emptyToNull(formData.get("colorId")),
     shape: emptyToNull(formData.get("shape")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
@@ -97,6 +99,15 @@ export async function createProductAction(formData: FormData) {
   const session = await requireActionRole(canAdminManageProducts)
   if (!session) {
     return { error: "Unauthorized" }
+  }
+
+  let resolvedColor = parsed.data.color ?? null
+  if (parsed.data.colorId) {
+    const colorRow = await getColorById(parsed.data.colorId)
+    if (!colorRow) {
+      return { error: "Unknown colorId" }
+    }
+    resolvedColor = colorRow.name
   }
 
   const canApplyVerified =
@@ -136,7 +147,8 @@ export async function createProductAction(formData: FormData) {
     pieceCount: parsed.data.pieceCount,
     weightCarat: parsed.data.weightCarat,
     dimensions: parsed.data.dimensions,
-    color: parsed.data.color,
+    color: resolvedColor,
+    colorId: parsed.data.colorId ?? null,
     shape: parsed.data.shape,
     origin: parsed.data.origin,
     laboratoryId: parsed.data.laboratoryId,
@@ -184,6 +196,7 @@ export async function updateProductAction(formData: FormData) {
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
     color: emptyToNull(formData.get("color")),
+    colorId: emptyToNull(formData.get("colorId")),
     shape: emptyToNull(formData.get("shape")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
@@ -210,6 +223,15 @@ export async function updateProductAction(formData: FormData) {
   const session = await requireActionRole(canAdminManageProducts)
   if (!session) {
     return { error: "Unauthorized" }
+  }
+
+  let resolvedColor = parsed.data.color ?? null
+  if (parsed.data.colorId) {
+    const colorRow = await getColorById(parsed.data.colorId)
+    if (!colorRow) {
+      return { error: "Unknown colorId" }
+    }
+    resolvedColor = colorRow.name
   }
 
   const isOwnProductUpdate = formData.get("isOwnProduct") === "on" || formData.get("isOwnProduct") === "true"
@@ -274,7 +296,8 @@ export async function updateProductAction(formData: FormData) {
       pieceCount: data.pieceCount,
       weightCarat: data.weightCarat,
       dimensions: data.dimensions,
-      color: data.color,
+      color: data.colorId ? resolvedColor : (data.color ?? null),
+      colorId: data.colorId ?? null,
       shape: data.shape,
       origin: data.origin,
       laboratoryId: data.laboratoryId,
