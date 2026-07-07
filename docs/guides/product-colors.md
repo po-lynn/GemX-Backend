@@ -70,6 +70,12 @@ colour untouched.
 individual `jewelleryGemstones[]` items, which keep their own free-text
 `color`.
 
+The admin product form now uses this same colour dropdown (`<select
+name="colorId">`) instead of a free-text input, for loose-stone products —
+fed by the managed list via `getAllColors()`. Legacy free-text products
+pre-select by case-insensitive name match against the managed list when
+possible; otherwise the admin must explicitly pick a colour before saving.
+
 ## Extending
 
 **Add a field to the colour** (e.g. a `sortOrder` or `family` column):

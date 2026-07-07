@@ -8,6 +8,7 @@ import { getProductById } from "@/features/products/db/products"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
+import { getAllColors } from "@/features/colors/db/color"
 import { getFeatureSettings } from "@/features/points/db/points"
 import { getCompanySettings } from "@/features/company-settings/db/company-settings"
 import { FadeUp } from "@/components/admin/motion"
@@ -46,11 +47,12 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
     (session.user.role === "internal" &&
       (await checkInternalAccess(session.user.id, FEATURE_KEYS.PRODUCTS_VERIFY)))
 
-  const [product, categories, laboratories, origins, featureSettings, companySettings] = await Promise.all([
+  const [product, categories, laboratories, origins, colors, featureSettings, companySettings] = await Promise.all([
     getProductById(id),
     getAllCategories(),
     getAllLaboratories(),
     getAllOrigins(),
+    getAllColors(),
     getFeatureSettings(),
     getCompanySettings(),
   ])
@@ -77,6 +79,7 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
           categories={categories}
           laboratories={laboratories}
           origins={origins}
+          colors={colors}
           featurePricingTiers={featureSettings.pricingTiers}
           companyUserId={companySettings?.companyUserId ?? null}
           canVerify={canVerify}

@@ -172,9 +172,10 @@ return `{ error: "Unauthorized" }`.
   string fails `.uuid()` and returns a generic Zod `400` with `details`,
   distinct from the custom `"Unknown colorId"` message (which only fires
   for a syntactically valid UUID that doesn't exist in the `color` table).
-- **Admin/seller web product form is still free-text `color`.** The
-  `colorId` field is only wired into the API layer (`POST`/`PATCH
-  /api/products`) for the mobile app; no follow-up wiring the admin web
-  product form's colour input to the managed list has been done yet.
+- **Admin web product form now uses a `colorId` dropdown.** The
+  stone-details section's colour field is a `<select name="colorId"
+  required>` fed by `getAllColors()`, for loose-stone products only
+  (jewellery does not render it). See
+  `docs/technical/product-form-color-dropdown.md` for the form-level detail.
 - **No colour filtering on product search/list.** `adminProductsSearchSchema`
   / `getAdminProductsFromDb` do not currently accept a `colorId` filter.
