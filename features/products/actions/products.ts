@@ -195,7 +195,7 @@ export async function updateProductAction(formData: FormData) {
     totalWeightGrams: emptyToNull(formData.get("totalWeightGrams")),
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
-    color: emptyToNull(formData.get("color")),
+    color: emptyToNull(formData.get("color")), // ignored unless colorId resolves — the form has no product-level color input
     colorId: emptyToNull(formData.get("colorId")),
     shape: emptyToNull(formData.get("shape")),
     origin: emptyToNull(formData.get("origin")),
@@ -230,7 +230,7 @@ export async function updateProductAction(formData: FormData) {
   // don't overwrite an existing colour with null on every jewellery-product edit.
   const colorFieldRendered = formData.has("colorId")
 
-  let resolvedColor = parsed.data.color ?? null
+  let resolvedColor: string | null = null
   if (parsed.data.colorId) {
     const colorRow = await getColorById(parsed.data.colorId)
     if (!colorRow) {

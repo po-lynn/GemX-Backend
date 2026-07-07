@@ -75,6 +75,9 @@ name="colorId">`) instead of a free-text input, for loose-stone products —
 fed by the managed list via `getAllColors()`. Legacy free-text products
 pre-select by case-insensitive name match against the managed list when
 possible; otherwise the admin must explicitly pick a colour before saving.
+Note: unlike the mobile PATCH API (where `colorId: null` clears only the
+link and leaves the colour text untouched), submitting the form with an
+empty selection clears both the link and the denormalized colour text.
 
 ## Extending
 
