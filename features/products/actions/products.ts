@@ -225,6 +225,11 @@ export async function updateProductAction(formData: FormData) {
     return { error: "Unauthorized" }
   }
 
+  // Jewellery forms never render the colour select, so `colorId` is absent from FormData
+  // entirely (not merely empty) — distinguish that from "select rendered but cleared" so we
+  // don't overwrite an existing colour with null on every jewellery-product edit.
+  const colorFieldRendered = formData.has("colorId")
+
   let resolvedColor = parsed.data.color ?? null
   if (parsed.data.colorId) {
     const colorRow = await getColorById(parsed.data.colorId)
@@ -296,8 +301,8 @@ export async function updateProductAction(formData: FormData) {
       pieceCount: data.pieceCount,
       weightCarat: data.weightCarat,
       dimensions: data.dimensions,
-      color: data.colorId ? resolvedColor : (data.color ?? null),
-      colorId: data.colorId ?? null,
+      color: colorFieldRendered ? (data.colorId ? resolvedColor : null) : undefined,
+      colorId: colorFieldRendered ? (data.colorId ?? null) : undefined,
       shape: data.shape,
       origin: data.origin,
       laboratoryId: data.laboratoryId,

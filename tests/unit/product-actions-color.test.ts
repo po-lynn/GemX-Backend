@@ -140,10 +140,24 @@ describe("updateProductAction with colorId", () => {
     )
   })
 
-  // Validates the link/text invariant: jewellery submits (no colorId field
-  // rendered) clear both columns together — colorId null AND color null.
-  it("clears both colorId and color when the select is absent (jewellery)", async () => {
+  // Validates that omitting the colour select entirely (jewellery forms never
+  // render it) leaves the existing colour columns untouched rather than
+  // wiping them — colorId and color must both be undefined, not null.
+  it("leaves colour columns untouched when the select is never rendered (jewellery)", async () => {
     const fd = updateFd({ productType: "jewellery" })
+    const result = await updateProductAction(fd)
+    expect(result).toEqual(expect.objectContaining({ success: true }))
+    const payload = vi.mocked(updateProductInDb).mock.calls[0]![1]
+    expect(payload.color).toBeUndefined()
+    expect(payload.colorId).toBeUndefined()
+    expect(getColorById).not.toHaveBeenCalled()
+  })
+
+  // Validates the link/text invariant when the select IS rendered but cleared:
+  // an explicit empty submission clears both columns together — colorId null
+  // AND color null — distinct from the "select absent" case above.
+  it("clears both colorId and color when the select is rendered but empty", async () => {
+    const fd = updateFd({ colorId: "" })
     const result = await updateProductAction(fd)
     expect(result).toEqual(expect.objectContaining({ success: true }))
     expect(updateProductInDb).toHaveBeenCalledWith(
