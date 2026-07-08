@@ -6,6 +6,7 @@ import { getNewsById } from "@/features/news/db/news";
 import { requireFeatureAccess } from "@/lib/admin-guard";
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { FadeUp } from "@/components/admin/motion";
+import { resolveAdjacentNews } from "./resolve-adjacent";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -15,12 +16,23 @@ async function AdminNewsEditContent({ params }: Props) {
   await connection();
   await requireFeatureAccess(FEATURE_KEYS.NEWS);
   const { id } = await params;
-  const news = await getNewsById(id);
+  const [news, adjacent] = await Promise.all([
+    getNewsById(id),
+    resolveAdjacentNews(id),
+  ]);
   if (!news) notFound();
 
   return (
     <div className="py-2">
-      <NewsForm key={news.id} mode="edit" news={news} />
+      <NewsForm
+        key={news.id}
+        mode="edit"
+        news={news}
+        prevHref={adjacent.prevHref}
+        nextHref={adjacent.nextHref}
+        listPosition={adjacent.position}
+        listTotal={adjacent.total}
+      />
     </div>
   );
 }

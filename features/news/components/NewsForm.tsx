@@ -4,8 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { createNewsAction, updateNewsAction } from "@/features/news/actions/news";
 import { useAutoSave } from "@/features/news/hooks/useAutoSave";
+import { estimateReadingTime } from "@/lib/reading-time";
 import type { NewsRow } from "@/features/news/db/news";
 import DatePicker from "@/components/date-picker/date-picker";
 import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
@@ -30,6 +32,10 @@ function fmtDate(d: Date | string | null | undefined): string | null {
 type Props = {
   mode: "create" | "edit";
   news?: NewsRow | null;
+  prevHref?: string | null;
+  nextHref?: string | null;
+  listPosition?: number | null;
+  listTotal?: number | null;
 };
 
 function getSavebarStatusClass({
@@ -75,7 +81,7 @@ function getSavebarLabel({
   return "New article";
 }
 
-export function NewsForm({ mode, news }: Props) {
+export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTotal }: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
   const formRef = useRef<HTMLFormElement>(null);
@@ -103,6 +109,7 @@ export function NewsForm({ mode, news }: Props) {
   const articleId = news?.id ? news.id.slice(0, 8).toUpperCase() : null;
   const createdLabel = fmtDate(news?.createdAt);
   const updatedLabel = fmtDate(news?.updatedAt);
+  const readingTime = estimateReadingTime(content);
 
   async function submit(overrideStatus?: Status) {
     setError(null);
@@ -124,7 +131,7 @@ export function NewsForm({ mode, news }: Props) {
   }
 
   return (
-    <>
+    <div className="nf-scope">
       {/* Sticky header: breadcrumbs + save bar */}
       <div className="ud-stickybar">
       <div className="ud-topbar">
@@ -139,6 +146,40 @@ export function NewsForm({ mode, news }: Props) {
           </svg>
           <span className="lv-here">{isEdit ? `Edit · ${articleId ?? "…"}` : "New article"}</span>
         </nav>
+
+        {(prevHref != null || nextHref != null || listPosition != null) && (
+          <div className="pd-listnav">
+            {prevHref ? (
+              <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous announcement">
+                <ChevronLeft size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronLeft size={14} />
+              </span>
+            )}
+            {listPosition != null && listTotal != null && (
+              <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+            )}
+            {nextHref ? (
+              <Link href={nextHref} className="pd-listnav-btn" aria-label="Next announcement">
+                <ChevronRight size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronRight size={14} />
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="ud-topbar-spacer" />
+
+        {isEdit && (
+          <Link href="/admin/news/new" className="btn">
+            <Plus size={13} /> New announcement
+          </Link>
+        )}
       </div>
 
       {/* Save bar */}
@@ -179,6 +220,19 @@ export function NewsForm({ mode, news }: Props) {
           <div className="n-editor-main">
             <div className="n-article-frame">
 
+              {/* Card header */}
+              <div className="nf-card-head">
+                <span className="nf-card-ico">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 22V4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v16a2 2 0 0 1-2 2Z" /><path d="M8 7h8M8 11h8M8 15h5" />
+                  </svg>
+                </span>
+                <div>
+                  <div className="nf-card-title">Announcement basics</div>
+                  <div className="nf-card-sub">Headline, byline and reading time.</div>
+                </div>
+              </div>
+
               {/* Status + article ID strip */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <span className={`lv-status ${status}`}>
@@ -191,7 +245,9 @@ export function NewsForm({ mode, news }: Props) {
               </div>
 
               {/* Large title */}
+              <label className="n-label" htmlFor="news-title" style={{ display: "block", marginBottom: 6 }}>Title</label>
               <input
+                id="news-title"
                 className="n-title-input"
                 name="title"
                 value={title}
@@ -201,29 +257,35 @@ export function NewsForm({ mode, news }: Props) {
                 maxLength={500}
               />
 
-              {/* Author byline */}
-              <div style={{ marginTop: 10, marginBottom: 4 }}>
-                <input
-                  name="author"
-                  value={author}
-                  onChange={e => { setAuthor(e.target.value); setDirty(true); }}
-                  placeholder="Author name"
-                  maxLength={200}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    outline: "none",
-                    fontSize: 13,
-                    color: "var(--lv-text-2)",
-                    width: "100%",
-                    padding: "2px 0",
-                  }}
-                />
+              {/* Author + reading time */}
+              <div className="nf-two-col">
+                <div>
+                  <label className="n-label" htmlFor="news-author" style={{ display: "block", marginBottom: 8 }}>Author name</label>
+                  <input
+                    id="news-author"
+                    className="nf-input"
+                    name="author"
+                    value={author}
+                    onChange={e => { setAuthor(e.target.value); setDirty(true); }}
+                    placeholder="Author name"
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="n-label" style={{ display: "block", marginBottom: 8 }}>Reading time</label>
+                  <div className="nf-readingtime">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                    </svg>
+                    {readingTime.minutes} min read · {readingTime.words.toLocaleString()} words
+                    <span className="nf-readingtime-auto">AUTO</span>
+                  </div>
+                </div>
               </div>
 
               {/* Created / edited byline */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 10, marginTop: 14,
+                display: "flex", alignItems: "center", gap: 10, marginTop: 18,
                 paddingBottom: 16, borderBottom: "1px solid var(--lv-border)",
                 fontSize: 12.5, color: "var(--lv-text-3)",
               }}>
@@ -237,18 +299,31 @@ export function NewsForm({ mode, news }: Props) {
                   </>
                 )}
               </div>
+            </div>
+
+            <div className="n-article-frame nf-content-frame">
+              {/* Card header */}
+              <div className="nf-card-head">
+                <span className="nf-card-ico" data-tone="green">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </span>
+                <div>
+                  <div className="nf-card-title">Content</div>
+                  <div className="nf-card-sub">The body of your announcement.</div>
+                </div>
+              </div>
 
               {/* Body editor */}
-              <div style={{ marginTop: 18 }}>
-                <BlockNoteEditor
-                  name="content"
-                  initialContent={news?.content}
-                  onContentChange={(json) => {
-                    setContent(json);
-                    setDirty(true);
-                  }}
-                />
-              </div>
+              <BlockNoteEditor
+                name="content"
+                initialContent={news?.content}
+                onContentChange={(json) => {
+                  setContent(json);
+                  setDirty(true);
+                }}
+              />
 
               {/* HR + footer row */}
               <hr className="n-hrule" />
@@ -376,6 +451,6 @@ export function NewsForm({ mode, news }: Props) {
           </aside>
         </div>
       </form>
-    </>
+    </div>
   );
 }

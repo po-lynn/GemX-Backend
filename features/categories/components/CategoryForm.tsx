@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { createCategoryAction, updateCategoryAction, deleteCategoryAction } from "@/features/categories/actions/categories"
 import type { CategoryRow } from "@/features/categories/db/categories"
 
@@ -14,6 +15,10 @@ const MAX_IMAGE_SIZE_MB = 5
 type Props = {
   mode: "create" | "edit"
   category?: CategoryRow | null
+  prevHref?: string | null
+  nextHref?: string | null
+  listPosition?: number | null
+  listTotal?: number | null
 }
 
 function toSlugClient(s: string) {
@@ -44,15 +49,7 @@ function TypePill({ type }: { type: "loose_stone" | "jewellery" }) {
   )
 }
 
-function ChevronRight() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-export function CategoryForm({ mode, category }: Props) {
+export function CategoryForm({ mode, category, prevHref, nextHref, listPosition, listTotal }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
 
@@ -335,29 +332,63 @@ export function CategoryForm({ mode, category }: Props) {
   if (isEdit && category) {
     return (
       <div>
-        {/* Top bar */}
-        <div className="pd-topbar">
-          <div className="pd-breadcrumbs">
-            <Link href="/admin/categories">Categories</Link>
-            <ChevronRight />
-            <span className="pd-here">{name}</span>
-          </div>
-        </div>
+        <div className="pd-stickybar">
+          {/* Top bar */}
+          <div className="pd-topbar">
+            <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+              <Link href="/admin/categories">Categories</Link>
+              <ChevronRight size={11} style={{ opacity: 0.5 }} />
+              <span className="pd-here">{name}</span>
+            </nav>
 
-        {/* Sticky save bar */}
-        <div className="pd-savebar" style={{ top: 0 }}>
-          {dirty
-            ? <span className="pd-savebar-dirty"><span className="pd-savebar-dirty-dot" /> Unsaved changes</span>
-            : <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>Saved · {fmtRelative(category.updatedAt)}</span>}
-          <span style={{ flex: 1 }} />
-          <Link href="/admin/categories" className="pd-btn">Cancel</Link>
-          <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17,21 17,13 7,13 7,21" /><polyline points="7,3 7,8 15,8" />
-            </svg>
-            {loading ? "Saving…" : "Update category"}
-          </button>
+            {(prevHref != null || nextHref != null || listPosition != null) && (
+              <div className="pd-listnav">
+                {prevHref ? (
+                  <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous category">
+                    <ChevronLeft size={14} />
+                  </Link>
+                ) : (
+                  <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                    <ChevronLeft size={14} />
+                  </span>
+                )}
+                {listPosition != null && listTotal != null && (
+                  <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+                )}
+                {nextHref ? (
+                  <Link href={nextHref} className="pd-listnav-btn" aria-label="Next category">
+                    <ChevronRight size={14} />
+                  </Link>
+                ) : (
+                  <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                    <ChevronRight size={14} />
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="pd-topbar-spacer" />
+
+            <Link href="/admin/categories/new" className="pd-btn">
+              <Plus size={13} /> New category
+            </Link>
+          </div>
+
+          {/* Sticky save bar */}
+          <div className="pd-savebar">
+            {dirty
+              ? <span className="pd-savebar-dirty"><span className="pd-savebar-dirty-dot" /> Unsaved changes</span>
+              : <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>Saved · {fmtRelative(category.updatedAt)}</span>}
+            <span style={{ flex: 1 }} />
+            <Link href="/admin/categories" className="pd-btn">Cancel</Link>
+            <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17,21 17,13 7,13 7,21" /><polyline points="7,3 7,8 15,8" />
+              </svg>
+              {loading ? "Saving…" : "Update category"}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -502,26 +533,28 @@ export function CategoryForm({ mode, category }: Props) {
   /* ── CREATE mode — focused layout ── */
   return (
     <div>
-      <div className="pd-topbar">
-        <div className="pd-breadcrumbs">
-          <Link href="/admin/categories">Categories</Link>
-          <ChevronRight />
-          <span className="pd-here">New category</span>
+      <div className="pd-stickybar">
+        <div className="pd-topbar">
+          <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin/categories">Categories</Link>
+            <ChevronRight size={11} style={{ opacity: 0.5 }} />
+            <span className="pd-here">New category</span>
+          </nav>
         </div>
-      </div>
 
-      {/* Sticky save bar — matches edit mode */}
-      <div className="pd-savebar" style={{ top: 0 }}>
-        <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>New category</span>
-        <span style={{ flex: 1 }} />
-        <Link href="/admin/categories" className="pd-btn">Discard</Link>
-        <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17,21 17,13 7,13 7,21" /><polyline points="7,3 7,8 15,8" />
-          </svg>
-          {loading ? "Creating…" : "Create category"}
-        </button>
+        {/* Sticky save bar — matches edit mode */}
+        <div className="pd-savebar">
+          <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>New category</span>
+          <span style={{ flex: 1 }} />
+          <Link href="/admin/categories" className="pd-btn">Discard</Link>
+          <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17,21 17,13 7,13 7,21" /><polyline points="7,3 7,8 15,8" />
+            </svg>
+            {loading ? "Creating…" : "Create category"}
+          </button>
+        </div>
       </div>
 
       {error && (

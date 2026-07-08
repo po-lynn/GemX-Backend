@@ -4,8 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { createArticleAction, updateArticleAction } from "@/features/articles/actions/articles";
 import { useAutoSave } from "@/features/articles/hooks/useAutoSave";
+import { estimateReadingTime } from "@/lib/reading-time";
 import type { ArticleRow } from "@/features/articles/db/articles";
 import DatePicker from "@/components/date-picker/date-picker";
 import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
@@ -73,9 +75,13 @@ function getSavebarLabel({
 type Props = {
   mode: "create" | "edit";
   article?: ArticleRow | null;
+  prevHref?: string | null;
+  nextHref?: string | null;
+  listPosition?: number | null;
+  listTotal?: number | null;
 };
 
-export function ArticleForm({ mode, article }: Props) {
+export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, listTotal }: Props) {
   const router = useRouter();
   const isEdit = mode === "edit";
   const formRef = useRef<HTMLFormElement>(null);
@@ -106,6 +112,7 @@ export function ArticleForm({ mode, article }: Props) {
   const articleId = article?.id ? article.id.slice(0, 8).toUpperCase() : null;
   const createdLabel = fmtDate(article?.createdAt);
   const updatedLabel = fmtDate(article?.updatedAt);
+  const readingTime = estimateReadingTime(content);
 
   async function submit(overrideStatus?: Status) {
     setError(null);
@@ -127,7 +134,7 @@ export function ArticleForm({ mode, article }: Props) {
   }
 
   return (
-    <>
+    <div className="af-scope">
       {/* Sticky header: breadcrumbs + save bar */}
       <div className="ud-stickybar">
       <div className="ud-topbar">
@@ -142,6 +149,40 @@ export function ArticleForm({ mode, article }: Props) {
           </svg>
           <span className="lv-here">{isEdit ? `Edit · ${articleId ?? "…"}` : "New article"}</span>
         </nav>
+
+        {(prevHref != null || nextHref != null || listPosition != null) && (
+          <div className="pd-listnav">
+            {prevHref ? (
+              <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous article">
+                <ChevronLeft size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronLeft size={14} />
+              </span>
+            )}
+            {listPosition != null && listTotal != null && (
+              <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+            )}
+            {nextHref ? (
+              <Link href={nextHref} className="pd-listnav-btn" aria-label="Next article">
+                <ChevronRight size={14} />
+              </Link>
+            ) : (
+              <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                <ChevronRight size={14} />
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="ud-topbar-spacer" />
+
+        {isEdit && (
+          <Link href="/admin/articles/new" className="btn">
+            <Plus size={13} /> New article
+          </Link>
+        )}
       </div>
 
       {/* Save bar */}
@@ -186,6 +227,19 @@ export function ArticleForm({ mode, article }: Props) {
           <div className="n-editor-main">
             <div className="n-article-frame">
 
+              {/* Card header */}
+              <div className="af-card-head">
+                <span className="af-card-ico">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 7h16M4 12h10M4 17h7" />
+                  </svg>
+                </span>
+                <div>
+                  <div className="af-card-title">Article details</div>
+                  <div className="af-card-sub">Headline, byline and reading time.</div>
+                </div>
+              </div>
+
               {/* Status + article ID strip */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                 <span className={`lv-status ${status}`}>
@@ -198,7 +252,9 @@ export function ArticleForm({ mode, article }: Props) {
               </div>
 
               {/* Large title */}
+              <label className="n-label" htmlFor="article-title" style={{ display: "block", marginBottom: 6 }}>Title</label>
               <input
+                id="article-title"
                 className="n-title-input"
                 name="title"
                 value={title}
@@ -208,29 +264,35 @@ export function ArticleForm({ mode, article }: Props) {
                 maxLength={500}
               />
 
-              {/* Author byline */}
-              <div style={{ marginTop: 10, marginBottom: 4 }}>
-                <input
-                  name="author"
-                  value={author}
-                  onChange={e => { setAuthor(e.target.value); setDirty(true); }}
-                  placeholder="Author name"
-                  maxLength={200}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    outline: "none",
-                    fontSize: 13,
-                    color: "var(--lv-text-2)",
-                    width: "100%",
-                    padding: "2px 0",
-                  }}
-                />
+              {/* Author + reading time */}
+              <div className="af-two-col">
+                <div>
+                  <label className="n-label" htmlFor="article-author" style={{ display: "block", marginBottom: 8 }}>Author name</label>
+                  <input
+                    id="article-author"
+                    className="af-input"
+                    name="author"
+                    value={author}
+                    onChange={e => { setAuthor(e.target.value); setDirty(true); }}
+                    placeholder="Author name"
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="n-label" style={{ display: "block", marginBottom: 8 }}>Reading time</label>
+                  <div className="af-readingtime">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                    </svg>
+                    {readingTime.minutes} min read · {readingTime.words.toLocaleString()} words
+                    <span className="af-readingtime-auto">AUTO</span>
+                  </div>
+                </div>
               </div>
 
               {/* Created / edited byline */}
               <div style={{
-                display: "flex", alignItems: "center", gap: 10, marginTop: 8,
+                display: "flex", alignItems: "center", gap: 10, marginTop: 18,
                 paddingBottom: 16, borderBottom: "1px solid var(--lv-border)",
                 fontSize: 12.5, color: "var(--lv-text-3)",
               }}>
@@ -244,18 +306,31 @@ export function ArticleForm({ mode, article }: Props) {
                   </>
                 )}
               </div>
+            </div>
+
+            <div className="n-article-frame af-content-frame">
+              {/* Card header */}
+              <div className="af-card-head">
+                <span className="af-card-ico" data-tone="green">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </span>
+                <div>
+                  <div className="af-card-title">Content</div>
+                  <div className="af-card-sub">The body of your article.</div>
+                </div>
+              </div>
 
               {/* Body editor */}
-              <div style={{ marginTop: 18 }}>
-                <BlockNoteEditor
-                  name="content"
-                  initialContent={article?.content}
-                  onContentChange={(json) => {
-                    setContent(json);
-                    setDirty(true);
-                  }}
-                />
-              </div>
+              <BlockNoteEditor
+                name="content"
+                initialContent={article?.content}
+                onContentChange={(json) => {
+                  setContent(json);
+                  setDirty(true);
+                }}
+              />
 
               {/* HR + footer row */}
               <hr className="n-hrule" />
@@ -397,6 +472,6 @@ export function ArticleForm({ mode, article }: Props) {
           </aside>
         </div>
       </form>
-    </>
+    </div>
   );
 }

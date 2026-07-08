@@ -21,6 +21,11 @@ export async function getNewsById(id: string): Promise<NewsRow | null> {
   return row ?? null;
 }
 
+/** Lightweight id-only list, ordered same as the default admin view, for prev/next navigation. */
+export async function getAllNewsIdsOrdered(): Promise<{ id: string }[]> {
+  return db.select({ id: news.id }).from(news).orderBy(desc(news.updatedAt));
+}
+
 /** List news with pagination. Pass `view` for admin tab filtering, `status` for API filtering. */
 export async function getNewsPaginatedFromDb(options: {
   page: number;

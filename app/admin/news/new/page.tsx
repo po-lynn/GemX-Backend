@@ -8,7 +8,7 @@ export default async function AdminNewsNewPage() {
   return (
     <FadeUp>
       <div className="py-2">
-        <NewsForm key="create" mode="create" />
+        <NewsForm key={crypto.randomUUID()} mode="create" />
       </div>
     </FadeUp>
   );

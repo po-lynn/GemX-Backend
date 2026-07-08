@@ -8,7 +8,7 @@ export default async function AdminArticlesNewPage() {
   return (
     <FadeUp>
       <div className="py-2">
-        <ArticleForm key="create" mode="create" />
+        <ArticleForm key={crypto.randomUUID()} mode="create" />
       </div>
     </FadeUp>
   );

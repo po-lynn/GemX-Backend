@@ -3734,18 +3734,48 @@
 /* ── Large title input ────────────────────────────────────────────────────── */
 .n-title-input {
   width: 100%;
-  border: 0;
   font: inherit;
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: var(--lv-text);
-  background: transparent;
+  background: #fff;
+  border: 1px solid var(--lv-border);
+  border-radius: 8px;
   outline: none;
-  padding: 4px 0;
+  padding: 10px 14px;
   line-height: 1.25;
+  transition: border-color .15s, box-shadow .15s;
 }
+.n-title-input:hover { border-color: var(--lv-border-strong); }
+.n-title-input:focus { border-color: var(--lv-accent); box-shadow: 0 0 0 3px #F3EEFF; }
 .n-title-input::placeholder { color: var(--lv-text-4, #cbd5e1); }
+
+/* ── Author byline input ──────────────────────────────────────────────────── */
+.n-author-input {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--lv-text-2);
+  background: #fff;
+  border: 1px solid var(--lv-border);
+  border-radius: 8px;
+  outline: none;
+  padding: 8px 11px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.n-author-input:hover { border-color: var(--lv-border-strong); }
+.n-author-input:focus { border-color: var(--lv-accent); box-shadow: 0 0 0 3px #F3EEFF; }
+.n-author-input::placeholder { color: var(--lv-text-4, #cbd5e1); }
+
+/* ── Body editor box (BlockNote) ──────────────────────────────────────────── */
+.n-editor-box {
+  border: 1px solid var(--lv-border) !important;
+  background: #fff !important;
+  border-radius: 8px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.n-editor-box:focus-within { border-color: var(--lv-accent) !important; box-shadow: 0 0 0 3px #F3EEFF; }
 
 /* ── H-rule inside article frame ─────────────────────────────────────────── */
 .n-hrule { height: 1px; background: var(--lv-border); margin: 20px 0; border: 0; }
@@ -3814,6 +3844,152 @@
   font-size: 11px; font-weight: 600; color: var(--lv-text-3);
   letter-spacing: 0.04em; text-transform: uppercase;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDITOR FORM REDESIGN (af-* for Articles, nf-* for News)
+   Scoped entirely under .af-scope / .nf-scope so it only affects the
+   article/news forms it's applied to — the two forms share the underlying
+   n-, ud-, btn, lv-status classes and ContentMetaCard, so nothing here is
+   allowed to leak in unscoped.
+   Source: Claude Design project "Article form design improvements" ›
+   Article Form.dc.html, News Form.dc.html
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.af-scope,
+.nf-scope {
+  --lv-accent: #6d5cf6;
+  --lv-accent-600: #5a48e0;
+  --lv-accent-soft: #efeafe;
+}
+
+/* ── Elevated top bars ─────────────────────────────────────────────────── */
+.af-scope .ud-topbar,
+.nf-scope .ud-topbar {
+  background: #fff;
+  border: 1px solid var(--lv-border);
+  border-radius: 14px;
+  padding: 13px 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+}
+.af-scope .n-savebar,
+.nf-scope .n-savebar { border-radius: 14px; }
+.af-scope .n-savebar-status.dirty,
+.nf-scope .n-savebar-status.dirty {
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: #fff5e6;
+}
+.af-scope .n-savebar-status.saved,
+.nf-scope .n-savebar-status.saved {
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: #e7f7ef;
+}
+
+/* ── Cards: bigger radius + soft shadow to match the mockup's elevation ─── */
+.af-scope .n-article-frame, .af-scope .n-side-card,
+.nf-scope .n-article-frame, .nf-scope .n-side-card {
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+}
+.af-scope .n-side-card-head,
+.nf-scope .n-side-card-head { border-radius: 18px 18px 0 0; }
+
+/* ── Card header: icon badge + title + subtitle (main column cards) ─────── */
+.af-card-head, .nf-card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 22px; }
+.af-card-ico, .nf-card-ico {
+  width: 32px; height: 32px; border-radius: 9px; flex: 0 0 32px;
+  background: var(--lv-accent-soft); color: var(--lv-accent-600);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.af-card-ico svg, .nf-card-ico svg { width: 17px; height: 17px; }
+.af-card-ico[data-tone="green"], .nf-card-ico[data-tone="green"] { background: #e7f7ef; color: #16b364; }
+.af-card-title, .nf-card-title { font-size: 16px; font-weight: 700; color: var(--lv-text); }
+.af-card-sub, .nf-card-sub { font-size: 13px; font-weight: 500; color: var(--lv-text-3); margin-top: 1px; }
+
+/* ── Content card gets its own header + no extra top padding ─────────────── */
+.af-content-frame .af-card-head,
+.nf-content-frame .nf-card-head { margin-bottom: 18px; }
+
+/* ── Author / reading-time row ───────────────────────────────────────────── */
+.af-two-col, .nf-two-col { display: flex; gap: 16px; margin-top: 16px; }
+.af-two-col > div, .nf-two-col > div { flex: 1; min-width: 0; }
+.af-input, .nf-input {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid var(--lv-border); border-radius: 10px;
+  padding: 12px 14px; font: inherit; font-size: 14.5px; font-weight: 500;
+  color: var(--lv-text); background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+.af-input:hover, .nf-input:hover { border-color: var(--lv-border-strong); }
+.af-input:focus, .nf-input:focus { outline: none; border-color: var(--lv-accent); box-shadow: 0 0 0 3px var(--lv-accent-soft); }
+.af-readingtime, .nf-readingtime {
+  display: flex; align-items: center; gap: 8px;
+  box-sizing: border-box; border: 1px dashed var(--lv-border); border-radius: 10px;
+  padding: 12px 14px; font-size: 14px; font-weight: 500; color: var(--lv-text-3);
+  background: var(--lv-panel-2);
+}
+.af-readingtime svg, .nf-readingtime svg { width: 15px; height: 15px; flex-shrink: 0; }
+.af-readingtime-auto, .nf-readingtime-auto {
+  margin-left: auto; font-size: 11px; font-weight: 600; color: var(--lv-text-4, #cbd5e1);
+  letter-spacing: 0.04em;
+}
+@media (max-width: 640px) { .af-two-col, .nf-two-col { flex-direction: column; } }
+
+/* ── Publishing segmented control: pill-track style ──────────────────────── */
+.af-scope .n-status-seg,
+.nf-scope .n-status-seg {
+  background: var(--lv-panel-2); border-radius: 11px; padding: 4px; gap: 0;
+}
+.af-scope .n-status-opt,
+.nf-scope .n-status-opt {
+  border: none; border-radius: 8px; justify-content: center; gap: 6px;
+  background: transparent; color: var(--lv-text-3); font-weight: 600;
+}
+.af-scope .n-status-opt .dot,
+.nf-scope .n-status-opt .dot { display: none; }
+.af-scope .n-status-opt.on,
+.nf-scope .n-status-opt.on {
+  background: #fff; color: var(--lv-text); box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+
+/* ── Publish date field (shadcn Button) ──────────────────────────────────── */
+.af-scope #publishDate,
+.nf-scope #publish {
+  width: 100%; justify-content: flex-start;
+  border: 1px solid var(--lv-border); border-radius: 10px;
+  padding: 12px 14px; height: auto;
+  font-weight: 600; font-size: 14px; color: var(--lv-text);
+  background: #fff;
+}
+.af-scope #publishDate svg,
+.nf-scope #publish svg { color: var(--lv-accent); }
+
+/* ── Featured toggle: restyle the existing checkbox as a switch ──────────── */
+.af-scope .n-side-card label:has(> input[type="checkbox"]),
+.nf-scope .n-side-card label:has(> input[type="checkbox"]) {
+  flex-direction: row-reverse !important;
+  justify-content: space-between !important;
+  width: 100%;
+}
+.af-scope .n-side-card input[type="checkbox"],
+.nf-scope .n-side-card input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 40px; height: 23px; border-radius: 999px; flex-shrink: 0;
+  background: #dcdee6; position: relative; cursor: pointer;
+  transition: background .15s; margin: 0;
+}
+.af-scope .n-side-card input[type="checkbox"]::before,
+.nf-scope .n-side-card input[type="checkbox"]::before {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 19px; height: 19px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .15);
+  transition: left .15s;
+}
+.af-scope .n-side-card input[type="checkbox"]:checked,
+.nf-scope .n-side-card input[type="checkbox"]:checked { background: var(--lv-accent); }
+.af-scope .n-side-card input[type="checkbox"]:checked::before,
+.nf-scope .n-side-card input[type="checkbox"]:checked::before { left: 19px; }
 
 /* ═══════════════════════════════════════════════════════════════
    LABORATORY  (lab-*)

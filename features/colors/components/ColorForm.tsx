@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import {
   createColorAction,
   updateColorAction,
@@ -29,20 +30,16 @@ function fmtRelative(d: Date | null | undefined) {
   return fmtDate(d)
 }
 
-function ChevronRight() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 type Props = {
   mode: "create" | "edit"
   color?: ColorForEdit | null
+  prevHref?: string | null
+  nextHref?: string | null
+  listPosition?: number | null
+  listTotal?: number | null
 }
 
-export function ColorForm({ mode, color }: Props) {
+export function ColorForm({ mode, color, prevHref, nextHref, listPosition, listTotal }: Props) {
   const router = useRouter()
   const isEdit = mode === "edit"
 
@@ -181,25 +178,59 @@ export function ColorForm({ mode, color }: Props) {
   if (isEdit && color) {
     return (
       <div>
-        <div className="pd-topbar">
-          <div className="pd-breadcrumbs">
-            <Link href="/admin/colors">Color</Link>
-            <ChevronRight />
-            <span className="pd-here">{displayName}</span>
-          </div>
-        </div>
+        <div className="pd-stickybar">
+          <div className="pd-topbar">
+            <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+              <Link href="/admin/colors">Color</Link>
+              <ChevronRight size={11} style={{ opacity: 0.5 }} />
+              <span className="pd-here">{displayName}</span>
+            </nav>
 
-        <div className="pd-savebar" style={{ top: 0 }}>
-          {dirty
-            ? <span className="pd-savebar-dirty"><span className="pd-savebar-dirty-dot" /> Unsaved changes</span>
-            : <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>Saved · {fmtRelative(color.updatedAt)}</span>
-          }
-          <span style={{ flex: 1 }} />
-          <Link href="/admin/colors" className="pd-btn">Cancel</Link>
-          <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading || !name.trim() || !hexValid}>
-            {saveIcon}
-            {loading ? "Saving…" : "Update colour"}
-          </button>
+            {(prevHref != null || nextHref != null || listPosition != null) && (
+              <div className="pd-listnav">
+                {prevHref ? (
+                  <Link href={prevHref} className="pd-listnav-btn" aria-label="Previous colour">
+                    <ChevronLeft size={14} />
+                  </Link>
+                ) : (
+                  <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                    <ChevronLeft size={14} />
+                  </span>
+                )}
+                {listPosition != null && listTotal != null && (
+                  <span className="pd-listnav-count">{listPosition} / {listTotal}</span>
+                )}
+                {nextHref ? (
+                  <Link href={nextHref} className="pd-listnav-btn" aria-label="Next colour">
+                    <ChevronRight size={14} />
+                  </Link>
+                ) : (
+                  <span className="pd-listnav-btn" style={{ opacity: 0.25 }} aria-hidden="true">
+                    <ChevronRight size={14} />
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="pd-topbar-spacer" />
+
+            <Link href="/admin/colors/new" className="pd-btn">
+              <Plus size={13} /> New colour
+            </Link>
+          </div>
+
+          <div className="pd-savebar">
+            {dirty
+              ? <span className="pd-savebar-dirty"><span className="pd-savebar-dirty-dot" /> Unsaved changes</span>
+              : <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>Saved · {fmtRelative(color.updatedAt)}</span>
+            }
+            <span style={{ flex: 1 }} />
+            <Link href="/admin/colors" className="pd-btn">Cancel</Link>
+            <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading || !name.trim() || !hexValid}>
+              {saveIcon}
+              {loading ? "Saving…" : "Update colour"}
+            </button>
+          </div>
         </div>
 
         {errorBanner}
@@ -300,22 +331,24 @@ export function ColorForm({ mode, color }: Props) {
 
   return (
     <div>
-      <div className="pd-topbar">
-        <div className="pd-breadcrumbs">
-          <Link href="/admin/colors">Color</Link>
-          <ChevronRight />
-          <span className="pd-here">New colour</span>
+      <div className="pd-stickybar">
+        <div className="pd-topbar">
+          <nav className="pd-breadcrumbs" aria-label="Breadcrumb">
+            <Link href="/admin/colors">Color</Link>
+            <ChevronRight size={11} style={{ opacity: 0.5 }} />
+            <span className="pd-here">New colour</span>
+          </nav>
         </div>
-      </div>
 
-      <div className="pd-savebar" style={{ top: 0 }}>
-        <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>New colour</span>
-        <span style={{ flex: 1 }} />
-        <Link href="/admin/colors" className="pd-btn">Discard</Link>
-        <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
-          {saveIcon}
-          {loading ? "Creating…" : "Create colour"}
-        </button>
+        <div className="pd-savebar">
+          <span style={{ fontSize: 12, color: "var(--lv-text-3)" }}>New colour</span>
+          <span style={{ flex: 1 }} />
+          <Link href="/admin/colors" className="pd-btn">Discard</Link>
+          <button className="pd-btn pd-btn-primary" onClick={handleSave} disabled={loading}>
+            {saveIcon}
+            {loading ? "Creating…" : "Create colour"}
+          </button>
+        </div>
       </div>
 
       {errorBanner}

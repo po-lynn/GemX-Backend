@@ -26,6 +26,11 @@ export async function getArticleById(id: string): Promise<ArticleRow | null> {
   return row ?? null;
 }
 
+/** Lightweight id-only list, ordered same as the default admin view, for prev/next navigation. */
+export async function getAllArticleIdsOrdered(): Promise<{ id: string }[]> {
+  return db.select({ id: articles.id }).from(articles).orderBy(desc(articles.updatedAt));
+}
+
 /** List articles with pagination. Pass `view` for admin tab filtering, `status` for API filtering. */
 export async function getArticlesPaginatedFromDb(options: {
   page: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useState } from "react";
 import { MantineProvider } from "@mantine/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
@@ -27,8 +27,8 @@ type Props = {
 };
 
 export function BlockNoteEditor({ name, initialContent, onContentChange }: Props) {
-  const hiddenInputRef = useRef<HTMLInputElement>(null);
   const initial = parseInitialContent(initialContent);
+  const [json, setJson] = useState(initial ? JSON.stringify(initial) : "[]");
 
   const { data: session } = authClient.useSession();
   const token = (() => {
@@ -77,22 +77,17 @@ export function BlockNoteEditor({ name, initialContent, onContentChange }: Props
   });
 
   const handleChange = useCallback(() => {
-    if (!editor.document || !hiddenInputRef.current) return;
-    const json = JSON.stringify(editor.document);
-    hiddenInputRef.current.value = json;
-    onContentChange?.(json);
+    if (!editor.document) return;
+    const next = JSON.stringify(editor.document);
+    setJson(next);
+    onContentChange?.(next);
   }, [editor, onContentChange]);
 
   return (
     <MantineProvider>
-      <div className="bn-editor-wrapper rounded-md border border-input bg-background [&_.bn-editor]:min-h-[280px]">
+      <div className="bn-editor-wrapper n-editor-box [&_.bn-editor]:min-h-[280px]">
         <BlockNoteView editor={editor} onChange={handleChange} />
-        <input
-          type="hidden"
-          ref={hiddenInputRef}
-          name={name}
-          defaultValue={initial ? JSON.stringify(initial) : "[]"}
-        />
+        <input type="hidden" name={name} value={json} readOnly />
       </div>
     </MantineProvider>
   );

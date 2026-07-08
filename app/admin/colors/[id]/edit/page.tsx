@@ -6,6 +6,7 @@ import { getCachedColorById } from "@/features/colors/db/cache/color";
 import { requireFeatureAccess } from "@/lib/admin-guard";
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { FadeUp } from "@/components/admin/motion";
+import { resolveAdjacentColors } from "./resolve-adjacent";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -15,10 +16,23 @@ async function AdminColorEditContent({ params }: Props) {
   await connection();
   await requireFeatureAccess(FEATURE_KEYS.COLOR);
   const { id } = await params;
-  const color = await getCachedColorById(id);
+  const [color, adjacent] = await Promise.all([
+    getCachedColorById(id),
+    resolveAdjacentColors(id),
+  ]);
   if (!color) notFound();
 
-  return <ColorForm key={color.id} mode="edit" color={color} />;
+  return (
+    <ColorForm
+      key={color.id}
+      mode="edit"
+      color={color}
+      prevHref={adjacent.prevHref}
+      nextHref={adjacent.nextHref}
+      listPosition={adjacent.position}
+      listTotal={adjacent.total}
+    />
+  );
 }
 
 export default function AdminColorEditPage(props: Props) {
