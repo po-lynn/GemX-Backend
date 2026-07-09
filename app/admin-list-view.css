@@ -3991,6 +3991,29 @@
 .af-scope .n-side-card input[type="checkbox"]:checked::before,
 .nf-scope .n-side-card input[type="checkbox"]:checked::before { left: 19px; }
 
+/* ── Share buttons row ────────────────────────────────────────────────── */
+.af-scope .n-share-row,
+.nf-scope .n-share-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.af-scope .n-share-btn,
+.nf-scope .n-share-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1; min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--lv-border); border-radius: 8px;
+  background: #fff; color: var(--lv-text-2);
+  font-size: 12.5px; font-weight: 600; font-family: inherit;
+  text-decoration: none; cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.af-scope .n-share-btn:hover,
+.nf-scope .n-share-btn:hover { border-color: var(--lv-border-strong); background: var(--lv-panel-2); }
+.af-scope .n-share-btn.is-disabled,
+.nf-scope .n-share-btn.is-disabled {
+  opacity: 0.45; pointer-events: none; cursor: not-allowed;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    LABORATORY  (lab-*)
    ═══════════════════════════════════════════════════════════════ */
