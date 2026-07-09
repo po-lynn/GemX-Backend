@@ -1,13 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import type { Metadata } from "next";
 import { HomeNavbar } from "@/components/home/HomeNavbar";
 import { HomeFooter } from "@/components/home/HomeFooter";
 import { getNewsById } from "@/features/news/db/news";
+import { extractExcerpt } from "@/lib/extract-excerpt";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const item = await getNewsById(id);
+
+  if (!item || item.status !== "published") {
+    return {};
+  }
+
+  const description = extractExcerpt(item.content) || undefined;
+  const images = item.coverImage ? [item.coverImage] : undefined;
+
+  return {
+    title: item.title,
+    description,
+    openGraph: {
+      title: item.title,
+      description,
+      images,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: item.title,
+      description,
+      images,
+    },
+  };
+}
 
 export default async function NewsDetailPage({ params }: Props) {
   await connection();
