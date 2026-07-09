@@ -1,13 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import type { Metadata } from "next";
 import { HomeNavbar } from "@/components/home/HomeNavbar";
 import { HomeFooter } from "@/components/home/HomeFooter";
 import { getArticleById } from "@/features/articles/db/articles";
+import { extractExcerpt } from "@/lib/extract-excerpt";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const article = await getArticleById(id);
+
+  if (!article || article.status !== "published") {
+    return {};
+  }
+
+  const description = extractExcerpt(article.content) || undefined;
+  const images = article.coverImage ? [article.coverImage] : undefined;
+
+  return {
+    title: article.title,
+    description,
+    openGraph: {
+      title: article.title,
+      description,
+      images,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description,
+      images,
+    },
+  };
+}
 
 export default async function ArticleDetailPage({ params }: Props) {
   await connection();
@@ -44,4 +76,3 @@ export default async function ArticleDetailPage({ params }: Props) {
     </div>
   );
 }
-
