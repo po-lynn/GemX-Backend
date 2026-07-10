@@ -58,7 +58,9 @@ curl "http://localhost:3000/api/articles?search=gemstone&category=gemology"
 
 **Auth:** public. Only `published` items are returned.
 
-**Response 200:** a single article object (same shape as list items, including `readTime`).
+**Response 200:** a single article object (same shape as list items, including `readTime`), plus `isBookmarked` (boolean).
+
+**Auth (optional):** if a valid session is present, `isBookmarked` reflects that user's bookmark state and the response is `Cache-Control: no-store` (personalized). Without a session, `isBookmarked` is always `false` and the response keeps the shared `public, s-maxage=60` cache.
 
 **Errors:**
 - `404 {"error": "Article not found"}` — missing or unpublished
