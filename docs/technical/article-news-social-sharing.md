@@ -32,3 +32,4 @@ No new auth surface. `ShareButtons` is a client component rendered only inside t
 - Missing `NEXT_PUBLIC_SERVER_URL` disables sharing entirely rather than building a broken URL.
 - Missing `coverImage` omits `images` from metadata rather than emitting a broken image tag.
 - The duplicate DB fetch between `generateMetadata` and the page component is not cached/deduped — out of scope for this change.
+- News rows can also carry `scheduled`/`archived` status values (not just `draft`/`published`) even though `NewsForm`'s status control only offers draft/published. Both the Share card and `generateMetadata` gate strictly on `status === "published"`, so scheduled/archived items are correctly treated as non-shareable — same path as a draft — with no separate handling needed.
