@@ -8,6 +8,8 @@ import {
 } from "@/features/news/db/news"
 import { GET as listGET } from "@/app/api/news/route"
 import { GET as detailGET } from "@/app/api/news/[id]/route"
+import { auth } from "@/lib/auth"
+import { isNewsBookmarked } from "@/features/bookmarks/db/news-bookmarks"
 
 vi.mock("next/server", () => ({
   connection: vi.fn(),
@@ -16,6 +18,12 @@ vi.mock("@/features/news/db/news", () => ({
   getNewsPaginatedFromDb: vi.fn(),
   getNewsCategoryCountsFromDb: vi.fn(),
   getNewsById: vi.fn(),
+}))
+vi.mock("@/lib/auth", () => ({
+  auth: { api: { getSession: vi.fn() } },
+}))
+vi.mock("@/features/bookmarks/db/news-bookmarks", () => ({
+  isNewsBookmarked: vi.fn(),
 }))
 
 const words = Array.from({ length: 450 }, (_, i) => `word${i}`).join(" ")
@@ -94,6 +102,7 @@ describe("GET /api/news", () => {
 describe("GET /api/news/[id]", () => {
   beforeEach(() => {
     vi.mocked(getNewsById).mockResolvedValue(newsRow)
+    vi.mocked(auth.api.getSession).mockResolvedValue(null)
   })
 
   const params = (id: string) => ({ params: Promise.resolve({ id }) })
@@ -123,5 +132,39 @@ describe("GET /api/news/[id]", () => {
     const req = new Request("http://localhost/api/news/missing")
     const res = await detailGET(req as NextRequest, params("missing"))
     expect(res.status).toBe(404)
+  })
+
+  // Validates anonymous requests get isBookmarked:false and keep the public/CDN cache header
+  it("returns isBookmarked false with public cache headers when unauthenticated", async () => {
+    const req = new Request(`http://localhost/api/news/${newsRow.id}`)
+    const res = await detailGET(req as NextRequest, params(newsRow.id))
+    const data = await res.json()
+    expect(data.isBookmarked).toBe(false)
+    expect(res.headers.get("Cache-Control")).toContain("public")
+  })
+
+  // Validates a signed-in user who bookmarked the item sees isBookmarked:true, and the
+  // response is no-store since it is now personalized
+  it("returns isBookmarked true with no-store headers for an authenticated bookmarking user", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: "user-abc" } } as never)
+    vi.mocked(isNewsBookmarked).mockResolvedValue(true)
+    const req = new Request(`http://localhost/api/news/${newsRow.id}`)
+    const res = await detailGET(req as NextRequest, params(newsRow.id))
+    const data = await res.json()
+    expect(data.isBookmarked).toBe(true)
+    expect(res.headers.get("Cache-Control")).toBe("no-store")
+    expect(isNewsBookmarked).toHaveBeenCalledWith("user-abc", newsRow.id)
+  })
+
+  // Validates a signed-in user who has not bookmarked the item sees isBookmarked:false,
+  // still with no-store (the response is personalized either way)
+  it("returns isBookmarked false with no-store headers for an authenticated non-bookmarking user", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: "user-abc" } } as never)
+    vi.mocked(isNewsBookmarked).mockResolvedValue(false)
+    const req = new Request(`http://localhost/api/news/${newsRow.id}`)
+    const res = await detailGET(req as NextRequest, params(newsRow.id))
+    const data = await res.json()
+    expect(data.isBookmarked).toBe(false)
+    expect(res.headers.get("Cache-Control")).toBe("no-store")
   })
 })
