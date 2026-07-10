@@ -24,7 +24,7 @@ Two new tables, no changes to existing tables. `user_bookmark_news` and `user_bo
 
 ## Auth & permissions
 
-All five new endpoints (`POST`/`GET`/`DELETE` × 2, using session identity for scoping) require a valid Better Auth session (`auth.api.getSession`); `401` if absent. The detail routes (`/api/news/[id]`, `/api/articles/[id]`) remain public — the session check there is optional and only changes whether `isBookmarked` is computed.
+All six new endpoints (`POST`/`GET`/`DELETE` × 2, using session identity for scoping) require a valid Better Auth session (`auth.api.getSession`); `401` if absent. The detail routes (`/api/news/[id]`, `/api/articles/[id]`) remain public — the session check there is optional and only changes whether `isBookmarked` is computed.
 
 ## Edge cases & known limitations
 
