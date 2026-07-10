@@ -14,6 +14,7 @@ export default defineConfig({
       AUTH_SECRET: "test-auth-secret",
       AUTH_URL: "http://localhost:3000",
       DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+      NEXT_PUBLIC_SERVER_URL: "http://localhost:3000",
     },
     coverage: {
       provider: "v8",

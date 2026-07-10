@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { estimateReadingTime } from "@/lib/reading-time"
+import { estimateReadingTime, extractPlainText } from "@/lib/reading-time"
 
 describe("estimateReadingTime", () => {
   // Empty/null content shows a minimal 1-minute estimate instead of 0
@@ -41,5 +41,36 @@ describe("estimateReadingTime", () => {
     const words = Array(400).fill("word").join(" ")
     const content = JSON.stringify([{ type: "paragraph", content: [{ type: "text", text: words }] }])
     expect(estimateReadingTime(content, 200)).toEqual({ words: 400, minutes: 2 })
+  })
+})
+
+describe("extractPlainText", () => {
+  // Empty/null/invalid content all collapse to an empty string
+  it("returns an empty string for null, empty, or invalid content", () => {
+    expect(extractPlainText(null)).toBe("")
+    expect(extractPlainText("")).toBe("")
+    expect(extractPlainText("[]")).toBe("")
+    expect(extractPlainText("not json")).toBe("")
+  })
+
+  // Plain paragraph text is extracted and trimmed
+  it("extracts and trims paragraph text", () => {
+    const content = JSON.stringify([
+      { type: "paragraph", content: [{ type: "text", text: "Hello world" }] },
+    ])
+    expect(extractPlainText(content)).toBe("Hello world")
+  })
+
+  // Nested children (e.g. list items) are included in document order
+  it("includes nested children text", () => {
+    const content = JSON.stringify([
+      {
+        type: "bulletListItem",
+        content: [{ type: "text", text: "top" }],
+        children: [{ type: "paragraph", content: [{ type: "text", text: "nested" }] }],
+      },
+    ])
+    expect(extractPlainText(content)).toContain("top")
+    expect(extractPlainText(content)).toContain("nested")
   })
 })

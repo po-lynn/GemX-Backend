@@ -24,18 +24,23 @@ function extractBlockText(blocks: unknown): string {
   return out;
 }
 
-export type ReadingTime = { words: number; minutes: number };
-
-/** Cosmetic word/read-time estimate from a BlockNote JSON document. Never persisted. */
-export function estimateReadingTime(contentJson: string | null | undefined, wordsPerMinute = 200): ReadingTime {
-  if (!contentJson) return { words: 0, minutes: 1 };
+/** Plain, trimmed text pulled from a BlockNote JSON document. Empty string for null/empty/invalid input. */
+export function extractPlainText(contentJson: string | null | undefined): string {
+  if (!contentJson) return "";
   let blocks: unknown;
   try {
     blocks = JSON.parse(contentJson);
   } catch {
-    return { words: 0, minutes: 1 };
+    return "";
   }
-  const text = extractBlockText(blocks).trim();
+  return extractBlockText(blocks).trim();
+}
+
+export type ReadingTime = { words: number; minutes: number };
+
+/** Cosmetic word/read-time estimate from a BlockNote JSON document. Never persisted. */
+export function estimateReadingTime(contentJson: string | null | undefined, wordsPerMinute = 200): ReadingTime {
+  const text = extractPlainText(contentJson);
   const words = text.length ? text.split(/\s+/).length : 0;
   const minutes = Math.max(1, Math.round(words / wordsPerMinute));
   return { words, minutes };

@@ -11,6 +11,8 @@ import { estimateReadingTime } from "@/lib/reading-time";
 import type { NewsRow } from "@/features/news/db/news";
 import DatePicker from "@/components/date-picker/date-picker";
 import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
+import { ShareButtons } from "@/components/share/ShareButtons";
+import { env } from "@/data/env/client";
 
 const BlockNoteEditor = dynamic(
   () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
@@ -110,6 +112,17 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
   const createdLabel = fmtDate(news?.createdAt);
   const updatedLabel = fmtDate(news?.updatedAt);
   const readingTime = estimateReadingTime(content);
+
+  const shareUrl = news?.id && env.NEXT_PUBLIC_SERVER_URL
+    ? `${env.NEXT_PUBLIC_SERVER_URL}/news/${news.id}`
+    : "";
+  const shareDisabledReason = !env.NEXT_PUBLIC_SERVER_URL
+    ? "Sharing unavailable"
+    : !isEdit || !news?.id
+      ? "Save first to share"
+      : status !== "published"
+        ? "Publish first to share"
+        : undefined;
 
   async function submit(overrideStatus?: Status) {
     setError(null);
@@ -394,6 +407,29 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
                 >
                   {loading ? "Saving…" : status === "published" ? "Update post" : "Publish now"}
                 </button>
+              </div>
+            </div>
+
+            {/* Share card */}
+            <div className="n-side-card">
+              <div className="n-side-card-head">
+                <span className="n-side-card-ico" data-tone="blue">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+                    <path fillRule="evenodd" d="M13 4.5a2.5 2.5 0 1 1-4.75 1.4l-3.5 2.1a2.5 2.5 0 0 1 0 1l3.5 2.1a2.5 2.5 0 1 1-.75 1.75l-3.5-2.1a2.5 2.5 0 1 1 0-3.5l3.5-2.1A2.5 2.5 0 0 1 13 4.5Z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                <div>
+                  <div className="n-side-card-title">Share</div>
+                  <div className="n-side-card-sub">Post the public link.</div>
+                </div>
+              </div>
+              <div className="n-side-card-body">
+                <ShareButtons
+                  url={shareUrl}
+                  title={title}
+                  disabled={shareDisabledReason !== undefined}
+                  disabledReason={shareDisabledReason}
+                />
               </div>
             </div>
 
