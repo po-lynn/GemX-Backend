@@ -1,0 +1,233 @@
+.ac-wrap {
+  --ac-green: #2ba25f;
+  --ac-green-d: #1f8a4f;
+  --ac-green-soft: #e9f5ee;
+  --ac-bd: #e6ebe7;
+  --ac-ink: #18211c;
+  --ac-muted: #78847c;
+  --ac-muted2: #aab3ac;
+  --ac-amber: #f59e0b;
+  color: var(--ac-ink);
+}
+
+.ac-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid var(--ac-bd);
+  border-radius: 16px;
+  padding: 14px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ac-crumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 13px "Plus Jakarta Sans", system-ui, sans-serif;
+  color: var(--ac-muted);
+}
+
+.ac-crumb b {
+  color: var(--ac-ink);
+}
+
+.ac-unsaved-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff5e6;
+  color: #b06f00;
+  font: 600 12px "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.ac-unsaved-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ac-amber);
+}
+
+.ac-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ac-note {
+  font: 500 12px "Plus Jakarta Sans", system-ui, sans-serif;
+  color: var(--ac-muted2);
+}
+
+.ac-btn {
+  border: 1px solid var(--ac-bd);
+  background: #fff;
+  color: var(--ac-ink);
+  font: 600 13.5px "Plus Jakarta Sans", system-ui, sans-serif;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ac-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ac-btn-primary {
+  border: none;
+  background: var(--ac-green);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(43, 162, 95, 0.35);
+}
+
+.ac-tabs {
+  display: flex;
+  background: #eaeeeb;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 22px;
+  max-width: 520px;
+}
+
+.ac-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 9px;
+  font: 700 13.5px "Plus Jakarta Sans", system-ui, sans-serif;
+  color: var(--ac-muted);
+  cursor: pointer;
+}
+
+.ac-tab.active {
+  background: #fff;
+  color: var(--ac-ink);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
+}
+
+.ac-card {
+  background: #fff;
+  border: 1px solid var(--ac-bd);
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.ac-cardhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.ac-cardhead b {
+  font: 700 15px "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.ac-label {
+  font: 600 11px "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ac-muted);
+  margin-bottom: 8px;
+}
+
+.ac-input,
+.ac-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--ac-bd);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font: 500 14px "Plus Jakarta Sans", system-ui, sans-serif;
+  color: var(--ac-ink);
+  background: #fff;
+  margin-bottom: 14px;
+}
+
+.ac-textarea {
+  resize: none;
+}
+
+.ac-2col {
+  display: flex;
+  gap: 16px;
+}
+
+.ac-2col > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--ac-bd);
+}
+
+.ac-row:first-of-type {
+  border-top: none;
+}
+
+.ac-draghandle {
+  color: var(--ac-muted2);
+  cursor: grab;
+  display: inline-flex;
+  touch-action: none;
+}
+
+.ac-icon {
+  border-radius: 9px;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font: 800 12px "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+.ac-addbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ac-bd);
+  background: #fff;
+  color: var(--ac-ink);
+  font: 700 13px "Plus Jakarta Sans", system-ui, sans-serif;
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--ac-green-soft);
+  color: var(--ac-green-d);
+  font: 600 12px "Plus Jakarta Sans", system-ui, sans-serif;
+  margin: 0 6px 6px 0;
+}
+
+.ac-chip button {
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+}
