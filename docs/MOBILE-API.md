@@ -3300,7 +3300,9 @@ When a seller completes a sale, the app should call:
 
 **Other status updates**
 
-Same endpoint; send only the fields you change. Examples:
+Same endpoint; send only the fields you change — omitted fields (including
+`imageUrls`, `videoUrls`, `currency`) are left untouched, not cleared or reset.
+Examples:
 
 - Reserve listing: `{ "status": "hidden" }`
 - Put back on market: `{ "status": "active" }`
