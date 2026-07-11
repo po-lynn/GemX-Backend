@@ -49,10 +49,11 @@ Rows are seeded (or lazily created on first save) for all three `section` values
   privacyUpdatedAt: string | null,
   companyName: string,
   contactAddress: string,
+  appVersion: string,          // manually entered display string, e.g. "v2.4.1"
 }
 ```
 
-App version is **not stored** — read from `package.json` at request time and shown read-only in the admin UI ("AUTO" badge). Not part of the mobile response either (app already knows its own version).
+**Correction from an earlier draft of this spec:** app version is a plain manually-entered text field, not auto-derived from `package.json`. This repo's `package.json` version (`0.1.0`) versions the Next.js backend, not the mobile client — there is no authoritative source in this codebase for "the current mobile app version" (the closest existing concept, `appVersion` in `drizzle/schema/user-devices-schema.ts`, is the version a device *reports* on push registration, not a canonical published version). The admin types the version string themselves; the "AUTO" badge from the mockup is dropped since nothing here can compute it automatically. Not part of the mobile response either (the app already knows its own version).
 
 ### `follow_us` content shape
 
@@ -109,13 +110,13 @@ Matches the mockup's global top bar (Save draft / Publish to app / "Unsaved chan
 
 - **Tab bar**: About us / Follow us / Help & Support, persisted via `?tab=`.
 - **Top bar** (persistent across tabs): breadcrumb, "Unsaved changes" pill (shown when any section is dirty), "Edited N ago · Name" (most recent `updatedAt` across the three sections), "Save draft" button, "Publish to app" button (disabled when nothing is dirty).
-- **About us tab**: heading input, story textarea, Terms/Privacy slug inputs (each showing computed "last updated" date), company name input, contact address textarea, read-only app version chip.
+- **About us tab**: heading input, story textarea, Terms/Privacy slug inputs (each showing computed "last updated" date), company name input, contact address textarea, app version text input (manually entered, not auto-computed).
 - **Follow us tab**: drag-to-reorder list of platform rows (`@dnd-kit`) — icon (built-in or custom upload), label, value/url inputs, active/inactive toggle, delete with confirm. "Add platform" — pick a built-in brand icon or upload a custom one, enter label/value/url.
 - **Help & Support tab**: drag-to-reorder FAQ list (question/answer, active toggle, add/delete), Contact channels card (email/phone/Telegram), Operating hours card (weekday/Saturday/Sunday text + timezone), Report-a-problem card (enabled toggle, category chips add/remove, allow-screenshots toggle).
 
 ## Mobile API responses
 
-- `GET /api/mobile/about-us` → `{ storyHeading, storyBody, terms: { slug, updatedAt }, privacy: { slug, updatedAt }, companyName, contactAddress, appVersion }` (appVersion computed server-side from `package.json`).
+- `GET /api/mobile/about-us` → `{ storyHeading, storyBody, terms: { slug, updatedAt }, privacy: { slug, updatedAt }, companyName, contactAddress, appVersion }` (appVersion is the manually-entered string from `about_us` content, not computed).
 - `GET /api/mobile/follow-us` → `{ platforms: [{ iconKey, customIconUrl, label, value, url }] }` — only `isActive`, sorted by `sortOrder`.
 - `GET /api/mobile/help-support` → `{ faqs: [...active, sorted...], contact: { email, phone, telegram }, hours: { weekday, saturday, sunday, timezone }, reportForm: { enabled, categories, allowScreenshots } }`.
 
