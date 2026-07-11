@@ -52,3 +52,6 @@ export const CATEGORY_IMAGES_BUCKET = "category-images"
 
 /** Bucket for KYC verification documents (NRC photos, selfies, business licenses). Create in Supabase Dashboard > Storage. */
 export const KYC_DOCUMENTS_BUCKET = "kyc-documents"
+
+/** Bucket for custom Follow Us platform icons (public for direct links). */
+export const APP_CONTENT_ICONS_BUCKET = "app-content-icons"
