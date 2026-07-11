@@ -248,6 +248,32 @@ export const productUpdateSchema = productCreateBaseSchema
   .partial()
   .extend({
     productId: z.string().uuid(),
+    // Override create-only defaulting/transform behavior: a status-only (or otherwise
+    // partial) update must leave omitted fields as `undefined` so updateProductInDb()
+    // skips them, instead of defaulting currency to USD or wiping images/videos to [].
+    currency: currencySchema.optional(),
+    imageUrls: z
+      .string()
+      .optional()
+      .transform((s) =>
+        s === undefined
+          ? undefined
+          : s
+              .split(/[\n,]/)
+              .map((u) => u.trim())
+              .filter(Boolean)
+      ),
+    videoUrls: z
+      .string()
+      .optional()
+      .transform((s) =>
+        s === undefined
+          ? undefined
+          : s
+              .split(/[\n,]/)
+              .map((u) => u.trim())
+              .filter(Boolean)
+      ),
     featuredExpiresAt: z
       .preprocess(
         (v) => (!v || v === "" ? null : v),
