@@ -36,7 +36,7 @@ New files:
 - `features/rbac/feature-keys.ts` — add `SETTINGS_APP_CONTENT` key + Settings group entry (modify)
 - `app/api/mobile/about-us/route.ts`, `app/api/mobile/follow-us/route.ts`, `app/api/mobile/help-support/route.ts`
 - `lib/supabase/server.ts` — add `APP_CONTENT_ICONS_BUCKET` constant (modify)
-- `app/api/upload/app-content-icon/route.ts` — custom platform icon upload
+- `features/app-content/actions/app-content-icon.ts` — `uploadAppContentIconAction` (custom platform icon upload, admin-only)
 - `app/admin/app-content/page.tsx` — server component page (auth guard, data fetch)
 - `app/admin/app-content/app-content.css` — scoped styles for this feature
 - `features/app-content/components/AppContentClient.tsx` — tab state, dirty tracking, save/publish top bar
@@ -53,6 +53,7 @@ Tests:
 - `tests/unit/app-content-reorder.test.ts`
 - `tests/unit/app-content-db.test.ts`
 - `tests/unit/app-content-actions.test.ts`
+- `tests/unit/app-content-icon-action.test.ts`
 - `tests/api/mobile/about-us.test.ts`
 - `tests/api/mobile/follow-us.test.ts`
 - `tests/api/mobile/help-support.test.ts`
@@ -1501,17 +1502,23 @@ git commit -m "feat: add public mobile GET endpoints for app content"
 
 ---
 
-### Task 8: Custom icon upload route
+### Task 8: Custom icon upload Server Action
+
+This feature has no `app/api/admin/*` routes anywhere else — the icon upload is a
+Server Action too, not a REST route, even though the two other upload-style routes
+this codebase has (`certificate`, `kyc-document`, etc.) are all `app/api/upload/*`.
+Those exist for buyer/seller-facing uploads reachable from many places; this one
+exists solely to serve the App Content admin page, so it follows this feature's own
+convention instead.
 
 **Files:**
 - Modify: `lib/supabase/server.ts`
-- Create: `app/api/upload/app-content-icon/route.ts`
-- Test: `tests/api/upload/app-content-icon.test.ts`
+- Create: `features/app-content/actions/app-content-icon.ts`
+- Test: `tests/unit/app-content-icon-action.test.ts`
 
 **Interfaces:**
-- Consumes: `canManageAppContent` (Task 4) — the route rejects any signed-in user who isn't an admin, matching the rest of this feature's write paths.
-- Produces: `APP_CONTENT_ICONS_BUCKET` constant — consumed by the upload route.
-- Produces: `POST /api/upload/app-content-icon` → `{ url: string }` on success, `403` on a non-admin session — consumed by Task 11's `FollowUsTab`.
+- Consumes: `canManageAppContent` (Task 4), `requireActionRole` (`lib/action-guard.ts`), `getSupabaseAdmin`/`getSupabaseAdminErrorMessage` and the new `APP_CONTENT_ICONS_BUCKET` (`lib/supabase/server.ts`), `validateUploadFile`/`storageObjectPath`/`uploadFileToBucket` (`lib/supabase/storage-upload.ts`).
+- Produces: `uploadAppContentIconAction(formData: FormData): Promise<{ url: string } | { error: string }>` — consumed by Task 11's `FollowUsTab`.
 
 - [ ] **Step 1: Add the bucket constant**
 
@@ -1524,150 +1531,161 @@ export const APP_CONTENT_ICONS_BUCKET = "app-content-icons"
 
 - [ ] **Step 2: Write the failing test**
 
-Create `tests/api/upload/app-content-icon.test.ts` (mirrors the existing `tests/api/upload/kyc-document.test.ts` pattern, plus a case for the admin-only check):
+Create `tests/unit/app-content-icon-action.test.ts`:
 
 ```ts
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { NextRequest } from "next/server"
-import { POST } from "@/app/api/upload/app-content-icon/route"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { uploadAppContentIconAction } from "@/features/app-content/actions/app-content-icon"
+import { requireActionRole } from "@/lib/action-guard"
+import { getSupabaseAdmin, getSupabaseAdminErrorMessage } from "@/lib/supabase/server"
+import { validateUploadFile, storageObjectPath, uploadFileToBucket } from "@/lib/supabase/storage-upload"
 
+vi.mock("@/lib/action-guard", () => ({ requireActionRole: vi.fn() }))
+vi.mock("@/lib/supabase/server", () => ({
+  APP_CONTENT_ICONS_BUCKET: "app-content-icons",
+  getSupabaseAdmin: vi.fn(),
+  getSupabaseAdminErrorMessage: vi.fn().mockReturnValue("Supabase upload not configured."),
+}))
 vi.mock("@/lib/supabase/storage-upload", () => ({
-  requireUploadContext: vi.fn(),
-  validateUploadFile: vi.fn().mockReturnValue(null),
+  validateUploadFile: vi.fn(),
   storageObjectPath: vi.fn().mockReturnValue("admin-1/abc.png"),
   uploadFileToBucket: vi.fn(),
 }))
-vi.mock("@/lib/supabase/server", () => ({
-  APP_CONTENT_ICONS_BUCKET: "app-content-icons",
-}))
 
-import {
-  requireUploadContext,
-  validateUploadFile,
-  uploadFileToBucket,
-} from "@/lib/supabase/storage-upload"
-
-function makeReq(formData: FormData): NextRequest {
-  return { headers: new Headers(), formData: () => Promise.resolve(formData) } as unknown as NextRequest
+function fd(file?: File): FormData {
+  const f = new FormData()
+  if (file) f.set("file", file)
+  return f
 }
 
-describe("POST /api/upload/app-content-icon", () => {
-  const adminCtx = { user: { id: "admin-1", role: "admin" }, supabase: {} }
+const PNG = new File(["x"], "icon.png", { type: "image/png" })
 
+describe("uploadAppContentIconAction", () => {
   beforeEach(() => {
-    vi.mocked(requireUploadContext).mockResolvedValue({ ctx: adminCtx as never })
+    vi.clearAllMocks()
+    vi.mocked(requireActionRole).mockResolvedValue({ user: { id: "admin-1" } } as never)
     vi.mocked(validateUploadFile).mockResolvedValue(null)
+    vi.mocked(getSupabaseAdmin).mockReturnValue({} as never)
     vi.mocked(uploadFileToBucket).mockResolvedValue({
       url: "https://example.com/app-content-icons/admin-1/abc.png",
-      error: undefined,
     })
   })
 
-  it("returns 401 when not authenticated", async () => {
-    vi.mocked(requireUploadContext).mockResolvedValue({
-      error: Response.json({ error: "Unauthorized" }, { status: 401 }),
-    } as never)
-    const res = await POST(makeReq(new FormData()))
-    expect(res.status).toBe(401)
-  })
-
-  it("returns 403 for a signed-in non-admin user", async () => {
-    vi.mocked(requireUploadContext).mockResolvedValue({
-      ctx: { user: { id: "user-1", role: "user" }, supabase: {} } as never,
-    })
-    const fd = new FormData()
-    fd.append("file", new File(["x"], "icon.png", { type: "image/png" }))
-    const res = await POST(makeReq(fd))
-    expect(res.status).toBe(403)
+  it("returns Unauthorized when the session check fails", async () => {
+    vi.mocked(requireActionRole).mockResolvedValue(null as never)
+    const result = await uploadAppContentIconAction(fd(PNG))
+    expect(result).toEqual({ error: "Unauthorized" })
     expect(uploadFileToBucket).not.toHaveBeenCalled()
   })
 
-  it("returns 400 when no file provided", async () => {
-    const res = await POST(makeReq(new FormData()))
-    expect(res.status).toBe(400)
+  it("returns an error when no file is provided", async () => {
+    const result = await uploadAppContentIconAction(fd())
+    expect(result).toEqual({ error: "No file provided" })
   })
 
-  it("returns 200 with url on a valid PNG upload from an admin", async () => {
-    const fd = new FormData()
-    fd.append("file", new File(["x"], "icon.png", { type: "image/png" }))
-    const res = await POST(makeReq(fd))
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.url).toBe("https://example.com/app-content-icons/admin-1/abc.png")
+  it("returns an error when the file fails validation", async () => {
+    vi.mocked(validateUploadFile).mockResolvedValue(
+      Response.json({ error: "Invalid file type" }, { status: 400 })
+    )
+    const result = await uploadAppContentIconAction(fd(PNG))
+    expect(result).toEqual({ error: "Invalid file type" })
+    expect(uploadFileToBucket).not.toHaveBeenCalled()
+  })
+
+  it("returns an error when Supabase admin is not configured", async () => {
+    vi.mocked(getSupabaseAdmin).mockReturnValue(null)
+    const result = await uploadAppContentIconAction(fd(PNG))
+    expect(result).toEqual({ error: "Supabase upload not configured." })
+  })
+
+  it("returns the url on a successful upload", async () => {
+    const result = await uploadAppContentIconAction(fd(PNG))
+    expect(result).toEqual({ url: "https://example.com/app-content-icons/admin-1/abc.png" })
+    expect(uploadFileToBucket).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ bucket: "app-content-icons", path: "admin-1/abc.png", file: PNG })
+    )
+  })
+
+  it("returns an error when the storage upload itself fails", async () => {
+    vi.mocked(uploadFileToBucket).mockResolvedValue({
+      error: Response.json({ error: "Upload failed" }, { status: 500 }),
+    })
+    const result = await uploadAppContentIconAction(fd(PNG))
+    expect(result).toEqual({ error: "Upload failed" })
   })
 })
 ```
 
 - [ ] **Step 3: Run the test to verify it fails**
 
-Run: `npx vitest run tests/api/upload/app-content-icon.test.ts`
-Expected: FAIL — `Cannot find module '@/app/api/upload/app-content-icon/route'`
+Run: `npx vitest run tests/unit/app-content-icon-action.test.ts`
+Expected: FAIL — `Cannot find module '@/features/app-content/actions/app-content-icon'`
 
-- [ ] **Step 4: Create the upload route**
+- [ ] **Step 4: Write the Server Action**
 
-Create `app/api/upload/app-content-icon/route.ts`:
+Create `features/app-content/actions/app-content-icon.ts`:
 
 ```ts
-import { NextRequest } from "next/server"
+"use server"
+
+import { requireActionRole } from "@/lib/action-guard"
+import { canManageAppContent } from "@/features/app-content/permissions/app-content"
 import {
-  requireUploadContext,
+  APP_CONTENT_ICONS_BUCKET,
+  getSupabaseAdmin,
+  getSupabaseAdminErrorMessage,
+} from "@/lib/supabase/server"
+import {
   storageObjectPath,
   uploadFileToBucket,
   validateUploadFile,
 } from "@/lib/supabase/storage-upload"
-import { APP_CONTENT_ICONS_BUCKET } from "@/lib/supabase/server"
-import { jsonError } from "@/lib/api"
-import { canManageAppContent } from "@/features/app-content/permissions/app-content"
 
 const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_ICON_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
 
-/**
- * Single custom icon upload for a Follow Us platform. Admin only — this route only
- * exists to serve the App Content admin page, unlike the other upload routes (which
- * are used by any signed-in buyer/seller for their own content), so it must not
- * accept uploads from a regular authenticated user.
- */
-export async function POST(request: NextRequest) {
+async function errorMessageFrom(response: Response, fallback: string): Promise<string> {
   try {
-    const { ctx, error } = await requireUploadContext(request)
-    if (error) return error
-    if (!canManageAppContent(ctx.user.role)) {
-      return jsonError("Forbidden", 403)
-    }
-
-    const formData = await request.formData()
-    const file = formData.get("file")
-    if (!(file instanceof File)) {
-      return Response.json(
-        { error: "No file provided. Use form field 'file'." },
-        { status: 400 }
-      )
-    }
-
-    const invalid = await validateUploadFile(file, ALLOWED_ICON_TYPES, MAX_ICON_SIZE_BYTES)
-    if (invalid) return invalid
-
-    const result = await uploadFileToBucket(ctx.supabase, {
-      bucket: APP_CONTENT_ICONS_BUCKET,
-      path: storageObjectPath(ctx.user.id, file, "png"),
-      file,
-      createBucketIfMissing: true,
-    })
-    if (result.error) return result.error
-
-    return Response.json({ url: result.url })
-  } catch (err) {
-    console.error("POST /api/upload/app-content-icon:", err)
-    return Response.json({ error: "Upload failed" }, { status: 500 })
+    const body = await response.json()
+    return typeof body?.error === "string" ? body.error : fallback
+  } catch {
+    return fallback
   }
+}
+
+/** Uploads a custom Follow Us platform icon. Admin only. */
+export async function uploadAppContentIconAction(
+  formData: FormData
+): Promise<{ url: string } | { error: string }> {
+  const session = await requireActionRole(canManageAppContent)
+  if (!session) return { error: "Unauthorized" }
+
+  const file = formData.get("file")
+  if (!(file instanceof File)) return { error: "No file provided" }
+
+  const invalidResponse = await validateUploadFile(file, ALLOWED_ICON_TYPES, MAX_ICON_SIZE_BYTES)
+  if (invalidResponse) return { error: await errorMessageFrom(invalidResponse, "Invalid file") }
+
+  const supabase = getSupabaseAdmin()
+  if (!supabase) return { error: getSupabaseAdminErrorMessage() }
+
+  const result = await uploadFileToBucket(supabase, {
+    bucket: APP_CONTENT_ICONS_BUCKET,
+    path: storageObjectPath(session.user.id, file, "png"),
+    file,
+    createBucketIfMissing: true,
+  })
+  if (result.error) return { error: await errorMessageFrom(result.error, "Upload failed") }
+
+  return { url: result.url }
 }
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `npx vitest run tests/api/upload/app-content-icon.test.ts`
-Expected: PASS (4 tests)
+Run: `npx vitest run tests/unit/app-content-icon-action.test.ts`
+Expected: PASS (6 tests)
 
 - [ ] **Step 6: Verify the project type-checks**
 
@@ -1677,8 +1695,8 @@ Expected: no new errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add lib/supabase/server.ts app/api/upload/app-content-icon/route.ts tests/api/upload/app-content-icon.test.ts
-git commit -m "feat: add admin-only custom Follow Us icon upload endpoint"
+git add lib/supabase/server.ts features/app-content/actions/app-content-icon.ts tests/unit/app-content-icon-action.test.ts
+git commit -m "feat: add admin-only uploadAppContentIconAction for custom Follow Us icons"
 ```
 
 ---
@@ -2516,7 +2534,7 @@ git commit -m "feat: add App Content admin page shell with About Us tab wired en
 - Modify: `features/app-content/components/FollowUsTab.tsx` (replaces the Task 10 stand-in; same `Props` shape, so `AppContentClient` needs no changes)
 
 **Interfaces:**
-- Consumes: `SortableList` (Task 9), `PlatformIcon` (Task 9), `SocialPlatform`/`FollowUsContent` (Task 2), `POST /api/upload/app-content-icon` (Task 8).
+- Consumes: `SortableList` (Task 9), `PlatformIcon` (Task 9), `SocialPlatform`/`FollowUsContent` (Task 2), `uploadAppContentIconAction` (Task 8).
 
 - [ ] **Step 1: Replace FollowUsTab.tsx with the full implementation**
 
@@ -2529,6 +2547,7 @@ import { useRef, useState } from "react"
 import type { FollowUsContent, SocialPlatform } from "@/features/app-content/schemas/app-content"
 import { SortableList } from "@/features/app-content/components/SortableList"
 import { PlatformIcon } from "@/features/app-content/components/PlatformIcon"
+import { uploadAppContentIconAction } from "@/features/app-content/actions/app-content-icon"
 
 type Props = {
   value: FollowUsContent
@@ -2573,10 +2592,9 @@ export function FollowUsTab({ value, onChange }: Props) {
     try {
       const formData = new FormData()
       formData.set("file", file)
-      const res = await fetch("/api/upload/app-content-icon", { method: "POST", body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Upload failed")
-      setDraftCustomIconUrl(data.url)
+      const result = await uploadAppContentIconAction(formData)
+      if ("error" in result) throw new Error(result.error)
+      setDraftCustomIconUrl(result.url)
       setDraftIconKey("custom")
     } catch {
       // The button re-enables and the field stays empty; the admin can retry.
@@ -3113,7 +3131,7 @@ Added a new admin feature for managing three areas of app content, with a draft/
 - `features/rbac/feature-keys.ts` — new `SETTINGS_APP_CONTENT` feature key
 - `app/admin/app-content/page.tsx` — the admin page
 - `app/api/mobile/about-us`, `/follow-us`, `/help-support` — public read endpoints
-- `app/api/upload/app-content-icon` — custom Follow Us icon upload
+- `features/app-content/actions/app-content-icon.ts` — `uploadAppContentIconAction`, custom Follow Us icon upload (admin-only Server Action, not a route)
 - `components/admin/AdminSidebar.tsx` — new "App Content" nav entry under Settings
 
 ## Data flow
@@ -3144,7 +3162,7 @@ No migration was run by the agent that built this — the schema file was create
 - Admin page: `requireFeatureAccess(FEATURE_KEYS.SETTINGS_APP_CONTENT)` — admins always pass; internal users need the `settings.app_content` permission granted via the RBAC admin UI.
 - Server Actions: `requireActionRole(canManageAppContent)` — **admin role only**, even for internal users with the feature-key permission. This matches the existing (if slightly inconsistent) convention in `rating-tags`/`precaution-tags`/`colors` — the page-level guard is feature-key-aware, but action-level guards check the raw role.
 - Mobile routes: no auth — public content.
-- Icon upload route: any authenticated user session (`requireUploadContext`) — same as other upload routes; it does not itself gate by role, relying on the admin page being the only caller.
+- Icon upload: `uploadAppContentIconAction` — `requireActionRole(canManageAppContent)`, admin role only, same as `saveAppContentAction`/`publishAppContentAction`. Implemented as a Server Action rather than an `app/api/upload/*` route, unlike the buyer/seller-facing upload routes (certificate, KYC, product media), because this one exists solely to serve the App Content admin page.
 
 ## Edge cases & known limitations
 
@@ -3197,8 +3215,8 @@ Create `docs/guides/app-content-admin.md`:
 ## Common errors
 
 - **"Nothing to save" / "Nothing to publish"**: returned when the action is called with no changed sections (Save) or no section has `has_unpublished_changes` (Publish) — not a bug, just nothing to do.
-- **Icon upload 401**: the upload route requires a signed-in session; confirm you're logged into the admin panel.
-- **Icon upload 503**: `SUPABASE_SERVICE_ROLE_KEY` / `NEXT_PUBLIC_SUPABASE_URL` are missing from `.env.local` — see `lib/supabase/server.ts`'s error message.
+- **Icon upload returns `{ error: "Unauthorized" }`**: `uploadAppContentIconAction` requires an admin session; confirm you're logged into the admin panel as an admin (internal users with the feature-key permission can still see the page, but this action is admin-role-only).
+- **Icon upload returns `{ error: "Supabase upload not configured." }`**: `SUPABASE_SERVICE_ROLE_KEY` / `NEXT_PUBLIC_SUPABASE_URL` are missing from `.env.local` — see `lib/supabase/server.ts`'s error message.
 - **Mobile route returns empty content**: the section has never been published — publish it from the admin page first.
 ```
 
@@ -3336,4 +3354,5 @@ git commit -m "docs: document App Content admin feature and its three mobile end
 - **Spec coverage**: every section of the design spec (architecture, data model, draft/publish workflow, admin UI per tab, mobile API responses, testing, known limitations) maps to a task above. The migration-running constraint from user memory is called out explicitly in Global Constraints and Task 1 Step 7.
 - **Type consistency checked**: `AboutUsContent`/`FollowUsContent`/`HelpSupportContent` (Task 2) flow unchanged through Task 3 (db), Task 5 (actions), Task 7 (mobile routes), and Tasks 10-12 (components) — same field names throughout. `reorderBySortOrder` (Task 6) is the one function both `SortableList` (Task 9) and its test rely on — no duplicate reimplementation. `AppContentClientProps` (Task 10) matches exactly what `page.tsx` passes.
 - **No placeholders**: Task 10's stand-in `FollowUsTab`/`HelpSupportTab` are real, compiling, minimal implementations (not TODO stubs) that Tasks 11-12 fully replace — flagged explicitly in their step text so no implementer mistakes them for the final version.
-- **Security fix during review**: Task 8's icon upload route initially only checked `requireUploadContext` (any signed-in user), unlike every other write path in this feature which gates on `canManageAppContent` (admin only). Fixed to add the same role check plus a `403` test case, since this route only serves the admin page and should not be reachable by a regular buyer/seller session.
+- **Security fix during review**: Task 8's icon upload initially only checked `requireUploadContext` (any signed-in user), unlike every other write path in this feature which gates on `canManageAppContent` (admin only). Fixed to add the same role check plus an "Unauthorized" test case.
+- **Consistency fix during review**: Task 8 was originally an `app/api/upload/*` route, inconsistent with this feature's "no `app/api/admin/*` routes" convention. Converted to `uploadAppContentIconAction`, a Server Action gated by `requireActionRole(canManageAppContent)` like `saveAppContentAction`/`publishAppContentAction` — Task 11's `FollowUsTab` now calls it directly instead of `fetch()`. Updated the File Structure list, Task 11's upload handler, and Task 13's technical doc/guide to match.
