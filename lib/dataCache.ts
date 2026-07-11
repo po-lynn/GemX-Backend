@@ -8,6 +8,7 @@ export type CACHE_TAG =
   | "color"
   | "ratingTag"
   | "precautionTag"
+  | "appContent"
   | "profile"
   | "home"
   | "rankedProducts"
