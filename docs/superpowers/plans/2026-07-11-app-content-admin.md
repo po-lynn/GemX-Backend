@@ -1506,10 +1506,12 @@ git commit -m "feat: add public mobile GET endpoints for app content"
 **Files:**
 - Modify: `lib/supabase/server.ts`
 - Create: `app/api/upload/app-content-icon/route.ts`
+- Test: `tests/api/upload/app-content-icon.test.ts`
 
 **Interfaces:**
+- Consumes: `canManageAppContent` (Task 4) — the route rejects any signed-in user who isn't an admin, matching the rest of this feature's write paths.
 - Produces: `APP_CONTENT_ICONS_BUCKET` constant — consumed by the upload route.
-- Produces: `POST /api/upload/app-content-icon` → `{ url: string }` on success — consumed by Task 11's `FollowUsTab`.
+- Produces: `POST /api/upload/app-content-icon` → `{ url: string }` on success, `403` on a non-admin session — consumed by Task 11's `FollowUsTab`.
 
 - [ ] **Step 1: Add the bucket constant**
 
@@ -1520,7 +1522,88 @@ In `lib/supabase/server.ts`, add after `KYC_DOCUMENTS_BUCKET`:
 export const APP_CONTENT_ICONS_BUCKET = "app-content-icons"
 ```
 
-- [ ] **Step 2: Create the upload route**
+- [ ] **Step 2: Write the failing test**
+
+Create `tests/api/upload/app-content-icon.test.ts` (mirrors the existing `tests/api/upload/kyc-document.test.ts` pattern, plus a case for the admin-only check):
+
+```ts
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import type { NextRequest } from "next/server"
+import { POST } from "@/app/api/upload/app-content-icon/route"
+
+vi.mock("@/lib/supabase/storage-upload", () => ({
+  requireUploadContext: vi.fn(),
+  validateUploadFile: vi.fn().mockReturnValue(null),
+  storageObjectPath: vi.fn().mockReturnValue("admin-1/abc.png"),
+  uploadFileToBucket: vi.fn(),
+}))
+vi.mock("@/lib/supabase/server", () => ({
+  APP_CONTENT_ICONS_BUCKET: "app-content-icons",
+}))
+
+import {
+  requireUploadContext,
+  validateUploadFile,
+  uploadFileToBucket,
+} from "@/lib/supabase/storage-upload"
+
+function makeReq(formData: FormData): NextRequest {
+  return { headers: new Headers(), formData: () => Promise.resolve(formData) } as unknown as NextRequest
+}
+
+describe("POST /api/upload/app-content-icon", () => {
+  const adminCtx = { user: { id: "admin-1", role: "admin" }, supabase: {} }
+
+  beforeEach(() => {
+    vi.mocked(requireUploadContext).mockResolvedValue({ ctx: adminCtx as never })
+    vi.mocked(validateUploadFile).mockResolvedValue(null)
+    vi.mocked(uploadFileToBucket).mockResolvedValue({
+      url: "https://example.com/app-content-icons/admin-1/abc.png",
+      error: undefined,
+    })
+  })
+
+  it("returns 401 when not authenticated", async () => {
+    vi.mocked(requireUploadContext).mockResolvedValue({
+      error: Response.json({ error: "Unauthorized" }, { status: 401 }),
+    } as never)
+    const res = await POST(makeReq(new FormData()))
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 403 for a signed-in non-admin user", async () => {
+    vi.mocked(requireUploadContext).mockResolvedValue({
+      ctx: { user: { id: "user-1", role: "user" }, supabase: {} } as never,
+    })
+    const fd = new FormData()
+    fd.append("file", new File(["x"], "icon.png", { type: "image/png" }))
+    const res = await POST(makeReq(fd))
+    expect(res.status).toBe(403)
+    expect(uploadFileToBucket).not.toHaveBeenCalled()
+  })
+
+  it("returns 400 when no file provided", async () => {
+    const res = await POST(makeReq(new FormData()))
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 200 with url on a valid PNG upload from an admin", async () => {
+    const fd = new FormData()
+    fd.append("file", new File(["x"], "icon.png", { type: "image/png" }))
+    const res = await POST(makeReq(fd))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.url).toBe("https://example.com/app-content-icons/admin-1/abc.png")
+  })
+})
+```
+
+- [ ] **Step 3: Run the test to verify it fails**
+
+Run: `npx vitest run tests/api/upload/app-content-icon.test.ts`
+Expected: FAIL — `Cannot find module '@/app/api/upload/app-content-icon/route'`
+
+- [ ] **Step 4: Create the upload route**
 
 Create `app/api/upload/app-content-icon/route.ts`:
 
@@ -1533,15 +1616,25 @@ import {
   validateUploadFile,
 } from "@/lib/supabase/storage-upload"
 import { APP_CONTENT_ICONS_BUCKET } from "@/lib/supabase/server"
+import { jsonError } from "@/lib/api"
+import { canManageAppContent } from "@/features/app-content/permissions/app-content"
 
 const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const MAX_ICON_SIZE_BYTES = 2 * 1024 * 1024 // 2 MB
 
-/** Single custom icon upload for a Follow Us platform. Admin session required. */
+/**
+ * Single custom icon upload for a Follow Us platform. Admin only — this route only
+ * exists to serve the App Content admin page, unlike the other upload routes (which
+ * are used by any signed-in buyer/seller for their own content), so it must not
+ * accept uploads from a regular authenticated user.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { ctx, error } = await requireUploadContext(request)
     if (error) return error
+    if (!canManageAppContent(ctx.user.role)) {
+      return jsonError("Forbidden", 403)
+    }
 
     const formData = await request.formData()
     const file = formData.get("file")
@@ -1571,16 +1664,21 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: Verify the project type-checks**
+- [ ] **Step 5: Run the test to verify it passes**
+
+Run: `npx vitest run tests/api/upload/app-content-icon.test.ts`
+Expected: PASS (4 tests)
+
+- [ ] **Step 6: Verify the project type-checks**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add lib/supabase/server.ts app/api/upload/app-content-icon/route.ts
-git commit -m "feat: add custom Follow Us icon upload endpoint"
+git add lib/supabase/server.ts app/api/upload/app-content-icon/route.ts tests/api/upload/app-content-icon.test.ts
+git commit -m "feat: add admin-only custom Follow Us icon upload endpoint"
 ```
 
 ---
@@ -3238,3 +3336,4 @@ git commit -m "docs: document App Content admin feature and its three mobile end
 - **Spec coverage**: every section of the design spec (architecture, data model, draft/publish workflow, admin UI per tab, mobile API responses, testing, known limitations) maps to a task above. The migration-running constraint from user memory is called out explicitly in Global Constraints and Task 1 Step 7.
 - **Type consistency checked**: `AboutUsContent`/`FollowUsContent`/`HelpSupportContent` (Task 2) flow unchanged through Task 3 (db), Task 5 (actions), Task 7 (mobile routes), and Tasks 10-12 (components) — same field names throughout. `reorderBySortOrder` (Task 6) is the one function both `SortableList` (Task 9) and its test rely on — no duplicate reimplementation. `AppContentClientProps` (Task 10) matches exactly what `page.tsx` passes.
 - **No placeholders**: Task 10's stand-in `FollowUsTab`/`HelpSupportTab` are real, compiling, minimal implementations (not TODO stubs) that Tasks 11-12 fully replace — flagged explicitly in their step text so no implementer mistakes them for the final version.
+- **Security fix during review**: Task 8's icon upload route initially only checked `requireUploadContext` (any signed-in user), unlike every other write path in this feature which gates on `canManageAppContent` (admin only). Fixed to add the same role check plus a `403` test case, since this route only serves the admin page and should not be reachable by a regular buyer/seller session.
