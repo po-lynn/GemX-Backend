@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
 - **Managed colours — `GET /api/colors` + product `colorId`** – Added **GET `/api/colors`** (no auth): returns the managed colour list (`id`, `name`, `hexCode`) for product colour pickers, ordered by name. **POST `/api/products`** and **PATCH `/api/products/:id`** accept optional **`colorId`** (UUID from `GET /api/colors`); the server resolves it to the colour's `name` and stores both `color` (denormalized text) and `colorId` on the product. An unknown `colorId` returns **400** `{ "error": "Unknown colorId" }` before any persistence or point deduction. Plain `color` strings are still accepted (`colorId` stays `null`); for loose stones either field satisfies the "color is required" rule. `colorId` is **not** accepted on `jewelleryGemstones[]` items. Product list and detail responses now include **`colorId`**. See **4.2a**, **5.5**, and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
 - **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update KYC fields — `nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; types: N/P/T/E, serial 6 digits); returns **400** on invalid format. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
@@ -142,6 +143,9 @@
 | GET    | `/api/news/:id`        | No   | Get single news by ID (published only). Includes `readTime`                                                                                                                                              |
 | GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                         |
 | GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`                                                                                                                                           |
+| GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
+| GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
+| GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
 | POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login.                                                                                             |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
 
@@ -3539,7 +3543,41 @@ Returns a single published article by ID. Draft items return **404**.
 
 ---
 
-## 8. Quick flow for React Native
+## 8. App Content (About Us / Follow Us / Help & Support)
+
+Content for the mobile app's About, Follow Us, and Help & Support screens is managed in the admin (**Admin → Settings → App Content**) with a draft/publish workflow. All three routes are public and return only **published** content. For full response shapes and error cases see `docs/api/mobile-about-us.md`, `docs/api/mobile-follow-us.md`, and `docs/api/mobile-help-support.md`.
+
+### 8.1 About us (public)
+
+**GET** `/api/mobile/about-us`
+
+**Auth:** Not required.
+
+Returns the About Us story heading/body, `termsSlug`/`termsUpdatedAt`, `privacySlug`/`privacyUpdatedAt`, `companyName`, `contactAddress`, and `appVersion`. If the section has never been published, string fields are empty and the `*UpdatedAt` fields are `null` — still returns **200**. See `docs/api/mobile-about-us.md`.
+
+---
+
+### 8.2 Follow us (public)
+
+**GET** `/api/mobile/follow-us`
+
+**Auth:** Not required.
+
+Returns **`platforms`**: an array of `{ iconKey, customIconUrl, label, value, url }`. Only platforms with `isActive: true` in the published content are included, sorted by `sortOrder`; empty array if never published or nothing active. See `docs/api/mobile-follow-us.md`.
+
+---
+
+### 8.3 Help & support (public)
+
+**GET** `/api/mobile/help-support`
+
+**Auth:** Not required.
+
+Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`, `phone`, `telegram`), **`hours`** (`weekday`, `saturday`, `sunday`, `timezone`), and **`reportForm`** (`enabled`, `categories`, `allowScreenshots`). Report-a-problem is config-only — there is no submission endpoint or admin inbox. See `docs/api/mobile-help-support.md`.
+
+---
+
+## 9. Quick flow for React Native
 
 1. **Auth**
   - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
@@ -3595,7 +3633,7 @@ Returns a single published article by ID. Draft items return **404**.
 
 ---
 
-## 9. Error format
+## 10. Error format
 
 - **Body:** `{ "error": "Human-readable message" }`.
 - **Validation (400):** May also include `details`: `{ "fieldName": ["error message"] }`.
@@ -3603,7 +3641,7 @@ Returns a single published article by ID. Draft items return **404**.
 
 ---
 
-## 10. Summary table
+## 11. Summary table
 
 
 | Method | Path                   | Auth | Description                                                                                                 |
@@ -3663,5 +3701,8 @@ Returns a single published article by ID. Draft items return **404**.
 | GET    | `/api/news/:id`        | No   | Get one news (published only)                                                                               |
 | GET    | `/api/articles`        | No   | List articles (`?page`, `?limit`, `?status`)                                                                |
 | GET    | `/api/articles/:id`    | No   | Get one article (published only)                                                                            |
+| GET    | `/api/mobile/about-us` | No   | Published About Us content (story, terms/privacy metadata, company info, app version). See 8.1.             |
+| GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms, active only, sorted by `sortOrder`. See 8.2.                                 |
+| GET    | `/api/mobile/help-support` | No | Published Help & Support content (`faqs`, `contact`, `hours`, `reportForm`). See 8.3.                    |
 
 
