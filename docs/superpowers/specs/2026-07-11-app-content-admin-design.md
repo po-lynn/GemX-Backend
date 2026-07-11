@@ -12,8 +12,8 @@ Give admins a single page to manage three areas of static/semi-static app conten
 
 - New feature module `features/app-content/` (`db/`, `schemas/`, `components/`, `permissions/`), following the shape of `features/rating-tags/` and `features/company-settings/`.
 - One admin page: `app/admin/app-content/page.tsx`, tabbed via `?tab=about|follow|help`, added to `AdminSidebar.tsx`'s "Settings" nav group.
-- One RBAC feature key: `SETTINGS_APP_CONTENT` (added to `features/rbac/feature-keys.ts`), guarding the admin page and its API routes via `requireAdminOrFeature`.
-- Three public mobile GET endpoints (no auth), using the existing `jsonCached()` wrapper: `/api/mobile/about-us`, `/api/mobile/follow-us`, `/api/mobile/help-support`.
+- One RBAC feature key: `SETTINGS_APP_CONTENT` (added to `features/rbac/feature-keys.ts`), guarding the admin page via `requireFeatureAccess` and its Server Actions via `requireActionRole(canManageAppContent)` — matching the `rating-tags`/`categories`/`company-settings` convention (no `app/api/admin/*` routes for this feature).
+- Three public mobile GET endpoints (no auth), the only genuine REST API routes this feature adds, using the existing `jsonCached()` wrapper: `/api/mobile/about-us`, `/api/mobile/follow-us`, `/api/mobile/help-support`.
 - New Supabase Storage bucket `app-content-icons` + `app/api/upload/app-content-icon/route.ts` for custom Follow Us platform icons (same pattern as existing upload routes).
 - New dependency: `@dnd-kit/core` + `@dnd-kit/sortable` for drag-to-reorder (first use of a DnD library in this codebase — confirmed acceptable per user request to match the source design exactly).
 
@@ -97,13 +97,13 @@ App version is **not stored** — read from `package.json` at request time and s
 
 ## Draft/Publish workflow
 
-Matches the mockup's global top bar (Save draft / Publish to app / "Unsaved changes" pill / "Edited N ago · Name"), spanning all three tabs rather than per-tab:
+Matches the mockup's global top bar (Save draft / Publish to app / "Unsaved changes" pill / "Edited N ago · Name"), spanning all three tabs rather than per-tab. **Admin-side reads and writes follow this codebase's existing convention — Server Actions + direct server-component DB calls, never `app/api/admin/*` REST routes** (confirmed against `features/rating-tags`, `features/categories`, `features/company-settings`, which all use this pattern with zero exceptions):
 
-- The admin page holds all three sections' edited state in memory as the admin moves between tabs.
-- **Save draft** → `PUT /api/admin/app-content` with `{ aboutUs, followUs, helpSupport }` (all three, whichever changed) → validates each against its Zod schema → upserts `draftContent`, `updatedAt`, `updatedByName`, sets `hasUnpublishedChanges = true` for changed sections.
-- **Publish to app** → `POST /api/admin/app-content/publish` → for each section with `hasUnpublishedChanges = true`, copies `draftContent → publishedContent`, sets `publishedAt`/`publishedByName`, clears `hasUnpublishedChanges` — all in one transaction.
-- **GET /api/admin/app-content** returns `draftContent` (for editing) plus metadata (`hasUnpublishedChanges`, `updatedAt`/`By`, `publishedAt`/`By`) for all three sections, used to render the "Unsaved changes" pill and attribution line.
-- Mobile endpoints read `publishedContent` only. If a section has never been published, return sensible empty defaults (empty array / empty strings) with `200`, not an error — the app must not break before first publish.
+- **Initial read**: `app/admin/app-content/page.tsx` is an async server component. It calls `requireFeatureAccess(FEATURE_KEYS.SETTINGS_APP_CONTENT)`, then `await getAppContentSections()` (from `features/app-content/db/app-content.ts`) directly — no API route — and passes `draftContent` + metadata (`hasUnpublishedChanges`, `updatedAt`/`By`, `publishedAt`/`By`) for all three sections as props to the client tab components, which render the "Unsaved changes" pill and attribution line.
+- The client holds all three sections' edited state in memory as the admin moves between tabs (plain `useState`, no `useTransition` needed — matches `RatingTagForm.tsx`'s style).
+- **Save draft** → `saveAppContentAction(payload)` server action in `features/app-content/actions/app-content.ts` — `"use server"`, validates `{ aboutUs, followUs, helpSupport }` against each section's Zod schema, calls `requireActionRole(canManageAppContent)` (new predicate in `features/rbac/`) inside the action, upserts `draftContent`/`updatedAt`/`updatedByName` for changed sections via the db layer, revalidates the relevant cache tag, returns `{ success }` / `{ error }`.
+- **Publish to app** → `publishAppContentAction()` server action — same guard, for each section with `hasUnpublishedChanges = true` copies `draftContent → publishedContent`, sets `publishedAt`/`publishedByName`, clears `hasUnpublishedChanges`, all in one DB transaction, revalidates cache, returns `{ success }` / `{ error }`.
+- Mobile endpoints (unaffected by this change — they're genuine public REST routes since the mobile app is a separate HTTP client) read `publishedContent` only. If a section has never been published, return sensible empty defaults (empty array / empty strings) with `200`, not an error — the app must not break before first publish.
 
 ## Admin UI
 
@@ -121,9 +121,9 @@ Matches the mockup's global top bar (Save draft / Publish to app / "Unsaved chan
 
 ## Testing
 
-- Unit: Zod schemas for each section shape; publish-promotion logic (draft→published copy, dirty-flag clearing); `package.json` version read helper.
-- API: admin `GET`/`PUT /api/admin/app-content` and `POST /api/admin/app-content/publish` (mocked auth + Drizzle, RBAC-guarded); mobile `GET` routes (active-filter + sort behavior, empty-before-publish default).
-- Component: reorder handler logic (sortOrder recompute on drag end), not full DnD simulation.
+- `tests/unit/`: Zod schemas for each section shape; publish-promotion logic (draft→published copy, dirty-flag clearing); `package.json` version read helper; `saveAppContentAction`/`publishAppContentAction` (mocked `requireActionRole` + Drizzle) — validation failure, unauthorized, happy-path save, happy-path publish (with and without pending changes per section).
+- `tests/api/`: mobile `GET` routes only (active-filter + sort behavior, empty-before-publish default) — these are the only real API routes this feature adds.
+- `tests/component/`: reorder handler logic (sortOrder recompute on drag end), not full DnD simulation.
 
 ## Known limitations / explicitly out of scope
 
