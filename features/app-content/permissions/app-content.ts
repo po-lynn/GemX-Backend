@@ -1,3 +1,3 @@
-export function canManageAppContent(role: string) {
+export function canManageAppContent(role: string): boolean {
   return role === "admin"
 }
