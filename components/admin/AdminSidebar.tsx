@@ -30,6 +30,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Palette,
+  FileStack,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 
@@ -169,6 +170,14 @@ const navGroups: (NavItem | NavGroup)[] = [
         color: "#7c5cff",
         featureKey: FEATURE_KEYS.SETTINGS_ESCROW,
         isActive: (p) => p === "/admin/settings" || p.startsWith("/admin/settings?"),
+      },
+      {
+        href: "/admin/app-content",
+        label: "App Content",
+        icon: FileStack,
+        color: "#0ea5e9",
+        featureKey: FEATURE_KEYS.SETTINGS_APP_CONTENT,
+        isActive: (p) => p.startsWith("/admin/app-content"),
       },
     ],
   },
