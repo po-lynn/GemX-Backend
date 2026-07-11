@@ -19,13 +19,17 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
   if (!session) {
     return { error: "Unauthorized" }
   }
-  await saveAppContentDraft({
-    aboutUs: parsed.data.aboutUs,
-    followUs: parsed.data.followUs,
-    helpSupport: parsed.data.helpSupport,
-    updatedByName: session.user.name ?? session.user.email ?? "Admin",
-  })
-  return { success: true as const }
+  try {
+    await saveAppContentDraft({
+      aboutUs: parsed.data.aboutUs,
+      followUs: parsed.data.followUs,
+      helpSupport: parsed.data.helpSupport,
+      updatedByName: session.user.name ?? session.user.email ?? "Admin",
+    })
+    return { success: true as const }
+  } catch {
+    return { error: "Failed to save app content" }
+  }
 }
 
 export async function publishAppContentAction() {
@@ -33,12 +37,16 @@ export async function publishAppContentAction() {
   if (!session) {
     return { error: "Unauthorized" }
   }
-  const { published } = await publishAppContentSections(
-    session.user.name ?? session.user.email ?? "Admin"
-  )
-  if (published.length === 0) {
-    return { error: "Nothing to publish" }
+  try {
+    const { published } = await publishAppContentSections(
+      session.user.name ?? session.user.email ?? "Admin"
+    )
+    if (published.length === 0) {
+      return { error: "Nothing to publish" }
+    }
+    revalidateAppContentCache()
+    return { success: true as const, published }
+  } catch {
+    return { error: "Failed to publish app content" }
   }
-  revalidateAppContentCache()
-  return { success: true as const, published }
 }
