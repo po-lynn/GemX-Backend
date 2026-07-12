@@ -3553,7 +3553,7 @@ Content for the mobile app's About, Follow Us, and Help & Support screens is man
 
 **Auth:** Not required.
 
-Returns the About Us story heading/body, `termsSlug`/`termsUpdatedAt`, `privacySlug`/`privacyUpdatedAt`, `companyName`, `contactAddress`, and `appVersion`. If the section has never been published, string fields are empty and the `*UpdatedAt` fields are `null` — still returns **200**. See `docs/api/mobile-about-us.md`.
+Returns the About Us story heading/body, `termsSlug`/`termsUpdatedAt`, `privacySlug`/`privacyUpdatedAt`, `companyName`, `contactAddress`, and `appVersion`. If the section has never been published, fields fall back to their configured defaults (`storyHeading` defaults to `"Our Story"`; other string fields default to empty) and the `*UpdatedAt` fields are `null` — still returns **200**. See `docs/api/mobile-about-us.md`.
 
 ---
 

@@ -105,7 +105,7 @@ export function AppContentClient(props: AppContentClientProps) {
   }
 
   async function handlePublish() {
-    if (!canPublish || publishing) return
+    if (!canPublish || publishing || isDirty) return
     setPublishing(true)
     const result = await publishAppContentAction()
     setPublishing(false)
@@ -141,7 +141,7 @@ export function AppContentClient(props: AppContentClientProps) {
           <button
             className="ac-btn ac-btn-primary"
             onClick={handlePublish}
-            disabled={!canPublish || publishing}
+            disabled={!canPublish || publishing || isDirty}
           >
             {publishing ? "Publishing…" : "Publish to app"}
           </button>

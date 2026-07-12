@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import { GET } from "@/app/api/mobile/follow-us/route"
 import { getCachedPublishedFollowUs } from "@/features/app-content/db/cache/app-content"
+import type { SocialPlatform } from "@/features/app-content/schemas/app-content"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
 vi.mock("@/features/app-content/db/cache/app-content", () => ({
@@ -18,7 +19,7 @@ const PLATFORM_ACTIVE = {
   url: "https://facebook.com/gemx.app",
   isActive: true,
   sortOrder: 1,
-}
+} satisfies SocialPlatform
 const PLATFORM_HIDDEN = {
   id: "p2",
   iconKey: "tiktok",
@@ -28,7 +29,7 @@ const PLATFORM_HIDDEN = {
   url: "https://tiktok.com/@gemx",
   isActive: false,
   sortOrder: 0,
-}
+} satisfies SocialPlatform
 
 describe("GET /api/mobile/follow-us", () => {
   beforeEach(() => {

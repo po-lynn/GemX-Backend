@@ -20,7 +20,7 @@
 }
 ```
 
-If the section has never been published, all string fields are empty and the `*UpdatedAt` fields are `null` — the response is still `200`.
+If the section has never been published, fields fall back to their configured defaults (`storyHeading` defaults to `"Our Story"`; `storyBody`, `termsSlug`, `privacySlug`, `companyName`, `contactAddress`, and `appVersion` default to empty strings) and the `*UpdatedAt` fields are `null` — the response is still `200`.
 
 **Errors:** `500` on an unexpected DB error, `{ "error": "Failed to load about us content" }`.
 
