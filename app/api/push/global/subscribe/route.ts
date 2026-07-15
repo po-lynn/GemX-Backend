@@ -1,6 +1,5 @@
 import { NextRequest, connection } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonUncached } from "@/lib/api";
 import {
@@ -20,9 +19,6 @@ function getIp(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   await connection();
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return jsonError("Unauthorized", 401);
-
     const rl = rateLimit(`push-sub:${getIp(request)}`, 20, 60_000);
     if (!rl.allowed) {
       return Response.json(
@@ -59,9 +55,6 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   await connection();
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) return jsonError("Unauthorized", 401);
-
     const rl = rateLimit(`push-unsub:${getIp(request)}`, 20, 60_000);
     if (!rl.allowed) {
       return Response.json(

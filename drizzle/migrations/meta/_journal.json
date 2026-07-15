@@ -470,6 +470,13 @@
       "when": 1783266317759,
       "tag": "0066_awesome_rachel_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1783866057930,
+      "tag": "0067_fixed_silver_sable",
+      "breakpoints": true
     }
   ]
 }
