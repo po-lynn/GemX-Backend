@@ -402,27 +402,41 @@ export function PortalProductsListView({
         ...(isArchiveView ? { status: ["archive"] } : {}),
         ...defaultPriceFilters,
       }}
-      onFilterChange={(filterId, values) => {
-        if (filterId === "status") {
-          if (values.includes("archive")) {
-            router.push(`${BASE}?status=archive`)
-            return true
+      onFilterChange={(changes) => {
+        // All server-driven filters changed in this batch (e.g. "Clear all" touching both
+        // status and price at once) are folded into ONE URLSearchParams and ONE router.push —
+        // otherwise each change would build its params from the same stale `searchParams` and
+        // only the last push would actually stick.
+        const params = new URLSearchParams(searchParams.toString())
+        let handledAny = false
+
+        for (const { id: filterId, values } of changes) {
+          if (filterId === "status") {
+            if (values.includes("archive")) {
+              router.push(`${BASE}?status=archive`)
+              return true
+            }
+            if (isArchiveView) {
+              router.push(BASE)
+              return true
+            }
+            continue
           }
-          if (isArchiveView) {
-            router.push(BASE)
-            return true
+          if (filterId === "price") {
+            const usdMin = values.find((v) => v.startsWith("usdMin:"))?.slice(7)
+            const usdMax = values.find((v) => v.startsWith("usdMax:"))?.slice(7)
+            const mmkMin = values.find((v) => v.startsWith("mmkMin:"))?.slice(7)
+            const mmkMax = values.find((v) => v.startsWith("mmkMax:"))?.slice(7)
+            if (usdMin) params.set("priceMinUSD", usdMin); else params.delete("priceMinUSD")
+            if (usdMax) params.set("priceMaxUSD", usdMax); else params.delete("priceMaxUSD")
+            if (mmkMin) params.set("priceMinMMK", mmkMin); else params.delete("priceMinMMK")
+            if (mmkMax) params.set("priceMaxMMK", mmkMax); else params.delete("priceMaxMMK")
+            handledAny = true
+            continue
           }
         }
-        if (filterId === "price") {
-          const params = new URLSearchParams(searchParams.toString())
-          const usdMin = values.find((v) => v.startsWith("usdMin:"))?.slice(7)
-          const usdMax = values.find((v) => v.startsWith("usdMax:"))?.slice(7)
-          const mmkMin = values.find((v) => v.startsWith("mmkMin:"))?.slice(7)
-          const mmkMax = values.find((v) => v.startsWith("mmkMax:"))?.slice(7)
-          if (usdMin) params.set("priceMinUSD", usdMin); else params.delete("priceMinUSD")
-          if (usdMax) params.set("priceMaxUSD", usdMax); else params.delete("priceMaxUSD")
-          if (mmkMin) params.set("priceMinMMK", mmkMin); else params.delete("priceMinMMK")
-          if (mmkMax) params.set("priceMaxMMK", mmkMax); else params.delete("priceMaxMMK")
+
+        if (handledAny) {
           params.set("page", "1")
           router.push(`${BASE}?${params.toString()}`)
           return true

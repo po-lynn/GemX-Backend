@@ -6,7 +6,6 @@ import { ProductForm } from "@/features/products/components/ProductForm"
 import { getAllCategories } from "@/features/categories/db/categories"
 import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
-import { getAllColors } from "@/features/colors/db/color"
 import { getFeatureSettings } from "@/features/points/db/points"
 import { FadeUp } from "@/components/admin/motion"
 
@@ -20,7 +19,6 @@ export default async function AdminProductsNewPage() {
   const categories = await getAllCategories()
   const laboratories = await getAllLaboratories()
   const origins = await getAllOrigins()
-  const colors = await getAllColors()
   const featureSettings = await getFeatureSettings()
 
   return (
@@ -32,7 +30,6 @@ export default async function AdminProductsNewPage() {
           categories={categories}
           laboratories={laboratories}
           origins={origins}
-          colors={colors}
           featurePricingTiers={featureSettings.pricingTiers}
           canVerify={canVerify}
         />

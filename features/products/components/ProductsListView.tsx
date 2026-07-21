@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { formatDate } from "@/lib/formatters"
 import { ListViewCard } from "@/components/admin/list-view"
 import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
-import type { AdminProductRow } from "@/features/products/db/products"
+import type { AdminProductRow, ProductFacetCounts } from "@/features/products/db/products"
 import {
   bulkSetProductModeration,
   bulkSetProductStatus,
@@ -99,13 +99,17 @@ function ProductStatusPill({ status }: { status: string }) {
 
 const BASE = "/admin/products"
 
-const PRICE_PARAMS = ["priceMinUSD", "priceMaxUSD", "priceMinMMK", "priceMaxMMK"] as const
+const FORWARDED_PARAMS = [
+  "priceMinUSD", "priceMaxUSD", "priceMinMMK", "priceMaxMMK",
+  "stoneCut", "metal", "shape", "identification", "weightMin", "weightMax",
+  "type", "category", "moderation", "flags",
+] as const
 
 function buildViewHref(view: string, search?: string, sp?: URLSearchParams): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
   if (search?.trim()) p.set("search", search.trim())
-  for (const key of PRICE_PARAMS) {
+  for (const key of FORWARDED_PARAMS) {
     const val = sp?.get(key)
     if (val) p.set(key, val)
   }
@@ -117,7 +121,7 @@ function buildPageHref(page: number, view: string, search?: string, sp?: URLSear
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
   if (search?.trim()) p.set("search", search.trim())
-  for (const key of PRICE_PARAMS) {
+  for (const key of FORWARDED_PARAMS) {
     const val = sp?.get(key)
     if (val) p.set(key, val)
   }
@@ -134,6 +138,16 @@ export function buildEditHref(
   priceMaxUSD?: string,
   priceMinMMK?: string,
   priceMaxMMK?: string,
+  stoneCut?: string,
+  metal?: string,
+  shape?: string,
+  identification?: string,
+  weightMin?: string,
+  weightMax?: string,
+  productTypes?: string,
+  categoryIds?: string,
+  moderationStatuses?: string,
+  flags?: string,
 ): string {
   const p = new URLSearchParams()
   if (view !== "all") p.set("view", view)
@@ -143,6 +157,16 @@ export function buildEditHref(
   if (priceMaxUSD) p.set("priceMaxUSD", priceMaxUSD)
   if (priceMinMMK) p.set("priceMinMMK", priceMinMMK)
   if (priceMaxMMK) p.set("priceMaxMMK", priceMaxMMK)
+  if (stoneCut) p.set("stoneCut", stoneCut)
+  if (metal) p.set("metal", metal)
+  if (shape) p.set("shape", shape)
+  if (identification) p.set("identification", identification)
+  if (weightMin) p.set("weightMin", weightMin)
+  if (weightMax) p.set("weightMax", weightMax)
+  if (productTypes) p.set("type", productTypes)
+  if (categoryIds) p.set("category", categoryIds)
+  if (moderationStatuses) p.set("moderation", moderationStatuses)
+  if (flags) p.set("flags", flags)
   return `/admin/products/${id}/edit?${p.toString()}`
 }
 
@@ -150,6 +174,7 @@ export function buildEditHref(
 
 type Props = {
   products: AdminProductRow[]
+  facetCounts: ProductFacetCounts
   views: ViewTab[]
   activeView: string
   page: number
@@ -160,10 +185,21 @@ type Props = {
   priceMaxUSD?: string
   priceMinMMK?: string
   priceMaxMMK?: string
+  stoneCut?: string
+  metal?: string
+  shape?: string
+  identification?: string
+  weightMin?: string
+  weightMax?: string
+  productTypes?: string[]
+  categoryIds?: string[]
+  moderationStatuses?: string[]
+  flags?: string[]
 }
 
 export function ProductsListView({
   products,
+  facetCounts,
   views,
   activeView,
   page,
@@ -174,6 +210,16 @@ export function ProductsListView({
   priceMaxUSD,
   priceMinMMK,
   priceMaxMMK,
+  stoneCut,
+  metal,
+  shape,
+  identification,
+  weightMin,
+  weightMax,
+  productTypes = [],
+  categoryIds = [],
+  moderationStatuses = [],
+  flags = [],
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -187,6 +233,25 @@ export function ProductsListView({
     ...(priceMaxMMK ? [`mmkMax:${priceMaxMMK}`] : []),
   ]
   const defaultPriceFilters: Record<string, string[]> = priceVals.length > 0 ? { price: priceVals } : {}
+
+  const weightVals: string[] = [
+    ...(weightMin ? [`min:${weightMin}`] : []),
+    ...(weightMax ? [`max:${weightMax}`] : []),
+  ]
+  const defaultGemFilters: Record<string, string[]> = {
+    ...(stoneCut ? { stoneCut: [stoneCut] } : {}),
+    ...(metal ? { metal: [metal] } : {}),
+    ...(shape ? { shape: [shape] } : {}),
+    ...(identification ? { identification: [identification] } : {}),
+    ...(weightVals.length > 0 ? { weight: weightVals } : {}),
+  }
+
+  const defaultServerFilters: Record<string, string[]> = {
+    ...(productTypes.length > 0 ? { type: productTypes } : {}),
+    ...(categoryIds.length > 0 ? { category: categoryIds } : {}),
+    ...(moderationStatuses.length > 0 ? { moderation: moderationStatuses } : {}),
+    ...(flags.length > 0 ? { flags } : {}),
+  }
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
 
@@ -343,13 +408,11 @@ export function ProductsListView({
     },
   ]
 
-  // Build filter options from data
-  const uniqueCategories = Array.from(
-    new Map(products.filter((p) => p.categoryName).map((p) => [p.categoryId, p.categoryName])).entries()
-  ).map(([id, name]) => ({
-    value: id ?? "",
-    label: name ?? "",
-    count: products.filter((p) => p.categoryId === id).length,
+  // Category options come from a global facet count (all matching products), not just the loaded page.
+  const categoryOptions = facetCounts.category.map((c) => ({
+    value: c.id,
+    label: c.name,
+    count: c.count,
   }))
 
   const filterDefs: FilterDef[] = [
@@ -358,15 +421,15 @@ export function ProductsListView({
       label: "Type",
       type: "multi",
       options: [
-        { value: "loose_stone", label: "Loose Stone", count: products.filter((p) => p.productType === "loose_stone").length },
-        { value: "jewellery",   label: "Jewellery",   count: products.filter((p) => p.productType === "jewellery").length },
+        { value: "loose_stone", label: "Loose Stone", count: facetCounts.productType["loose_stone"] ?? 0 },
+        { value: "jewellery",   label: "Jewellery",   count: facetCounts.productType["jewellery"] ?? 0 },
       ],
     },
     {
       id: "category",
       label: "Category",
       type: "multi",
-      options: uniqueCategories,
+      options: categoryOptions,
     },
     {
       id: "status",
@@ -385,7 +448,7 @@ export function ProductsListView({
       options: (["pending", "approved", "rejected"] as const).map((s) => ({
         value: s,
         label: STATUS_LABELS[s] ?? s,
-        count: products.filter((p) => p.moderationStatus === s).length,
+        count: facetCounts.moderationStatus[s] ?? 0,
       })).filter((o) => o.count > 0),
     },
     {
@@ -393,10 +456,57 @@ export function ProductsListView({
       label: "Flags",
       type: "multi",
       options: [
-        { value: "featured",  label: "Featured",  count: products.filter((p) => p.isFeatured).length },
-        { value: "collector", label: "Collector", count: products.filter((p) => p.isCollectorPiece).length },
-        { value: "privilege", label: "Privilege", count: products.filter((p) => p.isPrivilegeAssist).length },
+        { value: "featured",  label: "Featured",  count: facetCounts.flags.featured },
+        { value: "collector", label: "Collector", count: facetCounts.flags.collector },
+        { value: "privilege", label: "Privilege", count: facetCounts.flags.privilege },
       ].filter((o) => o.count > 0),
+    },
+    {
+      id: "stoneCut",
+      label: "Cut",
+      type: "multi",
+      options: (["Faceted", "Cabochon"] as const).map((s) => ({
+        value: s,
+        label: s,
+        count: facetCounts.stoneCut[s] ?? 0,
+      })),
+    },
+    {
+      id: "metal",
+      label: "Metal",
+      type: "multi",
+      options: (["Gold", "Silver", "Other"] as const).map((s) => ({
+        value: s,
+        label: s,
+        count: facetCounts.metal[s] ?? 0,
+      })),
+    },
+    {
+      id: "shape",
+      label: "Shape",
+      type: "multi",
+      options: (["Oval", "Cushion", "Round", "Pear", "Heart"] as const).map((s) => ({
+        value: s,
+        label: s,
+        count: facetCounts.shape[s] ?? 0,
+      })),
+    },
+    {
+      id: "identification",
+      label: "Identification",
+      type: "multi",
+      options: (["Natural", "Heat Treated", "Treatments", "Others"] as const).map((s) => ({
+        value: s,
+        label: s,
+        count: facetCounts.identification[s] ?? 0,
+      })),
+    },
+    {
+      id: "weight",
+      label: "Weight (ct)",
+      type: "numrange" as const,
+      domain: [0, 100] as [number, number],
+      step: 0.25,
     },
     { id: "createdAt", label: "Created", type: "daterange" },
     {
@@ -431,28 +541,67 @@ export function ProductsListView({
       defaultFilters={{
         ...(isArchiveView ? { status: ["archive"] } : {}),
         ...defaultPriceFilters,
+        ...defaultGemFilters,
+        ...defaultServerFilters,
       }}
-      onFilterChange={(filterId, values) => {
-        if (filterId === "status") {
-          if (values.includes("archive")) {
-            router.push(`${BASE}?status=archive`)
-            return true
+      onFilterChange={(changes) => {
+        // All server-driven filters changed in this batch (e.g. a single checkbox toggle, or
+        // several at once via "Clear all") are folded into ONE URLSearchParams and ONE
+        // router.push, so clearing/changing multiple of them together doesn't lose all but the
+        // first (each call used to build its own params from the same stale `searchParams` and
+        // push independently, so only the last push actually stuck).
+        const params = new URLSearchParams(searchParams.toString())
+        let handledAny = false
+
+        for (const { id: filterId, values } of changes) {
+          if (filterId === "status") {
+            if (values.includes("archive")) {
+              router.push(`${BASE}?status=archive`)
+              return true
+            }
+            if (isArchiveView) {
+              router.push(BASE)
+              return true
+            }
+            continue
           }
-          if (isArchiveView) {
-            router.push(BASE)
-            return true
+          if (filterId === "price") {
+            const usdMin = values.find((v) => v.startsWith("usdMin:"))?.slice(7)
+            const usdMax = values.find((v) => v.startsWith("usdMax:"))?.slice(7)
+            const mmkMin = values.find((v) => v.startsWith("mmkMin:"))?.slice(7)
+            const mmkMax = values.find((v) => v.startsWith("mmkMax:"))?.slice(7)
+            if (usdMin) params.set("priceMinUSD", usdMin); else params.delete("priceMinUSD")
+            if (usdMax) params.set("priceMaxUSD", usdMax); else params.delete("priceMaxUSD")
+            if (mmkMin) params.set("priceMinMMK", mmkMin); else params.delete("priceMinMMK")
+            if (mmkMax) params.set("priceMaxMMK", mmkMax); else params.delete("priceMaxMMK")
+            handledAny = true
+            continue
+          }
+          if (filterId === "weight") {
+            const min = values.find((v) => v.startsWith("min:"))?.slice(4)
+            const max = values.find((v) => v.startsWith("max:"))?.slice(4)
+            if (min) params.set("weightMin", min); else params.delete("weightMin")
+            if (max) params.set("weightMax", max); else params.delete("weightMax")
+            handledAny = true
+            continue
+          }
+          if (filterId === "stoneCut" || filterId === "metal" || filterId === "shape" || filterId === "identification") {
+            // These are single-value DB columns; the checkbox UI is "last checked wins".
+            const value = values[values.length - 1]
+            if (value) params.set(filterId, value); else params.delete(filterId)
+            handledAny = true
+            continue
+          }
+          if (filterId === "type" || filterId === "category" || filterId === "moderation" || filterId === "flags") {
+            // True multi-select (OR semantics for type/category/moderation, AND for flags),
+            // server-filtered via inArray()/eq() — encoded as a comma-joined URL param.
+            if (values.length > 0) params.set(filterId, values.join(",")); else params.delete(filterId)
+            handledAny = true
+            continue
           }
         }
-        if (filterId === "price") {
-          const params = new URLSearchParams(searchParams.toString())
-          const usdMin = values.find((v) => v.startsWith("usdMin:"))?.slice(7)
-          const usdMax = values.find((v) => v.startsWith("usdMax:"))?.slice(7)
-          const mmkMin = values.find((v) => v.startsWith("mmkMin:"))?.slice(7)
-          const mmkMax = values.find((v) => v.startsWith("mmkMax:"))?.slice(7)
-          if (usdMin) params.set("priceMinUSD", usdMin); else params.delete("priceMinUSD")
-          if (usdMax) params.set("priceMaxUSD", usdMax); else params.delete("priceMaxUSD")
-          if (mmkMin) params.set("priceMinMMK", mmkMin); else params.delete("priceMinMMK")
-          if (mmkMax) params.set("priceMaxMMK", mmkMax); else params.delete("priceMaxMMK")
+
+        if (handledAny) {
           params.set("page", "1")
           router.push(`${BASE}?${params.toString()}`)
           return true
@@ -517,6 +666,16 @@ export function ProductsListView({
             }
             return false
           }
+          case "weight": {
+            const weightNum = r.weightCarat != null ? Number(r.weightCarat) : null
+            const min = vals.find((v) => v.startsWith("min:"))?.slice(4)
+            const max = vals.find((v) => v.startsWith("max:"))?.slice(4)
+            if (min === undefined && max === undefined) return true
+            if (weightNum == null) return false
+            const lo = min !== undefined ? Number(min) : -Infinity
+            const hi = max !== undefined ? Number(max) : Infinity
+            return weightNum >= lo && weightNum <= hi
+          }
           default: return null
         }
       }}
@@ -535,7 +694,12 @@ export function ProductsListView({
       }}
       onRowClick={(r) =>
         router.push(
-          buildEditHref(r.id, activeView, search, page, priceMinUSD, priceMaxUSD, priceMinMMK, priceMaxMMK)
+          buildEditHref(
+            r.id, activeView, search, page,
+            priceMinUSD, priceMaxUSD, priceMinMMK, priceMaxMMK,
+            stoneCut, metal, shape, identification, weightMin, weightMax,
+            productTypes.join(","), categoryIds.join(","), moderationStatuses.join(","), flags.join(","),
+          )
         )
       }
       renderBulkActions={(rows, onClear) => {

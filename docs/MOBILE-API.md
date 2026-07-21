@@ -7,7 +7,7 @@
 ## Recent changes
 
 - **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
-- **Managed colours — `GET /api/colors` + product `colorId`** – Added **GET `/api/colors`** (no auth): returns the managed colour list (`id`, `name`, `hexCode`) for product colour pickers, ordered by name. **POST `/api/products`** and **PATCH `/api/products/:id`** accept optional **`colorId`** (UUID from `GET /api/colors`); the server resolves it to the colour's `name` and stores both `color` (denormalized text) and `colorId` on the product. An unknown `colorId` returns **400** `{ "error": "Unknown colorId" }` before any persistence or point deduction. Plain `color` strings are still accepted (`colorId` stays `null`); for loose stones either field satisfies the "color is required" rule. `colorId` is **not** accepted on `jewelleryGemstones[]` items. Product list and detail responses now include **`colorId`**. See **4.2a**, **5.5**, and **5.6**.
+- **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
 - **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update KYC fields — `nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; types: N/P/T/E, serial 6 digits); returns **400** on invalid format. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
 - **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **POST `/api/products`** and **PATCH `/api/products/:id`** apply the same rule when creating or updating with **`isFeatured: true`** and a **`featured`** point cost: seller balance is checked first; **no** deduction and **no** product create/update on failure. See **5.5** and **5.6**.
@@ -335,38 +335,6 @@ Use the returned `url` as the category’s `image` (saved via admin UI).
 
 
 **Use in app:** Call when building the product form (create/edit). Use `name` for the product `origin` field (loose stones and jewellery gemstones) or for filter dropdowns.
-
----
-
-### 4.2a List colors (for product create/edit)
-
-**GET** `/api/colors`
-
-**Auth:** Not required.
-
-Returns the managed colour list for product colour pickers (gemstones, loose
-stones, jewellery), ordered by name.
-
-**Success (200):**
-
-```json
-[
-  { "id": "<uuid>", "name": "Blue", "hexCode": "#1565C0" },
-  { "id": "<uuid>", "name": "Multi-color", "hexCode": "" }
-]
-```
-
-| Field     | Type   | Description |
-| --------- | ------ | ----------- |
-| `id`      | string | Colour UUID |
-| `name`    | string | Colour name |
-| `hexCode` | string | Hex swatch, e.g. `"#1565C0"`, or `""` when the colour has no single swatch (Multi-color, Bi-color, Colorless) — render a placeholder instead of a swatch |
-
-Cache headers: `public, s-maxage=60, stale-while-revalidate=300`.
-
-**Use in app:** Call when building the product form (create/edit). Use `id`
-as the product `colorId` field. Admin management of colours (add/edit/delete)
-happens through the admin panel, not this endpoint.
 
 ---
 
@@ -3013,7 +2981,7 @@ This endpoint has been removed. Use the package + purchase-request flow instead:
 **Required when `productType` is `"loose_stone"` only:**
 
 - `weightCarat` (string) – weight in carats (e.g. `"2.5"`)
-- `color` (string, max 100) – e.g. Pigeon Blood Red — **or** `colorId` (see below)
+- `color` (string, max 100) – e.g. Pigeon Blood Red
 - `origin` (string, max 200) – e.g. Myanmar
 
 **Optional (common):**
@@ -3040,14 +3008,9 @@ This endpoint has been removed. Use the package + purchase-request flow instead:
 
 - `stoneCut` – `"Faceted"` | `"Cabochon"`
 - `weightCarat`, `dimensions`, `color`, `shape`, `origin`
-- `colorId` (uuid, optional) – a colour id from **GET `/api/colors`**. When
-  provided, the server stores the link and writes the colour's name into
-  `color` automatically (you may omit `color`). An unknown `colorId` returns
-  **400** `{ "error": "Unknown colorId" }`. Plain `color` strings are still
-  accepted. If both `color` and `colorId` are sent, the resolved colour name
-  from `colorId` wins. For loose stones, either `colorId` or `color`
-  satisfies the "color is required" rule. `colorId` is **not** accepted on
-  `jewelleryGemstones[]` items — those keep free-text `color`.
+- `color` (string, max 100) – required for loose stones; free text, e.g.
+  "Pigeon Blood Red". `jewelleryGemstones[]` items keep their own free-text
+  `color` field.
 - `shape` – `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`
 - `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` (get URL by uploading via **POST /api/upload/certificate**; no manual URL field in admin form; certificate is shown in a viewer)
 
@@ -3222,7 +3185,6 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 **Errors:**
 
 - **400** – Validation failed. Body: `{ "error": "message", "details": { "field": ["error"] } }`
-- **400** – `{ "error": "Unknown colorId" }` — `colorId` does not match any row from `GET /api/colors`. Checked before any point deduction or product creation. An empty-string `colorId` fails Zod UUID validation first (generic **400** with `details`), not this message.
 - **400** – `{ "error": "Insufficient points balance" }` — `isFeatured: true` with `featured` > 0 but the seller does not have enough available points (no deduction, no product created).
 - **401** – `{ "error": "Unauthorized" }`
 
@@ -3238,7 +3200,7 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 
 **Featuring via PATCH:** When the update increases the seller’s **`featured`** point cost (e.g. `isFeatured: true` with a higher `featured` value than before), the server checks the **seller’s** available point balance (`user.points`) against the **additional** points required. If balance is insufficient, the request fails with **400** `{ "error": "Insufficient points balance" }` — **no points are deducted** and the product is **not** updated. A second check runs at deduction time for concurrent spends. Points are always charged to the **product seller**, not an admin editing on their behalf.
 
-**Updating colour:** Sending `colorId` (with no `color`) resolves and denormalizes the name as on create. Sending a plain `color` string **without** `colorId` stores that text **and clears any existing `colorId` link** (`colorId` → `null`), keeping the invariant that a non-null `colorId` always matches the denormalized `color` text. Sending `colorId: null` explicitly also clears the link. Omitting both fields leaves the product's colour untouched.
+**Updating colour:** Sending `color` stores that text directly. Omitting `color` leaves the product's colour untouched.
 
 **Example:** Change title and price only.
 
@@ -3261,7 +3223,6 @@ Example: a ring with one ruby (centre) and multiple diamonds (side stones). Repl
 **Errors:**
 
 - **400** – Validation error (see `error` and `details`).
-- **400** – `{ "error": "Unknown colorId" }` — `colorId` does not match any row from `GET /api/colors`. Checked before any point deduction or product update.
 - **400** – `{ "error": "Insufficient points balance" }` — featured point cost increased but the seller does not have enough available points (no deduction, no DB update).
 - **401** – Not logged in.
 - **403** – `{ "error": "Forbidden" }` — not the owner and not admin.

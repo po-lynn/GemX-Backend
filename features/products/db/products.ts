@@ -12,6 +12,7 @@ import { companySetting } from "@/drizzle/schema/company-settings-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, desc } from "drizzle-orm"
+import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -43,6 +44,14 @@ function buildCategoryCondition(categoryId: string | null | undefined) {
       )
     )
   )
+}
+
+/** OR of `buildCategoryCondition` across multiple category ids, for multi-select category filtering. */
+function buildCategoryConditionMulti(categoryIds: ReadonlyArray<string> | undefined) {
+  if (!categoryIds?.length) return undefined
+  const conditions = categoryIds.map((id) => buildCategoryCondition(id)).filter((c) => c !== undefined)
+  if (conditions.length === 0) return undefined
+  return or(...conditions)
 }
 
 function buildProductOrderBy(
@@ -105,6 +114,8 @@ export type AdminProductRow = {
   categoryName: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
+  shape: "Oval" | "Cushion" | "Round" | "Pear" | "Heart" | null
+  weightCarat: string | null
   status: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus: "pending" | "approved" | "rejected"
   isFeatured: boolean
@@ -116,7 +127,6 @@ export type AdminProductRow = {
   verifiedAt: Date | null
   verifiedBy: string | null
   laboratoryId: string | null
-  colorId: string | null
   sellerId: string
   sellerName: string
   sellerPhone: string | null
@@ -129,10 +139,16 @@ export async function getAdminProductsFromDb(opts: {
   limit?: number
   search?: string
   productType?: "loose_stone" | "jewellery"
+  /** Multi-select variant of `productType` (OR'd via inArray) — used by the admin filter panel. */
+  productTypes?: ReadonlyArray<"loose_stone" | "jewellery">
   categoryId?: string | null
+  /** Multi-select variant of `categoryId` (OR'd across categories) — used by the admin filter panel. */
+  categoryIds?: ReadonlyArray<string>
   status?: "draft" | "pending" | "active" | "archive" | "sold"
   excludeStatuses?: ReadonlyArray<"draft" | "pending" | "active" | "archive" | "sold">
   moderationStatus?: "pending" | "approved" | "rejected"
+  /** Multi-select variant of `moderationStatus` (OR'd via inArray) — used by the admin filter panel. */
+  moderationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
@@ -152,6 +168,8 @@ export async function getAdminProductsFromDb(opts: {
   priceMaxUSD?: number
   priceMinMMK?: number
   priceMaxMMK?: number
+  weightMin?: number
+  weightMax?: number
   /** When true, sort for public list: collector pieces first, then privilege assist, then featured, then by latest date */
   sortByPublicPriority?: boolean
   /** Admin list sort column */
@@ -205,15 +223,26 @@ export async function getAdminProductsFromDb(opts: {
   const priceCondition =
     usdRange && mmkRange ? or(usdRange, mmkRange) : usdRange ?? mmkRange
 
+  const weightCondition =
+    opts.weightMin != null || opts.weightMax != null
+      ? and(
+          opts.weightMin != null ? gte(product.weightCarat, String(opts.weightMin)) : undefined,
+          opts.weightMax != null ? lte(product.weightCarat, String(opts.weightMax)) : undefined,
+        )
+      : undefined
+
   const filterConditions = [
     searchCondition,
     opts.productType ? eq(product.productType, opts.productType) : undefined,
+    opts.productTypes?.length ? inArray(product.productType, [...opts.productTypes]) : undefined,
     categoryCondition,
+    opts.categoryIds?.length ? buildCategoryConditionMulti(opts.categoryIds) : undefined,
     opts.status ? eq(product.status, opts.status) : undefined,
     opts.excludeStatuses?.length ? notInArray(product.status, [...opts.excludeStatuses]) : undefined,
     opts.moderationStatus
       ? eq(product.moderationStatus, opts.moderationStatus)
       : undefined,
+    opts.moderationStatuses?.length ? inArray(product.moderationStatus, [...opts.moderationStatuses]) : undefined,
     opts.excludeModerationStatuses?.length ? notInArray(product.moderationStatus, [...opts.excludeModerationStatuses]) : undefined,
     opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
     opts.metal ? eq(product.metal, opts.metal) : undefined,
@@ -248,6 +277,7 @@ export async function getAdminProductsFromDb(opts: {
       : undefined,
     opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
     priceCondition,
+    weightCondition,
   ].filter(Boolean)
 
   const whereClause =
@@ -269,8 +299,9 @@ export async function getAdminProductsFromDb(opts: {
       categoryName: category.name,
       stoneCut: product.stoneCut,
       metal: product.metal,
+      shape: product.shape,
+      weightCarat: product.weightCarat,
       laboratoryId: product.laboratoryId,
-      colorId: product.colorId,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
@@ -315,9 +346,10 @@ export async function getAdminProductsFromDb(opts: {
     categoryName: p.categoryName ?? null,
     stoneCut: p.stoneCut,
     metal: p.metal,
+    shape: p.shape,
+    weightCarat: p.weightCarat ? String(p.weightCarat) : null,
     status: p.status,
     laboratoryId: p.laboratoryId,
-    colorId: p.colorId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featuredExpiresAt: p.featuredExpiresAt,
@@ -336,6 +368,223 @@ export async function getAdminProductsFromDb(opts: {
   const total = countResult[0]?.count ?? 0
 
   return { products, total }
+}
+
+export type ProductFacetCounts = {
+  stoneCut: Record<string, number>
+  metal: Record<string, number>
+  shape: Record<string, number>
+  identification: Record<string, number>
+  productType: Record<string, number>
+  moderationStatus: Record<string, number>
+  category: Array<{ id: string; name: string; count: number }>
+  flags: { featured: number; collector: number; privilege: number }
+}
+
+type ProductFacetOpts = {
+  search?: string
+  productTypes?: ReadonlyArray<"loose_stone" | "jewellery">
+  categoryIds?: ReadonlyArray<string>
+  status?: "draft" | "pending" | "active" | "archive" | "sold"
+  excludeStatuses?: ReadonlyArray<"draft" | "pending" | "active" | "archive" | "sold">
+  moderationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
+  excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
+  stoneCut?: "Faceted" | "Cabochon"
+  metal?: "Gold" | "Silver" | "Other"
+  identification?: ProductIdentification
+  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  origin?: string
+  laboratoryId?: string | null
+  createdFrom?: string
+  createdTo?: string
+  isFeatured?: boolean
+  isCollectorPiece?: boolean
+  collectorPieceApprovedForUserId?: string
+  isPrivilegeAssist?: boolean
+  priceMinUSD?: number
+  priceMaxUSD?: number
+  priceMinMMK?: number
+  priceMaxMMK?: number
+  weightMin?: number
+  weightMax?: number
+}
+
+/** Which facet's own filter to leave out of the WHERE clause when computing that facet's counts. */
+type FacetKey =
+  | "productType" | "category" | "moderation"
+  | "stoneCut" | "metal" | "shape" | "identification"
+  | "featured" | "collector" | "privilege"
+
+/**
+ * Per-option counts for the admin filter panel (Type, Category, Moderation, Flags, Cut, Metal,
+ * Shape, Identification), computed across the *entire* matching result set — not just the
+ * current page. Each facet's own counts ignore its own active filter/value but respect every
+ * other active filter, so e.g. filtering to Type=Loose Stone still shows the true Jewellery
+ * count instead of always reporting 0.
+ */
+export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promise<ProductFacetCounts> {
+  const search = opts.search?.trim()
+
+  const searchCondition = search
+    ? or(
+        sql`to_tsvector('english', coalesce(${product.title}, '') || ' ' || coalesce(${product.description}, '')) @@ plainto_tsquery('english', ${search})`,
+        ilike(product.title, `%${escapeLike(search)}%`),
+        ilike(user.name, `%${escapeLike(search)}%`),
+        ilike(user.phone ?? "", `%${escapeLike(search)}%`),
+        ilike(user.email, `%${escapeLike(search)}%`)
+      )
+    : undefined
+
+  const createdFromDate = opts.createdFrom
+    ? new Date(opts.createdFrom + "T00:00:00.000Z")
+    : undefined
+  const createdToDate = opts.createdTo
+    ? new Date(opts.createdTo + "T23:59:59.999Z")
+    : undefined
+
+  const usdRange =
+    opts.priceMinUSD != null || opts.priceMaxUSD != null
+      ? and(
+          eq(product.currency, "USD"),
+          opts.priceMinUSD != null ? gte(product.price, String(opts.priceMinUSD)) : undefined,
+          opts.priceMaxUSD != null ? lte(product.price, String(opts.priceMaxUSD)) : undefined,
+        )
+      : undefined
+
+  const mmkRange =
+    opts.priceMinMMK != null || opts.priceMaxMMK != null
+      ? and(
+          eq(product.currency, "MMK"),
+          opts.priceMinMMK != null ? gte(product.price, String(opts.priceMinMMK)) : undefined,
+          opts.priceMaxMMK != null ? lte(product.price, String(opts.priceMaxMMK)) : undefined,
+        )
+      : undefined
+
+  const priceCondition =
+    usdRange && mmkRange ? or(usdRange, mmkRange) : usdRange ?? mmkRange
+
+  const weightCondition =
+    opts.weightMin != null || opts.weightMax != null
+      ? and(
+          opts.weightMin != null ? gte(product.weightCarat, String(opts.weightMin)) : undefined,
+          opts.weightMax != null ? lte(product.weightCarat, String(opts.weightMax)) : undefined,
+        )
+      : undefined
+
+  /** Builds the WHERE conditions for one facet's count query — every active filter except `omit`. */
+  function buildConditions(omit: FacetKey) {
+    return [
+      searchCondition,
+      omit !== "productType" && opts.productTypes?.length ? inArray(product.productType, [...opts.productTypes]) : undefined,
+      omit !== "category" ? buildCategoryConditionMulti(opts.categoryIds) : undefined,
+      opts.status ? eq(product.status, opts.status) : undefined,
+      opts.excludeStatuses?.length ? notInArray(product.status, [...opts.excludeStatuses]) : undefined,
+      omit !== "moderation" && opts.moderationStatuses?.length ? inArray(product.moderationStatus, [...opts.moderationStatuses]) : undefined,
+      opts.excludeModerationStatuses?.length ? notInArray(product.moderationStatus, [...opts.excludeModerationStatuses]) : undefined,
+      omit !== "stoneCut" && opts.stoneCut ? eq(product.stoneCut, opts.stoneCut) : undefined,
+      omit !== "metal" && opts.metal ? eq(product.metal, opts.metal) : undefined,
+      omit !== "shape" && opts.shape ? eq(product.shape, opts.shape) : undefined,
+      omit !== "identification" && opts.identification ? eq(product.identification, opts.identification) : undefined,
+      opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+      opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
+      createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
+      createdToDate ? lte(product.createdAt, createdToDate) : undefined,
+      omit !== "featured" && opts.isFeatured === true
+        ? and(
+            eq(product.isFeatured, true),
+            or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+          )
+        : omit !== "featured" && opts.isFeatured === false
+          ? eq(product.isFeatured, false)
+          : undefined,
+      omit !== "collector" && opts.isCollectorPiece === true ? eq(product.isCollectorPiece, true) : undefined,
+      omit !== "collector" && opts.collectorPieceApprovedForUserId && opts.isCollectorPiece === true
+        ? exists(
+            db
+              .select()
+              .from(collectorPieceShowRequest)
+              .where(
+                and(
+                  eq(collectorPieceShowRequest.productId, product.id),
+                  eq(collectorPieceShowRequest.userId, opts.collectorPieceApprovedForUserId),
+                  eq(collectorPieceShowRequest.status, "approved")
+                )
+              )
+          )
+        : undefined,
+      omit !== "privilege" && opts.isPrivilegeAssist === true ? eq(product.isPrivilegeAssist, true) : undefined,
+      priceCondition,
+      weightCondition,
+    ].filter(Boolean)
+  }
+
+  async function countGroupBy(column: AnyPgColumn, omit: FacetKey): Promise<Record<string, number>> {
+    const conditions = buildConditions(omit)
+    const rows = await db
+      .select({ value: column, count: sql<number>`count(*)::int` })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id))
+      .where(and(...conditions))
+      .groupBy(column)
+    const out: Record<string, number> = {}
+    for (const r of rows) if (r.value != null) out[r.value] = r.count
+    return out
+  }
+
+  async function countByCategory(): Promise<Array<{ id: string; name: string; count: number }>> {
+    const conditions = buildConditions("category")
+    const rows = await db
+      .select({ id: product.categoryId, name: category.name, count: sql<number>`count(*)::int` })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id))
+      .leftJoin(category, eq(product.categoryId, category.id))
+      .where(and(...conditions))
+      .groupBy(product.categoryId, category.name)
+    return rows
+      .filter((r): r is { id: string; name: string | null; count: number } => r.id != null)
+      .map((r) => ({ id: r.id, name: r.name ?? "Uncategorized", count: r.count }))
+  }
+
+  async function countBooleanFlag(omit: FacetKey, flagCondition: ReturnType<typeof eq>): Promise<number> {
+    const conditions = [...buildConditions(omit), flagCondition].filter(Boolean)
+    const rows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id))
+      .where(and(...conditions))
+    return rows[0]?.count ?? 0
+  }
+
+  const [stoneCut, metal, shape, identification, productType, moderationStatus, categoryCounts, featured, collector, privilege] =
+    await Promise.all([
+      countGroupBy(product.stoneCut, "stoneCut"),
+      countGroupBy(product.metal, "metal"),
+      countGroupBy(product.shape, "shape"),
+      countGroupBy(product.identification, "identification"),
+      countGroupBy(product.productType, "productType"),
+      countGroupBy(product.moderationStatus, "moderation"),
+      countByCategory(),
+      countBooleanFlag(
+        "featured",
+        and(
+          eq(product.isFeatured, true),
+          or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+        ) as ReturnType<typeof eq>
+      ),
+      countBooleanFlag("collector", eq(product.isCollectorPiece, true)),
+      countBooleanFlag("privilege", eq(product.isPrivilegeAssist, true)),
+    ])
+
+  return {
+    stoneCut,
+    metal,
+    shape,
+    identification,
+    productType,
+    moderationStatus,
+    category: categoryCounts,
+    flags: { featured, collector, privilege },
+  }
 }
 
 export type ProductSuggestionRow = { label: string }
@@ -509,8 +758,9 @@ export async function getProductsBySellerId(
       categoryName: category.name,
       stoneCut: product.stoneCut,
       metal: product.metal,
+      shape: product.shape,
+      weightCarat: product.weightCarat,
       laboratoryId: product.laboratoryId,
-      colorId: product.colorId,
       status: product.status,
       moderationStatus: product.moderationStatus,
       isFeatured: sql<boolean>`(${product.isFeatured} AND (${product.featuredExpiresAt} IS NULL OR ${product.featuredExpiresAt} > now()))`,
@@ -555,9 +805,10 @@ export async function getProductsBySellerId(
     categoryName: p.categoryName ?? null,
     stoneCut: p.stoneCut,
     metal: p.metal,
+    shape: p.shape,
+    weightCarat: p.weightCarat ? String(p.weightCarat) : null,
     status: p.status,
     laboratoryId: p.laboratoryId,
-    colorId: p.colorId,
     moderationStatus: p.moderationStatus,
     isFeatured: p.isFeatured,
     featuredExpiresAt: p.featuredExpiresAt,
@@ -607,7 +858,6 @@ export type ProductForEdit = {
   shape: string | null
   origin: string | null
   laboratoryId: string | null
-  colorId: string | null
   certReportNumber: string | null
   certReportDate: string | null
   certReportUrl: string | null
@@ -656,7 +906,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       shape: product.shape,
       origin: product.origin,
       laboratoryId: product.laboratoryId,
-      colorId: product.colorId,
       certReportNumber: product.certReportNumber,
       certReportDate: product.certReportDate,
       certReportUrl: product.certReportUrl,
@@ -771,7 +1020,6 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     shape: row.shape,
     origin: row.origin,
     laboratoryId: row.laboratoryId,
-    colorId: row.colorId,
     certReportNumber: row.certReportNumber,
     certReportDate: row.certReportDate ?? null,
     certReportUrl: row.certReportUrl,
@@ -841,7 +1089,6 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     shape: input.shape ?? null,
     origin: input.origin ?? null,
     laboratoryId: input.laboratoryId ?? null,
-    colorId: input.colorId ?? null,
     certReportNumber: input.certReportNumber ?? null,
     certReportDate: input.certReportDate ?? null,
     certReportUrl: input.certReportUrl ?? null,
@@ -951,7 +1198,6 @@ export type UpdateProductInput = {
   shape?: string | null
   origin?: string | null
   laboratoryId?: string | null
-  colorId?: string | null
   certReportNumber?: string | null
   certReportDate?: string | null
   certReportUrl?: string | null
@@ -1036,7 +1282,6 @@ export async function updateProductInDb(
     updates.shape = rest.shape as (typeof product.$inferInsert)["shape"]
   if (rest.origin !== undefined) updates.origin = rest.origin
   if (rest.laboratoryId !== undefined) updates.laboratoryId = rest.laboratoryId
-  if (rest.colorId !== undefined) updates.colorId = rest.colorId
   if (rest.certReportNumber !== undefined)
     updates.certReportNumber = rest.certReportNumber
   if (rest.certReportDate !== undefined) updates.certReportDate = rest.certReportDate

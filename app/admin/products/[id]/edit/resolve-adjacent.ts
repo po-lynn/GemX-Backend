@@ -22,6 +22,35 @@ function parsePrice(raw?: string): number | undefined {
   return isFinite(n) && n >= 0 ? n : undefined
 }
 
+const STONE_CUTS = ["Faceted", "Cabochon"] as const
+const METALS = ["Gold", "Silver", "Other"] as const
+const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+const IDENTIFICATIONS = ["Natural", "Heat Treated", "Treatments", "Others"] as const
+const PRODUCT_TYPES = ["loose_stone", "jewellery"] as const
+const MODERATION_STATUSES = ["pending", "approved", "rejected"] as const
+const FLAG_VALUES = ["featured", "collector", "privilege"] as const
+
+function parseMultiParam<T extends string>(raw: string | undefined, allowed: readonly T[]): T[] {
+  if (!raw) return []
+  const set = new Set(allowed as readonly string[])
+  const seen = new Set<T>()
+  for (const v of raw.split(",")) {
+    const trimmed = v.trim()
+    if (set.has(trimmed)) seen.add(trimmed as T)
+  }
+  return [...seen]
+}
+
+function parseCategoryIds(raw: string | undefined): string[] {
+  if (!raw) return []
+  const seen = new Set<string>()
+  for (const v of raw.split(",")) {
+    const trimmed = v.trim()
+    if (trimmed) seen.add(trimmed)
+  }
+  return [...seen]
+}
+
 export type ListContext = {
   view?: string
   search?: string
@@ -30,6 +59,16 @@ export type ListContext = {
   priceMaxUSD?: string
   priceMinMMK?: string
   priceMaxMMK?: string
+  stoneCut?: string
+  metal?: string
+  shape?: string
+  identification?: string
+  weightMin?: string
+  weightMax?: string
+  type?: string
+  category?: string
+  moderation?: string
+  flags?: string
 }
 
 export type AdjacentResult = {
@@ -49,6 +88,16 @@ function buildAdjacentHref(id: string, ctx: ListContext, page: number): string {
   if (ctx.priceMaxUSD) p.set("priceMaxUSD", ctx.priceMaxUSD)
   if (ctx.priceMinMMK) p.set("priceMinMMK", ctx.priceMinMMK)
   if (ctx.priceMaxMMK) p.set("priceMaxMMK", ctx.priceMaxMMK)
+  if (ctx.stoneCut) p.set("stoneCut", ctx.stoneCut)
+  if (ctx.metal) p.set("metal", ctx.metal)
+  if (ctx.shape) p.set("shape", ctx.shape)
+  if (ctx.identification) p.set("identification", ctx.identification)
+  if (ctx.weightMin) p.set("weightMin", ctx.weightMin)
+  if (ctx.weightMax) p.set("weightMax", ctx.weightMax)
+  if (ctx.type) p.set("type", ctx.type)
+  if (ctx.category) p.set("category", ctx.category)
+  if (ctx.moderation) p.set("moderation", ctx.moderation)
+  if (ctx.flags) p.set("flags", ctx.flags)
   return `/admin/products/${id}/edit?${p.toString()}`
 }
 
@@ -63,7 +112,17 @@ export async function resolveAdjacentProducts(
     ctx.priceMinUSD !== undefined ||
     ctx.priceMaxUSD !== undefined ||
     ctx.priceMinMMK !== undefined ||
-    ctx.priceMaxMMK !== undefined
+    ctx.priceMaxMMK !== undefined ||
+    ctx.stoneCut !== undefined ||
+    ctx.metal !== undefined ||
+    ctx.shape !== undefined ||
+    ctx.identification !== undefined ||
+    ctx.weightMin !== undefined ||
+    ctx.weightMax !== undefined ||
+    ctx.type !== undefined ||
+    ctx.category !== undefined ||
+    ctx.moderation !== undefined ||
+    ctx.flags !== undefined
 
   if (!hasContext) {
     return { prevHref: null, nextHref: null, position: null, total: null }
@@ -74,14 +133,39 @@ export async function resolveAdjacentProducts(
     ? (ctx.view as View)
     : "all"
 
+  const flagValues = parseMultiParam(ctx.flags, FLAG_VALUES)
+  const flagsFilter = {
+    ...(flagValues.includes("featured") ? { isFeatured: true } : {}),
+    ...(flagValues.includes("collector") ? { isCollectorPiece: true } : {}),
+    ...(flagValues.includes("privilege") ? { isPrivilegeAssist: true } : {}),
+  }
+
   const sharedOpts = {
     limit: PAGE_SIZE,
     search: ctx.search?.trim() || undefined,
     ...buildViewFilter(view),
+    ...flagsFilter,
+    productTypes: parseMultiParam(ctx.type, PRODUCT_TYPES),
+    categoryIds: parseCategoryIds(ctx.category),
+    moderationStatuses: parseMultiParam(ctx.moderation, MODERATION_STATUSES),
     priceMinUSD: parsePrice(ctx.priceMinUSD),
     priceMaxUSD: parsePrice(ctx.priceMaxUSD),
     priceMinMMK: parsePrice(ctx.priceMinMMK),
     priceMaxMMK: parsePrice(ctx.priceMaxMMK),
+    stoneCut: (STONE_CUTS as readonly string[]).includes(ctx.stoneCut ?? "")
+      ? (ctx.stoneCut as (typeof STONE_CUTS)[number])
+      : undefined,
+    metal: (METALS as readonly string[]).includes(ctx.metal ?? "")
+      ? (ctx.metal as (typeof METALS)[number])
+      : undefined,
+    shape: (SHAPES as readonly string[]).includes(ctx.shape ?? "")
+      ? (ctx.shape as (typeof SHAPES)[number])
+      : undefined,
+    identification: (IDENTIFICATIONS as readonly string[]).includes(ctx.identification ?? "")
+      ? (ctx.identification as (typeof IDENTIFICATIONS)[number])
+      : undefined,
+    weightMin: parsePrice(ctx.weightMin),
+    weightMax: parsePrice(ctx.weightMax),
   }
 
   const { products, total } = await getAdminProductsFromDb({ page, ...sharedOpts })

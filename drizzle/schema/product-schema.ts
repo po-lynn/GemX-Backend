@@ -13,7 +13,6 @@ import {
 import { user } from "./auth-schema";
 import { category, productTypeEnum } from "./category-schema";
 import { laboratory } from "./laboratory-schema";
-import { color } from "./color-schema";
 
 export const productStatusEnum = pgEnum("product_status", [
   "draft",    // Created but not published — not visible to buyers
@@ -98,9 +97,6 @@ export const product = pgTable(
     weightCarat: decimal("weight_carat", { precision: 10, scale: 4 }),
     dimensions: text("dimensions"),
     color: text("color"),
-    colorId: uuid("color_id").references(() => color.id, {
-      onDelete: "set null",
-    }),
     shape: productShapeEnum("shape"),
     origin: text("origin"),
     // Certification (product-level; gemstones can have their own cert fields)
@@ -154,7 +150,6 @@ export const product = pgTable(
     index("product_isCollectorPiece_idx").on(table.isCollectorPiece),
     index("product_isPrivilegeAssist_idx").on(table.isPrivilegeAssist),
     index("product_laboratoryId_idx").on(table.laboratoryId),
-    index("product_colorId_idx").on(table.colorId),
   ]
 );
 

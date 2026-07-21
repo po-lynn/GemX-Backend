@@ -1,1 +1,0 @@
-export { ColorForm } from "./ColorForm";

@@ -74,7 +74,8 @@
       "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres\" -c \"select current_user;\")",
       "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select current_user, version\\(\\);\")",
       "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")",
-      "Bash(PGCONNECT_TIMEOUT=8 psql \"postgresql://wrong_user:wrong_pass@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")"
+      "Bash(PGCONNECT_TIMEOUT=8 psql \"postgresql://wrong_user:wrong_pass@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")",
+      "Bash(export PGPASSWORD=meadmin)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

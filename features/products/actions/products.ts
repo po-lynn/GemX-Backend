@@ -21,7 +21,6 @@ import { and, eq, gte, inArray, sql } from "drizzle-orm"
 import { deductUserPoints } from "@/features/points/db/points"
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data"
 import { requireActionRole } from "@/lib/action-guard"
-import { getColorById } from "@/features/colors/db/color"
 import { searchUsersForPicker, getRecentUsersForPicker, getUsersPaginatedFromDb } from "@/features/users/db/users"
 import type { UserPickerOption } from "@/features/users/db/users"
 import { getCompanySettings } from "@/features/company-settings/db/company-settings"
@@ -72,7 +71,6 @@ export async function createProductAction(formData: FormData) {
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
     color: emptyToNull(formData.get("color")),
-    colorId: emptyToNull(formData.get("colorId")),
     shape: emptyToNull(formData.get("shape")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
@@ -99,15 +97,6 @@ export async function createProductAction(formData: FormData) {
   const session = await requireActionRole(canAdminManageProducts)
   if (!session) {
     return { error: "Unauthorized" }
-  }
-
-  let resolvedColor = parsed.data.color ?? null
-  if (parsed.data.colorId) {
-    const colorRow = await getColorById(parsed.data.colorId)
-    if (!colorRow) {
-      return { error: "Unknown colorId" }
-    }
-    resolvedColor = colorRow.name
   }
 
   const canApplyVerified =
@@ -147,8 +136,7 @@ export async function createProductAction(formData: FormData) {
     pieceCount: parsed.data.pieceCount,
     weightCarat: parsed.data.weightCarat,
     dimensions: parsed.data.dimensions,
-    color: resolvedColor,
-    colorId: parsed.data.colorId ?? null,
+    color: parsed.data.color ?? null,
     shape: parsed.data.shape,
     origin: parsed.data.origin,
     laboratoryId: parsed.data.laboratoryId,
@@ -195,8 +183,7 @@ export async function updateProductAction(formData: FormData) {
     totalWeightGrams: emptyToNull(formData.get("totalWeightGrams")),
     weightCarat: emptyToNull(formData.get("weightCarat")),
     dimensions: emptyToNull(formData.get("dimensions")),
-    color: emptyToNull(formData.get("color")), // ignored unless colorId resolves — the form has no product-level color input
-    colorId: emptyToNull(formData.get("colorId")),
+    color: emptyToNull(formData.get("color")),
     shape: emptyToNull(formData.get("shape")),
     origin: emptyToNull(formData.get("origin")),
     laboratoryId: emptyToNull(formData.get("laboratoryId")),
@@ -225,19 +212,10 @@ export async function updateProductAction(formData: FormData) {
     return { error: "Unauthorized" }
   }
 
-  // Jewellery forms never render the colour select, so `colorId` is absent from FormData
-  // entirely (not merely empty) — distinguish that from "select rendered but cleared" so we
+  // Jewellery forms never render the colour input, so `color` is absent from FormData
+  // entirely (not merely empty) — distinguish that from "field rendered but cleared" so we
   // don't overwrite an existing colour with null on every jewellery-product edit.
-  const colorFieldRendered = formData.has("colorId")
-
-  let resolvedColor: string | null = null
-  if (parsed.data.colorId) {
-    const colorRow = await getColorById(parsed.data.colorId)
-    if (!colorRow) {
-      return { error: "Unknown colorId" }
-    }
-    resolvedColor = colorRow.name
-  }
+  const colorFieldRendered = formData.has("color")
 
   const isOwnProductUpdate = formData.get("isOwnProduct") === "on" || formData.get("isOwnProduct") === "true"
   let newSellerId: string | undefined
@@ -301,8 +279,7 @@ export async function updateProductAction(formData: FormData) {
       pieceCount: data.pieceCount,
       weightCarat: data.weightCarat,
       dimensions: data.dimensions,
-      color: colorFieldRendered ? (data.colorId ? resolvedColor : null) : undefined,
-      colorId: colorFieldRendered ? (data.colorId ?? null) : undefined,
+      color: colorFieldRendered ? data.color : undefined,
       shape: data.shape,
       origin: data.origin,
       laboratoryId: data.laboratoryId,

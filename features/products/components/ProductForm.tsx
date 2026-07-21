@@ -50,7 +50,6 @@ import {
 import type { CategoryRow } from "@/features/categories/db/categories"
 import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
 import type { OriginOption } from "@/features/origin/db/origin"
-import type { ColorOption } from "@/features/colors/db/color"
 import type { FeaturePricingTier } from "@/features/points/db/points"
 
 const MAX_PRODUCT_IMAGES = 10
@@ -714,7 +713,6 @@ type Props = {
   categories: CategoryRow[]
   laboratories?: LaboratoryOption[] | null
   origins?: OriginOption[] | null
-  colors?: ColorOption[] | null
   featurePricingTiers?: FeaturePricingTier[] | null
   backHref?: string | null
   backLabel?: string | null
@@ -732,7 +730,6 @@ export function ProductForm({
   categories,
   laboratories,
   origins,
-  colors,
   featurePricingTiers,
   backHref,
   backLabel = "Back",
@@ -2211,30 +2208,17 @@ export function ProductForm({
                     </select>
                   </div>
                   <div className="pd-field">
-                    <label htmlFor="colorId" className="pd-label">
+                    <label htmlFor="color" className="pd-label">
                       Color <span className="req">*</span>
                     </label>
-                    <select
-                      id="colorId"
-                      name="colorId"
+                    <input
+                      id="color"
+                      name="color"
+                      type="text"
                       required
-                      defaultValue={
-                        product?.colorId ??
-                        (product?.color
-                          ? (colors ?? []).find(
-                              (c) => c.name.toLowerCase() === product.color!.toLowerCase()
-                            )?.id ?? ""
-                          : "")
-                      }
-                      className="pd-select"
-                    >
-                      <option value="">Select color</option>
-                      {(colors ?? []).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                      defaultValue={product?.color ?? ""}
+                      className="pd-input"
+                    />
                   </div>
                   <div className="pd-field">
                     <label htmlFor="origin" className="pd-label">

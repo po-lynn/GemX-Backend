@@ -960,10 +960,12 @@ type ListViewCardProps<T extends { id: string }> = {
   /** Pre-populate filter state on mount (use for server-driven filter restoration). */
   defaultFilters?: ActiveFilters
   /**
-   * Called when a filter value changes. Return `true` to handle the change
-   * externally (skips internal state update — use for server-driven filters).
+   * Called with every filter that changed in a single update (e.g. one checkbox toggle, or all
+   * of them at once via "Clear all"). Return `true` if any change was handled externally (e.g.
+   * a single combined `router.push` for server-driven filters) — local filter state is still
+   * updated either way, so client-side-only filters in the same batch keep working.
    */
-  onFilterChange?: (filterId: string, values: string[]) => boolean | void
+  onFilterChange?: (changes: ReadonlyArray<{ id: string; values: string[] }>) => boolean | void
 }
 
 export function ListViewCard<T extends { id: string }>({
@@ -1000,25 +1002,24 @@ export function ListViewCard<T extends { id: string }>({
 
   function handleSetFilters(next: ActiveFilters) {
     if (onFilterChange) {
+      const changes: Array<{ id: string; values: string[] }> = []
       for (const [id, vals] of Object.entries(next)) {
         const prev = filters[id] ?? []
         const newVals = vals ?? []
         const changed =
           newVals.length !== prev.length ||
           newVals.some((v) => !prev.includes(v))
-        if (changed) {
-          const handled = onFilterChange(id, newVals)
-          if (handled) { setFilters(next); return }
-        }
+        if (changed) changes.push({ id, values: newVals })
       }
       for (const id of Object.keys(filters)) {
         if (!(id in next) || (next[id] ?? []).length === 0) {
           const prev = filters[id] ?? []
-          if (prev.length > 0) {
-            const handled = onFilterChange(id, [])
-            if (handled) { setFilters(next); return }
-          }
+          if (prev.length > 0) changes.push({ id, values: [] })
         }
+      }
+      if (changes.length > 0) {
+        const handled = onFilterChange(changes)
+        if (handled) { setFilters(next); return }
       }
     }
     setFilters(next)

@@ -477,6 +477,13 @@
       "when": 1783866057930,
       "tag": "0067_fixed_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1784649612012,
+      "tag": "0068_wooden_human_robot",
+      "breakpoints": true
     }
   ]
 }
