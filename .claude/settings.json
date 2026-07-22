@@ -75,7 +75,10 @@
       "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select current_user, version\\(\\);\")",
       "Bash(PGCONNECT_TIMEOUT=8 rtk psql \"postgresql://postgres.djhlrpxsqbttqwujyncf:cgXnJtwnWvAB2zEM@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")",
       "Bash(PGCONNECT_TIMEOUT=8 psql \"postgresql://wrong_user:wrong_pass@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres\" -c \"select 1\")",
-      "Bash(export PGPASSWORD=meadmin)"
+      "Bash(export PGPASSWORD=meadmin)",
+      "Bash(command -v vercel)",
+      "Bash(vercel --version)",
+      "Bash(rm -rf /home/po/me/2026/Jade/infinity-gemx/.next/dev/types 2>/dev/null; node node_modules/.bin/tsc --noEmit 2>&1 | grep -E \"products\\\\.ts|products-facet\")"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
@@ -89,7 +92,8 @@
       "/home/po/me/2026/Jade/infinity-gemx/features/articles",
       "/home/po/me/2026/Jade/infinity-gemx/app/api/products/[id]",
       "/home/po/me/2026/Jade/infinity-gemx/features/news/schemas",
-      "/home/po/me/2026/Jade/infinity-gemx/tests/component"
+      "/home/po/me/2026/Jade/infinity-gemx/tests/component",
+      "/home/po/me/2026/Jade/infinity-gemx/.next/dev"
     ]
   },
   "enabledPlugins": {

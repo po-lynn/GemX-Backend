@@ -12,7 +12,6 @@ import { companySetting } from "@/drizzle/schema/company-settings-schema"
 import { user } from "@/drizzle/schema/auth-schema"
 import { collectorPieceShowRequest } from "@/drizzle/schema/collector-piece-show-request-schema"
 import { and, asc, eq, exists, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, desc } from "drizzle-orm"
-import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import type {
   ProductCreate,
   ProductIdentification,
@@ -518,19 +517,6 @@ export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promis
     ].filter(Boolean)
   }
 
-  async function countGroupBy(column: AnyPgColumn, omit: FacetKey): Promise<Record<string, number>> {
-    const conditions = buildConditions(omit)
-    const rows = await db
-      .select({ value: column, count: sql<number>`count(*)::int` })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .where(and(...conditions))
-      .groupBy(column)
-    const out: Record<string, number> = {}
-    for (const r of rows) if (r.value != null) out[r.value] = r.count
-    return out
-  }
-
   async function countByCategory(): Promise<Array<{ id: string; name: string; count: number }>> {
     const conditions = buildConditions("category")
     const rows = await db
@@ -545,45 +531,81 @@ export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promis
       .map((r) => ({ id: r.id, name: r.name ?? "Uncategorized", count: r.count }))
   }
 
-  async function countBooleanFlag(omit: FacetKey, flagCondition: ReturnType<typeof eq>): Promise<number> {
-    const conditions = [...buildConditions(omit), flagCondition].filter(Boolean)
-    const rows = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(product)
-      .innerJoin(user, eq(product.sellerId, user.id))
-      .where(and(...conditions))
-    return rows[0]?.count ?? 0
-  }
+  // One count(*) FILTER (WHERE ...) per option, all in a single table scan/round-trip —
+  // replaces what used to be 9 separate GROUP BY / COUNT queries fired via Promise.all.
+  // Firing that many queries concurrently on every page load was enough to exhaust the
+  // Postgres connection pool under real traffic, and with no statement_timeout active on
+  // the pooler connection (see drizzle/db.ts), a stalled query would hang until Vercel's
+  // function timeout instead of failing fast.
+  const stoneCutWhere = and(...buildConditions("stoneCut"))
+  const metalWhere = and(...buildConditions("metal"))
+  const shapeWhere = and(...buildConditions("shape"))
+  const identificationWhere = and(...buildConditions("identification"))
+  const productTypeWhere = and(...buildConditions("productType"))
+  const moderationWhere = and(...buildConditions("moderation"))
+  const featuredWhere = and(...buildConditions("featured"))
+  const collectorWhere = and(...buildConditions("collector"))
+  const privilegeWhere = and(...buildConditions("privilege"))
+  const featuredFlagCondition = and(
+    eq(product.isFeatured, true),
+    or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
+  )
 
-  const [stoneCut, metal, shape, identification, productType, moderationStatus, categoryCounts, featured, collector, privilege] =
-    await Promise.all([
-      countGroupBy(product.stoneCut, "stoneCut"),
-      countGroupBy(product.metal, "metal"),
-      countGroupBy(product.shape, "shape"),
-      countGroupBy(product.identification, "identification"),
-      countGroupBy(product.productType, "productType"),
-      countGroupBy(product.moderationStatus, "moderation"),
-      countByCategory(),
-      countBooleanFlag(
-        "featured",
-        and(
-          eq(product.isFeatured, true),
-          or(isNull(product.featuredExpiresAt), gt(product.featuredExpiresAt, sql`now()`))
-        ) as ReturnType<typeof eq>
-      ),
-      countBooleanFlag("collector", eq(product.isCollectorPiece, true)),
-      countBooleanFlag("privilege", eq(product.isPrivilegeAssist, true)),
-    ])
+  const [[counts], categoryCounts] = await Promise.all([
+    db
+      .select({
+        stoneCutFaceted: sql<number>`count(*) FILTER (WHERE ${and(stoneCutWhere, eq(product.stoneCut, "Faceted"))})::int`,
+        stoneCutCabochon: sql<number>`count(*) FILTER (WHERE ${and(stoneCutWhere, eq(product.stoneCut, "Cabochon"))})::int`,
+        metalGold: sql<number>`count(*) FILTER (WHERE ${and(metalWhere, eq(product.metal, "Gold"))})::int`,
+        metalSilver: sql<number>`count(*) FILTER (WHERE ${and(metalWhere, eq(product.metal, "Silver"))})::int`,
+        metalOther: sql<number>`count(*) FILTER (WHERE ${and(metalWhere, eq(product.metal, "Other"))})::int`,
+        shapeOval: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Oval"))})::int`,
+        shapeCushion: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Cushion"))})::int`,
+        shapeRound: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Round"))})::int`,
+        shapePear: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Pear"))})::int`,
+        shapeHeart: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Heart"))})::int`,
+        identificationNatural: sql<number>`count(*) FILTER (WHERE ${and(identificationWhere, eq(product.identification, "Natural"))})::int`,
+        identificationHeatTreated: sql<number>`count(*) FILTER (WHERE ${and(identificationWhere, eq(product.identification, "Heat Treated"))})::int`,
+        identificationTreatments: sql<number>`count(*) FILTER (WHERE ${and(identificationWhere, eq(product.identification, "Treatments"))})::int`,
+        identificationOthers: sql<number>`count(*) FILTER (WHERE ${and(identificationWhere, eq(product.identification, "Others"))})::int`,
+        productTypeLooseStone: sql<number>`count(*) FILTER (WHERE ${and(productTypeWhere, eq(product.productType, "loose_stone"))})::int`,
+        productTypeJewellery: sql<number>`count(*) FILTER (WHERE ${and(productTypeWhere, eq(product.productType, "jewellery"))})::int`,
+        moderationPending: sql<number>`count(*) FILTER (WHERE ${and(moderationWhere, eq(product.moderationStatus, "pending"))})::int`,
+        moderationApproved: sql<number>`count(*) FILTER (WHERE ${and(moderationWhere, eq(product.moderationStatus, "approved"))})::int`,
+        moderationRejected: sql<number>`count(*) FILTER (WHERE ${and(moderationWhere, eq(product.moderationStatus, "rejected"))})::int`,
+        featured: sql<number>`count(*) FILTER (WHERE ${and(featuredWhere, featuredFlagCondition)})::int`,
+        collector: sql<number>`count(*) FILTER (WHERE ${and(collectorWhere, eq(product.isCollectorPiece, true))})::int`,
+        privilege: sql<number>`count(*) FILTER (WHERE ${and(privilegeWhere, eq(product.isPrivilegeAssist, true))})::int`,
+      })
+      .from(product)
+      .innerJoin(user, eq(product.sellerId, user.id)),
+    countByCategory(),
+  ])
 
   return {
-    stoneCut,
-    metal,
-    shape,
-    identification,
-    productType,
-    moderationStatus,
+    stoneCut: { Faceted: counts.stoneCutFaceted, Cabochon: counts.stoneCutCabochon },
+    metal: { Gold: counts.metalGold, Silver: counts.metalSilver, Other: counts.metalOther },
+    shape: {
+      Oval: counts.shapeOval,
+      Cushion: counts.shapeCushion,
+      Round: counts.shapeRound,
+      Pear: counts.shapePear,
+      Heart: counts.shapeHeart,
+    },
+    identification: {
+      Natural: counts.identificationNatural,
+      "Heat Treated": counts.identificationHeatTreated,
+      Treatments: counts.identificationTreatments,
+      Others: counts.identificationOthers,
+    },
+    productType: { loose_stone: counts.productTypeLooseStone, jewellery: counts.productTypeJewellery },
+    moderationStatus: {
+      pending: counts.moderationPending,
+      approved: counts.moderationApproved,
+      rejected: counts.moderationRejected,
+    },
     category: categoryCounts,
-    flags: { featured, collector, privilege },
+    flags: { featured: counts.featured, collector: counts.collector, privilege: counts.privilege },
   }
 }
 
