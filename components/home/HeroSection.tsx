@@ -7,38 +7,43 @@ export function HeroSection() {
       flexDirection: "column",
       alignItems: "center",
       textAlign: "center",
-      padding: "96px 7vw 80px",
-      background: "radial-gradient(120% 120% at 50% 0%,#f6f4ff 0%,#ffffff 60%)",
+      padding: "88px 7vw 76px",
     }}>
       <span style={{
         display: "inline-flex", alignItems: "center", gap: 7,
-        fontSize: "12.5px", fontWeight: 700, color: "#6d5ce7",
-        background: "#efeafe", padding: "7px 14px", borderRadius: 20,
+        fontSize: "12px", fontWeight: 700, color: "#5B3DF5",
+        background: "#fff", border: "1px solid #ece6fb",
+        padding: "7px 14px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.07em",
       }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2 9.2 8.6 2 9.3l5.5 4.7L5.8 21 12 17.3 18.2 21l-1.7-7 5.5-4.7-7.2-.7z"/>
-        </svg>
-        Certified gemstones &amp; fine jewellery
+        ✦ Verified provenance
       </span>
 
-      <h1 className="home-hero-title" style={{ margin: "24px 0 0", fontSize: 68, lineHeight: 1.03, fontWeight: 800, letterSpacing: "-0.03em", color: "#191525" }}>
-        Where rarity meets <span style={{ color: "#6d5ce7" }}>trust</span>
+      <h1 className="home-hero-title" style={{
+        margin: "22px 0 0", fontFamily: "var(--font-bricolage)",
+        fontSize: 66, lineHeight: 1.04, fontWeight: 800, letterSpacing: "-0.03em", color: "#171326",
+      }}>
+        Where rarity meets{" "}
+        <span style={{
+          background: "linear-gradient(120deg,#5B3DF5,#E8318A)",
+          WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+        }}>trust</span>.
       </h1>
 
-      <p style={{ margin: "20px 0 0", fontSize: 18, lineHeight: 1.65, color: "#56536a", maxWidth: 520 }}>
-        Discover certified loose gemstones and handcrafted jewellery. Lab reports, transparent sellers, and a marketplace built for collectors who care about provenance.
+      <p style={{ margin: "20px 0 0", fontSize: 18, lineHeight: 1.6, color: "#5f5a72", maxWidth: 560 }}>
+        The marketplace for certified loose gemstones and handcrafted jewellery — lab-verified, seller-vetted, built for collectors who care about provenance.
       </p>
 
-      <div style={{ display: "flex", gap: 13, marginTop: 36, flexWrap: "wrap", justifyContent: "center" }}>
+      <div className="home-hero-actions" style={{ display: "flex", gap: 13, marginTop: 34, flexWrap: "wrap", justifyContent: "center" }}>
         <Link href="#app" style={{
-          fontSize: 15, fontWeight: 700, color: "#fff", background: "#6d5ce7",
-          padding: "14px 28px", borderRadius: 12,
-          boxShadow: "0 8px 20px rgba(109,92,231,0.32)", textDecoration: "none",
-        }}>Download mobile app</Link>
+          fontSize: 15, fontWeight: 800, color: "#fff",
+          background: "linear-gradient(90deg,#5B3DF5,#7C3AED)",
+          padding: "15px 30px", borderRadius: 14,
+          boxShadow: "0 14px 30px -10px rgba(91,61,245,.6)", textDecoration: "none",
+        }}>Download the app</Link>
         <Link href="#why" style={{
-          fontSize: 15, fontWeight: 700, color: "#191525", background: "#fff",
-          border: "1px solid #e6e4ee", padding: "14px 28px", borderRadius: 12, textDecoration: "none",
-        }}>Why GemX</Link>
+          fontSize: 15, fontWeight: 700, color: "#171326", background: "#fff",
+          border: "1px solid #ded7f4", padding: "14px 29px", borderRadius: 14, textDecoration: "none",
+        }}>Why GemX →</Link>
       </div>
     </section>
   )

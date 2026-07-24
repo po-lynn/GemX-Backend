@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { articles } from "@/drizzle/schema/articles-schema";
-import { and, eq, ilike, desc, sql, type SQL } from "drizzle-orm";
+import { and, eq, ilike, desc, ne, sql, type SQL } from "drizzle-orm";
 
 export type ArticleRow = {
   id: string;
@@ -148,13 +148,28 @@ export async function updateArticleInDb(
     coverImage?: string | null;
     isFeatured?: boolean;
   }
-): Promise<boolean> {
+): Promise<{ justPublished: boolean; title?: string }> {
   const updates = Object.fromEntries(
     Object.entries(input).filter(([, v]) => v !== undefined)
   );
-  if (Object.keys(updates).length === 0) return true;
+  if (Object.keys(updates).length === 0) return { justPublished: false };
+
+  if (updates.status === "published") {
+    // Atomic status flip: only counts as "just published" if the row wasn't already
+    // published — prevents duplicate publish notifications from concurrent or repeated saves.
+    const [row] = await db
+      .update(articles)
+      .set(updates)
+      .where(and(eq(articles.id, id), ne(articles.status, "published")))
+      .returning({ title: articles.title });
+    if (row) return { justPublished: true, title: row.title };
+    // Already published — still apply the rest of the edit (title/content/etc).
+    await db.update(articles).set(updates).where(eq(articles.id, id));
+    return { justPublished: false };
+  }
+
   await db.update(articles).set(updates).where(eq(articles.id, id));
-  return true;
+  return { justPublished: false };
 }
 
 export async function deleteArticleInDb(id: string): Promise<boolean> {

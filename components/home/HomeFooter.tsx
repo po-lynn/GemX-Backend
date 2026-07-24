@@ -5,39 +5,35 @@ const LINKS = [
   { href: "#why", label: "Why Us" },
   { href: "#contact", label: "Contact us" },
   { href: "/login", label: "Sign in" },
-  { href: "/admin", label: "Admin" },
 ]
 
 export function HomeFooter() {
   return (
     <footer className="home-footer" style={{
-      padding: "36px 7vw",
-      borderTop: "1px solid #f0eff5",
+      padding: "32px 7vw",
+      background: "#171326", color: "#cfc9e6",
       display: "flex", alignItems: "center", justifyContent: "space-between",
       gap: 20, flexWrap: "wrap",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 9,
-          background: "linear-gradient(135deg,#7b67ee,#9a86ff)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 3h12l4 6-10 13L2 9Z"/>
-          </svg>
-        </div>
-        <span style={{ fontSize: 16, fontWeight: 800, color: "#191525" }}>GemX</span>
+        <span style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: "linear-gradient(135deg,#5B3DF5,#E8318A)",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontSize: 14,
+        }}>◈</span>
+        <span style={{ fontFamily: "var(--font-bricolage)", fontSize: 16, fontWeight: 800, color: "#fff" }}>GemX</span>
       </div>
 
-      <nav style={{ display: "flex", gap: 26, fontSize: "13.5px", fontWeight: 600, color: "#56536a", flexWrap: "wrap" }}>
+      <nav style={{ display: "flex", gap: 26, fontSize: "13.5px", fontWeight: 600, color: "#cfc9e6", flexWrap: "wrap" }}>
         {LINKS.map(({ href, label }) => (
-          <Link key={label} href={href} className="home-nav-link" style={{ color: "#56536a", textDecoration: "none" }}>
+          <Link key={label} href={href} className="home-nav-link" style={{ color: "#cfc9e6", textDecoration: "none" }}>
             {label}
           </Link>
         ))}
       </nav>
 
-      <span style={{ fontSize: "12.5px", color: "#a6a3b8" }}>© 2026 GemX. Premium gemstone &amp; jewellery marketplace.</span>
+      <span style={{ fontSize: "12px", color: "#7d769c" }}>© 2026 GemX. Certified gemstones &amp; fine jewellery.</span>
     </footer>
   )
 }

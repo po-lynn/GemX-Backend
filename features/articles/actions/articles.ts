@@ -11,7 +11,6 @@ import {
   createArticleInDb,
   updateArticleInDb,
   deleteArticleInDb,
-  getArticleById,
 } from "@/features/articles/db/articles";
 import { sendArticlePublishedNotification } from "@/features/notifications/services/global-push";
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
@@ -111,11 +110,9 @@ export async function updateArticleAction(formData: FormData) {
     updates.title = title;
     updates.slug = slugify(title);
   }
-  const previous = await getArticleById(articleId);
-  await updateArticleInDb(articleId, updates);
-  if (updates.status === "published" && previous?.status !== "published") {
-    const articleTitle = updates.title ?? previous?.title ?? "New article";
-    sendArticlePublishedNotification({ articleId, title: articleTitle }).catch((e) =>
+  const { justPublished, title: publishedTitle } = await updateArticleInDb(articleId, updates);
+  if (justPublished) {
+    sendArticlePublishedNotification({ articleId, title: publishedTitle ?? "New article" }).catch((e) =>
       console.error("Global article push failed:", e)
     );
   }

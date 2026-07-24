@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Plus_Jakarta_Sans, Geist_Mono, Cormorant_Garamond } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono, Cormorant_Garamond, Bricolage_Grotesque, Manrope } from "next/font/google";
 import { AppSpeedInsights } from "@/components/app-speed-insights";
 import { GlobalPushProvider } from "@/components/notifications/GlobalPushProvider";
 import { Analytics } from '@vercel/analytics/next';
@@ -23,6 +23,18 @@ const cormorant = Cormorant_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
+const bricolageGrotesque = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "GemX | Premium Gemstone & Jewellery Marketplace",
   description:
@@ -37,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${plusJakartaSans.variable} ${geistMono.variable} ${cormorant.variable} font-sans antialiased`}
+        className={`${plusJakartaSans.variable} ${geistMono.variable} ${cormorant.variable} ${bricolageGrotesque.variable} ${manrope.variable} font-sans antialiased`}
       >
         <GlobalPushProvider>
           <Suspense fallback={null}>{children}</Suspense>
