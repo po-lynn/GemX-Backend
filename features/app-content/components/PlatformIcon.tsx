@@ -23,8 +23,8 @@ const ICON_GLYPH: Record<string, string> = {
 
 export function PlatformIcon({ iconKey, customIconUrl, size = 38 }: Props) {
   if (iconKey === "custom" && customIconUrl) {
-    // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, not a static asset
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, not a static asset
       <img
         src={customIconUrl}
         alt=""

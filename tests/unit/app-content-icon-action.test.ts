@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { uploadAppContentIconAction } from "@/features/app-content/actions/app-content-icon"
 import { requireActionRole } from "@/lib/action-guard"
-import { getSupabaseAdmin, getSupabaseAdminErrorMessage } from "@/lib/supabase/server"
-import { validateUploadFile, storageObjectPath, uploadFileToBucket } from "@/lib/supabase/storage-upload"
+import { getSupabaseAdmin } from "@/lib/supabase/server"
+import { validateUploadFile, uploadFileToBucket } from "@/lib/supabase/storage-upload"
 
 vi.mock("@/lib/action-guard", () => ({ requireActionRole: vi.fn() }))
 vi.mock("@/lib/supabase/server", () => ({
