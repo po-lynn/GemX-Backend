@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { after } from "next/server";
 import { canAdminManageArticles } from "@/features/articles/permissions/articles";
 import {
   articleCreateSchema,
@@ -63,8 +64,10 @@ export async function createArticleAction(formData: FormData) {
     publishDate,
   });
   if (parsed.data.status === "published") {
-    sendArticlePublishedNotification({ articleId, title: parsed.data.title }).catch((e) =>
-      console.error("Global article push failed:", e)
+    after(() =>
+      sendArticlePublishedNotification({ articleId, title: parsed.data.title }).catch((e) =>
+        console.error("Global article push failed:", e)
+      )
     );
   }
   return { success: true, articleId };
@@ -112,8 +115,10 @@ export async function updateArticleAction(formData: FormData) {
   }
   const { justPublished, title: publishedTitle } = await updateArticleInDb(articleId, updates);
   if (justPublished) {
-    sendArticlePublishedNotification({ articleId, title: publishedTitle ?? "New article" }).catch((e) =>
-      console.error("Global article push failed:", e)
+    after(() =>
+      sendArticlePublishedNotification({ articleId, title: publishedTitle ?? "New article" }).catch((e) =>
+        console.error("Global article push failed:", e)
+      )
     );
   }
   return { success: true, articleId };

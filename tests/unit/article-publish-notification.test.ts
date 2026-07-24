@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("next/server", () => ({
+  after: vi.fn((cb: () => unknown) => cb()),
+}));
+
 vi.mock("@/features/articles/db/articles", () => ({
   updateArticleInDb: vi.fn(),
   createArticleInDb: vi.fn(),
