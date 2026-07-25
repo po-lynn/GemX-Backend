@@ -54,9 +54,12 @@ function buildCategoryConditionMulti(categoryIds: ReadonlyArray<string> | undefi
 }
 
 function buildProductOrderBy(
-  opts: { sortByPublicPriority?: boolean; sortBy?: string; sortOrder?: "asc" | "desc" },
+  opts: { sortByPublicPriority?: boolean; sortBy?: string; sortOrder?: "asc" | "desc"; random?: boolean },
   search?: string
 ) {
+  if (opts.random) {
+    return [sql`RANDOM()`]
+  }
   if (opts.sortByPublicPriority) {
     const base = [
       desc(product.isCollectorPiece),
@@ -175,6 +178,8 @@ export async function getAdminProductsFromDb(opts: {
   sortBy?: "createdAt" | "title" | "price" | "status"
   /** Admin list sort direction */
   sortOrder?: "asc" | "desc"
+  /** When true, ignore sortByPublicPriority/sortBy and order by RANDOM() instead */
+  random?: boolean
 }): Promise<{ products: AdminProductRow[]; total: number }> {
   const page = opts.page ?? 1
   const limit = Math.min(opts.limit ?? 20, 100)

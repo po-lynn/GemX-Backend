@@ -98,6 +98,8 @@ export async function GET(request: NextRequest) {
     let sortByPublicPriority: boolean
     let sortByArg: "createdAt" | "title" | "price" | "status" | undefined
     let sortOrderArg: "asc" | "desc" | undefined
+    /** Privilege Assist browse (no search/explicit sort/newest override): reshuffle on every request instead of fixed priority order. */
+    const randomOrder = isPrivilegeAssist === true && !hasSearch && !explicitSort && !newest
 
     if (hasSearch) {
       // Search + filters: collector → privilege → featured → createdAt (and relevance when searching)
@@ -138,6 +140,7 @@ export async function GET(request: NextRequest) {
       ...(sortByPublicPriority
         ? {}
         : { sortBy: sortByArg!, sortOrder: sortOrderArg! }),
+      random: randomOrder,
     }
 
     /** Collector-piece browse: public = all masked; authenticated = approved products show full data, others masked. */
@@ -158,7 +161,9 @@ export async function GET(request: NextRequest) {
     const { products, total } = await getAdminProductsFromDb(listOpts)
     // Only mask collector pieces in the general browse; skip masking when explicitly filtering for another type
     const maskInBrowse = !isPrivilegeAssist && !isFeatured
-    return jsonCached({
+    // Randomized order must not be cached, or every request within the cache window would return the same shuffle
+    const jsonRespond = randomOrder ? jsonUncached : jsonCached
+    return jsonRespond({
       products: products.map((p) =>
         maskInBrowse && p.isCollectorPiece
           ? maskCollectorPiece(p)
