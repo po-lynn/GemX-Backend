@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Google social login (mobile)** – Added **POST `/api/mobile/google-login`** (no auth — issues a session): mobile app sends the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. First-time Google sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). See **3.3**.
 - **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
 - **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
@@ -86,6 +87,7 @@
 | ------ | ---------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name; optional nrc with format validation, address, city, state, country, gender, dateOfBirth, **nrcFrontUrl**, **nrcBackUrl**, **selfieUrl**, **businessLicenseUrl**). NRC must be unique. See **3.1**. |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
+| POST   | `/api/mobile/google-login` | No | Sign in / sign up with Google (native ID token). See **3.3**.                                                                                                                                        |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
 | GET    | `/api/mobile/points/balance` | Yes  | Current user's point balance breakdown (`available`, `reserved`, `lifetime`). See **5.4.2a**. |
@@ -243,6 +245,34 @@ After successful register, backend also auto-adds the configured **default regis
 
 - **400** – Invalid phone format or missing password.
 - **401** – `{ "error": "Invalid phone number or password" }`
+
+---
+
+### 3.3 Google login
+
+**POST** `/api/mobile/google-login`
+
+**Request body:**
+
+```json
+{
+  "idToken": "<Google ID token from the native Sign-In SDK>",
+  "fcmToken": "optional",
+  "platform": "android | ios"
+}
+```
+
+`idToken` comes from the device's native Google Sign-In SDK, configured with the backend's Google **Web application** OAuth client ID as `webClientId` so the token's audience matches the backend's `GOOGLE_CLIENT_ID`.
+
+**Success (200 login / 201 first-time sign-up):** Same shape as **3.2** — `{ redirect: false, token, user }`. Store **`token`** and use it as `Authorization: Bearer <token>`. First-time sign-ins are credited the registration bonus (same as **3.1**) and get a welcome push instead of a login push.
+
+**Errors:**
+
+- **400** – `{ "error": "idToken is required" }`
+- **401** – `{ "error": "Google sign-in failed" }` — invalid/expired token or verification failure.
+- **429** – Same rate limit as **3.2**.
+
+Full detail: `docs/api/mobile-google-login.md`.
 
 ---
 

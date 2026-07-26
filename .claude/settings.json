@@ -78,7 +78,10 @@
       "Bash(export PGPASSWORD=meadmin)",
       "Bash(command -v vercel)",
       "Bash(vercel --version)",
-      "Bash(rm -rf /home/po/me/2026/Jade/infinity-gemx/.next/dev/types 2>/dev/null; node node_modules/.bin/tsc --noEmit 2>&1 | grep -E \"products\\\\.ts|products-facet\")"
+      "Bash(rm -rf /home/po/me/2026/Jade/infinity-gemx/.next/dev/types 2>/dev/null; node node_modules/.bin/tsc --noEmit 2>&1 | grep -E \"products\\\\.ts|products-facet\")",
+      "Bash(echo \"npm in PATH: $?\")",
+      "Bash(dpkg -L npm)",
+      "Bash(node_modules/.bin/tsc --noEmit -p tsconfig.json)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
