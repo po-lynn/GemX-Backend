@@ -6,11 +6,11 @@
 
 ## Recent changes
 
-- **Google social login (mobile)** – Added **POST `/api/mobile/google-login`** (no auth — issues a session): mobile app sends the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. First-time Google sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). See **3.3**.
+- **Social login (mobile)** – **POST `/api/mobile/google-login`** has been replaced by **POST `/api/mobile/social-login`** (no auth — issues a session): mobile app sends `provider` + the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. Generic by `provider`, but only `"google"` is wired/verified today (unsupported providers return **400**). First-time sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). **New:** first-time sign-ins can also submit the Screen-1 profile fields (`name`, `country`, `state`, `city`, `address`, `gender`, `dateOfBirth`, `nrc`, KYC URLs) in the same call — written only on signup, never on a returning login; `nrc` is validated as a Myanmar NRC only when `country` is Myanmar or unset, otherwise stored as a plain passport/national ID. See **3.3**.
 - **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
 - **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
-- **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update KYC fields — `nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; types: N/P/T/E, serial 6 digits); returns **400** on invalid format. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
+- **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update profile/KYC fields — `name`, `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (Latin transliteration e.g. `12/ABC(N)123456`, or the Myanmar script equivalent) only when `country` is Myanmar or unset — any other country stores `nrc` as a plain passport/national ID with no format check; returns **400** on an invalid Myanmar NRC. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
 - **Feature product — insufficient points guard** – **POST `/api/mobile/products/:id/feature`** checks **`user.points`** (available balance) against the selected tier **before** deducting or marking the product featured. Returns **400** `{ "error": "Insufficient points balance" }` with **no** point deduction and **no** `isFeatured` / `featured_expires_at` change. Deduction and product update still run in one DB transaction as a second guard. See **5.4.1a**. **POST `/api/products`** and **PATCH `/api/products/:id`** apply the same rule when creating or updating with **`isFeatured: true`** and a **`featured`** point cost: seller balance is checked first; **no** deduction and **no** product create/update on failure. See **5.5** and **5.6**.
 - **Product list — featured expiry** – **GET `/api/products`** each product item now includes **`featured_expires_at`** (ISO 8601 or `null`; from **`product.featured_expires_at`**). **`isFeatured`** remains the effective featured flag (false when expiry is in the past). See **5.1**.
 - **Point balance & transaction history (mobile)** – **GET `/api/mobile/points/balance`** (auth): returns the authenticated user's point balance breakdown — **`available`** (spendable), **`reserved`**, and **`lifetime`** (all-time earned). **GET `/api/mobile/points/history`** (auth): returns the same balance object plus a paginated **`transactions`** ledger (newest first). Query: optional **`filter`** (`all` | `topups` | `spent` | `pending`), **`page`**, **`limit`** (max 50). Each transaction row includes **`id`**, **`type`**, **`direction`** (`credit` | `debit`), **`amount`**, **`status`**, **`description`**, **`paymentMethod`**, **`referenceId`**, **`referenceType`**, **`createdAt`**. Use **balance** for a lightweight wallet header; use **history** for the full ledger screen. See **5.4.2a** and **5.4.2b**.
@@ -87,7 +87,7 @@
 | ------ | ---------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name; optional nrc with format validation, address, city, state, country, gender, dateOfBirth, **nrcFrontUrl**, **nrcBackUrl**, **selfieUrl**, **businessLicenseUrl**). NRC must be unique. See **3.1**. |
 | POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
-| POST   | `/api/mobile/google-login` | No | Sign in / sign up with Google (native ID token). See **3.3**.                                                                                                                                        |
+| POST   | `/api/mobile/social-login` | No | Sign in / sign up with a social provider (native ID token; only `google` wired today), optionally filling profile fields on first signup. See **3.3**.                                                                                                                                        |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
 | GET    | `/api/mobile/points/balance` | Yes  | Current user's point balance breakdown (`available`, `reserved`, `lifetime`). See **5.4.2a**. |
@@ -130,7 +130,7 @@
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                                                                                                        |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license). Allowed: `jpeg`, `png`, `webp`, `pdf`; max 10 MB. Returns `{ "url": "..." }`. See **4.6**.                                           |
-| PATCH  | `/api/mobile/profile`       | Yes  | Update KYC profile fields: `nrc` (validated Myanmar format), `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
+| PATCH  | `/api/mobile/profile`       | Yes  | Update profile/KYC fields: `name`, `nrc` (Myanmar-format-validated only when `country` is Myanmar/unset, else a free-text passport/ID), `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
 | GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
@@ -248,31 +248,52 @@ After successful register, backend also auto-adds the configured **default regis
 
 ---
 
-### 3.3 Google login
+### 3.3 Social login (Google, more providers later)
 
-**POST** `/api/mobile/google-login`
+**POST** `/api/mobile/social-login`
+
+Replaces the earlier `/api/mobile/google-login`. Generic by `provider`, but only `"google"` is wired/verified today — Facebook's native SDK returns an `accessToken` rather than an ID token, so it needs a different request shape and isn't supported yet (unsupported providers get a **400**, not a silent failure).
 
 **Request body:**
 
 ```json
 {
+  "provider": "google",
   "idToken": "<Google ID token from the native Sign-In SDK>",
   "fcmToken": "optional",
-  "platform": "android | ios"
+  "platform": "android | ios",
+
+  "name": "optional — Full name from Screen 1",
+  "country": "optional — defaults to Myanmar rules if omitted",
+  "state": "optional",
+  "city": "optional",
+  "address": "optional",
+  "gender": "optional",
+  "dateOfBirth": "optional",
+  "nrc": "optional — Myanmar NRC (Latin or Myanmar script) if country is Myanmar/unset, otherwise a plain passport/national ID",
+  "nrcFrontUrl": "optional",
+  "nrcBackUrl": "optional",
+  "selfieUrl": "optional",
+  "businessLicenseUrl": "optional"
 }
 ```
 
 `idToken` comes from the device's native Google Sign-In SDK, configured with the backend's Google **Web application** OAuth client ID as `webClientId` so the token's audience matches the backend's `GOOGLE_CLIENT_ID`.
+
+The profile fields (`name` onward) let non-Myanmar signups fill in Screen 1's fields in the same call as their Google sign-up — no separate `PATCH /api/mobile/profile` round trip needed. They are only ever written on a **brand-new signup** (201) — a returning login (200) never has its existing profile touched by this call, even if the client resends stale form data. `nrc` is validated against the Myanmar NRC format only when `country` is Myanmar or omitted; any other country stores it as-is (passport/national ID, no format check).
 
 **Success (200 login / 201 first-time sign-up):** Same shape as **3.2** — `{ redirect: false, token, user }`. Store **`token`** and use it as `Authorization: Bearer <token>`. First-time sign-ins are credited the registration bonus (same as **3.1**) and get a welcome push instead of a login push.
 
 **Errors:**
 
 - **400** – `{ "error": "idToken is required" }`
-- **401** – `{ "error": "Google sign-in failed" }` — invalid/expired token or verification failure.
+- **400** – `{ "error": "Unsupported provider. Supported: google" }`
+- **400** – `{ "error": "Invalid NRC format. Expected format: 12/ABC(N)123456 or the Myanmar script equivalent" }`
+- **409** – `{ "error": "This NRC number is already registered to another account." }`
+- **401** – `{ "error": "Social sign-in failed" }` — invalid/expired token or verification failure.
 - **429** – Same rate limit as **3.2**.
 
-Full detail: `docs/api/mobile-google-login.md`.
+Full detail: `docs/api/mobile-social-login.md`.
 
 ---
 
@@ -1243,17 +1264,20 @@ At least one of `name`, `address`, `image` is required.
 
 **Content-Type:** `application/json`
 
-Update KYC identity fields and address on the current user's profile. All fields are optional — send only the ones you want to change. At least one must be present (empty body returns `{ "ok": true }` with no DB write).
+Update profile and KYC identity fields on the current user's profile. All fields are optional — send only the ones you want to change. At least one must be present (empty body returns `{ "ok": true }` with no DB write).
 
 **Request body (JSON):**
 
 ```json
 {
+  "name": "John Doe",
   "nrc": "12/ABC(N)123456",
   "address": "No. 12, Main Road, Yangon",
   "city": "Yangon",
   "state": "Yangon Region",
   "country": "Myanmar",
+  "gender": "male",
+  "dateOfBirth": "1990-01-15",
   "nrcFrontUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-front.jpg",
   "nrcBackUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../nrc-back.jpg",
   "selfieUrl": "https://...supabase.co/storage/v1/object/public/kyc-documents/.../selfie.jpg",
@@ -1263,11 +1287,14 @@ Update KYC identity fields and address on the current user's profile. All fields
 
 | Field                  | Type            | Description                                                                                                                                         |
 | ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nrc`                  | string \| null  | Myanmar NRC. Format: `StateNo/TownshipCode(Type)Serial` — e.g. `12/ABC(N)123456`. State 1–14; township 3 uppercase letters; type `N`/`P`/`T`/`E`; serial 6 digits. Send `null` to clear. |
+| `name`                  | string          | Full name (max 200, non-empty — cannot be cleared to `null`).                                                                                       |
+| `nrc`                  | string \| null  | Myanmar NRC — Latin format `StateNo/TownshipCode(Type)Serial` (e.g. `12/ABC(N)123456`; state 1–14, township 3 uppercase letters, type `N`/`P`/`T`/`E`, serial 6 digits) or the Myanmar script equivalent (e.g. `၉/မလန(နိုင်)၁၂၈၂၃၃`) — **only validated against this format when `country` is Myanmar or omitted.** For any other `country`, `nrc` is stored as a plain passport/national ID string with no format check. Send `null` to clear. Max 20 chars. |
 | `address`              | string \| null  | Street address (max 500). Send `null` or `""` to clear.                                                                                             |
 | `city`                 | string \| null  | City (max 100).                                                                                                                                     |
 | `state`                | string \| null  | State / region (max 100).                                                                                                                           |
-| `country`              | string \| null  | Country (max 100).                                                                                                                                  |
+| `country`              | string \| null  | Country (max 100). Drives whether `nrc` is validated as a Myanmar NRC or accepted as a free-text ID.                                                |
+| `gender`               | string \| null  | Max 20 chars.                                                                                                                                        |
+| `dateOfBirth`          | string \| null  | Max 20 chars (e.g. `YYYY-MM-DD`).                                                                                                                    |
 | `nrcFrontUrl`          | string \| null  | URL from **POST `/api/upload/kyc-document`** for NRC front photo. Send `null` to clear.                                                             |
 | `nrcBackUrl`           | string \| null  | URL from **POST `/api/upload/kyc-document`** for NRC back photo.                                                                                    |
 | `selfieUrl`            | string \| null  | URL from **POST `/api/upload/kyc-document`** for selfie.                                                                                            |
@@ -3679,7 +3706,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 | POST   | `/api/upload/product-media/sign` | Yes  | Generate signed upload token for direct-to-Supabase media uploads (use `publicUrl` in product payload). Auth required.                 |
 | POST   | `/api/upload/certificate`   | Yes  | Upload one certificate file (PDF/image); returns url for certReportUrl. See 4.5.                          |
 | POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license); `jpeg`/`png`/`webp`/`pdf`, max 10 MB. Returns `{ "url": "..." }`. See 4.6. |
-| PATCH  | `/api/mobile/profile`       | Yes  | Update KYC profile fields (`nrc`, `address`, `city`, `state`, `country`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`). NRC validated + unique. See 5.4c.2. |
+| PATCH  | `/api/mobile/profile`       | Yes  | Update profile/KYC fields (`name`, `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`). NRC validated (Myanmar-only when country is Myanmar/unset) + unique. See 5.4c.2. |
 | GET    | `/api/products`        | No   | List products (default active only; see 5.1). `isCollectorPiece=true` → public, masked (image + masked price). |
 | GET    | `/api/products/:id`    | No†  | Get one product (includes `seller` details with `image` + `rating`). **†** Collector pieces: owner gets full data when logged in; non-owner limited unless approved — see 5.2.                           |
 | GET    | `/api/products/mine`   | Yes  | List my products (all listing statuses by default; optional `moderationStatus`). Collector pieces are owner-visible (not public-masked). See 5.3.                                   |

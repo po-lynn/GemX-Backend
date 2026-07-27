@@ -89,4 +89,29 @@ describe("PATCH /api/mobile/profile", () => {
     }))
     expect(res.status).toBe(200)
   })
+
+  it("accepts an NRC written in Myanmar script", async () => {
+    const res = await PATCH(makeReq({ nrc: "၉/မလန(နိုင်)၁၂၈၂၃၃" }))
+    expect(res.status).toBe(200)
+  })
+
+  it("rejects a malformed NRC when country is Myanmar (or unset)", async () => {
+    const res = await PATCH(makeReq({ nrc: "PASSPORT123" }))
+    expect(res.status).toBe(400)
+  })
+
+  it("accepts a plain passport/national ID in nrc when country is not Myanmar", async () => {
+    const res = await PATCH(makeReq({ nrc: "PASSPORT123", country: "Others" }))
+    expect(res.status).toBe(200)
+  })
+
+  it("accepts name, gender, and dateOfBirth", async () => {
+    const res = await PATCH(makeReq({ name: "Jane Doe", gender: "female", dateOfBirth: "1990-01-15" }))
+    expect(res.status).toBe(200)
+  })
+
+  it("returns 400 when name is an empty string", async () => {
+    const res = await PATCH(makeReq({ name: "" }))
+    expect(res.status).toBe(400)
+  })
 })

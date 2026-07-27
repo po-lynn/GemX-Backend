@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST as googleLoginPost } from "@/app/api/mobile/google-login/route";
+import { POST as socialLoginPost } from "@/app/api/mobile/social-login/route";
 import { auth } from "@/lib/auth";
+import { db } from "@/drizzle/db";
 
 vi.mock("@/lib/auth", () => ({
   auth: {
@@ -15,6 +16,8 @@ vi.mock("@/features/points/db/points", () => ({
 }));
 
 const limitMock = vi.fn();
+const updateWhereMock = vi.fn().mockResolvedValue(undefined);
+const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
 vi.mock("@/drizzle/db", () => ({
   db: {
     select: vi.fn(() => ({
@@ -24,6 +27,7 @@ vi.mock("@/drizzle/db", () => ({
         })),
       })),
     })),
+    update: vi.fn(() => ({ set: updateSetMock })),
   },
 }));
 
@@ -47,17 +51,18 @@ function makeIdToken(claims: Record<string, unknown>): string {
 }
 
 function makeRequest(body: Record<string, unknown>): Request {
-  return new Request("http://localhost/api/mobile/google-login", {
+  return new Request("http://localhost/api/mobile/social-login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }
 
-describe("POST /api/mobile/google-login", () => {
+describe("POST /api/mobile/social-login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     limitMock.mockResolvedValue([]);
+    updateWhereMock.mockResolvedValue(undefined);
   });
 
   // Brand-new Google sign-in: no existing user row for the token's email, so this is a
@@ -71,7 +76,9 @@ describe("POST /api/mobile/google-login", () => {
     } as never);
 
     const idToken = makeIdToken({ email: "aung@gmail.com" });
-    const res = await googleLoginPost(makeRequest({ idToken, fcmToken: "fcm-1", platform: "android" }));
+    const res = await socialLoginPost(
+      makeRequest({ provider: "google", idToken, fcmToken: "fcm-1", platform: "android" })
+    );
     const body = await res.json();
 
     expect(res.status).toBe(201);
@@ -98,7 +105,7 @@ describe("POST /api/mobile/google-login", () => {
     } as never);
 
     const idToken = makeIdToken({ email: "aung@gmail.com" });
-    const res = await googleLoginPost(makeRequest({ idToken }));
+    const res = await socialLoginPost(makeRequest({ provider: "google", idToken }));
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -111,8 +118,20 @@ describe("POST /api/mobile/google-login", () => {
 
   // Missing idToken must be rejected before ever calling better-auth.
   it("returns 400 when idToken is missing", async () => {
-    const res = await googleLoginPost(makeRequest({}));
+    const res = await socialLoginPost(makeRequest({ provider: "google" }));
     expect(res.status).toBe(400);
+    expect(auth.api.signInSocial).not.toHaveBeenCalled();
+  });
+
+  // Unsupported provider (e.g. Facebook isn't wired yet) must be rejected before ever
+  // calling better-auth, with a clear list of what is supported.
+  it("returns 400 for an unsupported provider", async () => {
+    const idToken = makeIdToken({ email: "aung@gmail.com" });
+    const res = await socialLoginPost(makeRequest({ provider: "facebook", idToken }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/Unsupported provider/);
     expect(auth.api.signInSocial).not.toHaveBeenCalled();
   });
 
@@ -122,11 +141,11 @@ describe("POST /api/mobile/google-login", () => {
     vi.mocked(auth.api.signInSocial).mockRejectedValue(new Error("INVALID_TOKEN"));
 
     const idToken = makeIdToken({ email: "aung@gmail.com" });
-    const res = await googleLoginPost(makeRequest({ idToken }));
+    const res = await socialLoginPost(makeRequest({ provider: "google", idToken }));
     const body = await res.json();
 
     expect(res.status).toBe(401);
-    expect(body.error).toBe("Google sign-in failed");
+    expect(body.error).toBe("Social sign-in failed");
     expect(creditDefaultRegistrationPointsToUser).not.toHaveBeenCalled();
   });
 
@@ -139,11 +158,98 @@ describe("POST /api/mobile/google-login", () => {
       user: { id: "user-1", name: "Aung" },
     } as never);
 
-    const res = await googleLoginPost(makeRequest({ idToken: "not-a-real-jwt" }));
+    const res = await socialLoginPost(makeRequest({ provider: "google", idToken: "not-a-real-jwt" }));
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body.token).toBe("session-token");
     expect(creditDefaultRegistrationPointsToUser).not.toHaveBeenCalled();
+  });
+
+  // New signup with the Screen-1 profile fields attached: they should be written in one
+  // combined call, no separate PATCH /api/mobile/profile round trip required.
+  it("writes provided profile fields to the user row for a new signup", async () => {
+    limitMock.mockResolvedValue([]);
+    vi.mocked(auth.api.signInSocial).mockResolvedValue({
+      redirect: false,
+      token: "session-token",
+      user: { id: "user-1", name: "Aung", email: "aung@gmail.com" },
+    } as never);
+
+    const idToken = makeIdToken({ email: "aung@gmail.com" });
+    const res = await socialLoginPost(
+      makeRequest({
+        provider: "google",
+        idToken,
+        country: "Others",
+        state: "Bangkok",
+        city: "Bangkok",
+        address: "123 Main St",
+        gender: "male",
+        dateOfBirth: "1990-01-15",
+        nrc: "PASSPORT123",
+      })
+    );
+
+    expect(res.status).toBe(201);
+    expect(db.update).toHaveBeenCalled();
+    expect(updateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "Others",
+        state: "Bangkok",
+        city: "Bangkok",
+        address: "123 Main St",
+        gender: "male",
+        dateOfBirth: "1990-01-15",
+        nrc: "PASSPORT123",
+      })
+    );
+  });
+
+  // Returning user must never have profile fields overwritten by a login call — those
+  // updates only happen through PATCH /api/mobile/profile once signed in.
+  it("ignores profile fields for an existing (returning) user", async () => {
+    limitMock.mockResolvedValue([{ id: "user-1" }]);
+    vi.mocked(auth.api.signInSocial).mockResolvedValue({
+      redirect: false,
+      token: "session-token",
+      user: { id: "user-1", name: "Aung", email: "aung@gmail.com" },
+    } as never);
+
+    const idToken = makeIdToken({ email: "aung@gmail.com" });
+    const res = await socialLoginPost(
+      makeRequest({ provider: "google", idToken, country: "Others", address: "123 Main St" })
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  // A malformed Myanmar NRC is rejected before ever calling better-auth, same as register.
+  it("returns 400 for an invalid NRC format when country is Myanmar (or unset)", async () => {
+    const idToken = makeIdToken({ email: "aung@gmail.com" });
+    const res = await socialLoginPost(makeRequest({ provider: "google", idToken, nrc: "not-an-nrc" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/Invalid NRC format/);
+    expect(auth.api.signInSocial).not.toHaveBeenCalled();
+  });
+
+  // Non-Myanmar country: nrc is treated as a free-text passport/national ID, no format check.
+  it("accepts a plain passport/national ID in nrc when country is not Myanmar", async () => {
+    limitMock.mockResolvedValue([]);
+    vi.mocked(auth.api.signInSocial).mockResolvedValue({
+      redirect: false,
+      token: "session-token",
+      user: { id: "user-1", name: "Aung", email: "aung@gmail.com" },
+    } as never);
+
+    const idToken = makeIdToken({ email: "aung@gmail.com" });
+    const res = await socialLoginPost(
+      makeRequest({ provider: "google", idToken, country: "Others", nrc: "PASSPORT123" })
+    );
+
+    expect(res.status).toBe(201);
   });
 });
