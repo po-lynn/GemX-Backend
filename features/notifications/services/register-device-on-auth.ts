@@ -1,9 +1,10 @@
 import { upsertUserDevice } from "@/features/notifications/db/user-devices";
-import { sendLoginNotification, sendWelcomeNotification } from "@/features/notifications/services/auth-notifications";
+import { sendWelcomeNotification } from "@/features/notifications/services/auth-notifications";
 import type { MobileDevicePayload } from "@/features/notifications/schemas/device";
 
 /**
  * After login/register: persist FCM token (if provided) and send lifecycle push.
+ * Login events only persist the device token — no push is sent on plain login.
  */
 export async function handleAuthDeviceAndNotifications(params: {
   userId: string;
@@ -29,7 +30,5 @@ export async function handleAuthDeviceAndNotifications(params: {
 
   if (event === "register") {
     await sendWelcomeNotification(userId, userName);
-  } else {
-    await sendLoginNotification(userId, device);
   }
 }
