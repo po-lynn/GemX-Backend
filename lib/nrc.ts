@@ -2,12 +2,14 @@ import { z } from "zod";
 
 // Myanmar NRC format: StateNo/TownshipCode(CitizenType)SequentialNo
 // e.g. 12/ABC(N)123456 — also accepted written in Myanmar script, e.g. ၉/မလန(နိုင်)၁၂၈၂၃၃
-// State: 1–14  |  Township: 3 uppercase letters (or Myanmar script)  |  Type: N/P/T/E (or Myanmar script)  |  Seq: 6 digits
+// State: 1–14  |  Township: 3 uppercase letters (or Myanmar script)  |  Type: N/P/T/E (or the spelled-out Myanmar word)  |  Seq: 6 digits
 const NRC_LATIN_SOURCE = String.raw`\d{1,2}\/[A-Z]{3}\([NPTE]\)\d{6}`;
 // Myanmar script has no fixed codepoint count per syllable (vowel signs/medials stack onto
 // base consonants), so township/type are matched as variable-length runs of Myanmar script
-// rather than a fixed character count.
-const NRC_MYANMAR_SOURCE = "[\\u1040-\\u1049]{1,2}\\/[\\u1000-\\u109F]{1,10}\\([\\u1000-\\u109F]{1,10}\\)[\\u1040-\\u1049]{6}";
+// rather than a fixed character count. Citizen type also commonly appears as the bare Latin
+// abbreviation (N/P/T/E) even on an otherwise Myanmar-script NRC, since that's how citizenship
+// type is presented on official documents and most entry UIs.
+const NRC_MYANMAR_SOURCE = "[\\u1040-\\u1049]{1,2}\\/[\\u1000-\\u109F]{1,10}\\((?:[\\u1000-\\u109F]{1,10}|[NPTE])\\)[\\u1040-\\u1049]{6}";
 export const NRC_REGEX = new RegExp(`^(?:${NRC_LATIN_SOURCE}|${NRC_MYANMAR_SOURCE})$`);
 
 export const NRC_CITIZEN_TYPES = {
@@ -56,7 +58,7 @@ export function parseNrc(value: string) {
     };
   }
 
-  const myanmarMatch = rest.match(/^([က-႟]{1,10})\(([က-႟]{1,10})\)([၀-၉]{6})$/);
+  const myanmarMatch = rest.match(/^([က-႟]{1,10})\(([က-႟]{1,10}|[NPTE])\)([၀-၉]{6})$/);
   if (myanmarMatch) {
     return {
       state: myanmarDigitsToNumber(statePart),

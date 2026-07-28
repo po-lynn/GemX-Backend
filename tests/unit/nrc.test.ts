@@ -25,6 +25,14 @@ describe("validateNrc", () => {
   it("rejects mixing Latin digits with Myanmar script", () => {
     expect(validateNrc("12/မလန(နိုင်)123456")).toBe(false)
   })
+
+  it("accepts a Myanmar-script NRC with a bare Latin citizen-type letter", () => {
+    expect(validateNrc("၉/မလန(N)၁၂၈၂၃၃")).toBe(true)
+  })
+
+  it("rejects a Myanmar-script NRC with a bad Latin citizen-type letter", () => {
+    expect(validateNrc("၉/မလန(X)၁၂၈၂၃၃")).toBe(false)
+  })
 })
 
 describe("parseNrc", () => {
@@ -42,6 +50,15 @@ describe("parseNrc", () => {
       state: 9,
       township: "မလန",
       type: "နိုင်",
+      serial: "၁၂၈၂၃၃",
+    })
+  })
+
+  it("parses a Myanmar-script NRC with a bare Latin citizen-type letter", () => {
+    expect(parseNrc("၉/မလန(N)၁၂၈၂၃၃")).toEqual({
+      state: 9,
+      township: "မလန",
+      type: "N",
       serial: "၁၂၈၂၃၃",
     })
   })
