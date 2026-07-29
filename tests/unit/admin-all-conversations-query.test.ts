@@ -176,7 +176,7 @@ describe("getConversationMessagesForAdmin", () => {
       selectCalls.push(args);
       return {
         from: () => ({
-          where: (w: unknown) => ({
+          where: (_w: unknown) => ({
             orderBy: () => ({
               limit: () => ({
                 offset: () => Promise.resolve([]),
