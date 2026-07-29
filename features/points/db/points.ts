@@ -587,6 +587,37 @@ export async function getMyPremiumStatus(userId: string): Promise<{
   }
 }
 
+/**
+ * Toggle auto-renew on the user's currently active premium dealer subscription.
+ * Returns null if the user has no active, non-expired subscription.
+ */
+export async function setPremiumDealerAutoRenew(
+  userId: string,
+  autoRenew: boolean
+): Promise<{ autoRenew: boolean } | null> {
+  const [currentRow] = await db
+    .select({ id: premiumDealersPackage.id })
+    .from(premiumDealersPackage)
+    .where(
+      and(
+        eq(premiumDealersPackage.userId, userId),
+        eq(premiumDealersPackage.status, "active"),
+        gt(premiumDealersPackage.endDate, sql`now()`)
+      )
+    )
+    .orderBy(desc(premiumDealersPackage.createdAt))
+    .limit(1);
+
+  if (!currentRow) return null;
+
+  await db
+    .update(premiumDealersPackage)
+    .set({ autoRenew })
+    .where(eq(premiumDealersPackage.id, currentRow.id));
+
+  return { autoRenew };
+}
+
 /** True when the user has at least one active, non-expired row in `premium_dealers_packages`. */
 export async function isUserActivePremiumDealer(userId: string): Promise<boolean> {
   const [row] = await db

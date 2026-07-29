@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Premium dealer auto-renew toggle** – Added **PATCH `/api/mobile/premium-dealers/auto-renew`** (auth): toggles `autoRenew` on the current user's active premium dealer subscription. Body: `autoRenew`. Previously the "Turn off"/"Turn on" auto-renew pill on the "Become Premium" screen (already-premium state) was client-side only and never persisted — the daily renewal cron (`POST /api/cron/renew-premium-dealers`) would still renew using the value set at activation time regardless of what the pill showed. This endpoint makes the toggle actually persist. Returns **400** `{ "error": "No active premium dealer subscription" }` if the user has no active, non-expired subscription. See **5.4.3d**.
 - **Social login (mobile)** – **POST `/api/mobile/google-login`** has been replaced by **POST `/api/mobile/social-login`** (no auth — issues a session): mobile app sends `provider` + the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. Generic by `provider`, but only `"google"` is wired/verified today (unsupported providers return **400**). First-time sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). **New:** first-time sign-ins can also submit the Screen-1 profile fields (`name`, `country`, `state`, `city`, `address`, `gender`, `dateOfBirth`, `nrc`, KYC URLs) in the same call — written only on signup, never on a returning login; `nrc` is validated as a Myanmar NRC only when `country` is Myanmar or unset, otherwise stored as a plain passport/national ID. See **3.3**.
 - **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
 - **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
@@ -96,6 +97,7 @@
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. Body: `packageName`, `autoRenew`. See **5.4.3a**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
+| PATCH  | `/api/mobile/premium-dealers/auto-renew` | Yes | Toggle auto-renew on the current user's active premium dealer subscription. Body: `autoRenew`. See **5.4.3d**. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product. Body: `durationDays`, `points` (must match a tier from `feature-pricing-tiers`). See **5.4.1a**.                                                                               |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See **5.4.2**.                                                                                                            |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit a credit point purchase request after transferring payment. Creates a pending request for admin approval. See **5.4.2**.                                                                       |
@@ -2272,6 +2274,39 @@ Returns every user who currently has **active** premium dealer status (package n
 
 ---
 
+### 5.4.3d Toggle premium dealer auto-renew (mobile)
+
+**PATCH** `/api/mobile/premium-dealers/auto-renew`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Turns automatic renewal on or off for the current user's **active** premium dealer subscription. Use this from the "Auto-renew is on/off" pill on the "Become Premium" screen when the user is already premium (see **E2E-BP-03** in `docs/qa/become-premium.md`). Updates the same `premium_dealers_packages` row read by **5.4.3b** / **5.4.3c**; does not change `expiresAt` or `packageName`.
+
+**Request body (JSON):**
+
+```json
+{ "autoRenew": false }
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `autoRenew` | boolean | Yes | New auto-renew value for the active subscription. |
+
+**Success (200):**
+
+```json
+{ "success": true, "autoRenew": false }
+```
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid input" }` — `autoRenew` missing or not a boolean.
+- **400** – `{ "error": "No active premium dealer subscription" }` — user has no active, non-expired subscription row to toggle.
+- **401** – `{ "error": "Unauthorized" }`
+- **500** – `{ "error": "Failed to update auto-renew" }`
+
+---
+
 ### 5.4.4 Collector piece show requests (mobile)
 
 #### POST `/api/mobile/collector-piece-show-requests`
@@ -3674,6 +3709,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
+| PATCH  | `/api/mobile/premium-dealers/auto-renew` | Yes | Toggle auto-renew on the current user's active premium dealer subscription. See 5.4.3d. |
 | POST   | `/api/mobile/products/:id/feature` | Yes  | Spend points to feature a product (`durationDays`, `points` matching a tier). See 5.4.1a.                           |
 | GET    | `/api/mobile/points/packages` | No   | List available credit point packages and payment methods for the top-up UI. See 5.4.2.                       |
 | POST   | `/api/mobile/points/purchase-requests` | Yes  | Submit credit point purchase request after transferring payment (`package_name`, `payment_method`, `currency`, `transferredAmount`, `transferredName`, `transactionReference`). Admin must approve before points are credited. See 5.4.2. |

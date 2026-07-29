@@ -7,6 +7,7 @@
 > - `GET /api/mobile/premium-dealers/status` — user balance + active status (auth required)
 > - `POST /api/mobile/premium-dealers/activate` — spend points to activate (auth required)
 > - `GET /api/mobile/premium-dealers` — public list of active premium dealers
+> - `PATCH /api/mobile/premium-dealers/auto-renew` — toggle auto-renew on the active subscription (auth required)
 
 ---
 
@@ -147,6 +148,33 @@ Based on the response it renders one of three states:
 
 ---
 
+## 3a. PATCH /api/mobile/premium-dealers/auto-renew
+
+**Headers:** `Authorization: Bearer {token}`, `Content-Type: application/json`
+
+**Request body:**
+```json
+{ "autoRenew": false }
+```
+
+| TC# | Test Case | Setup | Expected Status | Expected Response | Priority |
+|-----|-----------|-------|-----------------|-------------------|----------|
+| PDR-01 | Turn auto-renew off | User has active subscription with `autoRenew:true` | 200 | `{success:true, autoRenew:false}`; confirmed via `GET /status` | Critical |
+| PDR-02 | Turn auto-renew on | User has active subscription with `autoRenew:false` | 200 | `{success:true, autoRenew:true}`; confirmed via `GET /status` | Critical |
+| PDR-03 | No active subscription | User never activated, or subscription expired | 400 | `"No active premium dealer subscription"` | High |
+| PDR-04 | `autoRenew` field missing | `{}` | 400 | `"Invalid input"` (Zod requires boolean) | High |
+| PDR-05 | `autoRenew` not a boolean | `{"autoRenew":"true"}` | 400 | `"Invalid input"` | Medium |
+| PDR-06 | No auth | — | 401 | Unauthorized | High |
+| PDR-07 | Does not change `expiresAt`/`packageName` | Toggle auto-renew | 200 | `GET /status` shows same `expiresAt`/`packageName` as before, only `autoRenew` changed | Medium |
+
+**Step-by-step for PDR-01:**
+1. Login as test user with an active Standard Package subscription (`autoRenew:true`)
+2. `PATCH /api/mobile/premium-dealers/auto-renew` with body `{"autoRenew":false}`
+3. Assert response: `{success:true, autoRenew:false}`
+4. `GET /api/mobile/premium-dealers/status` — confirm `autoRenew:false`, `active`/`packageName`/`expiresAt` unchanged
+
+---
+
 ## 4. GET /api/mobile/premium-dealers (Public List)
 
 **Auth:** None required
@@ -214,8 +242,9 @@ Based on the response it renders one of three states:
 | 3 | Balance / progress bar section is hidden | Client-side | No "YOUR BALANCE" section rendered |
 | 4 | Hero card shows active state | Client-side | "You're a Premium Dealer" + package name + days remaining |
 | 5 | AutoRenew pill shows "on" | Client-side | Pill reads "Auto-renew is on" with "Turn off" button |
-| 6 | Tap "Turn off" auto-renew | Client-side toggle | Pill updates to "Auto-renew is off" (client-side only in current design) |
-| 7 | CTA is "View my premium profile" | Client-side | Button navigates to seller profile screen |
+| 6 | Tap "Turn off" auto-renew | `PATCH /api/mobile/premium-dealers/auto-renew` `{"autoRenew":false}` | 200 — `{success:true, autoRenew:false}`; pill updates to "Auto-renew is off" |
+| 7 | Reload status | `GET /api/mobile/premium-dealers/status` | `autoRenew:false` persists across app restart / re-fetch |
+| 8 | CTA is "View my premium profile" | Client-side | Button navigates to seller profile screen |
 
 ---
 
