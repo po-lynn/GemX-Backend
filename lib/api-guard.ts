@@ -16,6 +16,14 @@ export async function requireAdminRole(request: NextRequest): Promise<GuardResul
   return { session }
 }
 
+/** Allows role === "admin" only (no internal/RBAC fallback) — for admin-oversight-only endpoints. */
+export async function requireStrictAdmin(request: NextRequest): Promise<GuardResult> {
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return { error: jsonError("Unauthorized", 401) }
+  if (session.user.role !== "admin") return { error: jsonError("Forbidden", 403) }
+  return { session }
+}
+
 /** Allows portal role only. */
 export async function requirePortalRole(request: NextRequest): Promise<GuardResult> {
   const session = await auth.api.getSession({ headers: request.headers })

@@ -171,3 +171,86 @@ export async function getChatConversationsForUser(
 
   return items;
 }
+
+export type UnreadConversationPreview = {
+  userId: string;
+  name: string;
+  profileImage: string | null;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+};
+
+type UnreadLatestSqlRow = {
+  peerId: string;
+  content: string;
+  fileUrl: string | null;
+  imageUrls: unknown;
+  messageType: string;
+  createdAt: Date | string;
+};
+
+/**
+ * Latest unread message per peer, for the nav bar notification bell dropdown.
+ * Scoped to messages sent to currentUserId that they haven't read yet — no presence
+ * lookup, since this is a lightweight preview rather than the full conversation list.
+ */
+export async function getUnreadConversationPreviews(
+  currentUserId: string,
+  limit = 20
+): Promise<UnreadConversationPreview[]> {
+  const latestResult = await db.execute(sql`
+    SELECT DISTINCT ON (m.sender_id)
+      m.sender_id     AS "peerId",
+      m.content,
+      m.file_url      AS "fileUrl",
+      m.image_urls    AS "imageUrls",
+      m.message_type  AS "messageType",
+      m.created_at    AS "createdAt"
+    FROM messages m
+    WHERE m.recipient_id = ${currentUserId} AND m.is_read = false
+    ORDER BY m.sender_id, m.created_at DESC
+  `);
+
+  const latestRows = [...latestResult] as UnreadLatestSqlRow[];
+  if (latestRows.length === 0) return [];
+
+  const peerIds = latestRows.map((r) => r.peerId);
+
+  const [profiles, unreadRows] = await Promise.all([
+    db.select({ id: user.id, name: user.name, image: user.image }).from(user).where(inArray(user.id, peerIds)),
+    db
+      .select({ senderId: messages.senderId, unread: sql<number>`count(*)::int` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.recipientId, currentUserId),
+          eq(messages.isRead, false),
+          inArray(messages.senderId, peerIds)
+        )
+      )
+      .groupBy(messages.senderId),
+  ]);
+
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const unreadByPeer = new Map(unreadRows.map((r) => [r.senderId, r.unread ?? 0]));
+
+  const items: UnreadConversationPreview[] = latestRows.map((row) => {
+    const imageUrls = normalizeImageUrls(row.imageUrls);
+    const prof = profileById.get(row.peerId);
+    return {
+      userId: row.peerId,
+      name: prof?.name ?? "Unknown user",
+      profileImage: prof?.image ?? null,
+      lastMessage: previewLastMessage(row.content, row.messageType, imageUrls),
+      lastMessageTime: toIsoTime(row.createdAt),
+      unreadCount: unreadByPeer.get(row.peerId) ?? 0,
+    };
+  });
+
+  items.sort(
+    (a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+  );
+
+  return items.slice(0, limit);
+}

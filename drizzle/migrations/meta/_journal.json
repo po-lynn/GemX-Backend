@@ -484,6 +484,13 @@
       "when": 1784649612012,
       "tag": "0068_wooden_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1785214016069,
+      "tag": "0069_short_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }
