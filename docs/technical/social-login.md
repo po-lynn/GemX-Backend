@@ -1,5 +1,16 @@
 # Social sign-in (mobile)
 
+## Update: trusting multiple Google idToken audiences (Android client mismatch)
+
+**Problem:** the Android app's native Google Sign-In was returning idTokens whose `aud` claim was `907948416535-jsgbjkjr053c9uj1odn6uvkejekr5n17.apps.googleusercontent.com` — the "Web client (auto created by Google Service)" that Google Cloud generates alongside an Android-type OAuth client — while the backend's `GOOGLE_CLIENT_ID` was a *different* web client (`907948416535-8au9t716msjo8ppe3ri91n6466fiqmtf...`). better-auth's built-in Google `verifyIdToken` (`@better-auth/core/social-providers/google.ts`) checks `audience: options.clientId` as a single strict value, so every sign-in failed JWT verification and `signInSocial` threw — caught by the route's generic `catch` into `{"error":"Social sign-in failed"}` (401).
+
+**Fix — `lib/google-id-token.ts` (new) + `lib/auth.ts`:**
+- `lib/auth.ts` no longer relies on better-auth's default `verifyIdToken`. It passes `verifyIdToken: verifyGoogleIdToken` from the new `lib/google-id-token.ts`, which does the same signature/issuer/max-age checks but verifies `aud` against `getTrustedGoogleAudiences()` — an array built from `GOOGLE_CLIENT_ID` plus every entry in the new, optional, comma-separated `GOOGLE_ADDITIONAL_CLIENT_IDS` env var.
+- `.env.local` / `.env.example` — added `GOOGLE_ADDITIONAL_CLIENT_IDS`, currently set (locally) to the Android-flow's auto-created web client ID above.
+- `tests/unit/google-id-token.test.ts` (new) — covers audience-list parsing, missing `kid`/`alg`, nonce mismatch, and that a `jwtVerify` rejection (bad signature/audience) propagates rather than being swallowed.
+
+No app/api route changed — `app/api/mobile/social-login/route.ts` still calls `auth.api.signInSocial(...)` unchanged; only what counts as a valid audience changed.
+
 ## What changed
 
 - `app/api/mobile/google-login/route.ts` **removed**, replaced by `app/api/mobile/social-login/route.ts` — generic over `provider` (allow-list `["google"]` today; unsupported values return 400 before any better-auth call). Facebook is not wired: its native SDK returns an `accessToken`, not an ID token, so it needs a different request shape and its own verified `signInSocial` call before joining the allow-list.

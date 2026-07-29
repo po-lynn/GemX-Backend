@@ -28,6 +28,8 @@ type UnreadState = {
 type AdminChatNotificationContextValue = {
   totalUnread: number;
   byPeer: Record<string, number>;
+  /** role === "admin" — system-wide oversight count/list, vs. internal staff's personal inbox. */
+  isTrueAdmin: boolean;
   /** Peer user id for the open chat thread (null when none). Set from Chat Dashboard. */
   activeConversationPeerId: string | null;
   setActiveConversationPeerId: (peerId: string | null) => void;
@@ -38,8 +40,16 @@ const AdminChatNotificationContext = createContext<AdminChatNotificationContextV
   null
 );
 
-async function fetchUnreadCounts(): Promise<UnreadState> {
-  const res = await fetch("/api/chat/unread", { credentials: "include" });
+/**
+ * True admins oversee every conversation in the system rather than having a personal
+ * inbox (see app/admin/chat-dashboard/page.tsx) — messages.isRead is scoped to the
+ * actual recipient and doesn't map onto "has this admin seen the oversight feed", so
+ * they get a separate system-wide "new since last view" count instead (byPeer is
+ * meaningless for them and comes back empty).
+ */
+async function fetchUnreadCounts(isTrueAdmin: boolean): Promise<UnreadState> {
+  const url = isTrueAdmin ? "/api/admin/chat/unread" : "/api/chat/unread";
+  const res = await fetch(url, { credentials: "include" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
@@ -47,6 +57,10 @@ async function fetchUnreadCounts(): Promise<UnreadState> {
         ? (data as { error: string }).error
         : "Failed to load unread counts"
     );
+  }
+  if (isTrueAdmin) {
+    const total = typeof (data as { total?: number }).total === "number" ? (data as { total: number }).total : 0;
+    return { total, byPeer: {} };
   }
   const d = data as { byPeer?: Record<string, number>; total?: number };
   const byPeer = d.byPeer ?? {};
@@ -64,7 +78,9 @@ type Props = {
 export function AdminChatNotificationProvider({ children }: Props) {
   const { data: session } = authClient.useSession();
   const userId = session?.user?.id;
-  const isAdmin = session?.user?.role === "admin";
+  const isTrueAdmin = session?.user?.role === "admin";
+  // Both true admins (system-wide oversight) and internal staff (personal inbox) use the bell.
+  const canUseChatNotifications = isTrueAdmin || session?.user?.role === "internal";
 
   const [unread, setUnread] = useState<UnreadState>({ total: 0, byPeer: {} });
   const [activeConversationPeerId, setActiveConversationPeerId] = useState<string | null>(
@@ -73,16 +89,16 @@ export function AdminChatNotificationProvider({ children }: Props) {
   const senderNamesRef = useRef<Record<string, string>>({});
 
   const refreshUnread = useCallback(async () => {
-    if (!userId || !isAdmin) return;
+    if (!userId || !canUseChatNotifications) return;
     try {
-      const next = await fetchUnreadCounts();
+      const next = await fetchUnreadCounts(isTrueAdmin);
       startTransition(() => setUnread(next));
     } catch (e) {
       chatRealtimeLogger.warn("Unread refresh failed", {
         error: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [userId, isAdmin]);
+  }, [userId, canUseChatNotifications, isTrueAdmin]);
 
   const shouldSuppressBrowserPopup = useCallback(
     (message: ChatMessage) => {
@@ -93,16 +109,16 @@ export function AdminChatNotificationProvider({ children }: Props) {
   );
 
   useEffect(() => {
-    if (!userId || !isAdmin) return;
+    if (!userId || !canUseChatNotifications) return;
     void ensureChatNotificationPermission();
     const timer = window.setTimeout(() => {
       void refreshUnread();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [userId, isAdmin, refreshUnread]);
+  }, [userId, canUseChatNotifications, refreshUnread]);
 
   useEffect(() => {
-    if (!userId || !isAdmin) return;
+    if (!userId || !canUseChatNotifications) return;
 
     const intervalMs = 30_000;
     const id = setInterval(() => {
@@ -118,10 +134,10 @@ export function AdminChatNotificationProvider({ children }: Props) {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [userId, isAdmin, refreshUnread]);
+  }, [userId, canUseChatNotifications, refreshUnread]);
 
   useEffect(() => {
-    if (!userId || !isAdmin) return;
+    if (!userId || !canUseChatNotifications) return;
 
     const service = createMessagesRealtimeService(userId);
     if (!service) return;
@@ -183,17 +199,18 @@ export function AdminChatNotificationProvider({ children }: Props) {
       if (unreadDebounce) clearTimeout(unreadDebounce);
       unsubscribe();
     };
-  }, [userId, isAdmin, refreshUnread, shouldSuppressBrowserPopup]);
+  }, [userId, canUseChatNotifications, refreshUnread, shouldSuppressBrowserPopup]);
 
   const value = useMemo<AdminChatNotificationContextValue>(
     () => ({
       totalUnread: unread.total,
       byPeer: unread.byPeer,
+      isTrueAdmin,
       activeConversationPeerId,
       setActiveConversationPeerId,
       refreshUnread,
     }),
-    [unread, activeConversationPeerId, refreshUnread]
+    [unread, isTrueAdmin, activeConversationPeerId, refreshUnread]
   );
 
   return (
@@ -209,6 +226,7 @@ export function useAdminChatNotifications(): AdminChatNotificationContextValue {
     return {
       totalUnread: 0,
       byPeer: {},
+      isTrueAdmin: false,
       activeConversationPeerId: null,
       setActiveConversationPeerId: () => undefined,
       refreshUnread: async () => undefined,

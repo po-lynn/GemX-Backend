@@ -5,6 +5,7 @@ import { bearer, username } from "better-auth/plugins";
 import { admin } from "better-auth/plugins/admin";
 import { user as userTable } from "@/drizzle/schema/auth-schema";
 import { eq } from "drizzle-orm";
+import { verifyGoogleIdToken } from "@/lib/google-id-token";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
@@ -13,6 +14,7 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      verifyIdToken: verifyGoogleIdToken,
     },
   },
   account: {

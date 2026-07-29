@@ -1,7 +1,7 @@
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { messages } from "@/drizzle/schema/chat-schema";
+import { adminChatCursor, messages } from "@/drizzle/schema/chat-schema";
 
 export type AdminConversationParticipant = {
   id: string;
@@ -94,6 +94,106 @@ export async function getAllConversationsForAdmin(
       ORDER BY pair_key, created_at DESC
     )
     SELECT * FROM pairs ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${offset}
+  `);
+  const rows = [...result] as PairRow[];
+  if (rows.length === 0) return [];
+
+  const userIds = [...new Set(rows.flatMap((r) => [r.lastSenderId, r.lastRecipientId]))];
+  const profiles = await db
+    .select({ id: user.id, name: user.name, image: user.image, role: user.role })
+    .from(user)
+    .where(inArray(user.id, userIds));
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
+
+  const fallback = (id: string): AdminConversationParticipant => ({
+    id,
+    name: "Unknown user",
+    image: null,
+    role: "",
+  });
+
+  return rows.map((row) => ({
+    participants: [
+      profileById.get(row.lastSenderId) ?? fallback(row.lastSenderId),
+      profileById.get(row.lastRecipientId) ?? fallback(row.lastRecipientId),
+    ],
+    lastMessage: previewLastMessage(row.content, row.messageType, row.imageUrls),
+    lastMessageTime: toIsoTime(row.createdAt),
+    lastMessageType: row.messageType,
+  }));
+}
+
+const EPOCH = new Date(0);
+
+/** When this admin last opened the notification bell / oversight feed (epoch if never). */
+export async function getAdminChatLastSeenAt(adminUserId: string): Promise<Date> {
+  const rows = await db
+    .select({ lastSeenAt: adminChatCursor.lastSeenAt })
+    .from(adminChatCursor)
+    .where(eq(adminChatCursor.userId, adminUserId))
+    .limit(1);
+  return rows[0]?.lastSeenAt ?? EPOCH;
+}
+
+/** Marks the oversight feed as seen by this admin as of now. */
+export async function markAdminChatSeen(adminUserId: string): Promise<void> {
+  await db
+    .insert(adminChatCursor)
+    .values({ userId: adminUserId, lastSeenAt: sql`now()` })
+    .onConflictDoUpdate({
+      target: adminChatCursor.userId,
+      set: { lastSeenAt: sql`now()` },
+    });
+}
+
+/**
+ * System-wide message count since `since`, excluding messages the admin themself sent
+ * (an admin's own reply shouldn't count as "new" against their own bell).
+ */
+export async function getNewMessageCountForAdmin(adminUserId: string, since: Date): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(messages)
+    .where(and(gt(messages.createdAt, since), ne(messages.senderId, adminUserId)));
+  return rows[0]?.count ?? 0;
+}
+
+/**
+ * Conversation pairs whose latest message arrived after `since` and wasn't sent by the
+ * admin themself — backs the notification bell dropdown's "new conversations" list.
+ * Reuses the same DISTINCT-ON-per-pair shape as getAllConversationsForAdmin.
+ */
+export async function getNewConversationsForAdmin(
+  adminUserId: string,
+  since: Date,
+  limit = 20
+): Promise<AdminConversationListItem[]> {
+  // db.execute's raw sql tag needs a string/primitive bind param — the query-builder
+  // path (getNewMessageCountForAdmin's gt()/ne()) serializes a Date fine, this doesn't.
+  const sinceIso = since.toISOString();
+  const result = await db.execute(sql`
+    WITH pairs AS (
+      SELECT DISTINCT ON (pair_key)
+        pair_key,
+        sender_id    AS "lastSenderId",
+        recipient_id AS "lastRecipientId",
+        content,
+        file_url     AS "fileUrl",
+        image_urls   AS "imageUrls",
+        message_type AS "messageType",
+        created_at   AS "createdAt"
+      FROM (
+        SELECT
+          m.sender_id, m.recipient_id, m.content, m.file_url, m.image_urls, m.message_type, m.created_at,
+          LEAST(m.sender_id, m.recipient_id) || ':' || GREATEST(m.sender_id, m.recipient_id) AS pair_key
+        FROM messages m
+      ) x
+      ORDER BY pair_key, created_at DESC
+    )
+    SELECT * FROM pairs
+    WHERE "createdAt" > ${sinceIso} AND "lastSenderId" != ${adminUserId}
+    ORDER BY "createdAt" DESC
+    LIMIT ${limit}
   `);
   const rows = [...result] as PairRow[];
   if (rows.length === 0) return [];

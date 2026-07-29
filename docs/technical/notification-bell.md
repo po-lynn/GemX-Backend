@@ -2,30 +2,57 @@
 
 ## What changed
 
-The nav bar bell in the admin panel (`components/admin/AdminNavbarClient.tsx`) was a static, non-functional placeholder. It now shows an unread-message badge and a dropdown listing the conversations with unread messages.
+The nav bar bell in the admin panel (`components/admin/AdminNavbarClient.tsx`) was a static, non-functional placeholder. It now shows an unread badge and a dropdown list, with **two independent data sources depending on role**:
 
-Files touched/added:
+- **Internal staff** (`role === "internal"`) — personal-inbox unread count/list, based on `messages.isRead`/`recipientId` (existing chat semantics).
+- **True admins** (`role === "admin"`) — system-wide "new since I last checked" count/list across every conversation in the system, since these users get the read-only oversight view (`AdminAllConversationsView`) rather than a personal inbox, and `messages.isRead` doesn't apply to conversations they aren't part of.
 
-- `features/chat/db/conversations-list.ts` — added `getUnreadConversationPreviews(currentUserId, limit = 20)`.
-- `app/api/chat/unread/preview/route.ts` — new `GET` route wrapping that query.
-- `components/admin/NotificationBell.tsx` — new client component (badge + popover list).
+Files touched/added (this session, across two rounds):
+
+- `features/chat/db/conversations-list.ts` — `getUnreadConversationPreviews(currentUserId, limit = 20)` (personal-inbox preview list).
+- `app/api/chat/unread/preview/route.ts` — `GET`, wraps the above.
+- `drizzle/schema/chat-schema.ts` — new `admin_chat_cursor` table (`userId` PK, `lastSeenAt`), migration `0070_confused_centennial.sql`.
+- `features/chat/db/admin-all-conversations.ts` — added `getAdminChatLastSeenAt`, `markAdminChatSeen`, `getNewMessageCountForAdmin`, `getNewConversationsForAdmin`.
+- `app/api/admin/chat/unread/route.ts`, `app/api/admin/chat/unread/preview/route.ts`, `app/api/admin/chat/seen/route.ts` — new `GET`/`GET`/`PATCH` routes, guarded by `requireStrictAdmin`.
+- `features/chat/context/admin-chat-notification-context.tsx` — `fetchUnreadCounts` now branches on role to hit the right endpoint; exposes `isTrueAdmin` on the context; the polling/realtime gate was renamed from `isAdmin` to `canUseChatNotifications` and now also covers `role === "internal"` (previously only `role === "admin"` triggered the poll at all, which meant internal staff's own badge silently never populated — a pre-existing bug fixed as part of this change since it's the same gate this feature depends on).
+- `components/admin/NotificationBell.tsx` — new client component (badge + popover list), renders one of two row shapes depending on `isTrueAdmin`.
 - `components/admin/AdminNavbarClient.tsx` — swapped the placeholder `<button>` for `<NotificationBell />`.
 
-No schema changes and no new migration — the feature is built entirely on the existing `messages.isRead` column (`drizzle/schema/chat-schema.ts`).
+## Schema impact
+
+New table, no changes to existing tables:
+
+```sql
+CREATE TABLE "admin_chat_cursor" (
+  "user_id" text PRIMARY KEY NOT NULL,
+  "last_seen_at" timestamp DEFAULT now() NOT NULL
+);
+```
+
+One row per admin, holding "the last time this admin opened the notification bell / oversight feed." Absence of a row (never opened it) is treated as the epoch (`new Date(0)`) so every message system-wide counts as new the first time.
 
 ## Data flow
 
-1. **Badge count**: `NotificationBell` reads `totalUnread` from the existing `useAdminChatNotifications()` context (`features/chat/context/admin-chat-notification-context.tsx`), which already polls `/api/chat/unread` every 30s and refreshes on Supabase realtime `messages` events. This was already wired into the admin layout (`AdminChatNotificationProvider` wraps `app/admin/layout.tsx`) but nothing consumed it in the nav bar until now.
-2. **Dropdown list**: on open, `NotificationBell` fetches `GET /api/chat/unread/preview`, which calls `getUnreadConversationPreviews(session.user.id)`. This runs one `DISTINCT ON (sender_id)` query (latest unread message per peer) plus two follow-up queries (peer profiles, per-peer unread counts) — mirroring the shape of `getChatConversationsForUser`, but scoped to `is_read = false` and without the presence (online/offline) lookup, since the dropdown doesn't need it.
-3. **Click-through**: each row links to `/admin/chat-dashboard?peer=<userId>`. That query param was already supported server-side by `app/admin/chat-dashboard/page.tsx` for the personal-inbox view (`role === "internal"` staff) — no changes were needed there. For `role === "admin"` users, the page instead renders `AdminAllConversationsView` (the separate system-wide oversight feature), which does not read `?peer=`; clicking a notification as a true admin lands on the oversight list rather than a pre-selected thread. See "Known limitations" below.
+**Internal staff (personal inbox), unchanged from the first round:**
+1. Badge: `useAdminChatNotifications()` polls `GET /api/chat/unread` every 30s (+ realtime nudge via the `chat:<userId>` Supabase broadcast channel).
+2. Dropdown: `NotificationBell` fetches `GET /api/chat/unread/preview` on open → `getUnreadConversationPreviews`.
+3. Click-through: `/admin/chat-dashboard?peer=<userId>` (already supported server-side).
+
+**True admins (system-wide oversight), new this round:**
+1. Badge: same polling cadence, but hits `GET /api/admin/chat/unread` instead. That route reads the admin's cursor (`getAdminChatLastSeenAt`) then counts messages system-wide created after it, excluding the admin's own sent messages (`getNewMessageCountForAdmin` — `WHERE created_at > since AND sender_id != adminId`).
+2. Dropdown: on open, `NotificationBell` fetches `GET /api/admin/chat/unread/preview` → `getNewConversationsForAdmin`, which reuses the same `DISTINCT ON (pair_key)` "latest message per conversation pair" shape as `getAllConversationsForAdmin`, filtered to pairs whose latest message is newer than the cursor and not sent by the admin.
+3. **Mark-seen on open**: immediately after loading the preview list, `NotificationBell` calls `PATCH /api/admin/chat/seen` (→ `markAdminChatSeen`, an upsert of the cursor to `now()`), then calls `refreshUnread()` so the badge clears. The preview list itself was already fetched against the *old* cursor, so the admin still sees what was new — only the *next* poll reflects the reset.
+4. Click-through: rows link to `/admin/chat-dashboard` (no `?peer=` — the oversight view has no per-pair deep link and the "peer" concept doesn't apply since the admin usually isn't one of the two participants).
 
 ## Auth & permissions
 
-`/api/chat/unread/preview` requires only a valid Better Auth session (`auth.api.getSession`) — no role check, matching the existing `/api/chat/unread` route. It returns only the calling user's own unread messages (`recipient_id = session.user.id`), so there is no cross-user data exposure.
+- `/api/chat/unread`, `/api/chat/unread/preview` — any authenticated session, scoped to the caller's own `recipientId`.
+- `/api/admin/chat/unread`, `/api/admin/chat/unread/preview`, `/api/admin/chat/seen` — `requireStrictAdmin` (role === "admin" only, no internal/RBAC fallback), matching the existing `/api/admin/chat/all-conversations/messages` route.
 
 ## Edge cases & known limitations
 
-- The badge/preview reflect messages sent **directly to** the current user (`messages.recipientId`). This is the same "personal inbox" unread concept used by `ChatDashboard`'s sidebar — it is unrelated to the separate admin-oversight "all conversations" feature, which has no unread concept (see `docs/technical/admin-all-conversations.md`).
-- For `role === "admin"` users, `/admin/chat-dashboard` renders the oversight view, which ignores `?peer=`. A notification row for an admin who has direct messages will navigate there but not auto-select the conversation. Fixing this would mean adding peer deep-linking to `AdminAllConversationsView`, out of scope for this change.
-- The dropdown list is fetched fresh every time it's opened (and again if `totalUnread` changes while open) — there's no client-side caching between opens.
-- Preview list is capped at 20 conversations (`limit` param, default in `getUnreadConversationPreviews`); no pagination/"load more" in the dropdown itself (there's a static "View all conversations" link at the bottom instead).
+- **No realtime for the system-wide count.** The `chat:<userId>` broadcast channel is scoped to messages addressed to that specific user, so it can't signal "a new message was sent between two other users" — the true-admin badge is polling-only (30s), consistent with the existing "no realtime updates" limitation already documented for the oversight feature (`docs/technical/admin-all-conversations.md`).
+- **"Seen" is a coarse cursor, not per-message read state.** Opening the dropdown marks everything up to that moment as seen, even conversations the admin didn't actually click into — same tradeoff as most notification bells (GitHub, Slack, etc.), not a per-item read receipt.
+- **No `?peer=` deep link for true admins.** `AdminAllConversationsView` doesn't accept a pre-selected pair; clicking a row takes the admin to the oversight list, not directly into that thread.
+- **Self-triggered refetch guard.** `NotificationBell`'s effect refetches the list when `totalUnread` changes while open (so a new message during viewing shows up) — but marking seen itself changes `totalUnread`. A ref (`justMarkedSeenRef`) absorbs exactly that one self-caused re-run so the list doesn't flicker back to empty right after loading.
+- Preview lists are capped at 20 items on both endpoints; no pagination in the dropdown ("View all conversations" link covers the rest).

@@ -7,14 +7,19 @@ vi.mock("@/drizzle/db", () => ({
   db: {
     execute: vi.fn(),
     select: vi.fn(),
+    insert: vi.fn(),
   },
 }));
 
 import { db } from "@/drizzle/db";
 import {
+  getAdminChatLastSeenAt,
   getAllConversationsCount,
   getAllConversationsForAdmin,
   getConversationMessagesForAdmin,
+  getNewConversationsForAdmin,
+  getNewMessageCountForAdmin,
+  markAdminChatSeen,
 } from "@/features/chat/db/admin-all-conversations";
 
 const dialect = new PgDialect();
@@ -234,5 +239,153 @@ describe("getConversationMessagesForAdmin", () => {
     const { messages, total } = await getConversationMessagesForAdmin("user-a", "user-b", 1, 100);
     expect(total).toBe(2);
     expect(messages.map((m) => m.id)).toEqual(["m1", "m2"]);
+  });
+});
+
+describe("admin chat cursor (bell 'seen' tracking)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // Validates the "never opened the feed before" default: epoch, not null/undefined,
+  // so downstream `createdAt > since` comparisons still work.
+  it("getAdminChatLastSeenAt defaults to the epoch when there is no cursor row", async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([]),
+        }),
+      }),
+    } as never);
+
+    const since = await getAdminChatLastSeenAt("admin-1");
+    expect(since.getTime()).toBe(0);
+  });
+
+  // Validates the cursor row's timestamp is returned as-is when present.
+  it("getAdminChatLastSeenAt returns the stored cursor when present", async () => {
+    const stored = new Date("2026-07-20T00:00:00.000Z");
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve([{ lastSeenAt: stored }]),
+        }),
+      }),
+    } as never);
+
+    const since = await getAdminChatLastSeenAt("admin-1");
+    expect(since).toEqual(stored);
+  });
+
+  // Validates markAdminChatSeen upserts (insert-or-update) rather than assuming a row exists.
+  it("markAdminChatSeen upserts the cursor row for this admin", async () => {
+    const values = vi.fn(() => ({ onConflictDoUpdate }));
+    const onConflictDoUpdate = vi.fn(() => Promise.resolve(undefined));
+    vi.mocked(db.insert).mockReturnValue({ values } as never);
+
+    await markAdminChatSeen("admin-1");
+
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ userId: "admin-1" }));
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ target: expect.anything(), set: expect.anything() })
+    );
+  });
+});
+
+describe("getNewMessageCountForAdmin", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // Validates the count excludes the admin's own outgoing messages and is scoped to `since`.
+  it("filters by created_at > since and excludes the admin's own messages", async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () => Promise.resolve([{ count: 3 }]),
+      }),
+    } as never);
+
+    const count = await getNewMessageCountForAdmin("admin-1", new Date("2026-07-20T00:00:00.000Z"));
+    expect(count).toBe(3);
+  });
+
+  // Validates the zero-row edge returns 0 rather than undefined.
+  it("returns 0 when there are no matching rows", async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () => Promise.resolve([]),
+      }),
+    } as never);
+
+    const count = await getNewMessageCountForAdmin("admin-1", new Date(0));
+    expect(count).toBe(0);
+  });
+});
+
+describe("getNewConversationsForAdmin new-activity query", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(db.execute).mockResolvedValue([] as never);
+  });
+
+  // Same 42P10 invariant as getAllConversationsForAdmin's pair query.
+  it("uses an identical expression for DISTINCT ON and its paired ORDER BY key", async () => {
+    await getNewConversationsForAdmin("admin-1", new Date(0));
+
+    const sqlArg = vi.mocked(db.execute).mock.calls[0][0];
+    const { sql: text } = dialect.sqlToQuery(sqlArg as never);
+
+    const distinctStart = text.indexOf("DISTINCT ON (");
+    const distinctExpr = normalize(extractDistinctOnExpr(text));
+    const orderExpr = normalize(extractFirstOrderByExprAfter(text, distinctStart));
+
+    expect(distinctExpr).toBe(orderExpr);
+  });
+
+  // Validates the two filters that make this "new since I looked, and not my own message":
+  // createdAt > since, and the pair's last sender isn't the admin themself.
+  it("filters to pairs whose latest message is after `since` and not sent by the admin", async () => {
+    const since = new Date("2026-07-20T00:00:00.000Z");
+    await getNewConversationsForAdmin("admin-1", since, 10);
+
+    const sqlArg = vi.mocked(db.execute).mock.calls[0][0];
+    const { sql: text, params } = dialect.sqlToQuery(sqlArg as never);
+
+    expect(text).toContain('"createdAt" >');
+    expect(text).toContain('"lastSenderId" !=');
+    // Serialized to an ISO string before binding — the raw sql tag's driver path
+    // (unlike the query-builder's gt()/ne()) can't take a bare Date param.
+    expect(params).toContain(since.toISOString());
+    expect(params).toContain("admin-1");
+    expect(params).toContain(10);
+  });
+
+  // Validates the early-exit contract: no profile lookup when nothing is new.
+  it("returns [] without a profile lookup when nothing is new", async () => {
+    const result = await getNewConversationsForAdmin("admin-1", new Date(0));
+    expect(result).toEqual([]);
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  // Validates row shaping matches getAllConversationsForAdmin's shape.
+  it("maps rows to participants the same way as the full oversight list", async () => {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        lastSenderId: "user-a",
+        lastRecipientId: "user-b",
+        content: "new here",
+        fileUrl: null,
+        imageUrls: null,
+        messageType: "text",
+        createdAt: new Date("2026-07-21T00:00:00.000Z"),
+      },
+    ] as never);
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () =>
+          Promise.resolve([{ id: "user-a", name: "Alice", image: null, role: "user" }]),
+      }),
+    } as never);
+
+    const [row] = await getNewConversationsForAdmin("admin-1", new Date(0));
+    expect(row.participants[0]).toEqual({ id: "user-a", name: "Alice", image: null, role: "user" });
+    expect(row.participants[1]).toEqual({ id: "user-b", name: "Unknown user", image: null, role: "" });
+    expect(row.lastMessage).toBe("new here");
   });
 });

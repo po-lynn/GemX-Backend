@@ -3,7 +3,8 @@
 ## Prerequisites
 
 - Backend env vars set (`.env.local`): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — from a **Web application** OAuth client in Google Cloud Console (Project: `gemx`).
-- Mobile app (RN) has its own separate Android/iOS OAuth clients in the same Google Cloud project, each configured with the backend's Web client ID as `webClientId` (for `@react-native-google-signin/google-signin`) so the ID token it produces has the right audience.
+- Mobile app (RN) has its own separate Android/iOS OAuth clients in the same Google Cloud project. Ideally each is configured with the backend's Web client ID as `webClientId`/`serverClientId` so the ID token it produces has that same audience and no backend change is needed.
+- **If the mobile app instead ends up using a different audience** — e.g. Android's Credential Manager / Google Sign-In defaulting to the "Web client (auto created by Google Service)" that Google Cloud generates alongside an Android-type OAuth client, rather than the backend's `GOOGLE_CLIENT_ID` — add that client ID to `GOOGLE_ADDITIONAL_CLIENT_IDS` in `.env.local` (comma-separated for more than one). The backend verifies Google idTokens against `GOOGLE_CLIENT_ID` **and** every ID in `GOOGLE_ADDITIONAL_CLIENT_IDS` (see `lib/google-id-token.ts`), so you don't have to chase down one exact `webClientId` value across every platform.
 
 ## Backend usage
 
@@ -72,7 +73,7 @@ Facebook is not wired yet — `isSupportedProvider` in `app/api/mobile/social-lo
 
 ## Common errors
 
-- **401 "Social sign-in failed"** — most likely the ID token's audience doesn't match `GOOGLE_CLIENT_ID` (mobile app is using an Android/iOS client ID as `webClientId` instead of the Web client ID), or the token is expired (Google ID tokens are short-lived; don't cache and reuse them).
+- **401 "Social sign-in failed"** — most likely the ID token's `aud` claim doesn't match `GOOGLE_CLIENT_ID` or any entry in `GOOGLE_ADDITIONAL_CLIENT_IDS`. Decode the idToken's payload (base64url, no verification needed to inspect) and compare its `aud` to your env vars — add it to `GOOGLE_ADDITIONAL_CLIENT_IDS` if it's a legitimate client for this app. Also check the token isn't expired (Google ID tokens are short-lived; don't cache and reuse them).
 - **400 "Unsupported provider..."** — the client sent a `provider` other than `"google"` (e.g. `"facebook"` before it's wired up).
 - **400 "Invalid NRC format..."** — `nrc` was sent while `country` is Myanmar (or omitted) but doesn't match the Myanmar NRC format. Either fix the NRC string or make sure `country` is set to something other than Myanmar so it's treated as a plain ID.
 - **User created with missing profile fields** — if the client didn't send the optional profile fields, they stay `null` on the new user, same as any account. They can be filled in later via `PATCH /api/mobile/profile`, but only if they weren't sent at signup — sending them at signup avoids the extra round trip.

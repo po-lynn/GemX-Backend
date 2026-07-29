@@ -48,3 +48,14 @@ export const messages = pgTable(
   })
 );
 
+/**
+ * Per-admin "last viewed the oversight feed" cursor. `messages.isRead` is scoped to
+ * the actual recipient and doesn't apply to admins overseeing conversations they
+ * aren't part of — this table backs the nav bar notification bell's system-wide
+ * "new since last view" count for role === "admin" instead.
+ */
+export const adminChatCursor = pgTable("admin_chat_cursor", {
+  userId: text("user_id").primaryKey(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+});
+
