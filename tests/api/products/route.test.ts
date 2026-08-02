@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import { GET, POST } from "@/app/api/products/route"
-import { getAdminProducts } from "@/features/products/db/cache/products"
+import { getPrivilegeAssistBrowse } from "@/features/products/db/cache/products"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
+import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import { auth } from "@/lib/auth"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -14,7 +15,7 @@ vi.mock("@/lib/auth", () => ({
   },
 }))
 vi.mock("@/features/products/db/cache/products", () => ({
-  getAdminProducts: vi.fn(),
+  getPrivilegeAssistBrowse: vi.fn(),
   revalidateProductsCache: vi.fn(),
 }))
 vi.mock("@/features/products/db/products", () => ({
@@ -24,6 +25,9 @@ vi.mock("@/features/products/db/products", () => ({
 vi.mock("@/features/points/db/points", () => ({
   deductUserPoints: vi.fn(),
   getUserPointBalance: vi.fn(),
+}))
+vi.mock("@/features/collector-piece-show-requests/db/collector-piece-show-requests", () => ({
+  getApprovedCollectorPieceProductIds: vi.fn(),
 }))
 
 /** Valid category UUID for product create tests (categoryId is required). */
@@ -42,15 +46,17 @@ const validLooseStoneBody = {
 
 describe("GET /api/products", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(connection).mockResolvedValue(undefined)
-    vi.mocked(getAdminProducts).mockResolvedValue({ products: [], total: 0 })
     vi.mocked(getAdminProductsFromDb).mockResolvedValue({ products: [], total: 0 })
+    vi.mocked(getPrivilegeAssistBrowse).mockResolvedValue({ products: [], total: 0 } as never)
+    vi.mocked(getApprovedCollectorPieceProductIds).mockResolvedValue(new Set())
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
   })
 
   it("returns 200 and list with products and total", async () => {
     const products = [{ id: "p1", title: "Ruby" }]
-    vi.mocked(getAdminProducts).mockResolvedValue({
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
       products: products as never,
       total: 1,
     })
@@ -61,14 +67,14 @@ describe("GET /api/products", () => {
     expect(data).toHaveProperty("products")
     expect(data).toHaveProperty("total", 1)
     expect(data.products).toHaveLength(1)
-    expect(getAdminProducts).toHaveBeenCalledWith(
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({ status: "active", sortByPublicPriority: true })
     )
   })
 
   it("returns featured_expires_at as ISO 8601 on each product", async () => {
     const expires = new Date("2026-06-01T12:00:00.000Z")
-    vi.mocked(getAdminProducts).mockResolvedValue({
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
       products: [
         {
           id: "p1",
@@ -90,12 +96,12 @@ describe("GET /api/products", () => {
     expect(data.products[0]).not.toHaveProperty("featuredExpiresAt")
   })
 
-  it("passes search params to getAdminProducts", async () => {
+  it("passes search params to getAdminProductsFromDb", async () => {
     const req = new Request(
       "http://localhost/api/products?page=2&search=ruby&productType=loose_stone&status=active"
     )
     await GET(req as NextRequest)
-    expect(getAdminProducts).toHaveBeenCalledWith(
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({
         page: 2,
         search: "ruby",
@@ -111,7 +117,7 @@ describe("GET /api/products", () => {
       "http://localhost/api/products?sortBy=createdAt&sortOrder=desc&limit=6"
     )
     await GET(req as NextRequest)
-    expect(getAdminProducts).toHaveBeenCalledWith(
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({
         sortByPublicPriority: false,
         sortBy: "createdAt",
@@ -124,7 +130,7 @@ describe("GET /api/products", () => {
   it("uses pure createdAt desc for new-products list when newest=true", async () => {
     const req = new Request("http://localhost/api/products?newest=true&limit=10")
     await GET(req as NextRequest)
-    expect(getAdminProducts).toHaveBeenCalledWith(
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({
         sortByPublicPriority: false,
         sortBy: "createdAt",
@@ -139,7 +145,7 @@ describe("GET /api/products", () => {
       "http://localhost/api/products?search=ruby&newest=true&limit=10"
     )
     await GET(req as NextRequest)
-    expect(getAdminProducts).toHaveBeenCalledWith(
+    expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({
         search: "ruby",
         sortByPublicPriority: true,
@@ -148,8 +154,8 @@ describe("GET /api/products", () => {
     )
   })
 
-  it("returns 500 when getAdminProducts throws", async () => {
-    vi.mocked(getAdminProducts).mockRejectedValue(new Error("DB error"))
+  it("returns 500 when getAdminProductsFromDb throws", async () => {
+    vi.mocked(getAdminProductsFromDb).mockRejectedValue(new Error("DB error"))
     const req = new Request("http://localhost/api/products")
     const res = await GET(req as NextRequest)
     expect(res.status).toBe(500)
@@ -157,20 +163,31 @@ describe("GET /api/products", () => {
     expect(data).toHaveProperty("error", "Failed to fetch products")
   })
 
-  it("returns 401 when isCollectorPiece=true without session", async () => {
+  // Collector-piece browse is intentionally public: no session required. Anonymous
+  // requests get every collector piece masked rather than a 401.
+  it("returns 200 with masked products when isCollectorPiece=true and no session", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
+      products: [{ id: "p1", price: "500", currency: "USD", status: "active", imageUrl: null }] as never,
+      total: 1,
+    })
     const req = new Request("http://localhost/api/products?isCollectorPiece=true")
     const res = await GET(req as NextRequest)
-    expect(res.status).toBe(401)
-    expect(getAdminProductsFromDb).not.toHaveBeenCalled()
-    expect(getAdminProducts).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.products[0]).toMatchObject({ title: null, isCollectorPiece: true })
+    expect(getApprovedCollectorPieceProductIds).not.toHaveBeenCalled()
   })
 
   it("uses getAdminProductsFromDb with approved-request filter when isCollectorPiece=true and session present", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "mobile" },
     } as never)
-    vi.mocked(getAdminProductsFromDb).mockResolvedValue({ products: [], total: 0 })
+    vi.mocked(getApprovedCollectorPieceProductIds).mockResolvedValue(new Set(["p1"]))
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
+      products: [{ id: "p1", title: "Ruby", price: "500", currency: "USD", status: "active", imageUrl: null }] as never,
+      total: 1,
+    })
     const req = new Request("http://localhost/api/products?isCollectorPiece=true", {
       headers: { Authorization: "Bearer token" },
     })
@@ -179,19 +196,64 @@ describe("GET /api/products", () => {
     expect(getAdminProductsFromDb).toHaveBeenCalledWith(
       expect.objectContaining({
         isCollectorPiece: true,
-        collectorPieceApprovedForUserId: "user-1",
         status: "active",
         sortByPublicPriority: true,
       })
     )
-    expect(getAdminProducts).not.toHaveBeenCalled()
+    expect(getApprovedCollectorPieceProductIds).toHaveBeenCalledWith("user-1")
     const cc = res.headers.get("Cache-Control")
     expect(cc).toContain("no-store")
+  })
+
+  // Privilege Assist browse with no search/sort/newest override reshuffles — goes through
+  // the short-TTL cached wrapper instead of hitting the DB directly on every request.
+  it("uses getPrivilegeAssistBrowse for a plain isPrivilegeAssist browse", async () => {
+    const req = new Request("http://localhost/api/products?isPrivilegeAssist=true")
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    expect(getPrivilegeAssistBrowse).toHaveBeenCalledWith(
+      expect.objectContaining({ isPrivilegeAssist: true })
+    )
+    expect(getAdminProductsFromDb).not.toHaveBeenCalled()
+    // Now safe to cache: the wrapper itself refreshes on a short TTL.
+    expect(res.headers.get("Cache-Control")).toContain("public")
+  })
+
+  // An explicit sort/search/newest override means the caller wants a specific order, not a
+  // shuffle — falls back to the uncached direct query even with isPrivilegeAssist=true.
+  it("does not use getPrivilegeAssistBrowse when isPrivilegeAssist is combined with an explicit sort", async () => {
+    const req = new Request(
+      "http://localhost/api/products?isPrivilegeAssist=true&sortBy=createdAt&sortOrder=desc"
+    )
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    expect(getPrivilegeAssistBrowse).not.toHaveBeenCalled()
+    expect(getAdminProductsFromDb).toHaveBeenCalled()
+  })
+
+  // Validates the timeout guard: a hung DB call fails fast with a retryable error instead
+  // of hanging until the platform kills the invocation.
+  it("returns 503 with Retry-After when the query hangs past the timeout", async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(getAdminProductsFromDb).mockReturnValue(new Promise(() => {}))
+      const req = new Request("http://localhost/api/products")
+      const resPromise = GET(req as NextRequest)
+      await vi.advanceTimersByTimeAsync(6000)
+      const res = await resPromise
+      expect(res.status).toBe(503)
+      expect(res.headers.get("Retry-After")).toBe("3")
+      const data = await res.json()
+      expect(data.error).toMatch(/retry/i)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
 describe("POST /api/products", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(auth.api.getSession).mockResolvedValue(null)
     vi.mocked(createProductInDb).mockResolvedValue("new-id")
     vi.mocked(getUserPointBalance).mockResolvedValue({
@@ -203,6 +265,10 @@ describe("POST /api/products", () => {
       success: true,
       remainingPoints: 9_500,
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("returns 401 when not authenticated", async () => {

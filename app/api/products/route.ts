@@ -2,7 +2,7 @@ import { NextRequest, connection } from "next/server"
 import { auth } from "@/lib/auth"
 import { jsonCached, jsonUncached, jsonError } from "@/lib/api"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
-import { revalidateProductsCache } from "@/features/products/db/cache/products"
+import { revalidateProductsCache, getPrivilegeAssistBrowse } from "@/features/products/db/cache/products"
 import { productCreateSchema } from "@/features/products/schemas/products"
 import { adminProductsSearchSchema } from "@/features/products/schemas/products"
 import type { z } from "zod"
@@ -11,6 +11,20 @@ import { deductUserPoints, getUserPointBalance } from "@/features/points/db/poin
 import { maskPrice } from "@/lib/formatters"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import type { AdminProductRow } from "@/features/products/db/products"
+import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
+export const maxDuration = 10
+
+/** Client-facing ceiling for the DB call itself; leaves headroom under maxDuration for auth/session lookups. */
+const PRODUCTS_QUERY_TIMEOUT_MS = 6000
+
+function jsonTimeout(message: string): Response {
+  return Response.json(
+    { error: message },
+    { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } }
+  )
+}
 
 /** Public list JSON: expose DB `featured_expires_at` as snake_case ISO 8601. */
 function toPublicProductListItem(p: AdminProductRow) {
@@ -147,7 +161,11 @@ export async function GET(request: NextRequest) {
     const collectorPieceFilter = isCollectorPiece === true
     if (collectorPieceFilter) {
       const session = await auth.api.getSession({ headers: request.headers })
-      const { products, total } = await getAdminProductsFromDb(listOpts)
+      const { products, total } = await withQueryTimeout(
+        getAdminProductsFromDb(listOpts),
+        PRODUCTS_QUERY_TIMEOUT_MS,
+        "products-collector-piece"
+      )
       if (session) {
         const approvedIds = await getApprovedCollectorPieceProductIds(session.user.id)
         const result = products.map((p) =>
@@ -158,12 +176,17 @@ export async function GET(request: NextRequest) {
       return jsonCached({ products: products.map(maskCollectorPiece), total })
     }
 
-    const { products, total } = await getAdminProductsFromDb(listOpts)
+    // Privilege Assist browse goes through a short-TTL cached wrapper instead of hitting the
+    // DB with `ORDER BY random()` on every single request — see getPrivilegeAssistBrowse for
+    // the tradeoff (shuffle refreshes every ~30s instead of every request).
+    const { products, total } = await withQueryTimeout(
+      randomOrder ? getPrivilegeAssistBrowse(listOpts) : getAdminProductsFromDb(listOpts),
+      PRODUCTS_QUERY_TIMEOUT_MS,
+      randomOrder ? "products-privilege-assist" : "products-list"
+    )
     // Only mask collector pieces in the general browse; skip masking when explicitly filtering for another type
     const maskInBrowse = !isPrivilegeAssist && !isFeatured
-    // Randomized order must not be cached, or every request within the cache window would return the same shuffle
-    const jsonRespond = randomOrder ? jsonUncached : jsonCached
-    return jsonRespond({
+    return jsonCached({
       products: products.map((p) =>
         maskInBrowse && p.isCollectorPiece
           ? maskCollectorPiece(p)
@@ -172,6 +195,10 @@ export async function GET(request: NextRequest) {
       total,
     })
   } catch (error) {
+    if (error instanceof QueryTimeoutError) {
+      console.error("GET /api/products: timed out:", error.message)
+      return jsonTimeout("Products are taking longer than usual to load — please retry")
+    }
     console.error("GET /api/products:", error)
     return jsonError("Failed to fetch products", 500)
   }

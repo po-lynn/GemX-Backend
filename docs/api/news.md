@@ -42,10 +42,12 @@ Consumed by the **mobile app** (News tab of the "News & Articles" screen). Publi
 ```
 
 - `readTime` — estimated minutes (200 wpm, min 1), computed server-side.
-- `categoryCounts` — published-news counts per category for the filter chips; unaffected by `search`/`featured`.
+- `categoryCounts` — published-news counts per category for the filter chips; unaffected by `search`/`featured`. Cached for ~30s (`getCachedNewsCategoryCounts`) since it's an unindexed `GROUP BY` — can lag up to ~90s behind a very recent publish/unpublish.
 - Sorted by publish date (falling back to creation date), newest first.
 
-**Errors:** `500 {"error": "Failed to fetch news"}`
+**Errors:**
+- `500 {"error": "Failed to fetch news"}` — unexpected error
+- `503 {"error": "News is taking longer than usual to load — please retry"}` with `Retry-After: 3` — the list or category-count query didn't complete within 6s (see `docs/technical/connection-pool-hardening.md`); safe to retry
 
 **Example:**
 

@@ -16,6 +16,7 @@ import {
 import { sendNewsPublishedNotification } from "@/features/notifications/services/global-push";
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
 import { requireActionRole } from "@/lib/action-guard";
+import { revalidateNewsCache } from "@/features/news/db/cache/news";
 
 
 export async function createNewsAction(formData: FormData) {
@@ -52,6 +53,7 @@ export async function createNewsAction(formData: FormData) {
     status: parsed.data.status,
     publish: publishDate,
   });
+  revalidateNewsCache();
   if (parsed.data.status === "published") {
     sendNewsPublishedNotification({ newsId, title: parsed.data.title }).catch((e) =>
       console.error("Global news push failed:", e)
@@ -95,6 +97,7 @@ export async function updateNewsAction(formData: FormData) {
   const updates: Parameters<typeof updateNewsInDb>[1] = { ...rest, publish };
   const previous = await getNewsById(newsId);
   await updateNewsInDb(newsId, updates);
+  revalidateNewsCache();
   if (updates.status === "published" && previous?.status !== "published") {
     const newsTitle = updates.title ?? previous?.title ?? "New news";
     sendNewsPublishedNotification({ newsId, title: newsTitle }).catch((e) =>
@@ -115,6 +118,7 @@ export async function deleteNewsAction(formData: FormData) {
   }
   const deleted = await deleteNewsInDb(parsed.data.newsId);
   if (!deleted) return { error: "News not found" };
+  revalidateNewsCache();
   return { success: true };
 }
 

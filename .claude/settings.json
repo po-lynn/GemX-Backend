@@ -86,7 +86,11 @@
       "Bash(./node_modules/.bin/eslint --no-ignore tests/load/admin-ramp.js tests/load/admin-steady.js tests/load/mobile-authenticated.js tests/load/mobile-login-endpoint.js tests/load/mobile-non-login.js)",
       "Bash(node_modules/.bin/eslint app/admin/messages/page.tsx app/admin/chat-dashboard/page.tsx components/admin/AdminSidebar.tsx features/messages/)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"/home/po/Downloads/gemximg/screenshoot/IMG_7734.MP4\")",
+      "Bash(ffmpeg -i \"/home/po/Downloads/gemximg/screenshoot/IMG_7734.MP4\" -vf \"fps=1/10\" /tmp/claude-1000/-home-po-me-2026-Jade-infinity-gemx/89c66c21-aa86-41bc-8428-4a6228f08c88/scratchpad/frames/frame_%03d.png -y)",
+      "Bash(./node_modules/.bin/eslint drizzle/db.ts lib/query-timeout.ts app/api/products/route.ts app/api/news/route.ts features/products/db/cache/products.ts features/news/db/cache/news.ts features/news/actions/news.ts lib/dataCache.ts tests/unit/query-timeout.test.ts tests/unit/privilege-assist-cache.test.ts tests/unit/news-category-counts-cache.test.ts tests/api/products/route.test.ts tests/api/news.test.ts)",
+      "Bash(./node_modules/.bin/eslint app/api/news/route.ts)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

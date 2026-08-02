@@ -1,4 +1,4 @@
-import { cacheTag, revalidateTag } from "next/cache"
+import { cacheTag, cacheLife, revalidateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import {
   getAdminProductsFromDb,
@@ -57,6 +57,39 @@ export async function getAdminProducts(opts: {
   cacheTag(getProductsGlobalTag())
 
   return getAdminProductsFromDb(opts)
+}
+
+/**
+ * Public Privilege Assist browse (random order, no search/sort/newest override).
+ * Was previously re-hit on every single request with `random: true` and served
+ * uncached (see git history on app/api/products/route.ts) — every Home-tab load
+ * therefore issued a fresh, uncacheable `ORDER BY random()` query straight to
+ * Postgres. Caching the shuffle for a short window turns "reshuffle on every
+ * request" into "reshuffle every ~30s", trading a small amount of randomness
+ * freshness for a large cut in DB round-trips on this hot path.
+ */
+export async function getPrivilegeAssistBrowse(opts: {
+  page?: number
+  limit?: number
+  productType?: "loose_stone" | "jewellery"
+  categoryId?: string | null
+  status?: "draft" | "pending" | "active" | "archive" | "sold"
+  excludeModerationStatuses?: ReadonlyArray<"pending" | "approved" | "rejected">
+  stoneCut?: "Faceted" | "Cabochon"
+  metal?: "Gold" | "Silver" | "Other"
+  identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
+  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  origin?: string
+  laboratoryId?: string | null
+  createdFrom?: string
+  createdTo?: string
+  isFeatured?: boolean
+  isCollectorPiece?: boolean
+}) {
+  "use cache"
+  cacheTag(getProductsGlobalTag())
+  cacheLife({ stale: 30, revalidate: 30, expire: 90 })
+  return getAdminProductsFromDb({ ...opts, isPrivilegeAssist: true, random: true })
 }
 
 export async function getCachedProductsBySellerId(

@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import {
   getNewsPaginatedFromDb,
-  getNewsCategoryCountsFromDb,
   getNewsById,
 } from "@/features/news/db/news"
+import { getCachedNewsCategoryCounts } from "@/features/news/db/cache/news"
 import { GET as listGET } from "@/app/api/news/route"
 import { GET as detailGET } from "@/app/api/news/[id]/route"
 import { auth } from "@/lib/auth"
@@ -16,8 +16,10 @@ vi.mock("next/server", () => ({
 }))
 vi.mock("@/features/news/db/news", () => ({
   getNewsPaginatedFromDb: vi.fn(),
-  getNewsCategoryCountsFromDb: vi.fn(),
   getNewsById: vi.fn(),
+}))
+vi.mock("@/features/news/db/cache/news", () => ({
+  getCachedNewsCategoryCounts: vi.fn(),
 }))
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -45,7 +47,11 @@ describe("GET /api/news", () => {
   beforeEach(() => {
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(getNewsPaginatedFromDb).mockResolvedValue({ items: [newsRow], total: 1 })
-    vi.mocked(getNewsCategoryCountsFromDb).mockResolvedValue({ all: 9, market: 4, gemology: 3, guides: 2 })
+    vi.mocked(getCachedNewsCategoryCounts).mockResolvedValue({ all: 9, market: 4, gemology: 3, guides: 2 })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   // Validates the mobile list response shape: items with readTime + categoryCounts for chips
@@ -96,6 +102,38 @@ describe("GET /api/news", () => {
     const res = await listGET(req as NextRequest)
     expect(res.status).toBe(500)
     expect(await res.json()).toHaveProperty("error", "Failed to fetch news")
+  })
+
+  // Validates the timeout guard: a hung list query fails fast with a retryable error
+  // instead of hanging until the platform kills the invocation.
+  it("returns 503 with Retry-After when the list query hangs past the timeout", async () => {
+    vi.useFakeTimers()
+    vi.mocked(getNewsPaginatedFromDb).mockReturnValue(new Promise(() => {}))
+    const req = new Request("http://localhost/api/news")
+    const resPromise = listGET(req as NextRequest)
+    await vi.advanceTimersByTimeAsync(6000)
+    const res = await resPromise
+    expect(res.status).toBe(503)
+    expect(res.headers.get("Retry-After")).toBe("3")
+    const data = await res.json()
+    expect(data.error).toMatch(/retry/i)
+  })
+
+  // Validates the two queries run sequentially (not Promise.all) so a request never
+  // holds two pooler connections at once — see app/api/news/route.ts for why.
+  it("queries the list before the category counts", async () => {
+    const order: string[] = []
+    vi.mocked(getNewsPaginatedFromDb).mockImplementation(async () => {
+      order.push("list")
+      return { items: [newsRow], total: 1 }
+    })
+    vi.mocked(getCachedNewsCategoryCounts).mockImplementation(async () => {
+      order.push("categoryCounts")
+      return { all: 9 }
+    })
+    const req = new Request("http://localhost/api/news")
+    await listGET(req as NextRequest)
+    expect(order).toEqual(["list", "categoryCounts"])
   })
 })
 

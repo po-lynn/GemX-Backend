@@ -17,13 +17,20 @@ const client =
   globalForDb.dbClient ??
   postgres(env.DATABASE_URL, {
     ssl: "require",
-    // PgBouncer transaction mode already pools — keep per-instance count low to
-    // avoid exhausting Supabase's connection limit across concurrent Vercel invocations.
-    max: isPooler ? 10 : 15,
+    // Supabase's pooler multiplexes client connections down to a small, fixed number of
+    // real backend connections (Settings → Database → Connection pooling — "Pool Size",
+    // 15 on the Micro compute tier, shared across every concurrent Vercel invocation
+    // project-wide). Each mobile screen load fires several parallel requests, so a handful
+    // of concurrent Vercel instances can already request more connections than the pooler
+    // has backend slots for. Keep max low so no single instance can monopolize a large
+    // share of that shared ceiling — this bounds concurrency, it does not raise it.
+    max: isPooler ? 4 : 15,
     prepare: false,
     fetch_types: false,
     connect_timeout: 20,
-    idle_timeout: 20,
+    // Release idle connections back quickly on the pooler path so a burst on one instance
+    // doesn't keep slots reserved once its requests finish.
+    idle_timeout: isPooler ? 10 : 20,
     max_lifetime: 300,
     // session-level settings only persist on direct connections (port 5432).
     // PgBouncer transaction mode (port 6543) resets session state per transaction,

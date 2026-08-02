@@ -12,6 +12,7 @@ export type CACHE_TAG =
   | "home"
   | "rankedProducts"
   | "rankedProductsUser"
+  | "news"
 
 export function getGlobalTag(tag: CACHE_TAG) {
   return `global:${tag}` as const
