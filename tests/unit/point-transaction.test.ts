@@ -110,7 +110,8 @@ describe("getUserPointHistory", () => {
   ]
 
   it("returns paginated transactions with total for filter=all", async () => {
-    // getUserPointHistory calls two queries in parallel: rows + count
+    // getUserPointHistory calls two queries sequentially (rows, then count) so the route
+    // never holds two pooler connections open at once for a single request
     const offsetMock = vi.fn().mockResolvedValue(mockRows)
     const limitMock = vi.fn().mockReturnValue({ offset: offsetMock })
     const orderByMock = vi.fn().mockReturnValue({ limit: limitMock })

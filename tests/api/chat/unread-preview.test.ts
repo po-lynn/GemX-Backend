@@ -10,6 +10,7 @@ vi.mock("@/features/chat/db/conversations-list", () => ({
 const { auth } = await import("@/lib/auth");
 const { getUnreadConversationPreviews } = await import("@/features/chat/db/conversations-list");
 const { GET } = await import("@/app/api/chat/unread/preview/route");
+const { QueryTimeoutError } = await import("@/lib/query-timeout");
 
 function makeRequest(): NextRequest {
   return new Request("http://localhost/api/chat/unread/preview") as unknown as NextRequest;
@@ -64,5 +65,42 @@ describe("GET /api/chat/unread/preview", () => {
 
     const res = await GET(makeRequest());
     expect(res.status).toBe(500);
+  });
+
+  // Validates the timeout guard: a hung preview query fails fast with a retryable 503
+  // instead of a fake `conversations: []` (which would misleadingly read as "all caught up"
+  // while the separately-sourced bell badge count still shows unread messages).
+  it("returns 503 with Retry-After when the query hangs past the timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: "user-abc" },
+      } as never);
+      vi.mocked(getUnreadConversationPreviews).mockReturnValue(new Promise(() => {}));
+
+      const resPromise = GET(makeRequest());
+      await vi.advanceTimersByTimeAsync(6000);
+      const res = await resPromise;
+
+      expect(res.status).toBe(503);
+      expect(res.headers.get("Retry-After")).toBe("3");
+      const data = await res.json();
+      expect(data.error).toMatch(/retry/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Validates a QueryTimeoutError specifically maps to 503, not the generic 500 path.
+  it("returns 503 when getUnreadConversationPreviews rejects with QueryTimeoutError", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-abc" },
+    } as never);
+    vi.mocked(getUnreadConversationPreviews).mockRejectedValue(
+      new QueryTimeoutError("chat-unread-preview", 6000)
+    );
+
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(503);
   });
 });

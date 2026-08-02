@@ -8,6 +8,13 @@ import {
 } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+import { withTimeout } from "@/lib/db-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_COLLECTOR_REQUESTS_QUERY_TIMEOUT_MS = 6000
 
 const PAGE_SIZE = 20
 
@@ -34,15 +41,32 @@ export default async function AdminCollectorPieceShowRequestsPage({ searchParams
       ? undefined
       : (view as "pending" | "approved" | "rejected")
 
-  const [{ requests, total }, kpis] = await Promise.all([
+  // Sequential, not Promise.all: this exact Promise.all was previously flagged as a
+  // connection-pool risk (see docs/technical/connection-pool-hardening.md) but never fixed.
+  // The paginated request list is the primary content the page exists to show, so it's
+  // timeout-guarded and allowed to throw (caught by this route's error.tsx). The KPI tiles
+  // decorate an already-useful list, so they degrade to a fallback instead of failing the
+  // whole page.
+  const { requests, total } = await withQueryTimeout(
     getCollectorPieceShowRequestsPaginated({
       page,
       limit: PAGE_SIZE,
       status: statusFilter,
       isPriority,
     }),
+    ADMIN_COLLECTOR_REQUESTS_QUERY_TIMEOUT_MS,
+    "admin-collector-requests-list"
+  )
+  // KNOWN LIMITATION: the KPI tiles below render `0` for both "no pending requests" and
+  // "the KPI query timed out" — there's no visual distinction between a confirmed zero and
+  // an unknown value. Acceptable degradation for now since the primary list still renders;
+  // revisit if this KPI strip needs a genuine loading/unknown state.
+  const kpiFallback = { totalPending: 0, approvedCount: 0, highValuePending: 0, totalCount: 0 }
+  const kpis = await withTimeout(
     getCollectorPieceShowRequestsKPIs(),
-  ])
+    kpiFallback,
+    ADMIN_COLLECTOR_REQUESTS_QUERY_TIMEOUT_MS
+  ).catch(() => kpiFallback)
 
   const viewTabs: ViewTab[] = [
     { id: "all",      label: "All",      count: kpis.totalCount },

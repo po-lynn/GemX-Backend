@@ -83,6 +83,8 @@ Session cookie. Returns 401 if unauthenticated.
 
 **500 Internal Server Error**
 
+**503 Service Unavailable** — `{ "error": "..." }` with `Retry-After: 3`. The balance or transaction-history query didn't complete within 6s (both are primary — a wallet screen showing one without the other would be misleading, so this fails closed instead of guessing).
+
 ## Example
 
 ```bash

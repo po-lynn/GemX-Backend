@@ -8,12 +8,26 @@ import { messages, messageTypeEnum } from "@/drizzle/schema/chat-schema";
 import { jsonError, jsonUncached } from "@/lib/api";
 import { sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
 import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
+import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout";
 
 const messageTypeValues = messageTypeEnum.enumValues;
 
 // DB-counted sliding window (works across serverless instances, unlike in-memory limiters).
 const SEND_RATE_LIMIT_WINDOW_MS = 60_000;
 const SEND_RATE_LIMIT_MAX_MESSAGES = 30;
+
+/** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
+export const maxDuration = 10;
+
+/** Client-facing ceiling for the recipient/rate-limit checks; leaves headroom under maxDuration for auth/session lookups and the insert that follows. */
+const CHAT_SEND_QUERY_TIMEOUT_MS = 6000;
+
+function jsonTimeout(message: string): Response {
+  return Response.json(
+    { error: message },
+    { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } }
+  );
+}
 
 const bodySchema = z
   .object({
@@ -60,19 +74,32 @@ export async function POST(request: NextRequest) {
     const { recipientId, content, fileUrl, imageUrls, tempId } = parsed.data;
     if (senderId === recipientId) return jsonError("Cannot send message to yourself", 400);
 
+    // Both checks gate whether the send is ALLOWED to happen (recipient must exist, rate
+    // limit must not be exceeded), so both are primary/fail-closed: run them sequentially
+    // (not Promise.all, so this route never holds two pooler connections at once) and let a
+    // timeout on either one block the send with a retryable 503. A silently-permissive
+    // fallback here (e.g. treating a timed-out rate-limit count as "0 sent so far") would let
+    // a stalled connection pool bypass abuse prevention — that's worse than a slow send.
     const windowStart = new Date(Date.now() - SEND_RATE_LIMIT_WINDOW_MS);
-    const [recipientRows, recentRows] = await Promise.all([
+    const recipientRows = await withQueryTimeout(
       db
         .select({ id: user.id })
         .from(user)
         .where(and(eq(user.id, recipientId), eq(user.archived, false)))
         .limit(1),
+      CHAT_SEND_QUERY_TIMEOUT_MS,
+      "chat-send-recipient-check"
+    );
+    if (!recipientRows[0]) return jsonError("Recipient not found", 404);
+
+    const recentRows = await withQueryTimeout(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(messages)
         .where(and(eq(messages.senderId, senderId), gt(messages.createdAt, windowStart))),
-    ]);
-    if (!recipientRows[0]) return jsonError("Recipient not found", 404);
+      CHAT_SEND_QUERY_TIMEOUT_MS,
+      "chat-send-rate-limit"
+    );
     if ((recentRows[0]?.count ?? 0) >= SEND_RATE_LIMIT_MAX_MESSAGES) {
       return jsonError("Too many messages — please slow down", 429);
     }
@@ -151,6 +178,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof QueryTimeoutError) {
+      console.error("POST /api/chat/messages: timed out:", error.message);
+      return jsonTimeout("Sending is taking longer than usual — please retry");
+    }
     console.error("POST /api/chat/messages:", error);
     return jsonError("Failed to send message", 500);
   }

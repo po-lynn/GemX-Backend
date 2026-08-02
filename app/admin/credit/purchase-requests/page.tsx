@@ -8,11 +8,37 @@ import {
   getPointPurchaseRequestCounts,
   getPointPurchasePackagesSettings,
   getPointManagementSettings,
+  type PointPurchasePackagesSettings,
+  type PointManagementSettings,
 } from "@/features/points/db/points"
 import { PointPurchaseRequestsTable } from "@/features/points/components/PointPurchaseRequestsTable"
 import { AdminCreatePurchaseRequestDialog } from "@/features/points/components/AdminCreatePurchaseRequestDialog"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+import { safeAll } from "@/lib/db-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_PURCHASE_REQUESTS_QUERY_TIMEOUT_MS = 6000
+
+const FALLBACK_PACKAGES_SETTINGS: PointPurchasePackagesSettings = { packages: [] }
+const FALLBACK_MANAGEMENT_SETTINGS: PointManagementSettings = {
+  defaultRegistrationPoints: 0,
+  registrationBonusEnabled: false,
+  registrationBonusDescription: "",
+  currencyConversion: {
+    mmk: { amount: 1, points: 0 },
+    usd: { amount: 1, points: 0 },
+    krw: { amount: 1, points: 0 },
+  },
+  minimumSpendAmount: 0,
+  minimumSpendCurrency: "mmk",
+  roundingMethod: "nearest",
+  pointExpiryDays: 0,
+  paymentMethods: [],
+}
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "pending", "approved", "rejected"] as const
@@ -31,16 +57,35 @@ export default async function AdminPointPurchaseRequestsPage({ searchParams }: P
     ? (params.status as StatusFilter)
     : "all"
 
-  const [current, counts, packagesSettings, managementSettings] = await Promise.all([
+  // Primary, sequential (not Promise.all): the paginated requests list is the actual
+  // money-handling workflow (staff approve/reject KBZ Pay wire-transfer point purchases
+  // here), and the tab counts drive the same header — both throw on timeout and are
+  // caught by error.tsx, mirroring app/admin/products/page.tsx.
+  const current = await withQueryTimeout(
     getPointPurchaseRequestsPaginated({
       page,
       limit: PAGE_SIZE,
       status: status === "all" ? undefined : status,
     }),
+    ADMIN_PURCHASE_REQUESTS_QUERY_TIMEOUT_MS,
+    "admin-purchase-requests-list"
+  )
+  const counts = await withQueryTimeout(
     getPointPurchaseRequestCounts(),
-    getPointPurchasePackagesSettings(),
-    getPointManagementSettings(),
-  ])
+    ADMIN_PURCHASE_REQUESTS_QUERY_TIMEOUT_MS,
+    "admin-purchase-requests-counts"
+  )
+
+  // Secondary: these only populate dropdown options in the "create request" dialog — they
+  // don't gate the approve/reject action, so a timeout degrades to empty option lists
+  // instead of failing the whole page.
+  const [packagesSettings, managementSettings] = await safeAll(
+    [
+      { promise: getPointPurchasePackagesSettings(), fallback: FALLBACK_PACKAGES_SETTINGS },
+      { promise: getPointManagementSettings(), fallback: FALLBACK_MANAGEMENT_SETTINGS },
+    ],
+    ADMIN_PURCHASE_REQUESTS_QUERY_TIMEOUT_MS
+  )
 
   const views: ViewTab[] = [
     { id: "all",      label: "All",      count: counts.all },

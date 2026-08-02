@@ -1554,19 +1554,20 @@ export async function getUserPointHistory(
       ? and(eq(pointTransaction.userId, userId), eq(pointTransaction.status, "pending"))
       : eq(pointTransaction.userId, userId);
 
-  const [rows, [{ value: total }]] = await Promise.all([
-    db
-      .select()
-      .from(pointTransaction)
-      .where(filterCondition)
-      .orderBy(desc(pointTransaction.createdAt))
-      .limit(limit)
-      .offset(offset),
-    db
-      .select({ value: count() })
-      .from(pointTransaction)
-      .where(filterCondition),
-  ]);
+  // Sequential, not Promise.all: both the page and the total count are primary (the mobile
+  // history screen and the account page need both to render), so we avoid holding two pooler
+  // connections at once for a single request — same pattern as app/api/news/route.ts.
+  const rows = await db
+    .select()
+    .from(pointTransaction)
+    .where(filterCondition)
+    .orderBy(desc(pointTransaction.createdAt))
+    .limit(limit)
+    .offset(offset);
+  const [{ value: total }] = await db
+    .select({ value: count() })
+    .from(pointTransaction)
+    .where(filterCondition);
 
   return { transactions: rows, total };
 }

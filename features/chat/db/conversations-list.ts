@@ -217,20 +217,25 @@ export async function getUnreadConversationPreviews(
 
   const peerIds = latestRows.map((r) => r.peerId);
 
-  const [profiles, unreadRows] = await Promise.all([
-    db.select({ id: user.id, name: user.name, image: user.image }).from(user).where(inArray(user.id, peerIds)),
-    db
-      .select({ senderId: messages.senderId, unread: sql<number>`count(*)::int` })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.recipientId, currentUserId),
-          eq(messages.isRead, false),
-          inArray(messages.senderId, peerIds)
-        )
+  // Sequential, not Promise.all: avoids holding two pooler connections at once for this
+  // request (same pattern as getChatConversationsForUser above). The whole call is
+  // time-boxed by the route's withQueryTimeout, so no per-query wrapping is needed here.
+  const profiles = await db
+    .select({ id: user.id, name: user.name, image: user.image })
+    .from(user)
+    .where(inArray(user.id, peerIds));
+
+  const unreadRows = await db
+    .select({ senderId: messages.senderId, unread: sql<number>`count(*)::int` })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.recipientId, currentUserId),
+        eq(messages.isRead, false),
+        inArray(messages.senderId, peerIds)
       )
-      .groupBy(messages.senderId),
-  ]);
+    )
+    .groupBy(messages.senderId);
 
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const unreadByPeer = new Map(unreadRows.map((r) => [r.senderId, r.unread ?? 0]));

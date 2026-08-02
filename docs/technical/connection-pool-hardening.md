@@ -49,6 +49,37 @@ No change — both routes remain public, unauthenticated GETs.
 - **Privilege Assist caching** changes product behavior: the random shuffle now refreshes every ~30s (shared across all viewers within that window) instead of reshuffling on every single request. Deliberate tradeoff to cut DB round-trips on the hottest mobile path.
 - **News category counts caching**: `getNewsCategoryCountsFromDb` runs an unindexed `GROUP BY` on `news.category` (no index exists on that column) — caching it means the mobile category chip counts can lag up to ~90s behind a very recent publish/unpublish, self-healing via `cacheLife`'s `expire` window and immediately on `revalidateNewsCache()`.
 
+## Codebase-wide sweep (Aug 2, 2026)
+
+The same root cause reproduced on `/admin/products` (screen-recorded: the page hung indefinitely on a 3-way `Promise.all` — list + counts + facet counts, the latter firing 2 more queries internally — while every other admin page loaded fine). A follow-up audit found the same anti-pattern (concurrent DB calls via `Promise.all`, no timeout) in 19 more locations. Fixed, in priority order:
+
+**Tier 1 (mobile/public, high traffic):**
+- `app/api/products/[id]/route.ts` — product detail (web + mobile's only product-detail source)
+- `app/api/profile/[id]/route.ts` — public seller profile
+- `app/api/chat/history/route.ts`, `app/api/chat/messages/route.ts` — chat thread + send
+- `app/api/chat/unread/preview/route.ts` / `features/chat/db/conversations-list.ts` — unread badge preview
+- `app/api/mobile/points/history/route.ts` / `features/points/db/points.ts` (`getUserPointHistory`) — wallet screen
+
+**Tier 2 (frequently-used admin pages):**
+- `app/admin/users/page.tsx`, `app/admin/products/[id]/edit/page.tsx` (worst fan-out found: 6-way `Promise.all`), `app/admin/collector-piece-show-requests/page.tsx`
+- `app/admin/credit/purchase-requests/page.tsx`, `app/admin/credit/premium-dealer-subscriptions/page.tsx`, `app/admin/credit/transactions/page.tsx`, `app/admin/messages/page.tsx`, `app/admin/news/page.tsx`, `app/admin/articles/page.tsx`
+
+Every admin page above got a matching `error.tsx` boundary (mirroring `app/admin/products/error.tsx`) where none existed at that route segment. Tier 3 (low-traffic settings pages, single-record edit forms) and `getAdminProductFacetCounts`'s internal 2-query `Promise.all` were identified but intentionally left unfixed for now — lower priority, revisit if they become relevant.
+
+### Two timeout helpers, two different jobs
+
+This sweep surfaced a pre-existing, differently-designed helper: `lib/db-timeout.ts` (`withTimeout`/`safeAll`), already used in `app/admin/page.tsx`, which resolves to a **fallback value** on timeout instead of throwing. Rather than standardize on one helper, we split by query role (full rationale and code examples in `docs/guides/connection-pool-and-query-timeouts.md`):
+
+- **Primary** query (the content the screen exists to show) → `lib/query-timeout.ts`'s `withQueryTimeout`, throws → `503`/`error.tsx`. Never fake success on the thing the user is actually waiting for.
+- **Secondary** query (decoration alongside already-useful primary content — a rating badge, a tab count, a presence indicator) → `lib/db-timeout.ts`'s `withTimeout`/`safeAll`, degrades to a fallback. The fallback must render as visibly absent/unknown (e.g. `rating: null`, `status: "Unknown"`), never as a bare `0`/empty result indistinguishable from a real one.
+- One notable fail-closed exception: `app/api/chat/messages/route.ts`'s recipient-exists and rate-limit checks are gating checks, not enrichment — timing out returns `503` rather than silently letting a send through, since a permissive fallback there would be an abuse-prevention bypass.
+
+### Known follow-ups (not yet fixed)
+
+- `features/points/db/points.ts`'s `getPointTransactionCounts` (used by `app/admin/credit/transactions/page.tsx`) loads every row and aggregates in JS — an unbounded full-table scan independent of the timeout issue; flagged with a `// TODO:` at the call site.
+- `app/admin/collector-piece-show-requests/page.tsx`'s KPI tiles render a bare `0` for both "confirmed zero" and "timed out" — the component has no way to distinguish them today; flagged with a `// KNOWN LIMITATION` comment rather than redesigned.
+- Tier 3 items from the audit (admin settings pages, single-record edit forms under `app/admin/{news,articles,categories,users}/[id]/edit/page.tsx`) — lower traffic, not fixed in this pass.
+
 ## Edge cases & known limitations
 
 - `withQueryTimeout` does not cancel the underlying `postgres.js`/Drizzle query — see above. True cancellation would require using `postgres.js`'s raw `.execute().cancel()` API, which doesn't currently thread through Drizzle's query builder in this codebase.

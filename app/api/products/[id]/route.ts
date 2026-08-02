@@ -20,6 +20,21 @@ import { getCachedPublicPrecautionTags } from "@/features/precaution-tags/db/cac
 import { db } from "@/drizzle/db"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
 import { eq, sql } from "drizzle-orm"
+import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout"
+import { safeAll } from "@/lib/db-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
+export const maxDuration = 10
+
+/** Client-facing ceiling for the primary DB calls; leaves headroom under maxDuration for auth/session lookups. */
+const PRODUCT_QUERY_TIMEOUT_MS = 6000
+
+function jsonTimeout(message: string): Response {
+  return Response.json(
+    { error: message },
+    { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } }
+  )
+}
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -30,27 +45,56 @@ export async function GET(
   await connection()
   try {
     const { id } = await params
-    const product = await getCachedProduct(id)
+    // Primary: the product record itself — nothing useful to return without it.
+    const product = await withQueryTimeout(
+      getCachedProduct(id),
+      PRODUCT_QUERY_TIMEOUT_MS,
+      "product-detail"
+    )
     if (!product) return jsonError("Product not found", 404)
 
-    let requestStatus: { id: string; status: string; createdAt: Date } | null = null
-    const [session, sellerUser, sellerRatingResult, allPrecautions] = await Promise.all([
-      auth.api.getSession({ headers: request.headers }),
+    // Primary: seller identity is part of the core response shape (name/username/phone),
+    // not decoration. Sequential (not Promise.all with the product fetch above) so the
+    // request never holds two pooler connections at once — same pattern as
+    // app/api/news/route.ts / getProductById.
+    const sellerUser = await withQueryTimeout(
       getUserById(product.sellerId),
-      db
-        .select({
-          averageScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
-          totalRatings: sql<number>`count(*)::int`,
-        })
-        .from(sellerRating)
-        .where(eq(sellerRating.sellerUserId, product.sellerId)),
-      getCachedPublicPrecautionTags(),
+      PRODUCT_QUERY_TIMEOUT_MS,
+      "product-seller"
+    )
+
+    // Fast auth check, not a heavy DB round-trip in the same sense as the queries above —
+    // pulled out of the Promise.all below so it doesn't hold a slot alongside real DB calls.
+    const session = await auth.api.getSession({ headers: request.headers })
+
+    let requestStatus: { id: string; status: string; createdAt: Date } | null = null
+    // Secondary/decorative: rating aggregate + precaution tags enrich an already-useful
+    // product response. Degrade gracefully instead of failing the whole request.
+    const [sellerRatingRows, allPrecautions] = await safeAll([
+      {
+        promise: db
+          .select({
+            averageScore: sql<number>`coalesce(round(avg(${sellerRating.score})::numeric, 2), 0)::double precision`,
+            totalRatings: sql<number>`count(*)::int`,
+          })
+          .from(sellerRating)
+          .where(eq(sellerRating.sellerUserId, product.sellerId)),
+        // null (not a fake {averageScore: 0, totalRatings: 0}) so a timed-out/failed lookup
+        // is distinguishable downstream from a seller who genuinely has zero ratings.
+        fallback: null as { averageScore: number; totalRatings: number }[] | null,
+      },
+      {
+        promise: getCachedPublicPrecautionTags(),
+        fallback: [] as Awaited<ReturnType<typeof getCachedPublicPrecautionTags>>,
+      },
     ])
-    const [sellerRatingAgg] = sellerRatingResult
-    const sellerRatingSummary = {
-      averageScore: Number(sellerRatingAgg?.averageScore ?? 0),
-      totalRatings: sellerRatingAgg?.totalRatings ?? 0,
-    }
+    const sellerRatingAgg = sellerRatingRows?.[0]
+    const sellerRatingSummary = sellerRatingAgg
+      ? {
+          averageScore: Number(sellerRatingAgg.averageScore ?? 0),
+          totalRatings: sellerRatingAgg.totalRatings ?? 0,
+        }
+      : null
 
     if (product.isCollectorPiece) {
       const isOwner = session?.user?.id === product.sellerId
@@ -116,6 +160,10 @@ export async function GET(
       requestStatus,
     })
   } catch (error) {
+    if (error instanceof QueryTimeoutError) {
+      console.error("GET /api/products/[id]: timed out:", error.message)
+      return jsonTimeout("Product is taking longer than usual to load — please retry")
+    }
     console.error("GET /api/products/[id]:", error)
     return jsonError("Failed to fetch product", 500)
   }

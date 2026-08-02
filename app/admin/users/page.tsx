@@ -12,6 +12,12 @@ import {
 import { getPushTokensByUserIds } from "@/features/push/db/push-tokens"
 import { UsersTable } from "@/features/users/components"
 import { FadeUp } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_USERS_QUERY_TIMEOUT_MS = 6000
 
 const PAGE_SIZE = 20
 
@@ -38,11 +44,26 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   const search  = params.search?.trim() ?? ""
   const view    = params.view?.trim() ?? "all"
 
-  const [{ users, total }, stats, viewCounts] = await Promise.all([
+  // Sequential, not Promise.all: three heavy queries fired concurrently on every page
+  // load was enough to exceed Supabase's shared pooler connection limit under real
+  // traffic — same root cause and fix as app/admin/products/page.tsx (see
+  // docs/technical/connection-pool-hardening.md). Each call is timeout-guarded so a
+  // stalled query throws (caught by error.tsx) instead of hanging the render forever.
+  const { users, total } = await withQueryTimeout(
     getUsersPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, search: search || undefined, view, excludeAdminRole: isInternal }),
+    ADMIN_USERS_QUERY_TIMEOUT_MS,
+    "admin-users-list"
+  )
+  const stats = await withQueryTimeout(
     getUserStatsFromDb(),
+    ADMIN_USERS_QUERY_TIMEOUT_MS,
+    "admin-users-stats"
+  )
+  const viewCounts = await withQueryTimeout(
     getViewCountsFromDb(),
-  ])
+    ADMIN_USERS_QUERY_TIMEOUT_MS,
+    "admin-users-view-counts"
+  )
 
   let pushTokensByUserId: Record<string, { token: string; platform: string | null }[]> = {}
   if (users.length > 0) {

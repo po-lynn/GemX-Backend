@@ -3,6 +3,20 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { getUserPointBalance, getUserPointHistory } from "@/features/points/db/points"
+import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
+export const maxDuration = 10
+
+/** Client-facing ceiling for each DB call; leaves headroom under maxDuration for auth/session lookups. */
+const POINTS_HISTORY_QUERY_TIMEOUT_MS = 6000
+
+function jsonTimeout(message: string): Response {
+  return Response.json(
+    { error: message },
+    { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } }
+  )
+}
 
 const querySchema = z.object({
   filter: z.enum(["all", "topups", "spent", "pending"]).default("all"),
@@ -31,10 +45,20 @@ export async function GET(request: NextRequest) {
 
     const { filter, page, limit } = parsed.data
 
-    const [balance, { transactions, total }] = await Promise.all([
+    // Sequential, not Promise.all: both the balance and the transaction list are primary for
+    // this wallet screen (a history list without a balance, or vice versa, is misleading) — each
+    // await releases its pooler connection before the next query opens one instead of holding
+    // two at once, same pattern as app/api/news/route.ts.
+    const balance = await withQueryTimeout(
       getUserPointBalance(session.user.id),
+      POINTS_HISTORY_QUERY_TIMEOUT_MS,
+      "points-history-balance"
+    )
+    const { transactions, total } = await withQueryTimeout(
       getUserPointHistory(session.user.id, { filter, page, limit }),
-    ])
+      POINTS_HISTORY_QUERY_TIMEOUT_MS,
+      "points-history-transactions"
+    )
 
     return jsonUncached({
       balance,
@@ -53,6 +77,10 @@ export async function GET(request: NextRequest) {
       pagination: { total, page, limit },
     })
   } catch (e) {
+    if (e instanceof QueryTimeoutError) {
+      console.error("GET /api/mobile/points/history: timed out:", e.message)
+      return jsonTimeout("Point history is taking longer than usual — please retry")
+    }
     console.error("GET /api/mobile/points/history:", e)
     return jsonError("Failed to load point history", 500)
   }

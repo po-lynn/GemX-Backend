@@ -50,6 +50,13 @@ No session.
 
 Unexpected DB error.
 
+**503 Service Unavailable**
+
+```json
+{ "error": "..." }
+```
+`Retry-After: 3`. The underlying query didn't complete within 6s. Deliberately a hard error rather than a silent empty-list fallback: the notification bell's badge count comes from a separate source, so returning `conversations: []` on a timeout would show "You're all caught up" while the badge still shows unread messages — a misleading mismatch. The bell component already has a distinct "Failed to load notifications" state for this.
+
 ## Example
 
 ```bash

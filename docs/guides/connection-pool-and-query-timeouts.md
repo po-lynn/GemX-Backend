@@ -6,6 +6,23 @@ Background: see `docs/technical/connection-pool-hardening.md` for why this exist
 
 - No new env vars or dependencies. Uses the existing `drizzle/db.ts` client and `next/cache`'s `"use cache"` directive (already enabled via `cacheComponents: true` in `next.config.ts`).
 
+## Which timeout helper: primary vs. secondary queries
+
+Two timeout helpers exist in this codebase for a reason — they're for different jobs. Classify every DB call in a route/page as one of:
+
+- **Primary** — the content the screen exists to show (the product record, the chat history, the paginated list a list-view page renders, the data that populates an edit form). If this fails, there is nothing useful to render.
+- **Secondary** — enrichment that decorates already-useful primary content (a rating-count widget next to a profile that already has its core fields, a notification badge, precaution tags shown alongside a product, status counts next to an already-rendered list).
+
+**Primary queries fail loud and fast** — use `lib/query-timeout.ts`'s `withQueryTimeout`, let it throw on timeout:
+- Route Handlers: catch `QueryTimeoutError` → `503` + `Retry-After: 3` (see `app/api/products/route.ts`, `app/api/news/route.ts`).
+- Server Component pages: let it propagate — add an `error.tsx` boundary with a "Try again" `reset()` button (see `app/admin/products/error.tsx`).
+
+**Secondary queries degrade gracefully** — use `lib/db-timeout.ts`'s `withTimeout`/`safeAll`, which resolves to a fallback value instead of throwing (see `app/admin/page.tsx` for existing usage). The one rule that matters here: **the UI must render that fallback as visibly absent** (hidden widget, `—`, "unavailable") — never as a bare `0` or an empty list indistinguishable from a confirmed-empty result. A timed-out count silently rendered as `0` looks like a fact; it isn't one.
+
+A single endpoint can (and often should) mix both — e.g. a product-detail endpoint treats the product record as primary but a seller-rating aggregate or precaution tags as secondary. Never blanket-apply one helper to an entire route just because most of its queries fall on one side.
+
+Why this split instead of picking one pattern everywhere: failing the whole page over a decorative widget is worse UX than showing the page without it, but silently hiding a failure on the actual content the user is waiting for (by faking a `0`/empty result) is worse than an honest error — this is the same fail-fast-on-critical-path / degrade-on-secondary split most production systems converge on.
+
 ## Using `withQueryTimeout` in a new route
 
 ```ts

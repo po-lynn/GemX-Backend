@@ -7,11 +7,21 @@ import {
   getPremiumDealerSubscriptionsPaginated,
   getPremiumDealerSubscriptionCounts,
   getPremiumDealersSettings,
+  type PremiumDealersSettings,
 } from "@/features/points/db/points"
 import { PremiumDealerSubscriptionsTable } from "@/features/points/components/PremiumDealerSubscriptionsTable"
 import { ActivatePremiumDealerDialog } from "@/features/points/components/ActivatePremiumDealerDialog"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+import { withTimeout } from "@/lib/db-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_DEALER_SUBSCRIPTIONS_QUERY_TIMEOUT_MS = 6000
+
+const FALLBACK_DEALER_SETTINGS: PremiumDealersSettings = { packages: [] }
 
 const PAGE_SIZE = 20
 const STATUS_FILTERS = ["all", "active", "expired", "cancelled"] as const
@@ -30,15 +40,32 @@ export default async function AdminPremiumDealerSubscriptionsPage({ searchParams
     ? (params.status as StatusFilter)
     : "all"
 
-  const [current, counts, dealerSettings] = await Promise.all([
+  // Primary, sequential (not Promise.all): the paginated subscriptions list is the actual
+  // content this page exists to show, and the tab counts drive the same header — both
+  // throw on timeout and are caught by error.tsx, mirroring app/admin/products/page.tsx.
+  const current = await withQueryTimeout(
     getPremiumDealerSubscriptionsPaginated({
       page,
       limit: PAGE_SIZE,
       status: status === "all" ? undefined : status,
     }),
+    ADMIN_DEALER_SUBSCRIPTIONS_QUERY_TIMEOUT_MS,
+    "admin-dealer-subscriptions-list"
+  )
+  const counts = await withQueryTimeout(
     getPremiumDealerSubscriptionCounts(),
+    ADMIN_DEALER_SUBSCRIPTIONS_QUERY_TIMEOUT_MS,
+    "admin-dealer-subscriptions-counts"
+  )
+
+  // Secondary: only feeds the package options in the "activate premium dealer" dialog — it
+  // doesn't gate the subscriptions list itself, so a timeout degrades to an empty package
+  // list instead of failing the whole page.
+  const dealerSettings = await withTimeout(
     getPremiumDealersSettings(),
-  ])
+    FALLBACK_DEALER_SETTINGS,
+    ADMIN_DEALER_SUBSCRIPTIONS_QUERY_TIMEOUT_MS
+  )
 
   const views: ViewTab[] = [
     { id: "all",       label: "All",       count: counts.all },

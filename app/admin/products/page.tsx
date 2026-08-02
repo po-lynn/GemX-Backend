@@ -7,6 +7,12 @@ import { getAdminProductsFromDb, getAdminProductCountsFromDb, getAdminProductFac
 import { ProductsListView } from "@/features/products/components/ProductsListView"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_PRODUCTS_QUERY_TIMEOUT_MS = 6000
 
 const PAGE_SIZE = 25
 const VIEWS = ["all", "pending", "featured", "collector", "sold", "drafts"] as const
@@ -143,15 +149,30 @@ export default async function AdminProductsPage({ searchParams }: Props) {
     weightMax,
   }
 
-  const [counts, { products, total }, facetCounts] = await Promise.all([
+  // Sequential, not Promise.all: three heavy queries fired concurrently on every page
+  // load (facet counts alone runs two more internally) was enough to exceed Supabase's
+  // shared pooler connection limit under real traffic — see docs/technical/connection-pool-hardening.md.
+  // Each call is also timeout-guarded so a stalled query throws (caught by error.tsx)
+  // instead of leaving this Server Component render hanging indefinitely.
+  const counts = await withQueryTimeout(
     getAdminProductCountsFromDb(),
+    ADMIN_PRODUCTS_QUERY_TIMEOUT_MS,
+    "admin-products-counts"
+  )
+  const { products, total } = await withQueryTimeout(
     getAdminProductsFromDb({
       page,
       limit: PAGE_SIZE,
       ...facetOpts,
     }),
+    ADMIN_PRODUCTS_QUERY_TIMEOUT_MS,
+    "admin-products-list"
+  )
+  const facetCounts = await withQueryTimeout(
     getAdminProductFacetCounts(facetOpts),
-  ])
+    ADMIN_PRODUCTS_QUERY_TIMEOUT_MS,
+    "admin-products-facets"
+  )
 
   const views: ViewTab[] = [
     { id: "all",       label: "All",       count: counts.all },

@@ -33,6 +33,7 @@ At least one of `content` / `fileUrl` / `imageUrls` is required.
   - `404` `Recipient not found` (unknown or archived)
   - `429` `Too many messages — please slow down`
   - `500` `Failed to send message`
+  - `503` `{"error": "..."}` with `Retry-After: 3` — the recipient-exists check or the rate-limit count didn't complete within 6s. Both gate whether the send is allowed, so a timeout **fails closed** (503, message not sent) rather than silently letting the send through — never treated as "0 sent so far."
 - **Side effects:** push notification to recipient; Supabase Broadcast
   `new_message` to `chat:<senderId>` and `chat:<recipientId>`.
 
@@ -68,14 +69,15 @@ curl -N "https://<host>/api/chat/conversations?stream=1" -H "Authorization: Bear
 
 ## GET /api/chat/history
 
-Paginated thread between the current user and `userId` (three internal queries
-run in parallel).
+Paginated thread between the current user and `userId`.
 
 - **Auth:** session cookie or bearer token
 - **Query:** `userId` (required), `page` ≥1 (default 1), `limit` 1–100 (default 30)
 - **Response:** `200`
   `{ messages: [...oldest→newest within page], participantImage, page, limit, total }`
-- **Errors:** `401`, `500`.
+- **Errors:**
+  - `401`, `500`
+  - `503` with `Retry-After: 3` — the messages page or total-count query (both primary — the total drives pagination) didn't complete within 6s. `participantImage` is secondary and never causes this: a slow peer-image lookup just falls back to `null` (no avatar shown) instead of failing the whole request.
 
 ```bash
 curl "https://<host>/api/chat/history?userId=usr_123&page=1&limit=30" \

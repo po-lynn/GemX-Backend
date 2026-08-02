@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
 vi.mock("next/server", () => ({ connection: vi.fn() }));
@@ -23,6 +23,18 @@ function selectChain(result: unknown) {
   chain.limit = vi.fn(() => chain);
   chain.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
     Promise.resolve(result).then(resolve, reject);
+  return chain;
+}
+
+/** Thenable that never settles — simulates a hung DB call for the timeout guard. */
+function pendingChain(): Record<string, unknown> {
+  const chain: Record<string, unknown> = {};
+  chain.from = vi.fn(() => chain);
+  chain.where = vi.fn(() => chain);
+  chain.limit = vi.fn(() => chain);
+  chain.then = () => {
+    /* never calls resolve or reject */
+  };
   return chain;
 }
 
@@ -106,5 +118,43 @@ describe("POST /api/chat/messages send rate limit", () => {
     const res = await POST(makeRequest({ recipientId: "recipient-1", content: "hello" }));
     expect(res.status).toBe(401);
     expect(db.select).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Validates the timeout guard on the recipient-existence check: a hung query fails fast
+  // with a retryable 503 instead of hanging indefinitely, and never falls through to the insert.
+  it("returns 503 with Retry-After when the recipient check hangs past the timeout", async () => {
+    vi.useFakeTimers();
+    vi.mocked(db.select).mockReturnValueOnce(pendingChain() as never); // recipient lookup hangs
+
+    const resPromise = POST(makeRequest({ recipientId: "recipient-1", content: "hello" }));
+    await vi.advanceTimersByTimeAsync(6000);
+    const res = await resPromise;
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("3");
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  // Validates the fail-closed behavior for the rate-limit check specifically: a hung count
+  // query must NOT silently fall back to "0 sent so far" (which would let a stalled pool
+  // bypass the abuse-prevention limiter) — it must 503 instead, after the recipient check
+  // has already resolved (proving the two checks run sequentially, not concurrently).
+  it("returns 503 with Retry-After when the rate-limit count hangs past the timeout, without allowing the send", async () => {
+    vi.useFakeTimers();
+    vi.mocked(db.select)
+      .mockReturnValueOnce(selectChain([{ id: "recipient-1" }]) as never) // recipient lookup resolves
+      .mockReturnValueOnce(pendingChain() as never); // rate-limit count hangs
+
+    const resPromise = POST(makeRequest({ recipientId: "recipient-1", content: "hello" }));
+    await vi.advanceTimersByTimeAsync(6000);
+    const res = await resPromise;
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("3");
+    expect(db.insert).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,12 @@ import { getFeatureSettings } from "@/features/points/db/points"
 import { getCompanySettings } from "@/features/company-settings/db/company-settings"
 import { FadeUp } from "@/components/admin/motion"
 import { resolveAdjacentProducts } from "./resolve-adjacent"
+import { withQueryTimeout } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS = 6000
 
 const BACK_ROUTES: Record<string, { href: string; label: string }> = {
   "collector-requests": {
@@ -56,14 +62,42 @@ export default async function AdminProductsEditPage({ params, searchParams }: Pr
     (session.user.role === "internal" &&
       (await checkInternalAccess(session.user.id, FEATURE_KEYS.PRODUCTS_VERIFY)))
 
-  const [product, categories, laboratories, origins, featureSettings, companySettings] = await Promise.all([
+  // Sequential, not Promise.all: this was the worst fan-out in the codebase (6 concurrent
+  // queries on every edit-page load), enough to exceed Supabase's shared pooler connection
+  // limit under real traffic — same root cause as app/admin/products/page.tsx (see
+  // docs/technical/connection-pool-hardening.md). The record being edited and its dropdown/
+  // config data are all required for the form to function, so every call is timeout-guarded
+  // and allowed to throw — caught by this route's existing error.tsx.
+  const product = await withQueryTimeout(
     getProductById(id),
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-product"
+  )
+  const categories = await withQueryTimeout(
     getAllCategories(),
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-categories"
+  )
+  const laboratories = await withQueryTimeout(
     getAllLaboratories(),
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-laboratories"
+  )
+  const origins = await withQueryTimeout(
     getAllOrigins(),
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-origins"
+  )
+  const featureSettings = await withQueryTimeout(
     getFeatureSettings(),
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-feature-settings"
+  )
+  const companySettings = await withQueryTimeout(
     getCompanySettings(),
-  ])
+    ADMIN_PRODUCT_EDIT_QUERY_TIMEOUT_MS,
+    "admin-product-edit-company-settings"
+  )
 
   if (!product) notFound()
 

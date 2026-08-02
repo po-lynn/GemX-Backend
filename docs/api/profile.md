@@ -26,6 +26,8 @@ Bearer token (Better Auth session). Required.
 
 **500** — `{ "error": "Failed to fetch profile" }`
 
+**503** — `{ "error": "..." }` with `Retry-After: 3` — the profile record or product-listings query (both primary) didn't complete within 6s.
+
 ## Example
 
 ```bash
@@ -68,7 +70,12 @@ None (public seller profile).
 
 `profile` includes `verified` (boolean, from `user.verified`, admin-set) alongside `presence`, `status`, `lastSeenAt`, and `isPremiumDealer`. See `docs/MOBILE-API.md` section **5.4a**.
 
+- `presence`/`status`/`lastSeenAt` are secondary: a timed-out presence lookup falls back to `{ presence: "offline", status: "Unknown", lastSeenAt: null }` — `status: "Unknown"` keeps a timeout distinguishable from a genuinely offline user.
+- `isPremiumDealer` is secondary: a timed-out check falls back to `false` (badge just doesn't show).
+
 **404** — `{ "error": "Profile not found" }`
+
+**503** — `{ "error": "..." }` with `Retry-After: 3` — the profile record or product-listings query (both primary) didn't complete within 6s.
 
 ## Example
 

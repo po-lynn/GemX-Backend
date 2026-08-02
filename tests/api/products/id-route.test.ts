@@ -8,6 +8,7 @@ import { getUserById } from "@/features/users/db/users"
 import { auth } from "@/lib/auth"
 import { db } from "@/drizzle/db"
 import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
+import { getCachedPublicPrecautionTags } from "@/features/precaution-tags/db/cache/precaution-tags"
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) })
 
@@ -34,6 +35,9 @@ vi.mock("@/drizzle/db", () => ({
 vi.mock("@/features/points/db/points", () => ({
   deductUserPoints: vi.fn(),
   getUserPointBalance: vi.fn(),
+}))
+vi.mock("@/features/precaution-tags/db/cache/precaution-tags", () => ({
+  getCachedPublicPrecautionTags: vi.fn(),
 }))
 vi.mock("@/drizzle/schema/seller-rating-schema", () => ({
   sellerRating: { score: "score", sellerUserId: "seller_user_id" },
@@ -63,6 +67,7 @@ describe("GET /api/products/[id]", () => {
     vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(getUserById).mockResolvedValue(null)
     vi.mocked(db.select).mockReturnValue(selectChain([{ averageScore: 0, totalRatings: 0 }]) as never)
+    vi.mocked(getCachedPublicPrecautionTags).mockResolvedValue([])
   })
 
   it("returns 200 and product with seller when found", async () => {
@@ -147,6 +152,83 @@ describe("GET /api/products/[id]", () => {
     expect(res.status).toBe(500)
     const data = await res.json()
     expect(data).toHaveProperty("error", "Failed to fetch product")
+  })
+
+  // Primary: the product record itself. A hung DB call must fail fast with a retryable
+  // error instead of hanging until the platform kills the invocation.
+  it("returns 503 with Retry-After when getCachedProduct (primary) hangs past the timeout", async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(getCachedProduct).mockReturnValue(new Promise(() => {}))
+      const resPromise = GET({} as NextRequest, params("p1"))
+      await vi.advanceTimersByTimeAsync(6000)
+      const res = await resPromise
+      expect(res.status).toBe(503)
+      expect(res.headers.get("Retry-After")).toBe("3")
+      const data = await res.json()
+      expect(data.error).toMatch(/retry/i)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // Primary: seller identity (name/username/phone) is part of the core response shape.
+  it("returns 503 with Retry-After when getUserById (seller, primary) hangs past the timeout", async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(getCachedProduct).mockResolvedValue({ id: "p1", title: "Ruby", sellerId: "u1" } as never)
+      vi.mocked(getUserById).mockReturnValue(new Promise(() => {}))
+      const resPromise = GET({} as NextRequest, params("p1"))
+      await vi.advanceTimersByTimeAsync(6000)
+      const res = await resPromise
+      expect(res.status).toBe(503)
+      expect(res.headers.get("Retry-After")).toBe("3")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // Secondary: the seller-rating aggregate is decorative. A hung/failed lookup must not
+  // fail the whole product response — it degrades to `null`, distinguishable from a seller
+  // who genuinely has zero ratings (which the query itself already represents as `0`).
+  it("returns 200 with rating=null when the seller-rating query (secondary) hangs", async () => {
+    vi.useFakeTimers()
+    try {
+      const product = { id: "p1", title: "Ruby", sellerId: "u1" }
+      const user = { id: "u1", name: "Seller", image: null, phone: null, username: "s", displayUsername: "s" }
+      vi.mocked(getCachedProduct).mockResolvedValue(product as never)
+      vi.mocked(getUserById).mockResolvedValue(user as never)
+      const hangingChain: Record<string, unknown> = {}
+      for (const m of ["from", "where"]) hangingChain[m] = vi.fn().mockReturnValue(hangingChain)
+      hangingChain.then = () => {} // never settles
+      hangingChain.catch = () => {}
+      vi.mocked(db.select).mockReturnValue(hangingChain as never)
+      const resPromise = GET({} as NextRequest, params("p1"))
+      await vi.advanceTimersByTimeAsync(7000)
+      const res = await resPromise
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      // Primary content (product + seller) still present despite the secondary hang.
+      expect(data.seller).toMatchObject({ id: "u1", name: "Seller" })
+      expect(data.seller.rating).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // Secondary: precaution tags are decorative. A rejected lookup must not fail the whole
+  // product response — it degrades to an empty list.
+  it("returns 200 with precautions=[] when getCachedPublicPrecautionTags (secondary) rejects", async () => {
+    const product = { id: "p1", title: "Ruby", sellerId: "u1" }
+    const user = { id: "u1", name: "Seller", image: null, phone: null, username: "s", displayUsername: "s" }
+    vi.mocked(getCachedProduct).mockResolvedValue(product as never)
+    vi.mocked(getUserById).mockResolvedValue(user as never)
+    vi.mocked(getCachedPublicPrecautionTags).mockRejectedValue(new Error("db boom"))
+    const res = await GET({} as NextRequest, params("p1"))
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.precautions).toEqual([])
+    expect(data.seller).toMatchObject({ id: "u1", name: "Seller" })
   })
 })
 

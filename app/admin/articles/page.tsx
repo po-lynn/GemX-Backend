@@ -10,6 +10,12 @@ import {
 } from "@/features/articles/db/articles"
 import { ArticlesTable } from "@/features/articles/components"
 import { FadeUp } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_ARTICLES_QUERY_TIMEOUT_MS = 6000
 
 const PAGE_SIZE = 20
 
@@ -24,10 +30,21 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const view = params.view?.trim() ?? "all"
 
-  const [{ items: articles, total }, counts] = await Promise.all([
-    getArticlesPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, view }),
+  // Sequential, not Promise.all: two heavy queries fired concurrently on every page load
+  // was enough to exceed Supabase's shared pooler connection limit under real traffic —
+  // see docs/technical/connection-pool-hardening.md. Each call is timeout-guarded so a
+  // stalled query throws (caught by error.tsx) instead of hanging this render indefinitely.
+  // Mirrors app/admin/products/page.tsx's established pattern for this list-view shape.
+  const counts = await withQueryTimeout(
     getArticleStatusCountsFromDb(),
-  ])
+    ADMIN_ARTICLES_QUERY_TIMEOUT_MS,
+    "admin-articles-counts"
+  )
+  const { items: articles, total } = await withQueryTimeout(
+    getArticlesPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, view }),
+    ADMIN_ARTICLES_QUERY_TIMEOUT_MS,
+    "admin-articles-list"
+  )
 
   const kpis = [
     {

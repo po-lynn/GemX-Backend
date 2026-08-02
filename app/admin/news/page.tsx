@@ -10,6 +10,12 @@ import {
 } from "@/features/news/db/news"
 import { NewsTable } from "@/features/news/components"
 import { FadeUp } from "@/components/admin/motion"
+import { withQueryTimeout } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
+export const maxDuration = 10
+
+const ADMIN_NEWS_QUERY_TIMEOUT_MS = 6000
 
 const PAGE_SIZE = 20
 
@@ -24,10 +30,21 @@ export default async function AdminNewsPage({ searchParams }: Props) {
   const rawPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
   const view = params.view?.trim() ?? "all"
 
-  const [{ items: news, total }, counts] = await Promise.all([
-    getNewsPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, view }),
+  // Sequential, not Promise.all: two heavy queries fired concurrently on every page load
+  // was enough to exceed Supabase's shared pooler connection limit under real traffic —
+  // see docs/technical/connection-pool-hardening.md. Each call is timeout-guarded so a
+  // stalled query throws (caught by error.tsx) instead of hanging this render indefinitely.
+  // Mirrors app/admin/products/page.tsx's established pattern for this list-view shape.
+  const counts = await withQueryTimeout(
     getNewsStatusCountsFromDb(),
-  ])
+    ADMIN_NEWS_QUERY_TIMEOUT_MS,
+    "admin-news-counts"
+  )
+  const { items: news, total } = await withQueryTimeout(
+    getNewsPaginatedFromDb({ page: rawPage, limit: PAGE_SIZE, view }),
+    ADMIN_NEWS_QUERY_TIMEOUT_MS,
+    "admin-news-list"
+  )
 
   const kpis = [
     {
