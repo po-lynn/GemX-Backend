@@ -20,7 +20,6 @@ import {
   FileText,
   ClipboardList,
   MessageSquare,
-  MessageCircle,
   Tags,
   ShieldAlert,
   Crown,
@@ -139,7 +138,6 @@ const navGroups: (NavItem | NavGroup)[] = [
     label: "Communication",
     items: [
       { href: "/admin/messages",       label: "Messages",       icon: MessageSquare, color: "#d946ef", featureKey: FEATURE_KEYS.MESSAGES },
-      { href: "/admin/chat-dashboard", label: "Chat Dashboard", icon: MessageCircle, color: "#0ea5e9", featureKey: FEATURE_KEYS.CHAT_DASHBOARD },
       { href: "/admin/users",          label: "Users",          icon: Users,         color: "#ec4899", featureKey: FEATURE_KEYS.USERS },
     ],
   },
@@ -261,7 +259,7 @@ export function AdminSidebar({ className, role, permissions }: Props) {
           strokeWidth={1.8}
         />
         <span className="min-w-0 flex-1 truncate">{nav.label}</span>
-        {nav.href === "/admin/chat-dashboard" && totalUnread > 0 ? (
+        {nav.href === "/admin/messages" && totalUnread > 0 ? (
           <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
             {totalUnread > 99 ? "99+" : totalUnread}
           </span>

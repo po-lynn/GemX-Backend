@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #f6f6fa; }
+  a { color: #7c3aed; text-decoration: none; }
+  a:hover { color: #5b21b6; }
+  input, button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: #dcdce6; border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+</style>
+</helmet>
+<div style="width:100%; height:100vh; overflow-x:auto; overflow-y:hidden"><div style="display:flex; height:100%; min-width:1500px; overflow:hidden; color:#17161c">
+
+  <aside style="width:264px; flex:none; background:#fff; border-right:1px solid #ececf3; display:flex; flex-direction:column; overflow:hidden">
+    <div style="display:flex; align-items:center; gap:10px; padding:18px 20px 16px">
+      <div style="width:34px; height:34px; border-radius:11px; border:1px solid #e6e2f7; display:grid; place-items:center; color:#7c3aed; font-size:15px">◎</div>
+      <div style="font-size:19px; font-weight:800; letter-spacing:-0.02em">GemX</div>
+      <div style="margin-left:auto; font-size:10px; font-weight:700; letter-spacing:0.08em; color:#7c3aed; background:#f1ecff; padding:4px 9px; border-radius:7px">ADMIN</div>
+    </div>
+    <nav style="flex:1; overflow-y:auto; padding:4px 12px 20px; display:flex; flex-direction:column; gap:2px">
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▦</span>Dashboard</div>
+      <div style="padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">MASTER DATA</div>
+      <sc-for list="{{ masterData }}" as="item" hint-placeholder-count="5">
+        <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">{{ item.icon }}</span>{{ item.label }}</div>
+      </sc-for>
+      <div style="padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">REQUESTS</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▤</span>Payment Transactions</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">◉</span>Collector Requests</div>
+      <div style="padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">COMMUNICATION</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-size:14px; font-weight:700; color:#6d28d9; background:#f2edff; cursor:pointer">
+        <span style="width:18px; text-align:center">▤</span>Messages
+        <span style="margin-left:auto; font-size:11px; font-weight:700; background:#fff; color:#6d28d9; padding:2px 7px; border-radius:6px">{{ flaggedCount }}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">◑</span>Users</div>
+      <div style="padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">CONTENT</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▧</span>News</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▤</span>Articles</div>
+    </nav>
+  </aside>
+
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden">
+    <header style="height:68px; flex:none; background:#fff; border-bottom:1px solid #ececf3; display:flex; align-items:center; gap:20px; padding:0 24px">
+      <div>
+        <div style="font-size:15px; font-weight:700; letter-spacing:-0.01em">Admin Panel</div>
+        <div style="font-size:12px; color:#8b8a99; margin-top:1px">GemX Marketplace</div>
+      </div>
+      <div style="flex:1"></div>
+      <label style="display:flex; align-items:center; gap:9px; width:280px; height:38px; padding:0 13px; border:1px solid #e6e6ee; border-radius:10px; background:#fbfbfd; color:#8b8a99; font-size:13.5px"><span>⌕</span><input placeholder="Search products, users…" style="border:0; outline:0; background:transparent; flex:1; font-size:13.5px; color:#17161c" /></label>
+      <div style="width:36px; height:36px; display:grid; place-items:center; border-radius:10px; color:#5b5a68; cursor:pointer" style-hover="background:#f5f4f9">◔</div>
+      <div style="display:flex; align-items:center; gap:9px; cursor:pointer">
+        <div style="width:32px; height:32px; border-radius:50%; background:#ede9fe; color:#6d28d9; display:grid; place-items:center; font-size:13px; font-weight:700">A</div>
+        <div style="font-size:14px; font-weight:600">Admin</div><span style="color:#9a99a8; font-size:11px">▾</span>
+      </div>
+    </header>
+
+    <div style="flex:none; padding:18px 24px 14px; background:#fff; border-bottom:1px solid #ececf3">
+      <div style="display:flex; align-items:flex-start; flex-wrap:wrap; gap:16px">
+        <div style="flex:1; min-width:280px">
+          <div style="display:flex; align-items:center; gap:11px">
+            <h1 style="margin:0; font-size:26px; font-weight:800; letter-spacing:-0.03em">Messages</h1>
+            <span style="font-size:12px; font-weight:700; color:#6d28d9; background:#f1ecff; padding:4px 10px; border-radius:8px">{{ headerCount }}</span>
+          </div>
+          <p style="margin:6px 0 0; font-size:13.5px; color:#6b6a78">Conversation oversight and message moderation in one place — formerly Chat Dashboard + Messages.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; flex:none">
+          <div style="display:flex; gap:2px; padding:3px; background:#f3f3f8; border-radius:10px">
+            <div onClick="{{ setConvMode }}" style="height:32px; padding:0 14px; display:flex; align-items:center; gap:7px; border-radius:8px; font-size:13px; font-weight:{{ convWeight }}; color:{{ convColor }}; background:{{ convBg }}; cursor:pointer">◫ Conversations</div>
+            <div onClick="{{ setMsgMode }}" style="height:32px; padding:0 14px; display:flex; align-items:center; gap:7px; border-radius:8px; font-size:13px; font-weight:{{ msgWeight }}; color:{{ msgColor }}; background:{{ msgBg }}; cursor:pointer">▤ All messages</div>
+          </div>
+          <button style="height:38px; padding:0 14px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer" style-hover="border-color:#cfcfe0">⤓ Export</button>
+          <button style="height:38px; padding:0 16px; background:#7c3aed; border:0; border-radius:10px; font-size:13.5px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer" style-hover="background:#6d28d9">＋ New message</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; display:flex; min-height:0">
+
+      <div style="width:212px; flex:none; border-right:1px solid #ececf3; background:#fcfcfe; padding:14px 10px; display:flex; flex-direction:column; gap:3px; overflow-y:auto">
+        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8; padding:6px 10px">STATUS</div>
+        <sc-for list="{{ views }}" as="v" hint-placeholder-count="6">
+          <div onClick="{{ v.select }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; font-size:13.5px; font-weight:{{ v.weight }}; color:{{ v.color }}; background:{{ v.bg }}; cursor:pointer" style-hover="background:#f4f3f9">
+            <span style="width:16px; text-align:center; opacity:.8">{{ v.icon }}</span>{{ v.label }}
+            <span style="margin-left:auto; font-size:11.5px; font-weight:700; color:{{ v.badgeColor }}">{{ v.count }}</span>
+          </div>
+        </sc-for>
+        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8; padding:18px 10px 6px">TYPE</div>
+        <sc-for list="{{ channels }}" as="c" hint-placeholder-count="3">
+          <div onClick="{{ c.select }}" style="display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:9px; font-size:13.5px; font-weight:{{ c.weight }}; color:{{ c.color }}; background:{{ c.bg }}; cursor:pointer" style-hover="background:#f4f3f9">{{ c.label }}<span style="margin-left:auto; font-size:11.5px; color:#9a99a8">{{ c.count }}</span></div>
+        </sc-for>
+        <div style="margin-top:auto; padding:11px 12px; border:1px dashed #ded9f5; border-radius:11px; background:#faf8ff">
+          <div style="font-size:11.5px; font-weight:700; letter-spacing:0.05em; color:#5b21b6">SLA</div>
+          <div style="font-size:12px; color:#6b6a78; margin-top:4px; line-height:1.45">{{ slaText }}</div>
+        </div>
+      </div>
+
+      <div style="width:392px; flex:none; border-right:1px solid #ececf3; background:#fff; display:flex; flex-direction:column; min-height:0">
+        <div style="flex:none; padding:12px 14px; border-bottom:1px solid #f0f0f5">
+          <label style="display:flex; align-items:center; gap:9px; height:36px; padding:0 11px; border:1px solid #e6e6ee; border-radius:9px; background:#fbfbfd; color:#8b8a99; font-size:13px">
+            <span>⌕</span><input value="{{ query }}" onChange="{{ onQuery }}" placeholder="{{ searchPlaceholder }}" style="border:0; outline:0; background:transparent; flex:1; font-size:13px; color:#17161c" />
+            <span style="font-size:11px; border:1px solid #e6e6ee; background:#fff; padding:1px 6px; border-radius:5px">/</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:10px">
+            <span style="font-size:12px; font-weight:700; color:#3d3c49">{{ listLabel }}</span>
+            <div style="flex:1"></div>
+            <span onClick="{{ toggleSort }}" style="font-size:12px; color:#6b6a78; cursor:pointer">{{ sortLabel }} ▾</span>
+          </div>
+        </div>
+
+        <div style="flex:1; overflow-y:auto">
+          <sc-for list="{{ list }}" as="m" hint-placeholder-count="9">
+            <div onClick="{{ m.select }}" style="display:flex; gap:11px; padding:12px 14px; border-bottom:1px solid #f4f4f8; background:{{ m.bg }}; border-left:3px solid {{ m.rail }}; cursor:pointer" style-hover="background:#fafaff">
+              <div style="width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; background:{{ m.color }}">{{ m.initial }}</div>
+              <div style="min-width:0; flex:1">
+                <div style="display:flex; align-items:center; gap:6px">
+                  <span style="font-size:13.5px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ m.title }}</span>
+                  <span style="margin-left:auto; font-size:11.5px; color:#9a99a8; white-space:nowrap">{{ m.time }}</span>
+                </div>
+                <div style="font-size:13px; color:#4a4956; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.preview }}</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:6px">
+                  <sc-if value="{{ m.tag }}"><span style="font-size:10.5px; font-weight:700; color:{{ m.tagColor }}; background:{{ m.tagBg }}; padding:2px 7px; border-radius:6px">{{ m.tag }}</span></sc-if>
+                  <sc-if value="{{ m.meta }}"><span style="font-size:11.5px; color:#9a99a8">{{ m.meta }}</span></sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ listEmpty }}">
+            <div style="padding:52px 24px; text-align:center">
+              <div style="font-size:14px; font-weight:700; color:#3d3c49">No matches</div>
+              <div style="font-size:13px; color:#8b8a99; margin-top:4px">Try a different term or switch view.</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="flex:1; min-width:560px; display:flex; flex-direction:column; min-height:0; background:#fbfbfd">
+        <div style="flex:none; padding:14px 20px; border-bottom:1px solid #ececf3; background:#fff; display:flex; align-items:center; flex-wrap:wrap; gap:12px">
+          <div style="display:flex">
+            <div style="width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; background:{{ activeColorA }}">{{ activeInitialA }}</div>
+            <div style="width:34px; height:34px; border-radius:50%; margin-left:-10px; border:2px solid #fff; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; background:{{ activeColorB }}">{{ activeInitialB }}</div>
+          </div>
+          <div style="min-width:0; flex:1">
+            <div style="font-size:15.5px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ activeTitle }}</div>
+            <div style="font-size:12.5px; color:#8b8a99; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ activeMeta }}</div>
+          </div>
+          <div style="flex:1"></div>
+          <button style="height:34px; padding:0 13px; background:#fff; border:1px solid #e3e3ec; border-radius:9px; font-size:13px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer" style-hover="border-color:#cfcfe0">⚑ Flag <span style="color:#a8a7b5">F</span></button>
+          <button style="height:34px; padding:0 13px; background:#fff; border:1px solid #f3c9c9; border-radius:9px; font-size:13px; font-weight:600; color:#b91c1c; white-space:nowrap; cursor:pointer" style-hover="background:#fff7f7">Delete ⌫</button>
+          <button style="height:34px; padding:0 14px; background:#7c3aed; border:0; border-radius:9px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer" style-hover="background:#6d28d9">✓ Resolve <span style="opacity:.7">E</span></button>
+          <div style="width:34px; height:34px; display:grid; place-items:center; border-radius:9px; color:#6b6a78; cursor:pointer" style-hover="background:#f5f4f9">⋯</div>
+        </div>
+
+        <sc-if value="{{ showRisk }}">
+          <div style="flex:none; margin:14px 20px 0; border:1px solid #fde4c8; background:#fffaf2; border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:12px">
+            <span style="font-size:11.5px; font-weight:800; letter-spacing:0.05em; color:#b45309">POLICY P-114 · OFF-PLATFORM PAYMENT</span>
+            <span style="font-size:12.5px; color:#6b5a45">Confidence 0.88 · sender has 3 prior strikes</span>
+            <div style="flex:1"></div>
+            <span style="font-size:12.5px; font-weight:700; color:#b45309; cursor:pointer">Review policy →</span>
+          </div>
+        </sc-if>
+
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px">
+          <div style="align-self:center; font-size:11.5px; color:#9a99a8; background:#f1f1f6; padding:4px 11px; border-radius:20px">{{ threadDate }}</div>
+          <sc-for list="{{ thread }}" as="t" hint-placeholder-count="6">
+            <div style="align-self:{{ t.align }}; max-width:64%">
+              <div style="font-size:11.5px; color:#9a99a8; margin-bottom:4px; text-align:{{ t.textAlign }}">{{ t.who }} · {{ t.time }}</div>
+              <div style="padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.5; color:{{ t.color }}; background:{{ t.bubble }}; border:1px solid {{ t.border }}">{{ t.text }}</div>
+              <sc-if value="{{ t.flagged }}"><div style="font-size:11.5px; font-weight:700; color:#b45309; margin-top:4px; text-align:{{ t.textAlign }}">⚑ flagged by system</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:none; padding:12px 20px; border-top:1px solid #ececf3; background:#fff; display:flex; align-items:center; gap:10px">
+          <span style="font-size:12px; font-weight:700; color:#9a99a8; letter-spacing:0.05em">INTERNAL</span>
+          <div style="flex:1; height:38px; border:1px solid #e6e6ee; border-radius:10px; background:#fbfbfd; display:flex; align-items:center; padding:0 12px; font-size:13px; color:#9a99a8">Add a note — visible to admins only</div>
+          <button style="height:38px; padding:0 14px; background:#17161c; border:0; border-radius:10px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer">Save ⌘⏎</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7c3aed&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#7c3aed&quot;,&quot;#4f46e5&quot;,&quot;#0f766e&quot;,&quot;#b45309&quot;]},&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+const PAL = { Ni: "#e11d48", Gemx4: "#7c3aed", Testing: "#0ea5e9", Gemx: "#d97706", "GemX Premium": "#4f46e5", Supervisor: "#0f766e", Admin: "#4a4956", "Phyu Phyu Aung": "#be185d" };
+const TAG = { "OFF-PLATFORM": ["#b91c1c", "#fee2e2"], ESCROW: ["#0369a1", "#e0f2fe"], REPORTED: ["#b45309", "#fef3c7"], DELETED: ["#6b6a78", "#f1f1f6"], SYSTEM: ["#6b6a78", "#f1f1f6"] };
+
+const CONVS = [
+  { id: "c1", a: "Ni", b: "Testing", preview: "Price is negotiable if you take both stones — call me", time: "4d ago", tag: "OFF-PLATFORM", meta: "18 messages", risk: true, flagged: true, channel: "Chat" },
+  { id: "c2", a: "Gemx4", b: "Supervisor", preview: "Doing exercise", time: "2d ago", meta: "34 messages", channel: "Chat" },
+  { id: "c3", a: "Ni", b: "Admin", preview: "Pls explain to buy points.", time: "5d ago", meta: "6 messages", channel: "Chat" },
+  { id: "c4", a: "Ni", b: "Supervisor", preview: "More details?", time: "5d ago", meta: "9 messages", channel: "Chat" },
+  { id: "c5", a: "Gemx", b: "Supervisor", preview: "Sent photos", time: "5d ago", meta: "12 messages", channel: "Chat" },
+  { id: "c6", a: "Testing", b: "Gemx", preview: "Escrow service request (buyer) for: Emeral", time: "7/5/2026", tag: "ESCROW", meta: "4 messages", channel: "Escrow" },
+  { id: "c7", a: "Testing", b: "GemX Premium", preview: "Hello", time: "7/5/2026", meta: "2 messages", channel: "Chat" },
+  { id: "c8", a: "Testing", b: "Supervisor", preview: "Escrow service request (seller) for: Ring (SKU: …)", time: "7/1/2026", tag: "ESCROW", meta: "5 messages", channel: "Escrow" },
+  { id: "c9", a: "Admin", b: "Testing", preview: "Hello Test", time: "6/16/2026", meta: "3 messages", channel: "System" },
+  { id: "c10", a: "Testing", b: "Phyu Phyu Aung", preview: "Test", time: "6/14/2026", tag: "REPORTED", meta: "7 messages", flagged: true, channel: "Chat" }
+];
+
+const MSGS = [
+  { id: "m1", conv: "c1", from: "Ni", to: "Testing", text: "Price is negotiable if you take both stones — call me on +95 9 79288770", time: "Jul 28, 4:12 PM", tag: "OFF-PLATFORM", flagged: true, channel: "Chat" },
+  { id: "m2", conv: "c2", from: "Gemx4", to: "Supervisor", text: "Doing exercise", time: "Jul 29, 9:56 PM", channel: "Chat" },
+  { id: "m3", conv: "c2", from: "Gemx4", to: "Supervisor", text: "Escrow service request (buyer) for: Emeral (SKU: EMERL-2061405053)", time: "Jul 29, 9:56 PM", tag: "ESCROW", channel: "Escrow" },
+  { id: "m4", conv: "c2", from: "Gemx4", to: "Supervisor", text: "Hope you're free on Sunday", time: "Jul 29, 9:55 PM", channel: "Chat" },
+  { id: "m5", conv: "c6", from: "Testing", to: "Gemx", text: "👋 have been working on the sapphire certificate upload", time: "Jul 29, 9:43 PM", channel: "Chat" },
+  { id: "m6", conv: "c5", from: "Gemx", to: "Supervisor", text: "Sent photos of the rough parcel", time: "Jul 27, 6:20 PM", channel: "Chat" },
+  { id: "m7", conv: "c9", from: "Admin", to: "Testing", text: "Your listing has been approved and is now visible", time: "Jul 28, 11:02 AM", tag: "SYSTEM", channel: "System" },
+  { id: "m8", conv: "c10", from: "Testing", to: "Phyu Phyu Aung", text: "Removed by moderator — off-platform payment request", time: "Jul 27, 8:30 PM", tag: "DELETED", flagged: true, channel: "Chat" },
+  { id: "m9", conv: "c3", from: "Ni", to: "Admin", text: "Pls explain to buy points.", time: "Jul 27, 1:04 PM", channel: "Chat" },
+  { id: "m10", conv: "c8", from: "Testing", to: "Supervisor", text: "Escrow service request (seller) for: Ring (SKU: RING-88C21)", time: "Jul 1, 3:11 PM", tag: "ESCROW", channel: "Escrow" }
+];
+
+const THREADS = {
+  c1: { date: "Jul 28, 2026", msgs: [
+    { who: "Testing", time: "3:58 PM", text: "Is the emerald pair still available?" },
+    { who: "Ni", time: "4:03 PM", text: "Yes, both stones. Certificate is on the listing.", mine: true },
+    { who: "Testing", time: "4:09 PM", text: "What's the best price for both?" },
+    { who: "Ni", time: "4:12 PM", text: "Price is negotiable if you take both stones — call me on +95 9 79288770, we can settle outside the app.", mine: true, flagged: true },
+    { who: "Testing", time: "4:15 PM", text: "I'd rather keep it in escrow." }
+  ] }
+};
+const GENERIC = [
+  { who: "A", time: "6:01 PM", text: "Hi sister" },
+  { who: "A", time: "6:01 PM", text: "How are you" },
+  { who: "B", time: "6:04 PM", text: "All good — checking the listing now.", mine: true },
+  { who: "A", time: "9:37 PM", text: "Escrow service request (buyer) for: Emeral (SKU: EMERL-2061405053)" },
+  { who: "B", time: "9:40 PM", text: "Received. I'll approve it after the lab report.", mine: true }
+];
+
+class Component extends DCLogic {
+  state = { mode: "conv", view: "Flagged", channel: "All", query: "", sel: "c1", sortDesc: true };
+
+  base() {
+    const s = this.state;
+    let rows = s.mode === "conv" ? CONVS.slice() : MSGS.slice();
+    if (s.channel !== "All") rows = rows.filter(r => r.channel === s.channel);
+    if (s.view === "Flagged") rows = rows.filter(r => r.flagged);
+    if (s.view === "Unassigned") rows = rows.filter((r, i) => i % 3 === 0);
+    if (s.view === "Mine") rows = rows.filter((r, i) => i % 4 === 1);
+    if (s.view === "Resolved") rows = rows.filter(r => !r.flagged);
+    const q = s.query.trim().toLowerCase();
+    if (q) rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    if (!s.sortDesc) rows.reverse();
+    return rows;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const conv = s.mode === "conv";
+    const rows = this.base();
+    const flaggedCount = CONVS.filter(c => c.flagged).length + MSGS.filter(m => m.flagged).length;
+
+    const selRow = (conv ? CONVS : MSGS).find(r => r.id === s.sel) || rows[0] || CONVS[0];
+    const activeConv = conv ? selRow : (CONVS.find(c => c.id === selRow.conv) || CONVS[0]);
+    const t = THREADS[activeConv.id] || { date: "Jul 29, 2026", msgs: GENERIC.map(m => ({ ...m, who: m.who === "A" ? activeConv.a : activeConv.b })) };
+
+    const views = [
+      { key: "All", icon: "◎", label: "All statuses", count: conv ? CONVS.length : MSGS.length },
+      { key: "Flagged", icon: "⚑", label: "Flagged", count: conv ? CONVS.filter(c => c.flagged).length : MSGS.filter(m => m.flagged).length },
+      { key: "Unassigned", icon: "◔", label: "Awaiting reply", count: 4 },
+      { key: "Mine", icon: "◑", label: "Assigned to me", count: 3 },
+      { key: "Resolved", icon: "✓", label: "Resolved", count: conv ? CONVS.filter(c => !c.flagged).length : MSGS.filter(m => !m.flagged).length }
+    ].map(v => {
+      const on = s.view === v.key;
+      return { ...v, weight: on ? 700 : 600, color: on ? "#6d28d9" : "#4a4956", bg: on ? "#f2edff" : "transparent", badgeColor: on ? "#6d28d9" : "#9a99a8", select: () => this.setState({ view: v.key }) };
+    });
+
+    const CH_LABEL = { All: "All types", Chat: "Buyer ↔ Seller", Escrow: "Escrow", System: "Contact Us" };
+    const channels = ["All", "Chat", "Escrow", "System"].map(c => {
+      const on = s.channel === c;
+      const src = conv ? CONVS : MSGS;
+      return { label: CH_LABEL[c], count: c === "All" ? src.length : src.filter(r => r.channel === c).length, weight: on ? 700 : 500, color: on ? "#6d28d9" : "#4a4956", bg: on ? "#f2edff" : "transparent", select: () => this.setState({ channel: c }) };
+    });
+
+    const list = rows.map(r => {
+      const on = r.id === s.sel;
+      const title = conv ? r.a + " ↔ " + r.b : r.from + " → " + r.to;
+      const who = conv ? r.a : r.from;
+      return {
+        title, preview: conv ? r.preview : r.text, time: r.time, meta: conv ? r.meta : "",
+        initial: who[0], color: PAL[who] || "#7c3aed",
+        bg: on ? "#f7f4ff" : "#fff", rail: on ? "#7c3aed" : "transparent",
+        tag: r.tag || "", tagColor: r.tag ? TAG[r.tag][0] : "", tagBg: r.tag ? TAG[r.tag][1] : "",
+        select: () => this.setState({ sel: r.id })
+      };
+    });
+
+    return {
+      masterData: [{ icon: "◰", label: "Products" }, { icon: "⚙", label: "Configuration" }, { icon: "◇", label: "Category" }, { icon: "⚗", label: "Laboratory" }, { icon: "◍", label: "Origin" }],
+      flaggedCount,
+      headerCount: conv ? CONVS.length + " conversations · 67 messages" : "67 messages",
+      convWeight: conv ? 700 : 600, convColor: conv ? "#17161c" : "#8b8a99", convBg: conv ? "#fff" : "transparent",
+      msgWeight: conv ? 600 : 700, msgColor: conv ? "#8b8a99" : "#17161c", msgBg: conv ? "transparent" : "#fff",
+      setConvMode: () => this.setState({ mode: "conv", sel: "c1", view: "Flagged" }),
+      setMsgMode: () => this.setState({ mode: "msg", sel: "m1", view: "All" }),
+      views, channels,
+      slaText: "4 flagged items breach in under 2h.",
+      query: s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      searchPlaceholder: conv ? "Search conversations, participants…" : "Search message text, SKU…",
+      listLabel: s.view + " · " + rows.length + (conv ? " conversations" : " messages"),
+      sortLabel: s.sortDesc ? "Newest" : "Oldest",
+      toggleSort: () => this.setState(p => ({ sortDesc: !p.sortDesc })),
+      list, listEmpty: rows.length === 0,
+      activeTitle: activeConv.a + " ↔ " + activeConv.b,
+      activeMeta: (activeConv.meta || "") + " · " + activeConv.channel + " · thread #" + activeConv.id.slice(1).padStart(4, "48"),
+      activeInitialA: activeConv.a[0], activeColorA: PAL[activeConv.a] || "#7c3aed",
+      activeInitialB: activeConv.b[0], activeColorB: PAL[activeConv.b] || "#0ea5e9",
+      showRisk: !!activeConv.risk,
+      threadDate: t.date,
+      thread: t.msgs.map(m => ({
+        ...m, align: m.mine ? "flex-end" : "flex-start", textAlign: m.mine ? "right" : "left",
+        bubble: m.mine ? "#7c3aed" : "#fff", color: m.mine ? "#fff" : "#2c2b36",
+        border: m.flagged ? "#f59e0b" : m.mine ? "#7c3aed" : "#ececf3", flagged: !!m.flagged
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

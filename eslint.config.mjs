@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static design-handoff reference files, not application code.
+    "design_handoff_messages_triage/**",
   ]),
   {
     rules: {

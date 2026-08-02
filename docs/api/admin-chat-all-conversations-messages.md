@@ -38,7 +38,8 @@ Validated by a Zod schema (`querySchema` in the route file). Neither `userA` nor
       "fileUrl": null,
       "imageUrls": null,
       "messageType": "text",
-      "createdAt": "2026-07-29T06:23:00.000Z"
+      "createdAt": "2026-07-29T06:23:00.000Z",
+      "starred": false
     }
   ],
   "page": 1,
@@ -48,6 +49,9 @@ Validated by a Zod schema (`querySchema` in the route file). Neither `userA` nor
 ```
 
 Messages are ordered oldest-first (ascending `createdAt`), matching `/api/chat/history`.
+
+`starred` (added for the Messages triage inbox, see `docs/technical/messages-triage.md`)
+mirrors the real `messages.starred` column — additive, existing consumers unaffected.
 
 ### Errors
 

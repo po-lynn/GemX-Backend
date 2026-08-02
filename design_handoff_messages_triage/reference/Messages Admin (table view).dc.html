@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #f6f6fa; }
+  a { color: #7c3aed; text-decoration: none; }
+  a:hover { color: #5b21b6; }
+  input, button, select { font-family: inherit; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #dcdce6; border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+  @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+</helmet>
+<div style="display:flex; height:100vh; overflow:hidden; color:#17161c; background:#f6f6fa">
+
+  <aside style="width:264px; flex:none; background:#fff; border-right:1px solid #ececf3; display:flex; flex-direction:column; overflow:hidden">
+    <div style="display:flex; align-items:center; gap:10px; padding:18px 20px 16px">
+      <div style="width:34px; height:34px; border-radius:11px; border:1px solid #e6e2f7; display:grid; place-items:center; color:#7c3aed; font-size:15px">◎</div>
+      <div style="font-size:19px; font-weight:800; letter-spacing:-0.02em">GemX</div>
+      <div style="margin-left:auto; font-size:10px; font-weight:700; letter-spacing:0.08em; color:#7c3aed; background:#f1ecff; padding:4px 9px; border-radius:7px">ADMIN</div>
+    </div>
+    <nav style="flex:1; overflow-y:auto; padding:4px 12px 20px; display:flex; flex-direction:column; gap:2px">
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb">
+        <span style="width:18px; text-align:center; opacity:.75">▦</span>Dashboard</div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">MASTER DATA<span style="opacity:.5">⌄</span></div>
+      <sc-for list="{{ masterData }}" as="item" hint-placeholder-count="5">
+        <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb">
+          <span style="width:18px; text-align:center; opacity:.75">{{ item.icon }}</span>{{ item.label }}</div>
+      </sc-for>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">REQUESTS<span style="opacity:.5">⌄</span></div>
+      <sc-for list="{{ requests }}" as="item" hint-placeholder-count="2">
+        <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb">
+          <span style="width:18px; text-align:center; opacity:.75">{{ item.icon }}</span>{{ item.label }}</div>
+      </sc-for>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">COMMUNICATION<span style="opacity:.5">⌄</span></div>
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; font-size:14px; font-weight:700; color:#6d28d9; background:#f2edff; cursor:pointer">
+        <span style="width:18px; text-align:center">▤</span>Messages
+        <span style="margin-left:auto; font-size:11px; font-weight:700; background:#fff; color:#6d28d9; padding:2px 7px; border-radius:6px">{{ flaggedCount }}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">◍</span>Chat Dashboard</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">◑</span>Users</div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 12px 6px; font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8">CONTENT<span style="opacity:.5">⌄</span></div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▧</span>News</div>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; font-size:14px; font-weight:600; color:#4a4956; cursor:pointer" style-hover="background:#f7f6fb"><span style="width:18px; text-align:center; opacity:.75">▤</span>Articles</div>
+    </nav>
+  </aside>
+
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden">
+    <header style="height:72px; flex:none; background:#fff; border-bottom:1px solid #ececf3; display:flex; align-items:center; gap:24px; padding:0 28px">
+      <div>
+        <div style="font-size:15px; font-weight:700; letter-spacing:-0.01em">Admin Panel</div>
+        <div style="font-size:12px; color:#8b8a99; margin-top:1px">GemX Marketplace</div>
+      </div>
+      <div style="flex:1"></div>
+      <label style="display:flex; align-items:center; gap:9px; width:300px; height:40px; padding:0 14px; border:1px solid #e6e6ee; border-radius:10px; background:#fbfbfd; color:#8b8a99; font-size:13.5px">
+        <span>⌕</span><input placeholder="Search products, users…" style="border:0; outline:0; background:transparent; flex:1; font-size:13.5px; color:#17161c" /></label>
+      <div style="width:38px; height:38px; display:grid; place-items:center; border-radius:10px; color:#5b5a68; cursor:pointer" style-hover="background:#f5f4f9">◔</div>
+      <div style="display:flex; align-items:center; gap:9px; cursor:pointer">
+        <div style="width:32px; height:32px; border-radius:50%; background:#ede9fe; color:#6d28d9; display:grid; place-items:center; font-size:13px; font-weight:700">A</div>
+        <div style="font-size:14px; font-weight:600">Admin</div><span style="color:#9a99a8; font-size:11px">▾</span>
+      </div>
+    </header>
+
+    <main style="flex:1; overflow-y:auto; padding:22px 28px 60px">
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8b8a99; margin-bottom:14px">
+        <span>Admin</span><span style="opacity:.6">›</span><span>Communication</span><span style="opacity:.6">›</span><span style="color:#17161c; font-weight:600">Messages</span>
+      </div>
+
+      <div style="display:flex; align-items:flex-start; gap:20px; margin-bottom:18px">
+        <div style="flex:1; min-width:0">
+          <div style="display:flex; align-items:center; gap:12px">
+            <h1 style="margin:0; font-size:30px; font-weight:800; letter-spacing:-0.03em">Messages</h1>
+            <span style="font-size:12px; font-weight:700; color:#6d28d9; background:#f1ecff; padding:5px 11px; border-radius:8px">{{ totalLabel }}</span>
+          </div>
+          <p style="margin:7px 0 0; font-size:14px; color:#6b6a78">Monitor buyer–seller conversations, moderate flagged content, and audit escrow requests.</p>
+        </div>
+        <div style="display:flex; gap:10px; flex:none">
+          <button style="height:42px; padding:0 16px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap" style-hover="border-color:#cfcfe0; background:#fbfbfd">⤓ Export Excel</button>
+          <button style="height:42px; padding:0 18px; display:flex; align-items:center; gap:8px; background:#7c3aed; border:0; border-radius:10px; font-size:13.5px; font-weight:700; color:#fff; cursor:pointer; box-shadow:0 1px 2px rgba(124,58,237,.35)" style-hover="background:#6d28d9">＋ New message</button>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:18px">
+        <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+          <div style="background:#fff; border:1px solid #ececf3; border-radius:14px; padding:14px 16px">
+            <div style="font-size:11.5px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">{{ s.label }}</div>
+            <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px">
+              <div style="font-size:24px; font-weight:800; letter-spacing:-0.02em; white-space:nowrap">{{ s.value }}</div>
+              <div style="font-size:12px; font-weight:600; white-space:nowrap; color:{{ s.deltaColor }}">{{ s.delta }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; overflow:hidden">
+        <div style="display:flex; gap:4px; padding:6px 10px 0; border-bottom:1px solid #f0f0f5">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+            <div onClick="{{ t.select }}" style="display:flex; align-items:center; gap:8px; padding:13px 14px; font-size:13.5px; font-weight:{{ t.weight }}; color:{{ t.color }}; border-bottom:2px solid {{ t.underline }}; cursor:pointer; margin-bottom:-1px">
+              {{ t.label }}<span style="font-size:11.5px; font-weight:700; color:{{ t.countColor }}; background:{{ t.countBg }}; padding:2px 7px; border-radius:6px">{{ t.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 16px">
+          <label style="display:flex; align-items:center; gap:9px; flex:1; max-width:420px; height:40px; padding:0 12px; border:1px solid #e6e6ee; border-radius:10px; background:#fbfbfd; color:#8b8a99; font-size:13.5px">
+            <span>⌕</span>
+            <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search message text, sender, SKU…" style="border:0; outline:0; background:transparent; flex:1; font-size:13.5px; color:#17161c" />
+            <span style="font-size:11px; font-weight:600; color:#a8a7b5; border:1px solid #e6e6ee; background:#fff; padding:2px 6px; border-radius:6px">⌘K</span>
+          </label>
+          <button onClick="{{ toggleFilters }}" style="height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap" style-hover="border-color:#cfcfe0">⧩ Filter <span style="color:#a8a7b5; font-size:11px">▾</span></button>
+          <button style="height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap" style-hover="border-color:#cfcfe0">◫ Group <span style="color:#a8a7b5; font-size:11px">▾</span></button>
+          <button onClick="{{ toggleSort }}" style="height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; background:#7c3aed; border:0; border-radius:10px; font-size:13.5px; font-weight:700; color:#fff; cursor:pointer; white-space:nowrap" style-hover="background:#6d28d9">⇅ Sort: {{ sortLabel }}</button>
+          <div style="flex:1"></div>
+          <button style="height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap" style-hover="border-color:#cfcfe0">▥ Columns</button>
+          <button style="height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap" style-hover="border-color:#cfcfe0">⤓ Export</button>
+        </div>
+
+        <sc-if value="{{ filtersOpen }}">
+          <div style="display:flex; flex-wrap:wrap; gap:18px; padding:0 16px 16px">
+            <div style="display:flex; flex-direction:column; gap:6px"><span style="font-size:11.5px; font-weight:700; letter-spacing:0.05em; color:#9a99a8">FROM DATE</span>
+              <div style="height:38px; min-width:170px; display:flex; align-items:center; gap:9px; padding:0 12px; border:1px solid #e6e6ee; border-radius:9px; font-size:13.5px; color:#6b6a78; background:#fbfbfd">▤ Pick date</div></div>
+            <div style="display:flex; flex-direction:column; gap:6px"><span style="font-size:11.5px; font-weight:700; letter-spacing:0.05em; color:#9a99a8">TO DATE</span>
+              <div style="height:38px; min-width:170px; display:flex; align-items:center; gap:9px; padding:0 12px; border:1px solid #e6e6ee; border-radius:9px; font-size:13.5px; color:#6b6a78; background:#fbfbfd">▤ Pick date</div></div>
+            <div style="display:flex; flex-direction:column; gap:6px"><span style="font-size:11.5px; font-weight:700; letter-spacing:0.05em; color:#9a99a8">TYPE</span>
+              <div style="height:38px; min-width:170px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border:1px solid #e6e6ee; border-radius:9px; font-size:13.5px; color:#3d3c49; background:#fbfbfd">All types <span style="color:#a8a7b5; font-size:11px">▾</span></div></div>
+            <div style="display:flex; flex-direction:column; gap:6px"><span style="font-size:11.5px; font-weight:700; letter-spacing:0.05em; color:#9a99a8">PARTICIPANT</span>
+              <div style="height:38px; min-width:170px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border:1px solid #e6e6ee; border-radius:9px; font-size:13.5px; color:#3d3c49; background:#fbfbfd">All users <span style="color:#a8a7b5; font-size:11px">▾</span></div></div>
+            <div style="display:flex; align-items:flex-end; gap:10px; margin-left:auto">
+              <button onClick="{{ clearAll }}" style="height:38px; padding:0 14px; background:#fff; border:1px solid #e3e3ec; border-radius:9px; font-size:13px; font-weight:600; color:#3d3c49; cursor:pointer">Clear</button>
+              <button onClick="{{ toggleFilters }}" style="height:38px; padding:0 16px; background:#7c3aed; border:0; border-radius:9px; font-size:13px; font-weight:700; color:#fff; cursor:pointer">Apply filters</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex; align-items:center; gap:10px; padding:0 16px 14px">
+          <span style="font-size:11px; font-weight:700; letter-spacing:0.08em; color:#9a99a8">ACTIVE</span>
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:8px; height:30px; padding:0 10px; border:1px solid #e6e6ee; border-radius:8px; background:#fbfbfd; font-size:12.5px; color:#6b6a78">
+              {{ c.label }} <span style="font-weight:700; color:#17161c">{{ c.value }}</span>
+              <span onClick="{{ c.remove }}" style="cursor:pointer; color:#a8a7b5; font-size:13px">✕</span>
+            </div>
+          </sc-for>
+          <div style="flex:1"></div>
+          <span onClick="{{ clearAll }}" style="font-size:13px; font-weight:600; color:#7c3aed; cursor:pointer">Clear all</span>
+        </div>
+
+        <sc-if value="{{ hasSelection }}">
+          <div style="display:flex; align-items:center; gap:12px; margin:0 16px 12px; padding:11px 14px; background:#f4f0ff; border:1px solid #e3d9ff; border-radius:11px">
+            <span style="font-size:13.5px; font-weight:700; color:#5b21b6">{{ selectedLabel }}</span>
+            <div style="width:1px; height:18px; background:#dccdff"></div>
+            <button style="height:32px; padding:0 12px; background:#fff; border:1px solid #e0d5fb; border-radius:8px; font-size:12.5px; font-weight:600; color:#5b21b6; cursor:pointer">⚑ Flag</button>
+            <button style="height:32px; padding:0 12px; background:#fff; border:1px solid #e0d5fb; border-radius:8px; font-size:12.5px; font-weight:600; color:#5b21b6; cursor:pointer">✓ Mark reviewed</button>
+            <button style="height:32px; padding:0 12px; background:#fff; border:1px solid #f3c9c9; border-radius:8px; font-size:12.5px; font-weight:600; color:#b91c1c; cursor:pointer">🗑 Delete</button>
+            <div style="flex:1"></div>
+            <span onClick="{{ clearSelection }}" style="font-size:12.5px; font-weight:600; color:#6b6a78; cursor:pointer">Deselect</span>
+          </div>
+        </sc-if>
+
+        <div style="overflow-x:auto"><div style="min-width:980px">
+        <div style="display:grid; grid-template-columns:44px minmax(240px,1.1fr) minmax(320px,2fr) 130px 150px 96px; align-items:center; padding:0 16px; height:44px; border-top:1px solid #f0f0f5; border-bottom:1px solid #f0f0f5; background:#fbfbfd; font-size:11px; font-weight:700; letter-spacing:0.08em; color:#8b8a99">
+          <div><input type="checkbox" checked="{{ allChecked }}" onChange="{{ toggleAll }}" style="width:15px; height:15px; accent-color:#7c3aed; cursor:pointer" /></div>
+          <div>CONVERSATION</div>
+          <div>MESSAGE</div>
+          <div>STATUS</div>
+          <div style="display:flex; align-items:center; gap:6px; color:#17161c">SENT <span style="color:#7c3aed">↓</span></div>
+          <div style="text-align:right">ACTIONS</div>
+        </div>
+
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+          <div onClick="{{ r.open }}" style="display:grid; grid-template-columns:44px minmax(240px,1.1fr) minmax(320px,2fr) 130px 150px 96px; align-items:center; padding:0 16px; min-height:{{ rowHeight }}; border-bottom:1px solid #f4f4f8; background:{{ r.bg }}; cursor:pointer" style-hover="background:#fafaff">
+            <div onClick="{{ r.stopToggle }}"><input type="checkbox" checked="{{ r.checked }}" onChange="{{ r.toggle }}" style="width:15px; height:15px; accent-color:#7c3aed; cursor:pointer" /></div>
+            <div style="display:flex; align-items:center; gap:9px; padding:10px 12px 10px 0; min-width:0">
+              <div style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:11.5px; font-weight:700; color:#fff; background:{{ r.sColor }}">{{ r.sInitial }}</div>
+              <div style="min-width:0">
+                <div style="font-size:13.5px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ r.sender }}</div>
+                <div style="font-size:11.5px; color:#9a99a8; display:flex; align-items:center; gap:5px; white-space:nowrap"><span style="color:#c4c3d0">→</span>{{ r.receiver }}</div>
+              </div>
+            </div>
+            <div style="padding:10px 16px 10px 0; min-width:0">
+              <div style="display:flex; align-items:center; gap:8px">
+                <sc-if value="{{ r.isEscrow }}"><span style="font-size:10.5px; font-weight:700; letter-spacing:0.04em; color:#0369a1; background:#e0f2fe; padding:2px 7px; border-radius:6px; flex:none">ESCROW</span></sc-if>
+                <div style="font-size:13.5px; color:#2c2b36; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.text }}</div>
+              </div>
+              <sc-if value="{{ r.sku }}"><div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#9a99a8; margin-top:3px">{{ r.sku }}</div></sc-if>
+            </div>
+            <div>
+              <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:{{ r.stColor }}; background:{{ r.stBg }}; padding:4px 10px; border-radius:7px">
+                <span style="width:6px; height:6px; border-radius:50%; background:{{ r.stColor }}"></span>{{ r.status }}</span>
+            </div>
+            <div>
+              <div style="font-size:12.5px; font-weight:600; color:#3d3c49">{{ r.date }}</div>
+              <div style="font-size:11.5px; color:#9a99a8">{{ r.rel }}</div>
+            </div>
+            <div onClick="{{ r.stopToggle }}" style="display:flex; align-items:center; justify-content:flex-end; gap:2px">
+              <div title="Open thread" onClick="{{ r.open }}" style="width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:#a8a7b5; cursor:pointer" style-hover="background:#f2edff; color:#6d28d9">◱</div>
+              <div title="Flag" style="width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:#a8a7b5; cursor:pointer" style-hover="background:#fff7e6; color:#b45309">⚑</div>
+              <div title="Delete" style="width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:#a8a7b5; cursor:pointer" style-hover="background:#fdeceb; color:#b91c1c">🗑</div>
+            </div>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ isEmpty }}">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:64px 20px">
+            <div style="width:48px; height:48px; border-radius:14px; background:#f4f0ff; color:#7c3aed; display:grid; place-items:center; font-size:20px">⚑</div>
+            <div style="font-size:15px; font-weight:700">{{ emptyTitle }}</div>
+            <div style="font-size:13.5px; color:#8b8a99">{{ emptyBody }}</div>
+          </div>
+        </sc-if>
+        </div></div>
+
+        <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border-top:1px solid #f0f0f5">
+          <span style="font-size:13px; color:#8b8a99">{{ rangeLabel }}</span>
+          <div style="flex:1"></div>
+          <div style="display:flex; gap:6px">
+            <div style="height:32px; min-width:32px; padding:0 10px; display:grid; place-items:center; border:1px solid #e3e3ec; border-radius:8px; font-size:13px; color:#8b8a99; cursor:pointer">‹</div>
+            <div style="height:32px; min-width:32px; display:grid; place-items:center; border:1px solid #7c3aed; background:#7c3aed; border-radius:8px; font-size:13px; font-weight:700; color:#fff; cursor:pointer">1</div>
+            <div style="height:32px; min-width:32px; display:grid; place-items:center; border:1px solid #e3e3ec; border-radius:8px; font-size:13px; color:#3d3c49; cursor:pointer">2</div>
+            <div style="height:32px; min-width:32px; display:grid; place-items:center; border:1px solid #e3e3ec; border-radius:8px; font-size:13px; color:#3d3c49; cursor:pointer">3</div>
+            <div style="height:32px; min-width:32px; padding:0 10px; display:grid; place-items:center; border:1px solid #e3e3ec; border-radius:8px; font-size:13px; color:#3d3c49; cursor:pointer">›</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <sc-if value="{{ drawerOpen }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed; inset:0; background:rgba(23,22,28,.28); z-index:40"></div>
+  </sc-if>
+  <sc-if value="{{ drawerOpen }}">
+    <aside style="position:fixed; top:0; right:0; bottom:0; width:440px; background:#fff; border-left:1px solid #ececf3; z-index:41; display:flex; flex-direction:column; box-shadow:-24px 0 60px rgba(23,22,28,.12); animation:slideIn .18s ease-out">
+      <div style="display:flex; align-items:center; gap:12px; padding:18px 20px; border-bottom:1px solid #f0f0f5">
+        <div style="flex:1; min-width:0">
+          <div style="font-size:16px; font-weight:800; letter-spacing:-0.02em">Conversation</div>
+          <div style="font-size:12.5px; color:#8b8a99; margin-top:2px">{{ drawerTitle }}</div>
+        </div>
+        <div onClick="{{ closeDrawer }}" style="width:32px; height:32px; display:grid; place-items:center; border-radius:9px; color:#6b6a78; cursor:pointer" style-hover="background:#f5f4f9">✕</div>
+      </div>
+      <div style="flex:1; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:12px; background:#fbfbfd">
+        <sc-for list="{{ thread }}" as="m" hint-placeholder-count="4">
+          <div style="align-self:{{ m.align }}; max-width:78%">
+            <div style="font-size:11.5px; color:#9a99a8; margin-bottom:4px; text-align:{{ m.textAlign }}">{{ m.who }} · {{ m.time }}</div>
+            <div style="padding:10px 13px; border-radius:14px; font-size:13.5px; line-height:1.45; color:{{ m.color }}; background:{{ m.bubble }}; border:1px solid {{ m.border }}">{{ m.text }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 20px; border-top:1px solid #f0f0f5; display:flex; gap:10px">
+        <button style="flex:1; height:40px; background:#fff; border:1px solid #e3e3ec; border-radius:10px; font-size:13.5px; font-weight:600; color:#3d3c49; cursor:pointer; white-space:nowrap">⚑ Flag thread</button>
+        <button style="flex:1; height:40px; background:#7c3aed; border:0; border-radius:10px; font-size:13.5px; font-weight:700; color:#fff; cursor:pointer">✓ Mark reviewed</button>
+      </div>
+    </aside>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7c3aed&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#7c3aed&quot;,&quot;#4f46e5&quot;,&quot;#0f766e&quot;,&quot;#b45309&quot;]},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;comfortable&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+const DATA = [
+  { id: 1, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Doing exercise", date: "Jul 29, 9:56 PM", rel: "3d ago", status: "Active" },
+  { id: 2, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Are you free for a quick call about the emerald listing?", date: "Jul 29, 9:56 PM", rel: "3d ago", status: "Active" },
+  { id: 3, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Escrow service request (buyer) for: Emeral", sku: "SKU EMERL-2061405053", escrow: true, date: "Jul 29, 9:56 PM", rel: "3d ago", status: "Active" },
+  { id: 4, sender: "Ni", handle: "@ni", receiver: "GemX Premium", text: "Let me check your project and revert tomorrow", date: "Jul 29, 9:56 PM", rel: "3d ago", status: "Flagged" },
+  { id: 5, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Hope you're free on Sunday", date: "Jul 29, 9:55 PM", rel: "3d ago", status: "Active" },
+  { id: 6, sender: "Testing", handle: "@testing", receiver: "Gemx", text: "👋 have been working on the sapphire certificate upload", date: "Jul 29, 9:43 PM", rel: "3d ago", status: "Active" },
+  { id: 7, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Cheers 🎉", date: "Jul 29, 9:41 PM", rel: "3d ago", status: "Active" },
+  { id: 8, sender: "Gemx", handle: "@gemx", receiver: "GemX Premium", text: "Escrow service request (buyer) for: Emeral", sku: "SKU EMERL-2061405053", escrow: true, date: "Jul 29, 9:41 PM", rel: "3d ago", status: "Active" },
+  { id: 9, sender: "Gemx4", handle: "@Gemx4", receiver: "Supervisor", text: "Hope you are well", date: "Jul 29, 9:40 PM", rel: "3d ago", status: "Active" },
+  { id: 10, sender: "Ni", handle: "@ni", receiver: "Testing", text: "Price is negotiable if you take both stones — call me", date: "Jul 28, 4:12 PM", rel: "4d ago", status: "Flagged" },
+  { id: 11, sender: "GemX Premium", handle: "@premium", receiver: "Gemx4", text: "Your listing has been approved and is now visible", date: "Jul 28, 11:02 AM", rel: "4d ago", status: "Active" },
+  { id: 12, sender: "Testing", handle: "@testing", receiver: "Supervisor", text: "Removed by moderator — off-platform payment request", date: "Jul 27, 8:30 PM", rel: "5d ago", status: "Deleted" }
+];
+const PALETTE = ["#e11d48", "#7c3aed", "#0ea5e9", "#059669", "#d97706", "#4f46e5"];
+const ST = {
+  Active: { color: "#16a34a", bg: "#e9f8ef" },
+  Flagged: { color: "#b45309", bg: "#fef3c7" },
+  Deleted: { color: "#b91c1c", bg: "#fee2e2" }
+};
+
+class Component extends DCLogic {
+  state = { tab: "All", query: "", selected: [], filtersOpen: false, sortDesc: true, drawer: null, chips: ["sort"] };
+
+  filtered() {
+    const q = this.state.query.trim().toLowerCase();
+    let rows = DATA.filter(r => this.state.tab === "All" || r.status === this.state.tab);
+    if (q) rows = rows.filter(r => (r.text + r.sender + r.receiver + (r.sku || "")).toLowerCase().includes(q));
+    if (!this.state.sortDesc) rows = rows.slice().reverse();
+    return rows;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const accent = this.props.accent ?? "#7c3aed";
+    const dense = (this.props.density ?? "comfortable") === "compact";
+    const counts = {
+      All: DATA.length, Active: DATA.filter(r => r.status === "Active").length,
+      Flagged: DATA.filter(r => r.status === "Flagged").length, Deleted: DATA.filter(r => r.status === "Deleted").length
+    };
+    const rows = this.filtered();
+    const sel = s.selected;
+
+    const tabs = ["All", "Active", "Flagged", "Deleted"].map(name => {
+      const on = s.tab === name;
+      return {
+        label: name === "All" ? "All messages" : name, count: counts[name],
+        weight: on ? 700 : 600, color: on ? "#17161c" : "#8b8a99",
+        underline: on ? accent : "transparent",
+        countColor: on ? "#6d28d9" : "#9a99a8", countBg: on ? "#f1ecff" : "#f3f3f7",
+        select: () => this.setState({ tab: name, selected: [] })
+      };
+    });
+
+    const mk = r => {
+      const checked = sel.includes(r.id);
+      return {
+        ...r, checked, bg: checked ? "#faf7ff" : "#fff",
+        sInitial: r.sender[0], sColor: PALETTE[r.id % PALETTE.length],
+        isEscrow: !!r.escrow, sku: r.sku || "",
+        stColor: ST[r.status].color, stBg: ST[r.status].bg,
+        toggle: () => this.setState(p => ({ selected: p.selected.includes(r.id) ? p.selected.filter(x => x !== r.id) : [...p.selected, r.id] })),
+        stopToggle: e => e.stopPropagation(),
+        open: e => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ drawer: r }); }
+      };
+    };
+
+    const d = s.drawer;
+    const thread = d ? [
+      { who: d.sender, time: "9:52 PM", text: "Hi, is the stone still available?", mine: false },
+      { who: d.receiver, time: "9:54 PM", text: "Yes — certificate and origin report are attached to the listing.", mine: true },
+      { who: d.sender, time: "9:56 PM", text: d.text, mine: false }
+    ].map(m => ({
+      ...m, align: m.mine ? "flex-end" : "flex-start", textAlign: m.mine ? "right" : "left",
+      bubble: m.mine ? accent : "#fff", color: m.mine ? "#fff" : "#2c2b36",
+      border: m.mine ? accent : "#ececf3"
+    })) : [];
+
+    return {
+      masterData: [
+        { icon: "◰", label: "Products" }, { icon: "⚙", label: "Configuration" }, { icon: "◇", label: "Category" },
+        { icon: "⚗", label: "Laboratory" }, { icon: "◍", label: "Origin" }
+      ],
+      requests: [{ icon: "▤", label: "Payment Transactions" }, { icon: "◉", label: "Collector Requests" }],
+      stats: [
+        { label: "TOTAL MESSAGES", value: "67", delta: "+12 this week", deltaColor: "#16a34a" },
+        { label: "AWAITING REVIEW", value: String(counts.Flagged), delta: "oldest 2d", deltaColor: "#b45309" },
+        { label: "ESCROW REQUESTS", value: "9", delta: "3 unresolved", deltaColor: "#8b8a99" },
+        { label: "AVG. RESPONSE", value: "4h 12m", delta: "−38m", deltaColor: "#16a34a" }
+      ],
+      tabs, rows: rows.map(mk),
+      flaggedCount: counts.Flagged,
+      totalLabel: DATA.length + " shown · 67 total",
+      query: s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      filtersOpen: s.filtersOpen,
+      toggleFilters: () => this.setState(p => ({ filtersOpen: !p.filtersOpen })),
+      sortLabel: s.sortDesc ? "Newest" : "Oldest",
+      toggleSort: () => this.setState(p => ({ sortDesc: !p.sortDesc })),
+      chips: [
+        { label: "Sort by", value: s.sortDesc ? "Sent · newest" : "Sent · oldest", remove: () => this.setState({ sortDesc: true }) },
+        { label: "View", value: s.tab, remove: () => this.setState({ tab: "All" }) }
+      ],
+      clearAll: () => this.setState({ tab: "All", query: "", sortDesc: true, filtersOpen: false }),
+      allChecked: rows.length > 0 && sel.length === rows.length,
+      toggleAll: () => this.setState(p => ({ selected: p.selected.length === rows.length ? [] : rows.map(r => r.id) })),
+      hasSelection: sel.length > 0,
+      selectedLabel: sel.length + (sel.length === 1 ? " message selected" : " messages selected"),
+      clearSelection: () => this.setState({ selected: [] }),
+      rowHeight: dense ? "48px" : "62px",
+      isEmpty: rows.length === 0,
+      emptyTitle: s.query ? "No messages match your search" : "Nothing to moderate here",
+      emptyBody: s.query ? "Try a different term or clear the filters." : "Flagged and deleted messages will appear in this tab.",
+      rangeLabel: "Showing 1–" + rows.length + " of " + counts[s.tab] + " messages",
+      drawerOpen: !!d,
+      drawerTitle: d ? d.sender + " → " + d.receiver + " · " + d.date : "",
+      thread,
+      closeDrawer: () => this.setState({ drawer: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

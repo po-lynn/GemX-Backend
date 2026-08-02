@@ -47,3 +47,19 @@ export async function requireAdminOrFeature(
   }
   return { error: jsonError("Forbidden", 403) }
 }
+
+/** Same as requireAdminOrFeature, but internal role is allowed if it holds ANY of the given keys. */
+export async function requireAdminOrAnyFeature(
+  request: NextRequest,
+  featureKeys: string[]
+): Promise<GuardResult> {
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return { error: jsonError("Unauthorized", 401) }
+  if (session.user.role === "admin") return { session }
+  if (session.user.role === "internal") {
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
+    const results = await Promise.all(featureKeys.map((key) => checkInternalAccess(session.user.id, key)))
+    if (results.some(Boolean)) return { session }
+  }
+  return { error: jsonError("Forbidden", 403) }
+}

@@ -56,6 +56,7 @@ describe("GET /api/admin/chat/all-conversations/messages", () => {
           fileUrl: null,
           imageUrls: null,
           messageType: "text",
+          starred: false,
           createdAt: "2026-07-01T00:00:00.000Z",
         },
       ],

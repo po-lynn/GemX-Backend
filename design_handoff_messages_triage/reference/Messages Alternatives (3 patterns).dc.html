@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #eeeef4; }
+  a { color: #7c3aed; text-decoration: none; }
+  a:hover { color: #5b21b6; }
+  input, button { font-family: inherit; }
+</style>
+</helmet>
+
+<section style="padding:40px; display:flex; flex-direction:column; gap:28px">
+  <div style="display:flex; flex-direction:column; gap:6px">
+    <div style="font-size:12px; font-weight:700; letter-spacing:0.12em; color:#8b8a99">TURN 1 · MESSAGE REVIEW PATTERNS</div>
+    <div style="font-size:26px; font-weight:800; letter-spacing:-0.02em; color:#17161c">Three ways large platforms build admin message review</div>
+    <div style="font-size:14.5px; color:#6b6a78; max-width:760px">Each frame is the same data on the same GemX chrome — the difference is the review model. Reference them in chat as <a href="#1a">1a</a>, <a href="#1b">1b</a>, <a href="#1c">1c</a>.</div>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:32px; align-items:flex-start">
+
+    <div id="1a" style="display:flex; flex-direction:column; gap:10px">
+      <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:12px; font-weight:800; color:#fff; background:#17161c; padding:4px 9px; border-radius:7px">1a</span>
+        <span style="font-size:16px; font-weight:700; color:#17161c">Triage inbox — split view</span>
+        <span style="font-size:13px; color:#8b8a99">Gmail / Zendesk / Front. Scan the list, read in place, act with keys.</span>
+      </div>
+      <div style="width:1360px; height:820px; background:#fff; border:1px solid #e0e0ea; border-radius:16px; overflow:hidden; box-shadow:0 20px 50px rgba(23,22,28,.10); display:flex; flex-direction:column">
+        <div style="height:56px; flex:none; display:flex; align-items:center; gap:14px; padding:0 18px; border-bottom:1px solid #ececf3">
+          <div style="font-size:15px; font-weight:800; letter-spacing:-0.02em">Messages</div>
+          <div style="display:flex; align-items:center; gap:8px; height:34px; flex:1; max-width:420px; padding:0 12px; border:1px solid #e6e6ee; border-radius:9px; background:#fbfbfd; font-size:13px; color:#8b8a99">⌕ Search or type a command <span style="margin-left:auto; font-size:11px; border:1px solid #e6e6ee; background:#fff; padding:1px 6px; border-radius:5px">/</span></div>
+          <div style="flex:1"></div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#8b8a99">Keyboard
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e6e6ee; padding:2px 6px; border-radius:5px">J</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e6e6ee; padding:2px 6px; border-radius:5px">K</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e6e6ee; padding:2px 6px; border-radius:5px">E</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; border:1px solid #e6e6ee; padding:2px 6px; border-radius:5px">⌘⏎</span>
+          </div>
+        </div>
+        <div style="flex:1; display:flex; min-height:0">
+          <div style="width:228px; flex:none; border-right:1px solid #ececf3; padding:14px 12px; display:flex; flex-direction:column; gap:4px; background:#fcfcfe">
+            <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8; padding:6px 10px">SAVED VIEWS</div>
+            <sc-for list="{{ views }}" as="v" hint-placeholder-count="6">
+              <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; font-size:13.5px; font-weight:{{ v.weight }}; color:{{ v.color }}; background:{{ v.bg }}; cursor:pointer">
+                <span style="width:16px; text-align:center; opacity:.8">{{ v.icon }}</span>{{ v.label }}
+                <span style="margin-left:auto; font-size:11.5px; font-weight:700; color:{{ v.badgeColor }}">{{ v.count }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-top:auto; padding:10px; border:1px dashed #ded9f5; border-radius:10px; background:#faf8ff">
+              <div style="font-size:12px; font-weight:700; color:#5b21b6">SLA</div>
+              <div style="font-size:12px; color:#6b6a78; margin-top:3px; line-height:1.4">4 flagged items breach in under 2h.</div>
+            </div>
+          </div>
+
+          <div style="width:400px; flex:none; border-right:1px solid #ececf3; display:flex; flex-direction:column; min-height:0">
+            <div style="height:44px; flex:none; display:flex; align-items:center; gap:10px; padding:0 14px; border-bottom:1px solid #f0f0f5; background:#fbfbfd">
+              <input type="checkbox" style="width:15px; height:15px; accent-color:#7c3aed" />
+              <span style="font-size:12px; font-weight:700; color:#6b6a78">Flagged · 12</span>
+              <div style="flex:1"></div>
+              <span style="font-size:12px; color:#8b8a99">Newest ▾</span>
+            </div>
+            <div style="flex:1; overflow:hidden">
+              <sc-for list="{{ inbox }}" as="m" hint-placeholder-count="8">
+                <div style="display:flex; gap:11px; padding:13px 14px; border-bottom:1px solid #f4f4f8; background:{{ m.bg }}; border-left:3px solid {{ m.rail }}; cursor:pointer">
+                  <div style="width:30px; height:30px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; color:#fff; background:{{ m.color }}">{{ m.initial }}</div>
+                  <div style="min-width:0; flex:1">
+                    <div style="display:flex; align-items:center; gap:6px">
+                      <span style="font-size:13.5px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ m.sender }}</span>
+                      <span style="font-size:11.5px; color:#b3b2c0">→</span>
+                      <span style="font-size:12.5px; color:#6b6a78; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ m.receiver }}</span>
+                      <span style="margin-left:auto; font-size:11.5px; color:#9a99a8; white-space:nowrap">{{ m.time }}</span>
+                    </div>
+                    <div style="font-size:13px; color:#4a4956; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.text }}</div>
+                    <div style="display:flex; gap:6px; margin-top:6px">
+                      <sc-if value="{{ m.tag }}"><span style="font-size:10.5px; font-weight:700; color:{{ m.tagColor }}; background:{{ m.tagBg }}; padding:2px 7px; border-radius:6px">{{ m.tag }}</span></sc-if>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; background:#fbfbfd">
+            <div style="flex:none; padding:16px 20px; border-bottom:1px solid #ececf3; background:#fff; display:flex; align-items:center; gap:12px">
+              <div style="width:36px; height:36px; border-radius:50%; background:#e11d48; color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px">N</div>
+              <div>
+                <div style="font-size:15px; font-weight:800; letter-spacing:-0.02em">Ni → Testing</div>
+                <div style="font-size:12.5px; color:#8b8a99">Thread #4821 · 18 messages · opened Jul 24</div>
+              </div>
+              <div style="flex:1"></div>
+              <button style="height:34px; padding:0 13px; background:#fff; border:1px solid #e3e3ec; border-radius:9px; font-size:13px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">⚑ Flag <span style="color:#a8a7b5">F</span></button>
+              <button style="height:34px; padding:0 13px; background:#fff; border:1px solid #f3c9c9; border-radius:9px; font-size:13px; font-weight:600; color:#b91c1c; white-space:nowrap; cursor:pointer">Delete <span style="opacity:.6">⌫</span></button>
+              <button style="height:34px; padding:0 14px; background:#7c3aed; border:0; border-radius:9px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer">✓ Resolve <span style="opacity:.7">E</span></button>
+            </div>
+            <div style="flex:1; overflow:hidden; padding:18px 20px; display:flex; flex-direction:column; gap:12px">
+              <div style="align-self:center; font-size:11.5px; color:#9a99a8; background:#f1f1f6; padding:4px 10px; border-radius:20px">Jul 28, 2026</div>
+              <sc-for list="{{ thread }}" as="t" hint-placeholder-count="5">
+                <div style="align-self:{{ t.align }}; max-width:70%">
+                  <div style="font-size:11.5px; color:#9a99a8; margin-bottom:4px; text-align:{{ t.textAlign }}">{{ t.who }} · {{ t.time }}</div>
+                  <div style="padding:11px 14px; border-radius:14px; font-size:13.5px; line-height:1.5; color:{{ t.color }}; background:{{ t.bubble }}; border:1px solid {{ t.border }}">{{ t.text }}</div>
+                </div>
+              </sc-for>
+              <div style="margin-top:auto; border:1px solid #fde4c8; background:#fffaf2; border-radius:12px; padding:12px 14px">
+                <div style="font-size:12px; font-weight:800; letter-spacing:0.05em; color:#b45309">AUTO-DETECTED · OFF-PLATFORM PAYMENT</div>
+                <div style="font-size:13px; color:#6b5a45; margin-top:4px; line-height:1.45">Phrase “call me” + a phone number matched policy rule <span style="font-family:'JetBrains Mono',monospace; font-size:12px">P-114</span>. Confidence 0.88.</div>
+              </div>
+            </div>
+            <div style="flex:none; padding:12px 20px; border-top:1px solid #ececf3; background:#fff; display:flex; align-items:center; gap:10px">
+              <div style="flex:1; height:38px; border:1px solid #e6e6ee; border-radius:10px; background:#fbfbfd; display:flex; align-items:center; padding:0 12px; font-size:13px; color:#9a99a8">Add an internal note…</div>
+              <button style="height:38px; padding:0 14px; background:#17161c; border:0; border-radius:10px; font-size:13px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer">Note ⌘⏎</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex; flex-direction:column; gap:10px">
+      <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:12px; font-weight:800; color:#fff; background:#17161c; padding:4px 9px; border-radius:7px">1b</span>
+        <span style="font-size:16px; font-weight:700; color:#17161c">Moderation queue — one decision at a time</span>
+        <span style="font-size:13px; color:#8b8a99">Meta / TikTok / Discord T&amp;S. Throughput, policy, audit trail.</span>
+      </div>
+      <div style="width:1360px; height:820px; background:#f7f7fb; border:1px solid #e0e0ea; border-radius:16px; overflow:hidden; box-shadow:0 20px 50px rgba(23,22,28,.10); display:flex; flex-direction:column">
+        <div style="height:60px; flex:none; background:#17161c; display:flex; align-items:center; gap:16px; padding:0 20px; color:#fff">
+          <div style="font-size:15px; font-weight:800; letter-spacing:-0.02em">Review queue</div>
+          <span style="font-size:12px; font-weight:700; color:#c4b5fd; background:rgba(124,58,237,.25); padding:4px 10px; border-radius:7px">Messages · Escalated</span>
+          <div style="flex:1"></div>
+          <div style="display:flex; align-items:center; gap:10px">
+            <div style="width:220px; height:6px; border-radius:4px; background:rgba(255,255,255,.16); overflow:hidden"><div style="width:38%; height:100%; background:#a78bfa"></div></div>
+            <span style="font-size:12.5px; color:#cfcede">Item 5 of 13 · 4m 20s avg</span>
+          </div>
+          <div style="width:32px; height:32px; border-radius:50%; background:#3a3945; display:grid; place-items:center; font-size:12px; font-weight:700">A</div>
+        </div>
+        <div style="flex:1; display:flex; min-height:0; padding:20px; gap:20px">
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:16px">
+            <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; padding:20px 22px">
+              <div style="display:flex; align-items:center; gap:10px">
+                <span style="font-size:11px; font-weight:800; letter-spacing:0.08em; color:#b91c1c; background:#fee2e2; padding:4px 9px; border-radius:6px">HIGH RISK</span>
+                <span style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:#0369a1; background:#e0f2fe; padding:4px 9px; border-radius:6px">ESCROW</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#9a99a8">MSG-2061405053</span>
+                <div style="flex:1"></div>
+                <span style="font-size:12.5px; color:#8b8a99">Reported by 2 users · Jul 28, 4:12 PM</span>
+              </div>
+              <div style="margin-top:16px; padding:18px 20px; border:1px solid #f0e2e2; background:#fffafa; border-radius:14px">
+                <div style="font-size:21px; line-height:1.45; font-weight:600; letter-spacing:-0.01em; color:#17161c">“Price is negotiable if you take both stones — <span style="background:#fee2e2; padding:0 4px; border-radius:4px">call me on +95 9 79288770</span>, we can settle outside the app.”</div>
+              </div>
+              <div style="display:flex; gap:24px; margin-top:16px">
+                <div><div style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">SENDER</div><div style="font-size:14px; font-weight:700; margin-top:4px">Ni · @ni</div><div style="font-size:12.5px; color:#8b8a99">Seller · 3 prior strikes</div></div>
+                <div><div style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">RECIPIENT</div><div style="font-size:14px; font-weight:700; margin-top:4px">Testing · @testing</div><div style="font-size:12.5px; color:#8b8a99">Buyer · joined Jun 2026</div></div>
+                <div><div style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">LISTING</div><div style="font-size:14px; font-weight:700; margin-top:4px">Emerald · Loose stone</div><div style="font-size:12.5px; color:#8b8a99">MMK 30,000,000</div></div>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; padding:16px 20px; flex:1; min-height:0; overflow:hidden">
+              <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">SURROUNDING CONTEXT</div>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px">
+                <sc-for list="{{ context }}" as="c" hint-placeholder-count="4">
+                  <div style="display:flex; gap:10px; align-items:flex-start; opacity:{{ c.opacity }}">
+                    <div style="width:60px; flex:none; font-size:11.5px; color:#9a99a8; padding-top:3px">{{ c.time }}</div>
+                    <div style="font-size:13.5px; font-weight:700; width:70px; flex:none; padding-top:2px">{{ c.who }}</div>
+                    <div style="font-size:13.5px; color:#4a4956; line-height:1.45">{{ c.text }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; padding:14px 18px; display:flex; align-items:center; gap:12px">
+              <button style="height:44px; flex:1; background:#16a34a; border:0; border-radius:11px; font-size:14px; font-weight:700; color:#fff; cursor:pointer">✓ Allow <span style="opacity:.75">A</span></button>
+              <button style="height:44px; flex:1; background:#fff; border:1px solid #fde4c8; border-radius:11px; font-size:14px; font-weight:700; color:#b45309; cursor:pointer">⚑ Warn sender <span style="opacity:.6">W</span></button>
+              <button style="height:44px; flex:1; background:#dc2626; border:0; border-radius:11px; font-size:14px; font-weight:700; color:#fff; cursor:pointer">✕ Remove <span style="opacity:.75">R</span></button>
+              <button style="height:44px; padding:0 16px; background:#fff; border:1px solid #e3e3ec; border-radius:11px; font-size:14px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">Escalate ↑</button>
+              <button style="height:44px; padding:0 16px; background:#fff; border:1px solid #e3e3ec; border-radius:11px; font-size:14px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">Skip →</button>
+            </div>
+          </div>
+
+          <div style="width:340px; flex:none; display:flex; flex-direction:column; gap:16px">
+            <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; padding:16px 18px">
+              <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">MATCHED POLICY</div>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px">
+                <sc-for list="{{ policies }}" as="p" hint-placeholder-count="3">
+                  <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid {{ p.border }}; background:{{ p.bg }}; border-radius:11px">
+                    <input type="radio" checked="{{ p.checked }}" style="margin-top:3px; accent-color:#7c3aed" />
+                    <div>
+                      <div style="font-size:13.5px; font-weight:700">{{ p.name }}</div>
+                      <div style="font-size:12.5px; color:#6b6a78; margin-top:2px; line-height:1.4">{{ p.desc }}</div>
+                    </div>
+                    <div style="margin-left:auto; font-size:11.5px; font-weight:700; color:#8b8a99">{{ p.score }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#fff; border:1px solid #ececf3; border-radius:16px; padding:16px 18px; flex:1">
+              <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">USER HISTORY · NI</div>
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px">
+                <sc-for list="{{ history }}" as="h" hint-placeholder-count="4">
+                  <div style="display:flex; gap:10px">
+                    <div style="width:8px; height:8px; border-radius:50%; margin-top:5px; flex:none; background:{{ h.dot }}"></div>
+                    <div><div style="font-size:13px; font-weight:600; color:#2c2b36">{{ h.text }}</div><div style="font-size:11.5px; color:#9a99a8; margin-top:2px">{{ h.when }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:16px; padding:12px 14px; border-radius:12px; background:#fbfbfd; border:1px solid #ececf3">
+                <div style="font-size:12.5px; color:#6b6a78; line-height:1.45">Removing this message applies strike <strong style="color:#17161c">4 of 5</strong>. Strike 5 suspends selling privileges.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1c" style="display:flex; flex-direction:column; gap:10px">
+      <div style="display:flex; align-items:center; gap:10px">
+        <span style="font-size:12px; font-weight:800; color:#fff; background:#17161c; padding:4px 9px; border-radius:7px">1c</span>
+        <span style="font-size:16px; font-weight:700; color:#17161c">Log console — facets &amp; expandable rows</span>
+        <span style="font-size:13px; color:#8b8a99">Stripe / Datadog / AWS. Query the corpus, drill into one row.</span>
+      </div>
+      <div style="width:1360px; height:820px; background:#fff; border:1px solid #e0e0ea; border-radius:16px; overflow:hidden; box-shadow:0 20px 50px rgba(23,22,28,.10); display:flex; flex-direction:column">
+        <div style="flex:none; padding:18px 22px 14px; border-bottom:1px solid #ececf3">
+          <div style="display:flex; align-items:center; gap:12px">
+            <div style="font-size:22px; font-weight:800; letter-spacing:-0.02em">Messages</div>
+            <span style="font-size:12px; font-weight:700; color:#6d28d9; background:#f1ecff; padding:4px 10px; border-radius:7px">67 events</span>
+            <div style="flex:1"></div>
+            <button style="height:36px; padding:0 14px; background:#fff; border:1px solid #e3e3ec; border-radius:9px; font-size:13px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">Save view</button>
+            <button style="height:36px; padding:0 14px; background:#fff; border:1px solid #e3e3ec; border-radius:9px; font-size:13px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">⤓ Export</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:14px; height:42px; border:1px solid #e0dcf5; border-radius:11px; background:#fbfaff; padding:0 12px">
+            <span style="font-size:12px; font-weight:700; color:#7c3aed; font-family:'JetBrains Mono',monospace">query</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#2c2b36">status:flagged AND type:escrow AND sent:&gt;7d</span>
+            <span style="width:1px; height:16px; background:#c4c3d0"></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#9a99a8">| add filter…</span>
+            <div style="flex:1"></div>
+            <span style="font-size:12px; color:#8b8a99">Last 30 days ▾</span>
+          </div>
+        </div>
+        <div style="flex:1; display:flex; min-height:0">
+          <div style="width:250px; flex:none; border-right:1px solid #ececf3; padding:16px 14px; overflow:hidden; background:#fcfcfe">
+            <sc-for list="{{ facets }}" as="f" hint-placeholder-count="3">
+              <div style="margin-bottom:20px">
+                <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; color:#9a99a8; margin-bottom:8px">{{ f.name }}</div>
+                <sc-for list="{{ f.items }}" as="i" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:9px; padding:5px 2px">
+                    <input type="checkbox" checked="{{ i.checked }}" style="width:14px; height:14px; accent-color:#7c3aed" />
+                    <span style="font-size:13px; color:#3d3c49; flex:1">{{ i.label }}</span>
+                    <span style="font-size:11.5px; color:#9a99a8; font-family:'JetBrains Mono',monospace">{{ i.count }}</span>
+                  </div>
+                  <div style="height:4px; border-radius:3px; background:#f0eefa; margin:2px 0 0 23px; overflow:hidden"><div style="height:100%; background:#c4b5fd; width:{{ i.bar }}"></div></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column">
+            <div style="flex:none; padding:14px 20px 6px">
+              <div style="display:flex; align-items:flex-end; gap:3px; height:64px">
+                <sc-for list="{{ bars }}" as="b" hint-placeholder-count="24">
+                  <div style="flex:1; border-radius:3px 3px 0 0; background:{{ b.color }}; height:{{ b.h }}"></div>
+                </sc-for>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; color:#9a99a8; margin-top:6px"><span>Jul 3</span><span>volume by day · flagged in amber</span><span>Aug 1</span></div>
+            </div>
+            <div style="flex:none; display:grid; grid-template-columns:150px 120px 150px 1fr 110px 90px; gap:12px; padding:10px 20px; border-top:1px solid #f0f0f5; border-bottom:1px solid #f0f0f5; background:#fbfbfd; font-size:11px; font-weight:700; letter-spacing:0.06em; color:#8b8a99">
+              <div>TIMESTAMP</div><div>TYPE</div><div>PARTICIPANTS</div><div>BODY</div><div>STATUS</div><div style="text-align:right">RISK</div>
+            </div>
+            <div style="flex:1; overflow:hidden">
+              <sc-for list="{{ logRows }}" as="l" hint-placeholder-count="7">
+                <div style="display:grid; grid-template-columns:150px 120px 150px 1fr 110px 90px; gap:12px; padding:11px 20px; border-bottom:1px solid #f5f5f9; align-items:center; background:{{ l.bg }}">
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#6b6a78">{{ l.ts }}</div>
+                  <div><span style="font-size:11px; font-weight:700; color:{{ l.typeColor }}; background:{{ l.typeBg }}; padding:2px 8px; border-radius:6px">{{ l.type }}</span></div>
+                  <div style="font-size:12.5px; color:#3d3c49; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ l.who }}</div>
+                  <div style="font-size:13px; color:#2c2b36; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ l.text }}</div>
+                  <div><span style="font-size:11.5px; font-weight:700; color:{{ l.stColor }}">● {{ l.status }}</span></div>
+                  <div style="text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; color:{{ l.riskColor }}">{{ l.risk }}</div>
+                </div>
+              </sc-for>
+              <div style="border-bottom:1px solid #f0f0f5; background:#fbfaff; padding:16px 20px 18px">
+                <div style="display:flex; align-items:center; gap:10px">
+                  <span style="font-size:12px; font-weight:800; letter-spacing:0.06em; color:#6d28d9">EXPANDED · MSG-2061405053</span>
+                  <div style="flex:1"></div>
+                  <button style="height:30px; padding:0 12px; background:#fff; border:1px solid #e3e3ec; border-radius:8px; font-size:12.5px; font-weight:600; color:#3d3c49; white-space:nowrap; cursor:pointer">Open thread</button>
+                  <button style="height:30px; padding:0 12px; background:#fff; border:1px solid #fde4c8; border-radius:8px; font-size:12.5px; font-weight:600; color:#b45309; white-space:nowrap; cursor:pointer">Flag</button>
+                  <button style="height:30px; padding:0 12px; background:#dc2626; border:0; border-radius:8px; font-size:12.5px; font-weight:700; color:#fff; white-space:nowrap; cursor:pointer">Remove</button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px">
+                  <div style="background:#17161c; border-radius:11px; padding:14px 16px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.7; color:#d6d4e4">
+                    <div><span style="color:#a78bfa">"sender"</span>: "ni", <span style="color:#a78bfa">"receiver"</span>: "testing",</div>
+                    <div><span style="color:#a78bfa">"channel"</span>: "escrow", <span style="color:#a78bfa">"sku"</span>: "EMERL-2061405053",</div>
+                    <div><span style="color:#a78bfa">"risk"</span>: 0.88, <span style="color:#a78bfa">"rule"</span>: "P-114",</div>
+                    <div><span style="color:#a78bfa">"attachments"</span>: 0, <span style="color:#a78bfa">"edited"</span>: false</div>
+                  </div>
+                  <div style="border:1px solid #ececf3; background:#fff; border-radius:11px; padding:14px 16px">
+                    <div style="font-size:12px; font-weight:700; letter-spacing:0.06em; color:#9a99a8">AUDIT TRAIL</div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px">
+                      <sc-for list="{{ audit }}" as="a" hint-placeholder-count="3">
+                        <div style="display:flex; gap:8px; font-size:12.5px"><span style="color:#9a99a8; width:74px; flex:none; font-family:'JetBrains Mono',monospace; font-size:11.5px">{{ a.when }}</span><span style="color:#3d3c49">{{ a.what }}</span></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    const inbox = [
+      { sender: "Ni", receiver: "Testing", text: "Price is negotiable if you take both stones — call me", time: "4:12 PM", tag: "OFF-PLATFORM", active: true },
+      { sender: "Gemx4", receiver: "Supervisor", text: "Escrow service request (buyer) for: Emeral", time: "9:56 PM", tag: "ESCROW" },
+      { sender: "Testing", receiver: "Gemx", text: "👋 have been working on the sapphire certificate", time: "9:43 PM" },
+      { sender: "Ni", receiver: "GemX Premium", text: "Let me check your project and revert tomorrow", time: "9:56 PM", tag: "REPORTED ×2" },
+      { sender: "Gemx", receiver: "GemX Premium", text: "Escrow service request (buyer) for: Emeral", time: "9:41 PM", tag: "ESCROW" },
+      { sender: "Gemx4", receiver: "Supervisor", text: "Hope you're free on Sunday", time: "9:55 PM" },
+      { sender: "GemX Premium", receiver: "Gemx4", text: "Your listing has been approved and is now visible", time: "11:02 AM" },
+      { sender: "Testing", receiver: "Supervisor", text: "Removed by moderator — off-platform payment request", time: "8:30 PM", tag: "DELETED" }
+    ];
+    const palette = { Ni: "#e11d48", Gemx4: "#7c3aed", Testing: "#0ea5e9", Gemx: "#d97706", "GemX Premium": "#4f46e5" };
+    const tagStyle = {
+      "OFF-PLATFORM": ["#b91c1c", "#fee2e2"], ESCROW: ["#0369a1", "#e0f2fe"],
+      "REPORTED ×2": ["#b45309", "#fef3c7"], DELETED: ["#6b6a78", "#f1f1f6"]
+    };
+    const bars = Array.from({ length: 26 }, (_, i) => {
+      const v = [30, 44, 22, 58, 40, 66, 34, 50, 72, 38, 26, 60, 48, 80, 42, 36, 54, 68, 30, 46, 62, 88, 40, 52, 34, 58][i];
+      const hot = [8, 13, 21, 17].includes(i);
+      return { h: v + "%", color: hot ? "#f59e0b" : "#ddd7f6" };
+    });
+    return {
+      views: [
+        { icon: "◎", label: "All messages", count: 67 },
+        { icon: "⚑", label: "Flagged", count: 12, active: true },
+        { icon: "◍", label: "Escrow", count: 9 },
+        { icon: "◔", label: "Unassigned", count: 5 },
+        { icon: "◑", label: "Assigned to me", count: 3 },
+        { icon: "✓", label: "Resolved", count: 41 }
+      ].map(v => ({
+        ...v, weight: v.active ? 700 : 600, color: v.active ? "#6d28d9" : "#4a4956",
+        bg: v.active ? "#f2edff" : "transparent", badgeColor: v.active ? "#6d28d9" : "#9a99a8"
+      })),
+      inbox: inbox.map((m, i) => ({
+        ...m, initial: m.sender[0], color: palette[m.sender] || "#7c3aed",
+        bg: m.active ? "#f7f4ff" : "#fff", rail: m.active ? "#7c3aed" : "transparent",
+        tagColor: m.tag ? tagStyle[m.tag][0] : "", tagBg: m.tag ? tagStyle[m.tag][1] : ""
+      })),
+      thread: [
+        { who: "Testing", time: "3:58 PM", text: "Is the emerald pair still available?", mine: false },
+        { who: "Ni", time: "4:03 PM", text: "Yes, both stones. Certificate is on the listing.", mine: true },
+        { who: "Testing", time: "4:09 PM", text: "What's the best price for both?", mine: false },
+        { who: "Ni", time: "4:12 PM", text: "Price is negotiable if you take both stones — call me on +95 9 79288770, we can settle outside the app.", mine: true }
+      ].map(t => ({
+        ...t, align: t.mine ? "flex-end" : "flex-start", textAlign: t.mine ? "right" : "left",
+        bubble: t.mine ? "#7c3aed" : "#fff", color: t.mine ? "#fff" : "#2c2b36", border: t.mine ? "#7c3aed" : "#ececf3"
+      })),
+      context: [
+        { time: "3:58 PM", who: "Testing", text: "Is the emerald pair still available?", opacity: 0.55 },
+        { time: "4:03 PM", who: "Ni", text: "Yes, both stones. Certificate is on the listing.", opacity: 0.55 },
+        { time: "4:09 PM", who: "Testing", text: "What's the best price for both?", opacity: 0.8 },
+        { time: "4:12 PM", who: "Ni", text: "Price is negotiable if you take both stones — call me on +95 9 79288770…", opacity: 1 },
+        { time: "4:15 PM", who: "Testing", text: "Reported this message.", opacity: 0.55 }
+      ],
+      policies: [
+        { name: "P-114 · Off-platform payment", desc: "Directing a trade off GemX escrow", score: "0.88", checked: true, border: "#ded5fb", bg: "#faf8ff" },
+        { name: "P-032 · Contact sharing", desc: "Phone number in message body", score: "0.61", checked: false, border: "#ececf3", bg: "#fff" },
+        { name: "No violation", desc: "Message is within policy", score: "—", checked: false, border: "#ececf3", bg: "#fff" }
+      ],
+      history: [
+        { text: "Warned — contact sharing", when: "Jul 12, 2026", dot: "#b45309" },
+        { text: "Message removed — P-114", when: "Jun 30, 2026", dot: "#dc2626" },
+        { text: "Appeal denied", when: "Jun 30, 2026", dot: "#6b6a78" },
+        { text: "Seller verified · lab-certified", when: "Mar 4, 2026", dot: "#16a34a" }
+      ],
+      facets: [
+        { name: "STATUS", items: [
+          { label: "Active", count: 54, bar: "80%", checked: false },
+          { label: "Flagged", count: 12, bar: "34%", checked: true },
+          { label: "Deleted", count: 1, bar: "6%", checked: false }
+        ] },
+        { name: "TYPE", items: [
+          { label: "Chat", count: 52, bar: "78%", checked: false },
+          { label: "Escrow request", count: 9, bar: "26%", checked: true },
+          { label: "System", count: 6, bar: "18%", checked: false }
+        ] },
+        { name: "RISK RULE", items: [
+          { label: "P-114 off-platform", count: 7, bar: "22%", checked: false },
+          { label: "P-032 contact", count: 4, bar: "14%", checked: false },
+          { label: "None", count: 56, bar: "84%", checked: false }
+        ] }
+      ],
+      bars,
+      logRows: [
+        { ts: "07-29 21:56:04", type: "escrow", who: "Gemx4 → Supervisor", text: "Escrow service request (buyer) for: Emeral", status: "Active", risk: "0.04" },
+        { ts: "07-29 21:56:00", type: "chat", who: "Gemx4 → Supervisor", text: "Are you free for a quick call about the emerald listing?", status: "Active", risk: "0.21" },
+        { ts: "07-29 21:43:11", type: "chat", who: "Testing → Gemx", text: "👋 have been working on the sapphire certificate upload", status: "Active", risk: "0.02" },
+        { ts: "07-28 16:12:47", type: "chat", who: "Ni → Testing", text: "Price is negotiable if you take both stones — call me on…", status: "Flagged", risk: "0.88", open: true },
+        { ts: "07-28 11:02:03", type: "system", who: "GemX Premium → Gemx4", text: "Your listing has been approved and is now visible", status: "Active", risk: "0.00" },
+        { ts: "07-27 20:30:55", type: "chat", who: "Testing → Supervisor", text: "Removed by moderator — off-platform payment request", status: "Deleted", risk: "0.74" }
+      ].map(l => {
+        const t = { chat: ["#6d28d9", "#f1ecff"], escrow: ["#0369a1", "#e0f2fe"], system: ["#6b6a78", "#f1f1f6"] }[l.type];
+        const st = { Active: "#16a34a", Flagged: "#b45309", Deleted: "#b91c1c" }[l.status];
+        const risk = parseFloat(l.risk);
+        return { ...l, typeColor: t[0], typeBg: t[1], stColor: st, bg: l.open ? "#f7f4ff" : "#fff", riskColor: risk > 0.7 ? "#b91c1c" : risk > 0.3 ? "#b45309" : "#8b8a99" };
+      }),
+      audit: [
+        { when: "16:15", what: "Reported by @testing" },
+        { when: "16:15", what: "Auto-flagged by rule P-114 (0.88)" },
+        { when: "16:41", what: "Queued for human review · tier 2" }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

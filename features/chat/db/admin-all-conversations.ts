@@ -232,6 +232,7 @@ export type AdminConversationMessage = {
   imageUrls: string[] | null;
   messageType: string;
   createdAt: string;
+  starred: boolean;
 };
 
 /** Full read-only message history between two arbitrary users, for admin oversight. */
@@ -258,6 +259,7 @@ export async function getConversationMessagesForAdmin(
         imageUrls: messages.imageUrls,
         messageType: messages.messageType,
         createdAt: messages.createdAt,
+        starred: messages.starred,
       })
       .from(messages)
       .where(whereClause)
@@ -279,6 +281,7 @@ export async function getConversationMessagesForAdmin(
       imageUrls: normalizeImageUrls(r.imageUrls),
       messageType: r.messageType,
       createdAt: toIsoTime(r.createdAt),
+      starred: !!r.starred,
     }));
 
   return { messages: ordered, total: countRows[0]?.count ?? 0 };

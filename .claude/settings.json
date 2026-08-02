@@ -83,7 +83,10 @@
       "Bash(dpkg -L npm)",
       "Bash(node_modules/.bin/tsc --noEmit -p tsconfig.json)",
       "Bash(./node_modules/.bin/eslint tests/load/admin-ramp.js tests/load/admin-steady.js tests/load/mobile-authenticated.js tests/load/mobile-login-endpoint.js tests/load/mobile-non-login.js)",
-      "Bash(./node_modules/.bin/eslint --no-ignore tests/load/admin-ramp.js tests/load/admin-steady.js tests/load/mobile-authenticated.js tests/load/mobile-login-endpoint.js tests/load/mobile-non-login.js)"
+      "Bash(./node_modules/.bin/eslint --no-ignore tests/load/admin-ramp.js tests/load/admin-steady.js tests/load/mobile-authenticated.js tests/load/mobile-login-endpoint.js tests/load/mobile-non-login.js)",
+      "Bash(node_modules/.bin/eslint app/admin/messages/page.tsx app/admin/chat-dashboard/page.tsx components/admin/AdminSidebar.tsx features/messages/)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",
