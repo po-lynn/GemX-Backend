@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { CheckCircle2, Flag, Loader2, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ImageViewer } from "@/components/shared/ImageViewer"
 import { ParticipantAvatar } from "@/features/messages/components/triage/ParticipantAvatar"
 import { TYPE_LABELS } from "@/features/messages/lib/triage-filters"
 import type { TriageConversation, TriageThread } from "@/features/messages/types/triage"
@@ -49,6 +51,8 @@ export function ReadingPane({
   flagPending,
   deletePending,
 }: Props) {
+  const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null)
+
   if (!conversation) {
     return (
       <div className="flex min-w-[560px] flex-1 items-center justify-center bg-[#fbfbfd] text-sm text-[#8b8a99]">
@@ -176,9 +180,15 @@ export function ReadingPane({
                     if (images) {
                       return (
                         <div className="mb-1 flex flex-wrap gap-1">
-                          {images.map((url) => (
+                          {images.map((url, i) => (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img key={url} src={url} alt="" className="h-24 w-24 rounded-lg object-cover" />
+                            <img
+                              key={url}
+                              src={url}
+                              alt=""
+                              onClick={() => setViewer({ images, index: i })}
+                              className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+                            />
                           ))}
                         </div>
                       )
@@ -226,6 +236,10 @@ export function ReadingPane({
           Save ⌘⏎
         </button>
       </div>
+
+      {viewer && (
+        <ImageViewer images={viewer.images} initialIndex={viewer.index} onClose={() => setViewer(null)} />
+      )}
     </div>
   )
 }

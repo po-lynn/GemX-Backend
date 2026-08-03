@@ -246,6 +246,50 @@ describe("MessagesTriagePage", () => {
     expect(screen.queryByText("Photo")).not.toBeInTheDocument()
   })
 
+  // Clicking an inline attachment thumbnail must open the full-size image
+  // viewer, not just leave the small 96x96 crop as the only way to see it.
+  it("opens the image viewer when an attachment thumbnail is clicked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-img-click",
+              senderId: "gemx4",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/photo.jpg",
+              imageUrls: ["https://storage.example.com/chat-media/photo.jpg"],
+              messageType: "image",
+              createdAt: "2026-07-29T21:56:00+06:30",
+              starred: false,
+            },
+          ],
+          page: 1,
+          limit: 200,
+          total: 1,
+        }),
+      }))
+    )
+    const { container } = renderPage()
+
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull())
+    expect(screen.queryByRole("dialog", { name: "Image viewer" })).not.toBeInTheDocument()
+
+    fireEvent.click(container.querySelector("img")!)
+
+    const viewer = await screen.findByRole("dialog", { name: "Image viewer" })
+    expect(viewer.querySelector(".pd-viewer-img")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/chat-media/photo.jpg"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Close viewer" }))
+    expect(screen.queryByRole("dialog", { name: "Image viewer" })).not.toBeInTheDocument()
+  })
+
   // Regression: real chat data stores single-image messages with only
   // fileUrl + messageType="image" set (imageUrls is null — it's only
   // populated for multi-image gallery messages). This must still render as

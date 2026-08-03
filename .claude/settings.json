@@ -128,7 +128,9 @@
       "Bash(echo \"started pid: $!\")",
       "Bash(~/.nvm/versions/node/v22.12.0/bin/node ./node_modules/.bin/next dev)",
       "mcp__chrome-devtools__list_network_requests",
-      "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
+      "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)",
+      "Bash(./node_modules/.bin/eslint features/products/components/ProductForm.tsx components/portal/PortalProductForm.tsx features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx components/shared/ImageViewer.tsx)",
+      "Bash(./node_modules/.bin/eslint tests/setup-component.ts tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

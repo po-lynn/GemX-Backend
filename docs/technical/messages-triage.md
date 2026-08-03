@@ -231,3 +231,39 @@ Verified live in-browser (Chrome DevTools MCP, see
 in the running dev app to return the exact real-data shape
 (`imageUrls: null`, `fileUrl` set, `messageType: "image"`) and confirmed the
 image now renders inline with zero console errors.
+
+## Phase 3c — Click thumbnail to open full-size image viewer
+
+**Ask:** the inline `<img>` thumbnail from Phase 3b is a small 96×96 crop
+with no way to see the full image — clicking it did nothing.
+
+**Fix:** rather than build a third viewer, extracted the existing
+`ImageViewer` component — previously copy-pasted byte-for-byte identically
+in `features/products/components/ProductForm.tsx` and
+`components/portal/PortalProductForm.tsx` (full-screen overlay with
+prev/next nav, thumbnail strip, Escape/arrow-key handling, focus management,
+backed by the already-globally-loaded `.pd-viewer*` CSS in
+`app/admin-list-view.css`) — into `components/shared/ImageViewer.tsx`. Both
+original call sites now import the shared component instead of defining
+their own copy; behavior is unchanged there (verified via
+`tests/component/product-form-color-field.test.tsx` and
+`product-form-nav.test.tsx`, which exercise `ProductForm.tsx`).
+
+`features/messages/components/triage/ReadingPane.tsx` and
+`features/chat/components/AdminAllConversationsView.tsx` each added local
+`viewer: { images: string[]; index: number } | null` state; the thumbnail
+`<img>` (or each thumbnail in a gallery message) gets an `onClick` that sets
+it, and `<ImageViewer>` mounts conditionally at the end of the component.
+
+**Test-environment note:** `ImageViewer` calls `scrollIntoView` in a
+`useEffect` (to keep the active thumbnail visible in its strip), which jsdom
+doesn't implement — added a no-op polyfill in `tests/setup-component.ts`
+rather than mocking it per-test, since any component test that mounts
+`ImageViewer` would otherwise throw.
+
+Regression tests ("opens the image viewer when an attachment thumbnail is
+clicked") added to both `tests/component/messages-triage-page.test.tsx` and
+`tests/component/admin-all-conversations-view.test.tsx`. Verified live via
+Chrome DevTools MCP: clicked the patched thumbnail, confirmed the full-size
+overlay opens (counter, prev/next, thumbnail strip) with zero console
+errors, then confirmed Escape closes it.

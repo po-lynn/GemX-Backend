@@ -70,6 +70,44 @@ describe("AdminAllConversationsView", () => {
     expect(screen.queryByRole("link", { name: "Attachment" })).not.toBeInTheDocument()
   })
 
+  // Clicking an inline attachment thumbnail must open the full-size image
+  // viewer, not just leave the small 96x96 crop as the only way to see it.
+  it("opens the image viewer when an attachment thumbnail is clicked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-img-click",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/single-photo.jpg",
+              imageUrls: null,
+              messageType: "image",
+              createdAt: "2026-07-29T21:56:00+06:30",
+            },
+          ],
+        }),
+      }))
+    )
+    const { container } = renderView()
+
+    fireEvent.click(screen.getByText(/Gemx4/))
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull())
+
+    fireEvent.click(container.querySelector("img")!)
+
+    const viewer = await screen.findByRole("dialog", { name: "Image viewer" })
+    expect(viewer.querySelector(".pd-viewer-img")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/chat-media/single-photo.jpg"
+    )
+  })
+
   // Regression: a non-image file attachment must render as a clickable link
   // to fileUrl, not the literal word "Attachment" with nothing behind it.
   it("renders a clickable link for a non-image attachment instead of a plain label", async () => {

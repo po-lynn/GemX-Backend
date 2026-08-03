@@ -7,6 +7,7 @@ import { Search, X } from "lucide-react";
 import { ELLIPSIS_NEXT, ELLIPSIS_PREV, getPageNumbers } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ImageViewer } from "@/components/shared/ImageViewer";
 import { cn } from "@/lib/utils";
 import type {
   AdminConversationListItem,
@@ -96,6 +97,7 @@ export function AdminAllConversationsView({ conversations, page, pageSize, total
   const [thread, setThread] = useState<ThreadMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
   const pageNumbers = getPageNumbers(page, totalPages);
@@ -306,9 +308,15 @@ export function AdminAllConversationsView({ conversations, page, pageSize, total
                         if (images) {
                           return (
                             <div className="mb-1 flex flex-wrap gap-1">
-                              {images.map((url) => (
+                              {images.map((url, i) => (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img key={url} src={url} alt="" className="h-24 w-24 rounded-lg object-cover" />
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  onClick={() => setViewer({ images, index: i })}
+                                  className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+                                />
                               ))}
                             </div>
                           )
@@ -338,6 +346,10 @@ export function AdminAllConversationsView({ conversations, page, pageSize, total
           </div>
         </div>
       </div>
+
+      {viewer && (
+        <ImageViewer images={viewer.images} initialIndex={viewer.index} onClose={() => setViewer(null)} />
+      )}
     </div>
   );
 }

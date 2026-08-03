@@ -28,6 +28,10 @@ data works). Visit `/admin/messages` while logged in as `admin` (or an
    while it loads and a retry card if it fails. The header shows both
    participants, message count, conversation type, and a thread number. A
    flagged thread shows an amber policy banner above the message scroller.
+   Image attachments render as an inline thumbnail — click one to open it
+   full-size in an overlay viewer (arrow keys / on-screen buttons to move
+   between images if the message has more than one, Escape or the × to
+   close). Non-image files render as a clickable "Attachment" link.
 7. **Flag** and **Delete** are real, persisted actions, but **only in
    "All messages" mode** — switch there first. In Conversations mode they
    still show a "Not wired yet in this preview" toast, since there's no
@@ -80,6 +84,16 @@ shareable/bookmarkable and the back button works.
    `MessagesTriagePage.tsx` with a real handler — mirror `handleFlag()`/
    `confirmDelete()` there for the call-action-then-`router.refresh()`
    pattern.
+
+**Reuse the image viewer elsewhere:** `components/shared/ImageViewer.tsx` is
+a shared component (also used by `ProductForm.tsx` and
+`PortalProductForm.tsx` for product images) — `<ImageViewer images={string[]}
+initialIndex={number} onClose={() => void} />`. To add click-to-enlarge
+somewhere new: add a `viewer: { images: string[]; index: number } | null`
+state, an `onClick={() => setViewer({ images, index: i })}` on the
+thumbnail(s), and mount `{viewer && <ImageViewer .../>}` once at the end of
+the component — see `ReadingPane.tsx` or `AdminAllConversationsView.tsx` for
+the exact pattern. Don't add a fourth copy of the component itself.
 
 **Give conversation `type` a real backing** (currently a text-pattern
 heuristic — see `classifyType()` in `features/messages/db/triage.ts` and the
