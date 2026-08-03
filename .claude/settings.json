@@ -127,7 +127,8 @@
       "Bash(nohup ./node_modules/.bin/next dev)",
       "Bash(echo \"started pid: $!\")",
       "Bash(~/.nvm/versions/node/v22.12.0/bin/node ./node_modules/.bin/next dev)",
-      "mcp__chrome-devtools__list_network_requests"
+      "mcp__chrome-devtools__list_network_requests",
+      "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

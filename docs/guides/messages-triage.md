@@ -109,9 +109,13 @@ technical doc's "Schema impact"):
   above the list for "No matches."
 - **Attachment message shows an image thumbnail / audio player / clickable
   "Attachment" link, not just the plain word "Attachment"** — this is the
-  fixed, expected behavior. If you see a bare, unclickable "Attachment" (or
-  "Photo"/"Voice message") text with nothing behind it, that's the phase-3
-  regression — check that `MessagesTriagePage.tsx`'s thread mapping still
+  fixed, expected behavior. **A single-image message (the common case) has
+  `fileUrl` set but `imageUrls: null`** — `imageUrls` is only populated for
+  multi-image gallery sends — so it must still resolve to an inline image
+  via `messageType === "image"` + `fileUrl`, not just via `imageUrls`. If you
+  see a bare, unclickable "Attachment" (or "Photo"/"Voice message") text
+  with nothing behind it, that's the phase-3/3b regression — check that
+  `MessagesTriagePage.tsx`'s thread mapping still
   passes `fileUrl`/`imageUrls`/`messageType` through to `TriageThreadMessage`
   instead of collapsing them into a label (see the technical doc's
   "Phase 3 — Attachment rendering fix").

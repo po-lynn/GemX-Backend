@@ -1,0 +1,104 @@
+import { describe, it, expect, vi, afterEach } from "vitest"
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react"
+import { AdminAllConversationsView } from "@/features/chat/components/AdminAllConversationsView"
+import type { AdminConversationListItem } from "@/features/chat/db/admin-all-conversations"
+
+vi.mock("next/image", () => ({
+  default: (props: Record<string, unknown>) => {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img alt={(props.alt as string) ?? ""} src={props.src as string} />
+  },
+}))
+
+const CONVERSATIONS: AdminConversationListItem[] = [
+  {
+    participants: [
+      { id: "gemx4", name: "Gemx4", image: null, role: "user" },
+      { id: "supervisor", name: "Supervisor", image: null, role: "internal" },
+    ],
+    lastMessage: "Photo",
+    lastMessageTime: "2026-07-29T21:56:00+06:30",
+    lastMessageType: "image",
+  },
+]
+
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
+function renderView() {
+  return render(<AdminAllConversationsView conversations={CONVERSATIONS} page={1} pageSize={20} total={1} />)
+}
+
+describe("AdminAllConversationsView", () => {
+  // Regression: real chat data stores single-image messages with only
+  // fileUrl + messageType="image" set (imageUrls is null — it's only
+  // populated for multi-image gallery messages). This must still render as
+  // an inline image, not fall through to the "Attachment" link branch.
+  it("renders an image thumbnail when only fileUrl (not imageUrls) is set for an image message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-img-file-only",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/single-photo.jpg",
+              imageUrls: null,
+              messageType: "image",
+              createdAt: "2026-07-29T21:56:00+06:30",
+            },
+          ],
+        }),
+      }))
+    )
+    const { container } = renderView()
+
+    fireEvent.click(screen.getByText(/Gemx4/))
+
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull())
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/chat-media/single-photo.jpg"
+    )
+    expect(screen.queryByRole("link", { name: "Attachment" })).not.toBeInTheDocument()
+  })
+
+  // Regression: a non-image file attachment must render as a clickable link
+  // to fileUrl, not the literal word "Attachment" with nothing behind it.
+  it("renders a clickable link for a non-image attachment instead of a plain label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-file",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/invoice.pdf",
+              imageUrls: null,
+              messageType: "file",
+              createdAt: "2026-07-29T21:56:00+06:30",
+            },
+          ],
+        }),
+      }))
+    )
+    renderView()
+
+    fireEvent.click(screen.getByText(/Gemx4/))
+
+    const link = await screen.findByRole("link", { name: "Attachment" })
+    expect(link).toHaveAttribute("href", "https://storage.example.com/chat-media/invoice.pdf")
+  })
+})

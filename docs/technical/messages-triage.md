@@ -174,8 +174,9 @@ returned `fileUrl`/`imageUrls`/`messageType` per row, but
 collapsed them into a plain-text fallback before `ReadingPane.tsx` ever saw
 the URL, and `TriageThreadMessage` (`types/triage.ts`) had no field to carry
 one. The sibling `/admin/chat-dashboard` view
-(`features/chat/components/AdminAllConversationsView.tsx`) never had this
-bug — it keeps the raw fields through to render time.
+(`features/chat/components/AdminAllConversationsView.tsx`) kept the raw
+fields through to render time already — but see Phase 3b below, it turned
+out to have a *different*, more consequential bug in the same render logic.
 
 **Fix:**
 - `features/messages/types/triage.ts` — `TriageThreadMessage` now carries
@@ -195,3 +196,38 @@ discarding it. Regression tests in
 `tests/component/messages-triage-page.test.tsx` cover an image attachment
 (renders an `<img>`, not "Photo") and a non-image file attachment (renders a
 link to `fileUrl`, not a bare "Attachment" label).
+
+## Phase 3b — Single-image messages still showed "Attachment"
+
+**Bug:** Phase 3's fix still showed the bare "Attachment" link (not an
+inline image) for real image messages in production. Confirmed against the
+live `messages` table via PostgREST (local `DATABASE_URL` is a DB copy with
+zero rows that have `file_url` set — see
+[[reference_prod_db_access|prod DB access]] — so this needed a direct prod
+read to catch): every real image message has `message_type: "image"` and
+`file_url` pointing at the actual image, but **`image_urls` is `null`**.
+`image_urls` is only populated for multi-image gallery sends (per the
+schema comment on `chat-schema.ts`) — a single-image send (the common case)
+never sets it. Both `ReadingPane.tsx`'s and
+`AdminAllConversationsView.tsx`'s image-detection only checked
+`imageUrls && imageUrls.length > 0`, so this majority case fell through to
+the `fileUrl && !content` "Attachment"-link branch instead.
+
+**Fix:** both components now resolve the image list as `imageUrls?.length >
+0 ? imageUrls : (messageType === "image" && fileUrl) ? [fileUrl] : null`
+before deciding what to render — a single-image message with only `fileUrl`
+set now renders the same inline `<img>` a gallery message does.
+`AdminAllConversationsView.tsx` got the identical fix even though it wasn't
+what the user originally reported, since it has the exact same render
+pattern and would hit the exact same real-world data shape.
+
+Regression tests added: `tests/component/messages-triage-page.test.tsx`
+("renders an image thumbnail when only fileUrl (not imageUrls) is set for
+an image message") and a new `tests/component/admin-all-conversations-view.test.tsx`
+covering the same case plus the non-image-attachment link for that view.
+
+Verified live in-browser (Chrome DevTools MCP, see
+[[feedback_ui_verification|UI verification approach]]): patched `window.fetch`
+in the running dev app to return the exact real-data shape
+(`imageUrls: null`, `fileUrl` set, `messageType: "image"`) and confirmed the
+image now renders inline with zero console errors.

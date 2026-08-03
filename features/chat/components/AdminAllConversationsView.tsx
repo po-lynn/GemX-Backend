@@ -296,20 +296,35 @@ export function AdminAllConversationsView({ conversations, page, pageSize, total
                         alignRight ? "bg-primary/10" : "bg-muted"
                       )}
                     >
-                      {m.imageUrls && m.imageUrls.length > 0 ? (
-                        <div className="mb-1 flex flex-wrap gap-1">
-                          {m.imageUrls.map((url) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img key={url} src={url} alt="" className="h-24 w-24 rounded-lg object-cover" />
-                          ))}
-                        </div>
-                      ) : m.messageType === "audio" && m.fileUrl ? (
-                        <audio controls src={m.fileUrl} className="max-w-full" />
-                      ) : m.fileUrl && !m.content ? (
-                        <a href={m.fileUrl} target="_blank" rel="noreferrer" className="underline">
-                          Attachment
-                        </a>
-                      ) : null}
+                      {(() => {
+                        const images =
+                          m.imageUrls && m.imageUrls.length > 0
+                            ? m.imageUrls
+                            : m.messageType === "image" && m.fileUrl
+                              ? [m.fileUrl]
+                              : null
+                        if (images) {
+                          return (
+                            <div className="mb-1 flex flex-wrap gap-1">
+                              {images.map((url) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img key={url} src={url} alt="" className="h-24 w-24 rounded-lg object-cover" />
+                              ))}
+                            </div>
+                          )
+                        }
+                        if (m.messageType === "audio" && m.fileUrl) {
+                          return <audio controls src={m.fileUrl} className="max-w-full" />
+                        }
+                        if (m.fileUrl && !m.content) {
+                          return (
+                            <a href={m.fileUrl} target="_blank" rel="noreferrer" className="underline">
+                              Attachment
+                            </a>
+                          )
+                        }
+                        return null
+                      })()}
                       {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
                       {!m.content && !m.fileUrl && (!m.imageUrls || m.imageUrls.length === 0) && (
                         <p className="text-muted-foreground">{messagePreview(m)}</p>

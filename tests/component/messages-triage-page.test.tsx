@@ -246,6 +246,45 @@ describe("MessagesTriagePage", () => {
     expect(screen.queryByText("Photo")).not.toBeInTheDocument()
   })
 
+  // Regression: real chat data stores single-image messages with only
+  // fileUrl + messageType="image" set (imageUrls is null — it's only
+  // populated for multi-image gallery messages). This must still render as
+  // an inline image, not fall through to the "Attachment" link branch.
+  it("renders an image thumbnail when only fileUrl (not imageUrls) is set for an image message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-img-file-only",
+              senderId: "gemx4",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/single-photo.jpg",
+              imageUrls: null,
+              messageType: "image",
+              createdAt: "2026-07-29T21:56:00+06:30",
+              starred: false,
+            },
+          ],
+          page: 1,
+          limit: 200,
+          total: 1,
+        }),
+      }))
+    )
+    const { container } = renderPage()
+
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull())
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/chat-media/single-photo.jpg"
+    )
+    expect(screen.queryByRole("link", { name: "Attachment" })).not.toBeInTheDocument()
+  })
+
   // Regression: a non-image file attachment must render as a clickable link
   // to fileUrl, not the literal word "Attachment" with nothing behind it.
   it("renders a clickable link for a non-image attachment instead of a plain label", async () => {
