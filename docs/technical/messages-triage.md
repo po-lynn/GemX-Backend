@@ -163,3 +163,35 @@ New/updated this phase:
    not a soft-delete-with-audit-trail — matches how delete already worked
    elsewhere in this codebase (`MessagesAdminPanel.tsx`), but the README's
    "write an audit entry" note isn't satisfied since no audit log exists.
+
+## Phase 3 — Attachment rendering fix
+
+**Bug:** the reading pane rendered attachment messages as the bare label
+string `"Attachment"`/`"Photo"`/`"Voice message"` with no image, audio
+player, or link — the API (`GET /api/admin/messages/thread`) already
+returned `fileUrl`/`imageUrls`/`messageType` per row, but
+`MessagesTriagePage.tsx`'s `ThreadApiRow → TriageThreadMessage` mapping
+collapsed them into a plain-text fallback before `ReadingPane.tsx` ever saw
+the URL, and `TriageThreadMessage` (`types/triage.ts`) had no field to carry
+one. The sibling `/admin/chat-dashboard` view
+(`features/chat/components/AdminAllConversationsView.tsx`) never had this
+bug — it keeps the raw fields through to render time.
+
+**Fix:**
+- `features/messages/types/triage.ts` — `TriageThreadMessage` now carries
+  `fileUrl`, `imageUrls`, and `messageType` alongside `text` (which is now
+  just `content`, not a synthesized label).
+- `features/messages/components/triage/MessagesTriagePage.tsx` — the thread
+  mapping passes `fileUrl`/`imageUrls`/`messageType` straight through instead
+  of collapsing them.
+- `features/messages/components/triage/ReadingPane.tsx` — the message bubble
+  now mirrors `AdminAllConversationsView.tsx`'s render order: image gallery
+  (`imageUrls`) → audio player (`messageType === "audio"` + `fileUrl`) →
+  clickable `<a href={fileUrl}>Attachment</a>` (non-image file with no
+  `content`) → text content.
+
+No schema or API changes — the data was already there, only the client was
+discarding it. Regression tests in
+`tests/component/messages-triage-page.test.tsx` cover an image attachment
+(renders an `<img>`, not "Photo") and a non-image file attachment (renders a
+link to `fileUrl`, not a bare "Attachment" label).

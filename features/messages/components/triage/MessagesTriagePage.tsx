@@ -182,15 +182,10 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
             : activeConversation.participantB.name,
         mine: r.senderId === activeConversation.participantB.id,
         sentAt: r.createdAt,
-        text:
-          r.content ||
-          (r.imageUrls && r.imageUrls.length > 0
-            ? "Photo"
-            : r.messageType === "audio"
-              ? "Voice message"
-              : r.fileUrl
-                ? "Attachment"
-                : ""),
+        text: r.content,
+        fileUrl: r.fileUrl,
+        imageUrls: r.imageUrls,
+        messageType: r.messageType,
         flagged: r.starred,
       }))
       const dateLabel = rows[0]

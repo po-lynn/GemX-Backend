@@ -107,3 +107,11 @@ technical doc's "Schema impact"):
   unexpectedly** — only happens when there are no messages in the database
   at all, or a filter combination matches zero rows; check the result label
   above the list for "No matches."
+- **Attachment message shows an image thumbnail / audio player / clickable
+  "Attachment" link, not just the plain word "Attachment"** — this is the
+  fixed, expected behavior. If you see a bare, unclickable "Attachment" (or
+  "Photo"/"Voice message") text with nothing behind it, that's the phase-3
+  regression — check that `MessagesTriagePage.tsx`'s thread mapping still
+  passes `fileUrl`/`imageUrls`/`messageType` through to `TriageThreadMessage`
+  instead of collapsing them into a label (see the technical doc's
+  "Phase 3 — Attachment rendering fix").

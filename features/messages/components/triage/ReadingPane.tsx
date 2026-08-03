@@ -166,7 +166,26 @@ export function ReadingPane({
                         : "border border-[#ececf3]"
                   )}
                 >
-                  {m.text}
+                  {m.imageUrls && m.imageUrls.length > 0 ? (
+                    <div className="mb-1 flex flex-wrap gap-1">
+                      {m.imageUrls.map((url) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={url} src={url} alt="" className="h-24 w-24 rounded-lg object-cover" />
+                      ))}
+                    </div>
+                  ) : m.messageType === "audio" && m.fileUrl ? (
+                    <audio controls src={m.fileUrl} className="max-w-full" />
+                  ) : m.fileUrl && !m.text ? (
+                    <a
+                      href={m.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={cn("underline", m.mine ? "text-white" : "text-[#2c2b36]")}
+                    >
+                      Attachment
+                    </a>
+                  ) : null}
+                  {m.text && <span className="whitespace-pre-wrap">{m.text}</span>}
                 </div>
                 {m.flagged && <div className="mt-1 text-[11.5px] font-bold text-[#b45309]">⚑ flagged by system</div>}
               </div>

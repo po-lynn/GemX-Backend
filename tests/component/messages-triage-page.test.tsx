@@ -206,4 +206,76 @@ describe("MessagesTriagePage", () => {
     expect(toastFn).toHaveBeenCalledWith("Not wired yet in this preview.")
     expect(setMessageStarredAction).not.toHaveBeenCalled()
   })
+
+  // Regression: attachment messages must render the actual image/link, not
+  // just the bare "Attachment"/"Photo" label with no way to open the file.
+  it("renders an image thumbnail for an image attachment instead of a label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-img",
+              senderId: "gemx4",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/photo.jpg",
+              imageUrls: ["https://storage.example.com/chat-media/photo.jpg"],
+              messageType: "image",
+              createdAt: "2026-07-29T21:56:00+06:30",
+              starred: false,
+            },
+          ],
+          page: 1,
+          limit: 200,
+          total: 1,
+        }),
+      }))
+    )
+    const { container } = renderPage()
+
+    // Empty alt text gives the <img> an accessibility role of "presentation",
+    // not "img", so we query the DOM directly rather than via getByRole.
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull())
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://storage.example.com/chat-media/photo.jpg"
+    )
+    expect(screen.queryByText("Photo")).not.toBeInTheDocument()
+  })
+
+  // Regression: a non-image file attachment must render as a clickable link
+  // to fileUrl, not the literal word "Attachment" with nothing behind it.
+  it("renders a clickable link for a non-image attachment instead of a plain label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-file",
+              senderId: "gemx4",
+              content: "",
+              fileUrl: "https://storage.example.com/chat-media/invoice.pdf",
+              imageUrls: null,
+              messageType: "file",
+              createdAt: "2026-07-29T21:56:00+06:30",
+              starred: false,
+            },
+          ],
+          page: 1,
+          limit: 200,
+          total: 1,
+        }),
+      }))
+    )
+    renderPage()
+
+    const link = await screen.findByRole("link", { name: "Attachment" })
+    expect(link).toHaveAttribute("href", "https://storage.example.com/chat-media/invoice.pdf")
+  })
 })

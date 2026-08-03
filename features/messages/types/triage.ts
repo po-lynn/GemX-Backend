@@ -59,6 +59,9 @@ export interface TriageThreadMessage {
   mine: boolean
   sentAt: string // ISO timestamp
   text: string
+  fileUrl?: string | null
+  imageUrls?: string[] | null
+  messageType?: string
   flagged?: boolean
 }
 
