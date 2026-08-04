@@ -380,3 +380,17 @@ inconsistent.
 - `FEATURE_ICONS` (`UserForm.tsx`) still has a `chat_dashboard` entry — it's
   unused now that the toggle only ever renders under the `messages` key,
   but left as-is since it's inert, not incorrect.
+
+## Phase 5 — Saved permissions never actually took effect
+
+This turned out to be a codebase-wide RBAC cache bug, not specific to
+Messages/Chat Dashboard — see
+[`docs/technical/rbac-permissions-cache.md`](./rbac-permissions-cache.md)
+for the full writeup. Short version: `getUserPermissions()`
+(`features/rbac/db/permissions.ts`) used the legacy `unstable_cache` API
+under this project's `cacheComponents: true` config, so
+`setUserPermissions()`'s `revalidateTag()` call never actually invalidated
+it — any permission toggle (Messages or otherwise) could be saved
+repeatedly and never take effect. Fixed by converting it to the same
+`"use cache"` + `cacheTag()` + `revalidateTag(tag, "max")` pattern already
+used by every other cache in the codebase.
