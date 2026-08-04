@@ -267,3 +267,39 @@ clicked") added to both `tests/component/messages-triage-page.test.tsx` and
 Chrome DevTools MCP: clicked the patched thumbnail, confirmed the full-size
 overlay opens (counter, prev/next, thumbnail strip) with zero console
 errors, then confirmed Escape closes it.
+
+## Phase 3d — Date shown per day, not once for the whole thread
+
+**Bug:** `ReadingPane.tsx` rendered exactly one date pill above the entire
+message list, derived from only the *first* row returned by the API
+(`MessagesTriagePage.tsx`'s `const dateLabel = rows[0] ? ... : ""`). Every
+message below it showed only a time (`Gemx4 · 9:33 PM`), with no date at
+all — so a thread spanning multiple days (common; conversations aren't
+single-sitting) showed every later message under a date that might not be
+theirs. `AdminAllConversationsView.tsx` had it worse: no date anywhere,
+only per-message time.
+
+**Fix:** removed the single `dateLabel` field from `TriageThread`
+(`features/messages/types/triage.ts`) and its computation in
+`MessagesTriagePage.tsx` entirely — a single label for a whole thread was
+never the right shape. `ReadingPane.tsx` and `AdminAllConversationsView.tsx`
+each now compute date dividers directly from the already-available
+per-message timestamps: walking the message list, a divider renders above
+the first message and above any message whose calendar day (`dayKey()`,
+`new Date(iso).toDateString()`) differs from the previous message's.
+Consecutive same-day messages share one divider, matching the original
+single-pill visual style (same classes), just repeated per day instead of
+once per thread.
+
+Implementation note: switched each message-list `.map()` from an
+expression body returning a single top-level element to a block body
+returning `<Fragment key={m.id}>` wrapping an optional divider plus the
+message — a `key`-bearing sibling pair per iteration needs an explicit
+`Fragment`, `<>...</>` shorthand doesn't accept `key`.
+
+Regression tests ("shows a date divider per calendar day in a thread
+spanning multiple days") added to both test files, asserting: one divider
+per distinct day, not one per message, and both day labels present when a
+thread has messages on two different days. Verified live via Chrome
+DevTools MCP with a patched 4-message/2-day thread — confirmed exactly two
+dividers rendered in the right positions, zero console errors.

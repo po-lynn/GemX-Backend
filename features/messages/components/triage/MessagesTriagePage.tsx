@@ -188,10 +188,7 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
         messageType: r.messageType,
         flagged: r.starred,
       }))
-      const dateLabel = rows[0]
-        ? new Date(rows[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-        : ""
-      setThread({ conversationId: activeConversation.id, dateLabel, messages: threadMessages })
+      setThread({ conversationId: activeConversation.id, messages: threadMessages })
     } catch (e) {
       setThreadError(e instanceof Error ? e.message : "Failed to load messages")
     } finally {

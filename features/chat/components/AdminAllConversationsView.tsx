@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { ELLIPSIS_NEXT, ELLIPSIS_PREV, getPageNumbers } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,16 @@ function relativeTime(iso: string) {
   if (days === 1) return "Yesterday";
   if (days < 7) return `${days}d ago`;
   return d.toLocaleDateString();
+}
+
+function formatDateLabel(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function dayKey(iso: string) {
+  return new Date(iso).toDateString();
 }
 
 function formatMessageTime(iso: string) {
@@ -282,65 +292,76 @@ export function AdminAllConversationsView({ conversations, page, pageSize, total
             <p className="text-center text-sm text-muted-foreground">No messages in this conversation.</p>
           )}
           <div className="space-y-4">
-            {thread.map((m) => {
+            {thread.map((m, msgIndex) => {
               const sender = participantById.get(m.senderId);
               const alignRight = selected && m.senderId === selected.participants[1].id;
+              const showDateDivider =
+                msgIndex === 0 || dayKey(m.createdAt) !== dayKey(thread[msgIndex - 1]!.createdAt);
               return (
-                <div key={m.id} className={cn("flex gap-2", alignRight ? "flex-row-reverse" : "flex-row")}>
-                  {sender ? <Avatar p={sender} size={28} /> : null}
-                  <div className={cn("flex max-w-[70%] flex-col gap-1", alignRight ? "items-end" : "items-start")}>
-                    <span className="text-[11px] font-medium text-muted-foreground">
-                      {sender?.name ?? "Unknown user"}
-                    </span>
-                    <div
-                      className={cn(
-                        "rounded-2xl px-3 py-2 text-sm",
-                        alignRight ? "bg-primary/10" : "bg-muted"
-                      )}
-                    >
-                      {(() => {
-                        const images =
-                          m.imageUrls && m.imageUrls.length > 0
-                            ? m.imageUrls
-                            : m.messageType === "image" && m.fileUrl
-                              ? [m.fileUrl]
-                              : null
-                        if (images) {
-                          return (
-                            <div className="mb-1 flex flex-wrap gap-1">
-                              {images.map((url, i) => (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  key={url}
-                                  src={url}
-                                  alt=""
-                                  onClick={() => setViewer({ images, index: i })}
-                                  className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
-                                />
-                              ))}
-                            </div>
-                          )
-                        }
-                        if (m.messageType === "audio" && m.fileUrl) {
-                          return <audio controls src={m.fileUrl} className="max-w-full" />
-                        }
-                        if (m.fileUrl && !m.content) {
-                          return (
-                            <a href={m.fileUrl} target="_blank" rel="noreferrer" className="underline">
-                              Attachment
-                            </a>
-                          )
-                        }
-                        return null
-                      })()}
-                      {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
-                      {!m.content && !m.fileUrl && (!m.imageUrls || m.imageUrls.length === 0) && (
-                        <p className="text-muted-foreground">{messagePreview(m)}</p>
-                      )}
+                <Fragment key={m.id}>
+                  {showDateDivider && (
+                    <div className="flex justify-center">
+                      <span className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
+                        {formatDateLabel(m.createdAt)}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{formatMessageTime(m.createdAt)}</span>
+                  )}
+                  <div className={cn("flex gap-2", alignRight ? "flex-row-reverse" : "flex-row")}>
+                    {sender ? <Avatar p={sender} size={28} /> : null}
+                    <div className={cn("flex max-w-[70%] flex-col gap-1", alignRight ? "items-end" : "items-start")}>
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        {sender?.name ?? "Unknown user"}
+                      </span>
+                      <div
+                        className={cn(
+                          "rounded-2xl px-3 py-2 text-sm",
+                          alignRight ? "bg-primary/10" : "bg-muted"
+                        )}
+                      >
+                        {(() => {
+                          const images =
+                            m.imageUrls && m.imageUrls.length > 0
+                              ? m.imageUrls
+                              : m.messageType === "image" && m.fileUrl
+                                ? [m.fileUrl]
+                                : null
+                          if (images) {
+                            return (
+                              <div className="mb-1 flex flex-wrap gap-1">
+                                {images.map((url, i) => (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    key={url}
+                                    src={url}
+                                    alt=""
+                                    onClick={() => setViewer({ images, index: i })}
+                                    className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+                                  />
+                                ))}
+                              </div>
+                            )
+                          }
+                          if (m.messageType === "audio" && m.fileUrl) {
+                            return <audio controls src={m.fileUrl} className="max-w-full" />
+                          }
+                          if (m.fileUrl && !m.content) {
+                            return (
+                              <a href={m.fileUrl} target="_blank" rel="noreferrer" className="underline">
+                                Attachment
+                              </a>
+                            )
+                          }
+                          return null
+                        })()}
+                        {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
+                        {!m.content && !m.fileUrl && (!m.imageUrls || m.imageUrls.length === 0) && (
+                          <p className="text-muted-foreground">{messagePreview(m)}</p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{formatMessageTime(m.createdAt)}</span>
+                    </div>
                   </div>
-                </div>
+                </Fragment>
               );
             })}
           </div>

@@ -31,7 +31,10 @@ data works). Visit `/admin/messages` while logged in as `admin` (or an
    Image attachments render as an inline thumbnail — click one to open it
    full-size in an overlay viewer (arrow keys / on-screen buttons to move
    between images if the message has more than one, Escape or the × to
-   close). Non-image files render as a clickable "Attachment" link.
+   close). Non-image files render as a clickable "Attachment" link. A date
+   pill appears above the first message of each calendar day the thread
+   spans — not just once at the top — so it's always clear which day a
+   given message is on.
 7. **Flag** and **Delete** are real, persisted actions, but **only in
    "All messages" mode** — switch there first. In Conversations mode they
    still show a "Not wired yet in this preview" toast, since there's no

@@ -361,4 +361,63 @@ describe("MessagesTriagePage", () => {
     const link = await screen.findByRole("link", { name: "Attachment" })
     expect(link).toHaveAttribute("href", "https://storage.example.com/chat-media/invoice.pdf")
   })
+
+  // Regression: a single static date pill derived from only the first
+  // message misrepresented threads spanning multiple days (later messages
+  // showed only a time, with no indication they were on a different day
+  // than the pill at the top). Each day boundary in the thread must get its
+  // own date divider.
+  it("shows a date divider per calendar day in a thread spanning multiple days", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-day1-a",
+              senderId: "gemx4",
+              content: "Have you",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-06-14T19:04:00+06:30",
+              starred: false,
+            },
+            {
+              id: "msg-day1-b",
+              senderId: "gemx4",
+              content: "seen this?",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-06-14T19:05:00+06:30",
+              starred: false,
+            },
+            {
+              id: "msg-day2",
+              senderId: "gemx4",
+              content: "following up",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-07-26T22:20:00+06:30",
+              starred: false,
+            },
+          ],
+          page: 1,
+          limit: 200,
+          total: 3,
+        }),
+      }))
+    )
+    renderPage()
+
+    await screen.findByText("Have you")
+    expect(screen.getByText("Jun 14, 2026")).toBeInTheDocument()
+    expect(screen.getByText("Jul 26, 2026")).toBeInTheDocument()
+    // Same-day messages share one divider, not one per message.
+    expect(screen.getAllByText("Jun 14, 2026")).toHaveLength(1)
+  })
 })

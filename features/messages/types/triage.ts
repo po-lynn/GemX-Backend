@@ -68,7 +68,6 @@ export interface TriageThreadMessage {
 // Response of GET /admin/conversations/:id/messages
 export interface TriageThread {
   conversationId: string
-  dateLabel: string
   messages: TriageThreadMessage[]
 }
 

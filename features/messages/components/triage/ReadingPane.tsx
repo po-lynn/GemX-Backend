@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import { CheckCircle2, Flag, Loader2, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ImageViewer } from "@/components/shared/ImageViewer"
@@ -27,6 +27,14 @@ type Props = {
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+}
+
+function formatDateLabel(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+function dayKey(iso: string) {
+  return new Date(iso).toDateString()
 }
 
 // Thread ids are display-only here — pad the numeric part of the mock id so
@@ -151,70 +159,80 @@ export function ReadingPane({
         )}
         {!threadLoading && !threadError && thread && (
           <>
-            <div className="self-center rounded-full bg-[#f1f1f6] px-[11px] py-1 text-[11.5px] text-[#9a99a8]">
-              {thread.dateLabel}
-            </div>
-            {thread.messages.map((m) => (
-              <div key={m.id} className={cn("max-w-[64%]", m.mine ? "self-end text-right" : "self-start text-left")}>
-                <div className="mb-1 text-[11.5px] text-[#9a99a8]">
-                  {m.who} · {formatTime(m.sentAt)}
-                </div>
-                <div
-                  className={cn(
-                    "rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-[1.5]",
-                    m.mine ? "bg-[#7c3aed] text-white" : "bg-white text-[#2c2b36]",
-                    m.flagged
-                      ? "border border-[#f59e0b]"
-                      : m.mine
-                        ? "border border-[#7c3aed]"
-                        : "border border-[#ececf3]"
+            {thread.messages.map((m, msgIndex) => {
+              const showDateDivider =
+                msgIndex === 0 || dayKey(m.sentAt) !== dayKey(thread.messages[msgIndex - 1]!.sentAt)
+              return (
+                <Fragment key={m.id}>
+                  {showDateDivider && (
+                    <div className="self-center rounded-full bg-[#f1f1f6] px-[11px] py-1 text-[11.5px] text-[#9a99a8]">
+                      {formatDateLabel(m.sentAt)}
+                    </div>
                   )}
-                >
-                  {(() => {
-                    const images =
-                      m.imageUrls && m.imageUrls.length > 0
-                        ? m.imageUrls
-                        : m.messageType === "image" && m.fileUrl
-                          ? [m.fileUrl]
-                          : null
-                    if (images) {
-                      return (
-                        <div className="mb-1 flex flex-wrap gap-1">
-                          {images.map((url, i) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              key={url}
-                              src={url}
-                              alt=""
-                              onClick={() => setViewer({ images, index: i })}
-                              className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
-                            />
-                          ))}
-                        </div>
-                      )
-                    }
-                    if (m.messageType === "audio" && m.fileUrl) {
-                      return <audio controls src={m.fileUrl} className="max-w-full" />
-                    }
-                    if (m.fileUrl && !m.text) {
-                      return (
-                        <a
-                          href={m.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={cn("underline", m.mine ? "text-white" : "text-[#2c2b36]")}
-                        >
-                          Attachment
-                        </a>
-                      )
-                    }
-                    return null
-                  })()}
-                  {m.text && <span className="whitespace-pre-wrap">{m.text}</span>}
-                </div>
-                {m.flagged && <div className="mt-1 text-[11.5px] font-bold text-[#b45309]">⚑ flagged by system</div>}
-              </div>
-            ))}
+                  <div className={cn("max-w-[64%]", m.mine ? "self-end text-right" : "self-start text-left")}>
+                    <div className="mb-1 text-[11.5px] text-[#9a99a8]">
+                      {m.who} · {formatTime(m.sentAt)}
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-[1.5]",
+                        m.mine ? "bg-[#7c3aed] text-white" : "bg-white text-[#2c2b36]",
+                        m.flagged
+                          ? "border border-[#f59e0b]"
+                          : m.mine
+                            ? "border border-[#7c3aed]"
+                            : "border border-[#ececf3]"
+                      )}
+                    >
+                      {(() => {
+                        const images =
+                          m.imageUrls && m.imageUrls.length > 0
+                            ? m.imageUrls
+                            : m.messageType === "image" && m.fileUrl
+                              ? [m.fileUrl]
+                              : null
+                        if (images) {
+                          return (
+                            <div className="mb-1 flex flex-wrap gap-1">
+                              {images.map((url, i) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  onClick={() => setViewer({ images, index: i })}
+                                  className="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+                                />
+                              ))}
+                            </div>
+                          )
+                        }
+                        if (m.messageType === "audio" && m.fileUrl) {
+                          return <audio controls src={m.fileUrl} className="max-w-full" />
+                        }
+                        if (m.fileUrl && !m.text) {
+                          return (
+                            <a
+                              href={m.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={cn("underline", m.mine ? "text-white" : "text-[#2c2b36]")}
+                            >
+                              Attachment
+                            </a>
+                          )
+                        }
+                        return null
+                      })()}
+                      {m.text && <span className="whitespace-pre-wrap">{m.text}</span>}
+                    </div>
+                    {m.flagged && (
+                      <div className="mt-1 text-[11.5px] font-bold text-[#b45309]">⚑ flagged by system</div>
+                    )}
+                  </div>
+                </Fragment>
+              )
+            })}
           </>
         )}
       </div>

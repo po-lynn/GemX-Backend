@@ -130,7 +130,10 @@
       "mcp__chrome-devtools__list_network_requests",
       "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)",
       "Bash(./node_modules/.bin/eslint features/products/components/ProductForm.tsx components/portal/PortalProductForm.tsx features/messages/components/triage/ReadingPane.tsx features/chat/components/AdminAllConversationsView.tsx components/shared/ImageViewer.tsx)",
-      "Bash(./node_modules/.bin/eslint tests/setup-component.ts tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
+      "Bash(./node_modules/.bin/eslint tests/setup-component.ts tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)",
+      "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/messages/components/triage/MessagesTriagePage.tsx features/messages/types/triage.ts)",
+      "Bash(./node_modules/.bin/eslint features/chat/components/AdminAllConversationsView.tsx)",
+      "Bash(./node_modules/.bin/eslint features/messages/ features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

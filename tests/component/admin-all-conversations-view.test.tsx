@@ -139,4 +139,59 @@ describe("AdminAllConversationsView", () => {
     const link = await screen.findByRole("link", { name: "Attachment" })
     expect(link).toHaveAttribute("href", "https://storage.example.com/chat-media/invoice.pdf")
   })
+
+  // Regression: this view showed only a per-message time, with no date
+  // anywhere — a thread spanning multiple days gave no indication of which
+  // day each message was on. Each day boundary must get its own divider.
+  it("shows a date divider per calendar day in a thread spanning multiple days", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          success: true,
+          messages: [
+            {
+              id: "msg-day1-a",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "Have you",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-06-14T19:04:00+06:30",
+            },
+            {
+              id: "msg-day1-b",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "seen this?",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-06-14T19:05:00+06:30",
+            },
+            {
+              id: "msg-day2",
+              senderId: "gemx4",
+              recipientId: "supervisor",
+              content: "following up",
+              fileUrl: null,
+              imageUrls: null,
+              messageType: "text",
+              createdAt: "2026-07-26T22:20:00+06:30",
+            },
+          ],
+        }),
+      }))
+    )
+    renderView()
+
+    fireEvent.click(screen.getByText(/Gemx4/))
+
+    await screen.findByText("Have you")
+    expect(screen.getByText("Jun 14, 2026")).toBeInTheDocument()
+    expect(screen.getByText("Jul 26, 2026")).toBeInTheDocument()
+    expect(screen.getAllByText("Jun 14, 2026")).toHaveLength(1)
+  })
 })
