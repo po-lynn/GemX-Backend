@@ -23,9 +23,16 @@ anymore, since both keys gate the same merged page.
 3. **Filter rails** (left, 212px): STATUS and TYPE are independent filters
    that AND together — e.g. Status=Flagged + Type=Escrow shows only flagged
    escrow conversations. Counts update live based on the *other* rail's
-   selection plus the current mode. Note: Awaiting reply/Assigned to
-   me/Resolved always show 0 against real data — there's no schema backing
-   them yet (see the technical doc's "Known gaps").
+   selection plus the current mode. **Awaiting reply** is real: it's true
+   when a staff (admin/internal — e.g. the assigned escrow user) account is
+   one of the two parties and the *other* party sent the most recent
+   message, i.e. staff owes a response. A conversation with no staff
+   participant at all (ordinary buyer↔seller chat) is never "awaiting" —
+   nobody on staff is expected to reply there. Rows matching this also show
+   a small purple dot on the avatar and an "Awaiting reply" pill directly in
+   the list, so you don't have to open the filter to spot them. **Assigned
+   to me**/**Resolved** still always show 0 — there's no schema backing
+   those yet (see the technical doc's "Known gaps").
 4. **Search** (top of the middle list) filters instantly across participant
    names, message body/preview, tag, and SKU (messages mode only).
 5. **Sort toggle** (next to the result count) flips newest/oldest by
@@ -57,6 +64,16 @@ anymore, since both keys gate the same merged page.
    user replying to a buyer or seller) actually respond from this page. It's
    disabled with an explanatory placeholder when you aren't one of the two
    participants — there'd be no unambiguous recipient to send to.
+   - The paperclip button attaches one or more files (images, audio, PDF,
+     or Word docs — up to 20MB each, 12 per reply). Picked files stage as
+     removable chips above the input (image thumbnail or a generic file
+     icon) — nothing uploads until you hit Send. You can send an attachment
+     with no typed text at all.
+   - Multiple images you attach together go out as one gallery message;
+     each non-image file goes out as its own message. If you also typed a
+     caption, only the first message sent carries it.
+   - The Send button reads **"Uploading…"** while files are being uploaded,
+     then **"Sending…"** while the message(s) are being saved.
 9. Resolve / Export / New message / the `⋯` overflow button are still inert
    placeholders — clicking any of them shows the same toast. The **INTERNAL**
    note bar's input works but "Save" doesn't persist anything yet (that's a
@@ -89,14 +106,18 @@ shareable/bookmarkable and the back button works.
    `MessagesTriagePage.tsx`'s `listRows` memo, and render it in
    `ConversationList.tsx`'s row markup.
 
-**Extend the REPLY composer (e.g. add attachments):** it currently only
-sends plain text via `POST /api/chat/messages` with `{ recipientId, content }`
-(see `handleSendReply()` in `MessagesTriagePage.tsx`). That endpoint already
-accepts `fileUrl`/`imageUrls`/`messageType` (see
-`ChatDashboard.tsx`'s `uploadAndSend`/`uploadImagesAndSend` for the existing
-upload-then-send pattern to copy) — extending the admin composer to support
-them is a matter of adding the upload step and passing those fields through
-in the same request body, no route changes needed.
+**Extend the REPLY composer's attachment support (e.g. new file types, drag
+and drop):** attachments upload via `POST /api/chat/media` — to allow a new
+mime type, add it to *both* `ALLOWED_MEDIA_TYPES` in
+`app/api/chat/media/route.ts` (the actual enforcement) and
+`ALLOWED_ATTACHMENT_TYPES`/`ATTACH_ACCEPT` in `MessagesTriagePage.tsx`/
+`ReadingPane.tsx` (the client-side pre-check + file-picker filter) — the two
+must stay in sync or a file will be accepted client-side and then 400
+server-side, or vice versa (rejected client-side even though the server
+would have allowed it). There's no drag-and-drop or clipboard-paste attach
+today, only the paperclip button's native file dialog — adding either means
+wiring `onDrop`/`onPaste` handlers to call the same
+`handlePickAttachments(fileList)` the file input already uses.
 
 **Wire up Resolve/Assign/Notes for real** (needs new schema first — see
 "Schema impact" in the technical doc):
@@ -136,6 +157,16 @@ technical doc's "Schema impact"):
 
 ## Common errors
 
+- **"`<filename>`: unsupported file type" / "`<filename>`: file is larger
+  than 20MB" toast when attaching a file** — expected client-side rejection,
+  matching `POST /api/chat/media`'s real allow-list/size cap; the file was
+  never uploaded. Not a bug — pick a supported type (images, audio, PDF,
+  Word docs) under 20MB.
+- **Reply with an attachment appears to "lose" the caption on one of the
+  files** — expected when you attach both an image and a non-image file (or
+  several non-image files) together: only the *first* message sent out of
+  the batch carries your typed caption, since each `messages` row can only
+  hold one attachment. See the technical doc's Phase 7 for why.
 - **"Not wired yet in this preview" toast** — expected for Resolve/Export/
   New message/`⋯` everywhere, and for Flag/Delete specifically in
   Conversations mode. Not a bug — see "Known gaps" in the technical doc.

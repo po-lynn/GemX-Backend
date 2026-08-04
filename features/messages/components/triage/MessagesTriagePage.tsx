@@ -26,6 +26,7 @@ import {
 } from "@/features/messages/lib/triage-filters"
 import type {
   ListMode,
+  PendingReplyAttachment,
   StatusFilter,
   TriageConversation,
   TriageMessage,
@@ -38,6 +39,42 @@ type Props = {
   initialConversations: TriageConversation[]
   initialMessages: TriageMessage[]
   currentUserId: string
+}
+
+// Must match app/api/chat/media's ALLOWED_MEDIA_TYPES/MAX_MEDIA_SIZE_BYTES —
+// this is only a client-side pre-check for a faster/friendlier rejection; the
+// server independently enforces the same limits regardless.
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "audio/webm",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/aac",
+  "audio/ogg",
+  "audio/wav",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+])
+const MAX_ATTACHMENT_SIZE_BYTES = 20 * 1024 * 1024
+// Not a server limit — a sane UX cap; the schema's own per-message imageUrls
+// cap is 12, and a mixed batch here can fan out into several messages (see
+// handleSendReply).
+const MAX_ATTACHMENTS_PER_REPLY = 12
+
+function messageTypeFromMime(mime: string): "image" | "audio" | "file" {
+  if (mime.startsWith("image/")) return "image"
+  if (mime.startsWith("audio/")) return "audio"
+  return "file"
+}
+
+function revokeAttachmentPreviews(attachments: PendingReplyAttachment[]) {
+  for (const a of attachments) {
+    if (a.previewUrl) URL.revokeObjectURL(a.previewUrl)
+  }
 }
 
 function formatRowTime(iso: string): string {
@@ -86,6 +123,8 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
   const [deletePending, setDeletePending] = useState(false)
   const [replyValue, setReplyValue] = useState("")
   const [replyPending, setReplyPending] = useState(false)
+  const [replyUploading, setReplyUploading] = useState(false)
+  const [replyAttachments, setReplyAttachments] = useState<PendingReplyAttachment[]>([])
 
   const updateParams = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -169,7 +208,46 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
 
   useEffect(() => {
     setReplyValue("")
+    setReplyAttachments((prev) => {
+      revokeAttachmentPreviews(prev)
+      return []
+    })
   }, [effectiveSelectedId])
+
+  function handlePickAttachments(fileList: FileList | null) {
+    const files = Array.from(fileList ?? [])
+    if (!files.length) return
+    const accepted: PendingReplyAttachment[] = []
+    for (const file of files) {
+      if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+        toast.error(`${file.name}: unsupported file type`)
+        continue
+      }
+      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+        toast.error(`${file.name}: file is larger than 20MB`)
+        continue
+      }
+      accepted.push({ file, previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null })
+    }
+    setReplyAttachments((prev) => {
+      const merged = [...prev, ...accepted]
+      if (merged.length > MAX_ATTACHMENTS_PER_REPLY) {
+        const overflow = merged.slice(MAX_ATTACHMENTS_PER_REPLY)
+        revokeAttachmentPreviews(overflow)
+        toast.error(`You can attach up to ${MAX_ATTACHMENTS_PER_REPLY} files per reply`)
+        return merged.slice(0, MAX_ATTACHMENTS_PER_REPLY)
+      }
+      return merged
+    })
+  }
+
+  function handleRemoveAttachment(index: number) {
+    setReplyAttachments((prev) => {
+      const removed = prev[index]
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
 
   const fetchThread = useCallback(async () => {
     if (!activeConversation) {
@@ -218,31 +296,90 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
     fetchThread()
   }, [fetchThread])
 
+  async function uploadReplyAttachment(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.set("file", file)
+    const res = await fetch("/api/chat/media", { method: "POST", body: formData, credentials: "include" })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: string }).error ?? `Failed to upload ${file.name}`)
+    const url = (data as { url?: string }).url
+    if (!url) throw new Error(`Upload of ${file.name} did not return a URL`)
+    return url
+  }
+
+  async function sendReplyMessage(body: {
+    content?: string
+    fileUrl?: string
+    imageUrls?: string[]
+    messageType?: "text" | "image" | "audio" | "file"
+  }) {
+    if (!replyTarget) return
+    const res = await fetch("/api/chat/messages", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipientId: replyTarget.id, ...body }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to send reply")
+  }
+
   // Sends as the logged-in session's own user id (POST /api/chat/messages
   // derives senderId from the session, not from anything passed here) to
   // whichever participant isn't the current user — this is what lets an
   // escrow-service account (or any admin/internal user who is themselves a
   // conversation participant) actually reply from /admin/messages instead of
-  // only being able to view the thread.
+  // only being able to view the thread. Attachments upload first (via the
+  // same /api/chat/media route ChatDashboard's composer uses); every picked
+  // image goes out as one gallery message, and every non-image file goes out
+  // as its own message (the schema only supports one attachment shape per
+  // row) — whichever message goes out first carries the typed caption.
   async function handleSendReply() {
     const content = replyValue.trim()
-    if (!content || !replyTarget || replyPending) return
+    if (!replyTarget || replyPending || (!content && replyAttachments.length === 0)) return
     setReplyPending(true)
     try {
-      const res = await fetch("/api/chat/messages", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientId: replyTarget.id, content }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to send reply")
+      if (replyAttachments.length === 0) {
+        await sendReplyMessage({ content })
+      } else {
+        setReplyUploading(true)
+        const uploaded: { url: string; mime: string }[] = []
+        for (const attachment of replyAttachments) {
+          uploaded.push({ url: await uploadReplyAttachment(attachment.file), mime: attachment.file.type })
+        }
+        setReplyUploading(false)
+
+        const images = uploaded.filter((u) => u.mime.startsWith("image/"))
+        const others = uploaded.filter((u) => !u.mime.startsWith("image/"))
+        let captionUsed = false
+        if (images.length > 0) {
+          await sendReplyMessage({
+            content: content || undefined,
+            imageUrls: images.map((i) => i.url),
+            messageType: "image",
+          })
+          captionUsed = true
+        }
+        for (const other of others) {
+          await sendReplyMessage({
+            content: captionUsed ? undefined : content || undefined,
+            fileUrl: other.url,
+            messageType: messageTypeFromMime(other.mime),
+          })
+          captionUsed = true
+        }
+      }
       setReplyValue("")
+      setReplyAttachments((prev) => {
+        revokeAttachmentPreviews(prev)
+        return []
+      })
       await fetchThread()
       router.refresh()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send reply")
     } finally {
+      setReplyUploading(false)
       setReplyPending(false)
     }
   }
@@ -259,6 +396,7 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
         meta: `${c.messageCount} messages`,
         tag: c.tag,
         selected: c.id === effectiveSelectedId,
+        awaitingReply: c.awaitingReply,
       }))
     }
     return messagesFiltered.map((m) => ({
@@ -270,6 +408,7 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
       time: formatRowTime(m.sentAt),
       tag: m.tag,
       selected: m.id === effectiveSelectedId,
+      awaitingReply: m.awaitingReply,
     }))
   }, [mode, conversationsFiltered, messagesFiltered, effectiveSelectedId])
 
@@ -365,7 +504,11 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
             onReplyChange={setReplyValue}
             onSendReply={handleSendReply}
             replyPending={replyPending}
+            replyUploading={replyUploading}
             replyTargetName={replyTarget?.name ?? null}
+            replyAttachments={replyAttachments}
+            onPickAttachments={handlePickAttachments}
+            onRemoveAttachment={handleRemoveAttachment}
             onFlag={handleFlag}
             onDelete={handleDeleteClick}
             onResolve={notWiredToast}

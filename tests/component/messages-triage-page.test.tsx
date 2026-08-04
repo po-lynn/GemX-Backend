@@ -474,4 +474,80 @@ describe("MessagesTriagePage", () => {
     const input = screen.getByPlaceholderText("You're not a participant in this conversation")
     expect(input).toBeDisabled()
   })
+
+  // Regression: picking a file must stage it as a removable chip (with an
+  // image preview thumbnail) and enable Send even with no typed text, since
+  // an attachment alone is a valid message per the API's schema.
+  it("stages a picked image as a removable chip and enables Send with no text", async () => {
+    const { container } = renderPage("supervisor")
+    const sendButton = screen.getByText("Send ⌘⏎")
+    expect(sendButton).toBeDisabled()
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const photo = new File(["fake-bytes"], "ring.jpg", { type: "image/jpeg" })
+    fireEvent.change(fileInput, { target: { files: [photo] } })
+
+    expect(await screen.findByText("ring.jpg")).toBeInTheDocument()
+    expect(sendButton).not.toBeDisabled()
+
+    fireEvent.click(screen.getByLabelText("Remove ring.jpg"))
+    expect(screen.queryByText("ring.jpg")).not.toBeInTheDocument()
+    expect(sendButton).toBeDisabled()
+  })
+
+  // Regression: an unsupported file type must be rejected client-side (matching
+  // the server's ALLOWED_MEDIA_TYPES) with a clear error, not silently staged.
+  it("rejects an unsupported file type when picked as an attachment", async () => {
+    const { container } = renderPage("supervisor")
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const script = new File(["#!/bin/sh"], "evil.sh", { type: "application/x-sh" })
+    fireEvent.change(fileInput, { target: { files: [script] } })
+
+    await waitFor(() => expect(toastFn.error).toHaveBeenCalledWith("evil.sh: unsupported file type"))
+    expect(screen.queryByText("evil.sh")).not.toBeInTheDocument()
+  })
+
+  // Regression: sending with an attached image must upload it first via the
+  // real chat-media route, then send the message referencing the returned
+  // URL — not attempt to inline the file into the JSON message body.
+  it("uploads an attached image via POST /api/chat/media then sends the message with imageUrls", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "/api/chat/media") {
+        return { ok: true, json: async () => ({ url: "https://storage.example.com/chat-media/ring.jpg" }) }
+      }
+      if (url === "/api/chat/messages" && init?.method === "POST") {
+        return { ok: true, json: async () => ({ success: true, message: { id: "new-msg" } }) }
+      }
+      return { ok: true, json: async () => ({ success: true, messages: [], page: 1, limit: 200, total: 0 }) }
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { container } = renderPage("supervisor")
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+    const photo = new File(["fake-bytes"], "ring.jpg", { type: "image/jpeg" })
+    fireEvent.change(fileInput, { target: { files: [photo] } })
+    await screen.findByText("ring.jpg")
+
+    fireEvent.change(screen.getByPlaceholderText("Reply to Gemx4…"), { target: { value: "Here's a photo" } })
+    fireEvent.click(screen.getByText("Send ⌘⏎"))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/chat/media", expect.objectContaining({ method: "POST" })))
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/chat/messages",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            recipientId: "gemx4",
+            content: "Here's a photo",
+            imageUrls: ["https://storage.example.com/chat-media/ring.jpg"],
+            messageType: "image",
+          }),
+        })
+      )
+    )
+    await waitFor(() => expect(refresh).toHaveBeenCalled())
+    // Attachment chip and draft text both clear after a successful send.
+    expect(screen.queryByText("ring.jpg")).not.toBeInTheDocument()
+  })
 })

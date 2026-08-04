@@ -23,6 +23,7 @@ export type TriageListRow = {
   meta?: string
   tag?: string
   selected: boolean
+  awaitingReply: boolean
 }
 
 type Props = {
@@ -88,16 +89,37 @@ export function ConversationList({
                 row.selected ? "border-l-[#7c3aed] bg-[#f7f4ff]" : "border-l-transparent bg-white hover:bg-[#fafaff]"
               )}
             >
-              <ParticipantAvatar id={row.avatarId} name={row.avatarName} size={32} />
+              <div className="relative flex-none">
+                <ParticipantAvatar id={row.avatarId} name={row.avatarName} size={32} />
+                {row.awaitingReply && (
+                  <span
+                    aria-label="Awaiting reply"
+                    title="Awaiting reply"
+                    className="absolute -right-0.5 -top-0.5 size-[9px] rounded-full border-2 border-white bg-[#7c3aed]"
+                  />
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-[13.5px] font-bold tracking-[-0.01em] text-[#17161c]">
+                  <span
+                    className={cn(
+                      "truncate text-[13.5px] tracking-[-0.01em]",
+                      row.awaitingReply ? "font-extrabold text-[#17161c]" : "font-bold text-[#17161c]"
+                    )}
+                  >
                     {row.title}
                   </span>
                   <span className="ml-auto whitespace-nowrap text-[11.5px] text-[#9a99a8]">{row.time}</span>
                 </div>
-                <div className="mt-[3px] truncate text-[13px] text-[#4a4956]">{row.preview}</div>
-                {(row.tag || row.meta) && (
+                <div
+                  className={cn(
+                    "mt-[3px] truncate text-[13px]",
+                    row.awaitingReply ? "font-semibold text-[#2c2b36]" : "text-[#4a4956]"
+                  )}
+                >
+                  {row.preview}
+                </div>
+                {(row.tag || row.meta || row.awaitingReply) && (
                   <div className="mt-1.5 flex items-center gap-1.5">
                     {row.tag && (
                       <span
@@ -105,6 +127,11 @@ export function ConversationList({
                         style={{ color: tagColors?.[0] ?? "#6b6a78", background: tagColors?.[1] ?? "#f1f1f6" }}
                       >
                         {row.tag}
+                      </span>
+                    )}
+                    {row.awaitingReply && (
+                      <span className="rounded-md bg-[#f2edff] px-[7px] py-0.5 text-[10.5px] font-bold text-[#6d28d9]">
+                        Awaiting reply
                       </span>
                     )}
                     {row.meta && <span className="text-[11.5px] text-[#9a99a8]">{row.meta}</span>}

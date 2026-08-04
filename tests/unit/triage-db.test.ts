@@ -10,7 +10,13 @@ vi.mock("@/drizzle/db", () => ({
 }))
 
 import { db } from "@/drizzle/db"
-import { classifyType, getTriageConversationsFromDb, pairKey, splitPairKey } from "@/features/messages/db/triage"
+import {
+  classifyType,
+  getTriageConversationsFromDb,
+  getTriageMessagesFromDb,
+  pairKey,
+  splitPairKey,
+} from "@/features/messages/db/triage"
 
 const dialect = new PgDialect()
 
@@ -100,5 +106,135 @@ describe("getTriageConversationsFromDb", () => {
     expect(row.type).toBe("escrow")
     expect(row.messageCount).toBe(5)
     expect(row.flagged).toBe(true)
+  })
+
+  // Validates "awaiting reply": true only when a staff (admin/internal) account is one of
+  // the two parties AND the *other*, non-staff party sent the most recent message — i.e.
+  // staff owes a response. This is what backs the FilterRails "Awaiting reply" count and
+  // the ConversationList row indicator.
+  it("marks awaitingReply true when the non-staff party sent the latest message to a staff participant", async () => {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        pair_key: "buyer-1:escrow-1",
+        sender_id: "buyer-1",
+        recipient_id: "escrow-1",
+        content: "Escrow service request (buyer) for: Ring",
+        created_at: new Date("2026-07-01T00:00:00.000Z"),
+        message_count: 1,
+        any_flagged: false,
+      },
+    ] as never)
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () =>
+          Promise.resolve([
+            { id: "buyer-1", name: "Buyer", role: "user" },
+            { id: "escrow-1", name: "Escrow", role: "internal" },
+          ]),
+      }),
+    } as never)
+
+    const [row] = await getTriageConversationsFromDb()
+    expect(row.awaitingReply).toBe(true)
+  })
+
+  it("marks awaitingReply false when staff already sent the latest message", async () => {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        pair_key: "buyer-1:escrow-1",
+        sender_id: "escrow-1",
+        recipient_id: "buyer-1",
+        content: "Thanks, I'll take a look",
+        created_at: new Date("2026-07-01T00:00:00.000Z"),
+        message_count: 2,
+        any_flagged: false,
+      },
+    ] as never)
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () =>
+          Promise.resolve([
+            { id: "buyer-1", name: "Buyer", role: "user" },
+            { id: "escrow-1", name: "Escrow", role: "internal" },
+          ]),
+      }),
+    } as never)
+
+    const [row] = await getTriageConversationsFromDb()
+    expect(row.awaitingReply).toBe(false)
+  })
+
+  it("marks awaitingReply false for a pure buyer<->seller pair with no staff participant", async () => {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        pair_key: "buyer-1:seller-1",
+        sender_id: "buyer-1",
+        recipient_id: "seller-1",
+        content: "Is this still available?",
+        created_at: new Date("2026-07-01T00:00:00.000Z"),
+        message_count: 1,
+        any_flagged: false,
+      },
+    ] as never)
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () =>
+          Promise.resolve([
+            { id: "buyer-1", name: "Buyer", role: "user" },
+            { id: "seller-1", name: "Seller", role: "user" },
+          ]),
+      }),
+    } as never)
+
+    const [row] = await getTriageConversationsFromDb()
+    expect(row.awaitingReply).toBe(false)
+  })
+})
+
+describe("getTriageMessagesFromDb", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  // Same awaitingReply rule as conversations, but computed per-message from that
+  // single row's own sender/recipient role (no "latest in pair" lookup needed).
+  it("marks a message awaitingReply true only when a non-staff sender wrote to a staff recipient", async () => {
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        leftJoin: () => ({
+          leftJoin: () => ({
+            orderBy: () =>
+              Promise.resolve([
+                {
+                  id: "msg-1",
+                  senderId: "buyer-1",
+                  recipientId: "escrow-1",
+                  senderName: "Buyer",
+                  recipientName: "Escrow",
+                  senderRole: "user",
+                  recipientRole: "internal",
+                  content: "Escrow service request (buyer) for: Ring",
+                  starred: false,
+                  createdAt: new Date("2026-07-01T00:00:00.000Z"),
+                },
+                {
+                  id: "msg-2",
+                  senderId: "escrow-1",
+                  recipientId: "buyer-1",
+                  senderName: "Escrow",
+                  recipientName: "Buyer",
+                  senderRole: "internal",
+                  recipientRole: "user",
+                  content: "On it, checking now.",
+                  starred: false,
+                  createdAt: new Date("2026-07-01T00:05:00.000Z"),
+                },
+              ]),
+          }),
+        }),
+      }),
+    } as never)
+
+    const [inbound, outbound] = await getTriageMessagesFromDb()
+    expect(inbound.awaitingReply).toBe(true)
+    expect(outbound.awaitingReply).toBe(false)
   })
 })

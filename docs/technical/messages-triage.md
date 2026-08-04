@@ -493,3 +493,185 @@ before by `requireMessagesAccess()`.
 - The INTERNAL note row is still exactly as unwired as before this phase —
   this fix only addresses the reply-to-participant path, not admin-only
   notes.
+
+## Phase 7 — File/image attachments in the REPLY composer
+
+**Ask:** let the REPLY composer send attachments (photos, documents), not
+just plain text, matching what the mobile chat already supports.
+
+**Design:** mirrored the existing, working (but currently unreached)
+attachment flow in `features/chat/components/ChatDashboard.tsx`
+(`uploadAndSend`/`uploadImagesAndSend`) rather than inventing a new upload
+path — same upload route (`POST /api/chat/media`, multipart `FormData` with
+field `"file"`, returns `{ url }`), same target bucket (`chat-media`), same
+server-side allow-list/size cap (`ALLOWED_MEDIA_TYPES`/`MAX_MEDIA_SIZE_BYTES`
+in `app/api/chat/media/route.ts` — untouched). No new API route, no schema
+change.
+
+Deliberate improvement over `ChatDashboard`'s version: that composer uploads
+and sends immediately on file pick, with no preview and no way to remove a
+file before it's sent, and silently drops every file but the first when a
+multi-select mixes image and non-image types. This composer instead **stages**
+picked files first — the admin can review, and remove any before sending —
+and sends *all* of them, not just the first.
+
+**Fix:**
+- `features/messages/types/triage.ts` — new `PendingReplyAttachment { file:
+  File; previewUrl: string | null }`. `previewUrl` is an object URL created
+  immediately for image files (for the thumbnail chip) and revoked on
+  remove/send/conversation-switch.
+- `features/messages/components/triage/MessagesTriagePage.tsx`:
+  - New state: `replyAttachments: PendingReplyAttachment[]`,
+    `replyUploading` (distinguishes the upload phase from the send phase in
+    the button label).
+  - `ALLOWED_ATTACHMENT_TYPES`/`MAX_ATTACHMENT_SIZE_BYTES` — client-side
+    mirror of the server's allow-list/20MB cap, purely for a faster/friendlier
+    rejection; the server enforces the same limits independently regardless.
+  - `MAX_ATTACHMENTS_PER_REPLY = 12` — a UX cap, not a server one (the
+    schema's own cap is 12 `imageUrls` *per message*; a mixed batch here can
+    fan out into several messages, see below).
+  - `handlePickAttachments()` — validates each newly picked file
+    (type/size), stages accepted ones, toasts a rejection reason per bad
+    file, and caps the total.
+  - `handleRemoveAttachment()` — removes one staged file, revoking its
+    preview URL.
+  - `handleSendReply()` rewritten: with no attachments, behavior is
+    unchanged (single text message). With attachments, uploads each via
+    `uploadReplyAttachment()` → `POST /api/chat/media` sequentially (matches
+    `ChatDashboard`'s pattern — bounds concurrent Supabase Storage writes to
+    one at a time), then partitions results into images vs. other files —
+    **because a single `messages` row can only carry one attachment shape**
+    (`imageUrls` *or* `fileUrl`, per the `POST /api/chat/messages` schema),
+    every image goes out together as one gallery message
+    (`sendReplyMessage({ imageUrls, messageType: "image" })`), and every
+    non-image file goes out as its own message
+    (`sendReplyMessage({ fileUrl, messageType: messageTypeFromMime(mime) })`).
+    Whichever message is sent first carries the typed caption
+    (`content`) — later messages in the same batch send with no caption, so
+    text isn't duplicated across rows.
+  - `messageTypeFromMime()` — same `image/*`→`"image"`,
+    `audio/*`→`"audio"`, else `"file"` mapping `ChatDashboard.tsx` uses.
+  - `sendReplyMessage()` factored out of the old inline fetch so both the
+    text-only and attachment paths share it.
+- `features/messages/components/triage/ReadingPane.tsx`:
+  - New hidden `<input type="file" multiple accept={ATTACH_ACCEPT}>` +
+    a paperclip button that triggers it via a ref — `ATTACH_ACCEPT` is a
+    local copy of the same accept string `ChatDashboard.tsx` uses (comment
+    notes it must match the server's allow-list).
+  - Staged attachments render as chips above the input row: an inline
+    thumbnail for images (from `previewUrl`), a generic file icon otherwise,
+    the filename (truncated), and a remove (×) button per chip.
+  - Send's `disabled` condition changed from "text is empty" to "text is
+    empty **and** there are no staged attachments" — an attachment-only
+    message (no caption) is valid per the API schema.
+  - Button label now has three states: `"Uploading…"` (while attachments
+    are being uploaded) → `"Sending…"` (while the message POST(s) are in
+    flight) → `"Send ⌘⏎"` (idle).
+- `tests/setup-component.ts` — added a `URL.createObjectURL`/
+  `revokeObjectURL` polyfill (jsdom doesn't implement either), following the
+  same pattern as the existing `scrollIntoView` polyfill added for
+  `ImageViewer` — any component test that stages an image attachment would
+  otherwise throw.
+
+**No schema or API route changes** — `POST /api/chat/media` and
+`POST /api/chat/messages` were both already capable of everything this needed.
+
+## Auth & permissions (Phase 7 addendum)
+
+No guard changes. `POST /api/chat/media` already requires only a valid
+session (`requireUploadContext`, no role check) — same trust boundary as
+`POST /api/chat/messages`. The existing `replyTarget` participant check
+(Phase 6) still gates whether the composer is usable at all, attachments
+included.
+
+## Known gaps / TODOs (Phase 7 addendum)
+
+- Uploads are sequential (one file at a time, matching `ChatDashboard`), not
+  parallel — a large multi-file batch will feel slower than it needs to.
+  Deliberate: bounds concurrent writes to Supabase Storage from a single
+  send, same tradeoff `ChatDashboard` already made.
+- If an upload or send fails partway through a mixed batch, whatever already
+  sent successfully stays sent (there's no way to "undo" a persisted
+  message) — the user sees an error toast and the remaining unsent
+  attachments stay staged for retry, since `replyAttachments` is only
+  cleared after the whole batch succeeds.
+- No client-side image compression/resizing — raw `File` objects upload
+  as-is, bounded only by the 20MB per-file server limit (same as
+  `ChatDashboard`).
+- No drag-and-drop or clipboard-paste attach — picking a file requires the
+  paperclip button's native file dialog.
+
+## Phase 8 — Real "Awaiting reply" status, visible in the list
+
+**Ask:** make it easy to spot, at a glance in the conversation list, which
+threads have a new message nobody on staff has answered yet — i.e. make
+"unread" easily visible, not just discoverable by opening every thread.
+
+**Why not `messages.is_read`:** that column is recipient-scoped — true once
+the literal `recipientId` of a row has viewed it (see the schema comment at
+`drizzle/schema/chat-schema.ts:51-56`). Admins/escrow staff browsing
+`/admin/messages` are third parties on most rows (neither `senderId` nor
+`recipientId`), so `is_read` says nothing about whether *staff* has seen or
+answered a thread. Using it here would only ever be correct for the exact
+message rows where the escrow/staff account happens to literally be the
+recipient, and silently wrong (always "read") for everything else — not an
+honest signal to build a list-wide indicator on.
+
+**What backs it instead:** `computeAwaitingReply(senderRole, recipientRole)`
+in `features/messages/db/triage.ts` — true only when (a) a staff account
+(`admin`/`internal` role — this is how an escrow-assigned user is
+represented) is one of the two parties, **and** (b) the *other*, non-staff
+party sent the most recent message. A pure buyer↔seller pair (no staff
+participant at all) is never "awaiting" — there's no staff person expected
+to reply there, so showing it as awaiting would be noise, not signal.
+
+**Fix:**
+- `features/messages/db/triage.ts` — `isStaffRole()`/`computeAwaitingReply()`
+  helpers; `getTriageConversationsFromDb()` computes it from the latest
+  message's sender/recipient profile roles (already fetched for
+  `participantA`/`participantB` names); `getTriageMessagesFromDb()` now also
+  selects `recipientRole` (new field on that query) and computes it
+  per-message from that row's own sender/recipient roles. Both replace the
+  previous hardcoded `awaitingReply: false`.
+- No other logic changed — `matchesStatus()`'s `"awaiting"` case
+  (`features/messages/lib/triage-filters.ts:52-53`), `computeFacetCounts()`,
+  and the "Awaiting reply" status rail (`FilterRails.tsx`, Clock icon) were
+  already fully wired against this field; they just showed 0 because the
+  field was always `false`. They now filter/count correctly with zero
+  changes to that layer.
+- `features/messages/components/triage/ConversationList.tsx` — new
+  `awaitingReply: boolean` field on `TriageListRow`; when true, a row shows
+  a small purple dot on the avatar's corner (`aria-label`/`title="Awaiting
+  reply"`) and an "Awaiting reply" pill next to the tag/meta line, and the
+  title/preview text get a bolder weight — the same "unread vs. read"
+  visual language most inbox UIs use, so it reads at a glance without
+  opening the thread or touching the filter rail.
+- `features/messages/components/triage/MessagesTriagePage.tsx` — threads
+  `c.awaitingReply`/`m.awaitingReply` (both already existed on
+  `TriageConversation`/`TriageMessage`) into the `listRows` mapping.
+
+**No schema or API changes** — this is entirely derived from data already
+being fetched (`user.role` on both parties), no new column or migration.
+
+## Auth & permissions (Phase 8 addendum)
+
+No change. This is read-only derived display data; it doesn't affect who
+can view or act on anything.
+
+## Known gaps / TODOs (Phase 8 addendum)
+
+- Still no real "resolved"/"assigned to me" backing (unchanged from earlier
+  phases) — only "awaiting reply" moved from hardcoded to real in this
+  phase.
+- The indicator reflects the *last* message only, not a true unread count —
+  if staff hasn't opened a thread in days and the other party sent 10
+  messages since, the list still shows one dot/pill, not "10 unread." That
+  matches what the underlying data can honestly support today (no
+  per-message-read-by-staff tracking exists), not a shortcut taken for
+  convenience.
+- A "true admin" (role `admin`) is *always* staff for this computation, even
+  on a thread they have no specific assignment to — "awaiting reply" means
+  "some staff member owes a reply," not "you personally, the current
+  viewer, owe a reply." Distinguishing those would need the
+  still-nonexistent per-conversation assignment feature (`assignedToMe`,
+  also still hardcoded `false`).

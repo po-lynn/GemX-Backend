@@ -15,6 +15,7 @@ const rows: TriageListRow[] = [
     meta: "18 messages",
     tag: "OFF-PLATFORM",
     selected: true,
+    awaitingReply: false,
   },
   {
     id: "c2",
@@ -25,6 +26,7 @@ const rows: TriageListRow[] = [
     time: "2d ago",
     meta: "34 messages",
     selected: false,
+    awaitingReply: true,
   },
 ]
 
@@ -87,5 +89,14 @@ describe("ConversationList", () => {
   it("uses the messages-mode search placeholder when mode is 'messages'", () => {
     renderList({ mode: "messages" })
     expect(screen.getByPlaceholderText("Search message text, SKU…")).toBeInTheDocument()
+  })
+
+  // Validates an "awaiting reply" row gets a visible dot indicator and pill,
+  // and a row that isn't awaiting gets neither — this is the whole point of
+  // making unread/awaiting conversations easy to spot without opening them.
+  it("shows an awaiting-reply dot and pill only on rows flagged as awaiting", () => {
+    renderList()
+    expect(screen.getAllByLabelText("Awaiting reply")).toHaveLength(1)
+    expect(screen.getByText("Awaiting reply")).toBeInTheDocument()
   })
 })

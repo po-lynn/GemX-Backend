@@ -1,12 +1,17 @@
 "use client"
 
-import { Fragment, useState } from "react"
-import { CheckCircle2, Flag, Loader2, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react"
+import { Fragment, useRef, useState } from "react"
+import { CheckCircle2, File as FileIcon, Flag, Loader2, MoreHorizontal, Paperclip, RotateCcw, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ImageViewer } from "@/components/shared/ImageViewer"
 import { ParticipantAvatar } from "@/features/messages/components/triage/ParticipantAvatar"
 import { TYPE_LABELS } from "@/features/messages/lib/triage-filters"
-import type { TriageConversation, TriageThread } from "@/features/messages/types/triage"
+import type { PendingReplyAttachment, TriageConversation, TriageThread } from "@/features/messages/types/triage"
+
+// Must match app/api/chat/media's ALLOWED_MEDIA_TYPES (advisory only — the
+// server independently enforces the real allow-list and size cap).
+const ATTACH_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 type Props = {
   conversation: TriageConversation | null
@@ -27,9 +32,13 @@ type Props = {
   onReplyChange: (value: string) => void
   onSendReply: () => void
   replyPending?: boolean
+  replyUploading?: boolean
   /** Name of the other participant a reply would be sent to, or null when the
    *  logged-in user isn't a participant in this conversation (oversight-only). */
   replyTargetName: string | null
+  replyAttachments: PendingReplyAttachment[]
+  onPickAttachments: (files: FileList | null) => void
+  onRemoveAttachment: (index: number) => void
 }
 
 function formatTime(iso: string) {
@@ -69,9 +78,14 @@ export function ReadingPane({
   onReplyChange,
   onSendReply,
   replyPending,
+  replyUploading,
   replyTargetName,
+  replyAttachments,
+  onPickAttachments,
+  onRemoveAttachment,
 }: Props) {
   const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   if (!conversation) {
     return (
@@ -250,30 +264,79 @@ export function ReadingPane({
       </div>
 
       <form
-        className="flex flex-none items-center gap-2.5 border-t border-[#ececf3] bg-white px-5 py-3"
+        className="flex flex-none flex-col gap-2 border-t border-[#ececf3] bg-white px-5 py-3"
         onSubmit={(e) => {
           e.preventDefault()
           onSendReply()
         }}
       >
-        <span className="w-[62px] flex-none text-xs font-bold tracking-[0.05em] text-[#9a99a8]">REPLY</span>
-        <input
-          name="reply"
-          value={replyValue}
-          onChange={(e) => onReplyChange(e.target.value)}
-          disabled={!replyTargetName || replyPending}
-          placeholder={
-            replyTargetName ? `Reply to ${replyTargetName}…` : "You're not a participant in this conversation"
-          }
-          className="h-[38px] flex-1 rounded-[10px] border border-[#e6e6ee] bg-[#fbfbfd] px-3 text-[13px] text-[#17161c] outline-none placeholder:text-[#9a99a8] disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={!replyTargetName || !replyValue.trim() || replyPending}
-          className="h-[38px] whitespace-nowrap rounded-[10px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white disabled:opacity-50"
-        >
-          {replyPending ? "Sending…" : "Send ⌘⏎"}
-        </button>
+        {replyAttachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 pl-[74px]">
+            {replyAttachments.map((a, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 rounded-[9px] border border-[#e6e6ee] bg-[#fbfbfd] py-1 pl-1.5 pr-2 text-[12px] text-[#3d3c49]"
+              >
+                {a.previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.previewUrl} alt="" className="size-7 rounded-[6px] object-cover" />
+                ) : (
+                  <FileIcon className="size-4 flex-none text-[#9a99a8]" />
+                )}
+                <span className="max-w-[140px] truncate">{a.file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveAttachment(i)}
+                  disabled={replyPending}
+                  aria-label={`Remove ${a.file.name}`}
+                  className="grid size-4 flex-none place-items-center rounded-full text-[#9a99a8] transition-colors hover:bg-[#ececf3] disabled:opacity-50"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2.5">
+          <span className="w-[62px] flex-none text-xs font-bold tracking-[0.05em] text-[#9a99a8]">REPLY</span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ATTACH_ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              onPickAttachments(e.target.files)
+              e.target.value = ""
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!replyTargetName || replyPending}
+            aria-label="Attach file"
+            className="grid size-[38px] flex-none place-items-center rounded-[10px] border border-[#e6e6ee] text-[#6b6a78] transition-colors hover:bg-[#f5f4f9] disabled:opacity-50"
+          >
+            <Paperclip className="size-4" />
+          </button>
+          <input
+            name="reply"
+            value={replyValue}
+            onChange={(e) => onReplyChange(e.target.value)}
+            disabled={!replyTargetName || replyPending}
+            placeholder={
+              replyTargetName ? `Reply to ${replyTargetName}…` : "You're not a participant in this conversation"
+            }
+            className="h-[38px] flex-1 rounded-[10px] border border-[#e6e6ee] bg-[#fbfbfd] px-3 text-[13px] text-[#17161c] outline-none placeholder:text-[#9a99a8] disabled:opacity-60"
+          />
+          <button
+            type="submit"
+            disabled={!replyTargetName || replyPending || (!replyValue.trim() && replyAttachments.length === 0)}
+            className="h-[38px] whitespace-nowrap rounded-[10px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white disabled:opacity-50"
+          >
+            {replyUploading ? "Uploading…" : replyPending ? "Sending…" : "Send ⌘⏎"}
+          </button>
+        </div>
       </form>
 
       <div className="flex flex-none items-center gap-2.5 border-t border-[#ececf3] bg-white px-5 py-3">

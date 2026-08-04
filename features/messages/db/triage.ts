@@ -29,6 +29,20 @@ export function classifyType(content: string, senderRole: string): ConversationT
   return "chat"
 }
 
+function isStaffRole(role: string): boolean {
+  return role === "admin" || role === "internal"
+}
+
+// "Awaiting reply" only means something when a staff account (admin/internal
+// — e.g. the assigned escrow user) is one of the two parties: it's true when
+// the *other*, non-staff party sent the most recent message, i.e. staff owes
+// a response. A pure buyer<->seller pair has no staff participant at all, so
+// it's never "awaiting" — there's no one on staff expected to reply there.
+function computeAwaitingReply(senderRole: string, recipientRole: string): boolean {
+  const hasStaffParticipant = isStaffRole(senderRole) || isStaffRole(recipientRole)
+  return hasStaffParticipant && !isStaffRole(senderRole)
+}
+
 /** Stable, order-independent id for a 1:1 pair — mirrors the SQL pair_key convention in admin-all-conversations.ts. */
 export function pairKey(a: string, b: string): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`
@@ -53,6 +67,7 @@ export async function getTriageMessagesFromDb(): Promise<TriageMessage[]> {
       senderName: senderUser.name,
       recipientName: recipientUser.name,
       senderRole: senderUser.role,
+      recipientRole: recipientUser.role,
       content: messages.content,
       starred: messages.starred,
       createdAt: messages.createdAt,
@@ -71,7 +86,7 @@ export async function getTriageMessagesFromDb(): Promise<TriageMessage[]> {
     sentAt: toIso(r.createdAt),
     type: classifyType(r.content, r.senderRole ?? ""),
     flagged: !!r.starred,
-    awaitingReply: false,
+    awaitingReply: computeAwaitingReply(r.senderRole ?? "", r.recipientRole ?? ""),
     assignedToMe: false,
     resolved: false,
   }))
@@ -127,16 +142,17 @@ export async function getTriageConversationsFromDb(): Promise<TriageConversation
 
   return rows.map((r) => {
     const senderProfile = profileById.get(r.sender_id) ?? fallback
+    const recipientProfile = profileById.get(r.recipient_id) ?? fallback
     return {
       id: r.pair_key,
       participantA: { id: r.sender_id, name: senderProfile.name },
-      participantB: { id: r.recipient_id, name: (profileById.get(r.recipient_id) ?? fallback).name },
+      participantB: { id: r.recipient_id, name: recipientProfile.name },
       type: classifyType(r.content, senderProfile.role),
       lastMessagePreview: r.content,
       lastMessageAt: toIso(r.created_at),
       messageCount: r.message_count,
       flagged: !!r.any_flagged,
-      awaitingReply: false,
+      awaitingReply: computeAwaitingReply(senderProfile.role, recipientProfile.role),
       assignedToMe: false,
       resolved: false,
     }

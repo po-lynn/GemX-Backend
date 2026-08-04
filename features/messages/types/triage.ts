@@ -71,6 +71,13 @@ export interface TriageThread {
   messages: TriageThreadMessage[]
 }
 
+// A file picked in the REPLY composer, staged client-side before send.
+// `previewUrl` is an object URL for images only (revoked on remove/send/reset).
+export interface PendingReplyAttachment {
+  file: File
+  previewUrl: string | null
+}
+
 // Response of GET /admin/messages/facets — counts respect the *other* axis
 export interface TriageFacetCounts {
   status: Record<StatusFilter, number>
