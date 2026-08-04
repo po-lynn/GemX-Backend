@@ -26,7 +26,7 @@ import {
   Dialog, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { FEATURE_GROUPS } from "@/features/rbac/feature-keys";
+import { FEATURE_GROUPS, featureSaveKeys, type FeatureGroupItem } from "@/features/rbac/feature-keys";
 import { saveUserPermissionsAction } from "@/features/rbac/actions/permissions";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -239,13 +239,25 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
   const mark        = () => setDirty(true);
 
   // permissions helpers
-  const allPermKeys  = FEATURE_GROUPS.flatMap(g => g.features.map(f => f.key));
-  const totalPerms   = allPermKeys.length;
-  const enabledCount = allPermKeys.filter(k => perms[k] ?? false).length;
-  function enableAll() { setPerms(Object.fromEntries(allPermKeys.map(k => [k, true]))); mark(); }
-  function clearAll()  { setPerms(Object.fromEntries(allPermKeys.map(k => [k, false]))); mark(); }
+  // A feature is "on" if its own key or any of its alias keys (merged
+  // features kept for backward compatibility, e.g. chat_dashboard) is set —
+  // but saving always writes the same value to every alias so a toggle can
+  // never leave the underlying keys split between on/off.
+  function featureIsOn(feature: FeatureGroupItem, p: Record<string, boolean>) {
+    return featureSaveKeys(feature).some((k) => p[k] ?? false);
+  }
+  const allFeatures  = FEATURE_GROUPS.flatMap(g => g.features);
+  const allSaveKeys  = allFeatures.flatMap(f => featureSaveKeys(f));
+  const totalPerms   = allFeatures.length;
+  const enabledCount = allFeatures.filter(f => featureIsOn(f, perms)).length;
+  function enableAll() { setPerms(Object.fromEntries(allSaveKeys.map(k => [k, true]))); mark(); }
+  function clearAll()  { setPerms(Object.fromEntries(allSaveKeys.map(k => [k, false]))); mark(); }
   function toggleGroup(group: typeof FEATURE_GROUPS[0], value: boolean) {
-    setPerms(p => { const n = { ...p }; group.features.forEach(f => { n[f.key] = value; }); return n; });
+    setPerms(p => {
+      const n = { ...p };
+      group.features.forEach(f => { featureSaveKeys(f).forEach(k => { n[k] = value; }); });
+      return n;
+    });
     mark();
   }
 
@@ -305,8 +317,14 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
       const result = await updateUserAction(fd);
       if (result?.error) { setError(result.error); return; }
       if (role === "internal") {
-        const allKeys = FEATURE_GROUPS.flatMap((g) => g.features.map((f) => f.key));
-        const completePerms = Object.fromEntries(allKeys.map((k) => [k, perms[k] ?? false]));
+        // Write every alias key alongside its primary key so a merged
+        // feature's stored permissions are always reconciled to match the
+        // single toggle, even if they had drifted apart previously.
+        const completePerms: Record<string, boolean> = {};
+        FEATURE_GROUPS.forEach((g) => g.features.forEach((f) => {
+          const on = featureIsOn(f, perms);
+          featureSaveKeys(f).forEach((k) => { completePerms[k] = on; });
+        }));
         const permsResult = await saveUserPermissionsAction(user.id, completePerms);
         if (!permsResult.ok) { setError(permsResult.error ?? "Failed to save permissions"); return; }
       }
@@ -892,7 +910,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
               <div className="ud-sec-body" style={{ paddingTop: 22 }}>
                 <div style={{ columns: 2, columnGap: 52 }}>
                   {FEATURE_GROUPS.map((group) => {
-                    const groupEnabled = group.features.filter(f => perms[f.key] ?? false).length;
+                    const groupEnabled = group.features.filter(f => featureIsOn(f, perms)).length;
                     const allGroupOn   = groupEnabled === group.features.length;
                     return (
                       <div key={group.label} style={{ breakInside: "avoid", marginBottom: 22 }}>
@@ -911,7 +929,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
                         <div>
                           {group.features.map((feature) => {
                             const Icon = FEATURE_ICONS[feature.key] ?? Shield;
-                            const isOn = perms[feature.key] ?? false;
+                            const isOn = featureIsOn(feature, perms);
                             return (
                               <label
                                 key={feature.key}
@@ -921,7 +939,15 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
                                   type="checkbox"
                                   className="sr-only"
                                   checked={isOn}
-                                  onChange={(e) => { setPerms(p => ({ ...p, [feature.key]: e.target.checked })); mark(); }}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setPerms(p => {
+                                      const n = { ...p };
+                                      featureSaveKeys(feature).forEach((k) => { n[k] = checked; });
+                                      return n;
+                                    });
+                                    mark();
+                                  }}
                                 />
                                 <span style={{ width: 30, height: 30, borderRadius: 9, background: isOn ? "#efeaff" : "#f3f4f6", color: isOn ? "#7c5cff" : "#9aa1ad", display: "grid", placeItems: "center", transition: "background .16s, color .16s", flexShrink: 0 }}>
                                   <Icon style={{ width: 16, height: 16 }} />

@@ -25,9 +25,24 @@ export const FEATURE_KEYS = {
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
 
+export type FeatureGroupItem = {
+  key: FeatureKey
+  label: string
+  // Other feature keys whose stored permission must always mirror this one.
+  // Used when two features were merged into a single page/toggle but the
+  // underlying keys are kept for backward compatibility (see MESSAGES below).
+  aliasKeys?: FeatureKey[]
+}
+
+// All keys (primary + aliases) that must be written together to keep a
+// merged feature's stored permissions in sync.
+export function featureSaveKeys(feature: FeatureGroupItem): FeatureKey[] {
+  return [feature.key, ...(feature.aliasKeys ?? [])]
+}
+
 export const FEATURE_GROUPS: Array<{
   label: string
-  features: Array<{ key: FeatureKey; label: string }>
+  features: Array<FeatureGroupItem>
 }> = [
   {
     label: "Users",
@@ -57,8 +72,10 @@ export const FEATURE_GROUPS: Array<{
   {
     label: "Communication",
     features: [
-      { key: FEATURE_KEYS.MESSAGES,       label: "Messages" },
-      { key: FEATURE_KEYS.CHAT_DASHBOARD, label: "Chat Dashboard" },
+      // Messages and Chat Dashboard were merged into a single triage inbox
+      // (see docs/technical/messages-triage.md) — one toggle controls both
+      // underlying keys so the UI can't grant/revoke only half of it.
+      { key: FEATURE_KEYS.MESSAGES, label: "Messages", aliasKeys: [FEATURE_KEYS.CHAT_DASHBOARD] },
     ],
   },
   {

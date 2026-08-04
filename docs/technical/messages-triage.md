@@ -303,3 +303,80 @@ per distinct day, not one per message, and both day labels present when a
 thread has messages on two different days. Verified live via Chrome
 DevTools MCP with a patched 4-message/2-day thread — confirmed exactly two
 dividers rendered in the right positions, zero console errors.
+
+## Phase 4 — Feature permissions UI still showed two separate toggles
+
+**Bug:** the Communication section of the internal-user "Feature
+permissions" panel (`/admin/users/[id]`, permissions tab) still showed
+**two** independent toggles — "Messages" and "Chat Dashboard" — even though
+those pages were merged into one triage inbox back in the initial merge.
+This wasn't just cosmetic: `FEATURE_GROUPS` (`features/rbac/feature-keys.ts`)
+listed `messages` and `chat_dashboard` as two unrelated entries, and
+`UserForm.tsx`'s save handler (`handleSave`) only wrote whichever keys were
+present in `FEATURE_GROUPS` for that specific toggle. An admin who flipped
+"Messages" off for a user who separately had `chat_dashboard: true` (e.g.
+from before the merge) would see the toggle turn off, but the user kept
+page access regardless — `requireMessagesAccess()`
+(`features/messages/lib/require-messages-access.ts`) has always OR'd the two
+keys together deliberately, so the stale `chat_dashboard` row silently kept
+the door open. The permission the admin thought they revoked was still
+effectively granted.
+
+**Fix:** `features/rbac/feature-keys.ts` — collapsed the Communication
+group to a single `{ key: MESSAGES, label: "Messages", aliasKeys:
+[CHAT_DASHBOARD] }` entry (new `aliasKeys` field on `FeatureGroupItem`), and
+added `featureSaveKeys(feature)` returning `[feature.key,
+...(feature.aliasKeys ?? [])]`. `features/users/components/UserForm.tsx`
+now goes through `featureSaveKeys` everywhere permissions are read or
+written:
+- `featureIsOn(feature, perms)` (new) reports a feature as "on" if *any* of
+  its save keys is true, so a legacy split state (one key true, one false)
+  still displays correctly instead of silently showing off.
+- The checkbox `onChange`, `toggleGroup`, `enableAll`, and `clearAll` all
+  write the same boolean to every key in `featureSaveKeys(feature)`, not
+  just the primary key.
+- `handleSave`'s `completePerms` is rebuilt from `featureIsOn` +
+  `featureSaveKeys` for every feature, so **every save reconciles
+  `messages`/`chat_dashboard` to the same value** — a legacy split
+  permission self-heals the next time an admin touches that user's
+  permissions, even if they don't touch the Communication row directly.
+
+No schema or migration change — `chat_dashboard` remains a real,
+independently-stored `internalPermission` row (kept for the reasons in
+Phase-1's `requireMessagesAccess()` comment: nobody who had bare
+`chat_dashboard` access loses it), it's just no longer independently
+*editable* from the admin UI.
+
+## Data flow (Phase 4 addendum)
+
+```
+FEATURE_GROUPS (feature-keys.ts)            Communication → one { key: messages, aliasKeys: [chat_dashboard] } entry
+        │
+        ▼
+UserForm.tsx permissions tab                 featureIsOn() reads either key; toggle writes both via featureSaveKeys()
+        │
+        ▼
+saveUserPermissionsAction → setUserPermissions   upserts both messages + chat_dashboard rows, always equal
+        │
+        ▼
+requireMessagesAccess() (unchanged)          still ORs messages/chat_dashboard — now they can't drift apart via the UI
+```
+
+## Auth & permissions (Phase 4 addendum)
+
+No change to who can access what at the guard layer — `requireMessagesAccess()`,
+`requireAdminOrAnyFeature`, and the raw `chat_dashboard`-gated
+`/api/admin/chat/presence` route are all untouched. This phase only changes
+how the **admin-facing permission editor** represents and persists those two
+keys, so a single visible toggle can no longer leave the two keys
+inconsistent.
+
+## Known gaps / TODOs (Phase 4 addendum)
+
+- Existing users whose `messages`/`chat_dashboard` rows were already split
+  before this change keep that split until an admin next saves their
+  permissions (any save reconciles both — see "Fix" above). There's no
+  proactive backfill migration; the reconciliation is lazy, on next edit.
+- `FEATURE_ICONS` (`UserForm.tsx`) still has a `chat_dashboard` entry — it's
+  unused now that the toggle only ever renders under the `messages` key,
+  but left as-is since it's inert, not incorrect.

@@ -7,6 +7,13 @@ Normal dev setup — the page now reads real data, so you need a working
 data works). Visit `/admin/messages` while logged in as `admin` (or an
 `internal` user with the `messages` or `chat_dashboard` permission).
 
+Granting that permission: on `/admin/users/[id]` → Permissions tab, the
+Communication section shows a single **Messages** toggle — flipping it
+grants/revokes both the `messages` and `chat_dashboard` feature keys
+together (see `featureSaveKeys()` in `features/rbac/feature-keys.ts`).
+There's no separate "Chat Dashboard" toggle to manage independently
+anymore, since both keys gate the same merged page.
+
 ## Using it end-to-end
 
 1. Go to `/admin/messages`.
