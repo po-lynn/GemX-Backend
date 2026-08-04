@@ -30,7 +30,7 @@ describe("AdminMessagesPage query concurrency", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(connection).mockResolvedValue(undefined)
-    vi.mocked(requireMessagesAccess).mockResolvedValue(undefined as never)
+    vi.mocked(requireMessagesAccess).mockResolvedValue({ user: { id: "admin-1" } } as never)
     vi.mocked(getTriageConversationsFromDb).mockResolvedValue([])
     vi.mocked(getTriageMessagesFromDb).mockResolvedValue([])
   })

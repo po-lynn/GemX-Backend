@@ -111,8 +111,14 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderPage() {
-  return render(<MessagesTriagePage initialConversations={CONVERSATIONS} initialMessages={MESSAGES} />)
+function renderPage(currentUserId = "supervisor") {
+  return render(
+    <MessagesTriagePage
+      initialConversations={CONVERSATIONS}
+      initialMessages={MESSAGES}
+      currentUserId={currentUserId}
+    />
+  )
 }
 
 describe("MessagesTriagePage", () => {
@@ -161,7 +167,13 @@ describe("MessagesTriagePage", () => {
     // Simulate the router applying the update, then re-render so the
     // selection-fallback effect can observe the new (status=flagged) URL.
     mockSearch = lastReplacedQuery().toString()
-    rerender(<MessagesTriagePage initialConversations={CONVERSATIONS} initialMessages={MESSAGES} />)
+    rerender(
+      <MessagesTriagePage
+        initialConversations={CONVERSATIONS}
+        initialMessages={MESSAGES}
+        currentUserId="supervisor"
+      />
+    )
 
     expect(lastReplacedQuery().get("selectedId")).not.toBe("pair-c2")
   })
@@ -419,5 +431,47 @@ describe("MessagesTriagePage", () => {
     expect(screen.getByText("Jul 26, 2026")).toBeInTheDocument()
     // Same-day messages share one divider, not one per message.
     expect(screen.getAllByText("Jun 14, 2026")).toHaveLength(1)
+  })
+
+  // Regression: the reply composer must target whichever participant isn't
+  // the logged-in session, so an escrow-service (or any) admin account that
+  // is itself a conversation participant can actually send a message back,
+  // not just view the thread.
+  it("sends a reply via POST /api/chat/messages to the other participant and refreshes", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return { ok: true, json: async () => ({ success: true, message: { id: "new-msg" } }) }
+      }
+      return { ok: true, json: async () => ({ success: true, messages: [], page: 1, limit: 200, total: 0 }) }
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    // Default conversation (newest, pair-c2) is Gemx4 <-> Supervisor; rendering
+    // as "supervisor" means a reply should go to the other participant, Gemx4.
+    renderPage("supervisor")
+
+    const input = screen.getByPlaceholderText("Reply to Gemx4…")
+    fireEvent.change(input, { target: { value: "On it, checking now." } })
+    fireEvent.click(screen.getByText("Send ⌘⏎"))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/chat/messages",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ recipientId: "gemx4", content: "On it, checking now." }),
+        })
+      )
+    )
+    await waitFor(() => expect(refresh).toHaveBeenCalled())
+  })
+
+  // Regression: a pure-oversight admin who isn't one of the two participants
+  // must not get an active reply box — there'd be no unambiguous "other
+  // participant" to send as themselves to.
+  it("disables the reply composer when the logged-in user isn't a participant in the conversation", () => {
+    renderPage("someone-else-entirely")
+    const input = screen.getByPlaceholderText("You're not a participant in this conversation")
+    expect(input).toBeDisabled()
   })
 })

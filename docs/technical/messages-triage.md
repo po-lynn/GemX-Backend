@@ -394,3 +394,102 @@ it — any permission toggle (Messages or otherwise) could be saved
 repeatedly and never take effect. Fixed by converting it to the same
 `"use cache"` + `cacheTag()` + `revalidateTag(tag, "max")` pattern already
 used by every other cache in the codebase.
+
+## Phase 6 — Reply composer (fixes: escrow-service user couldn't reply from admin)
+
+**Bug reported:** an admin assigns an internal user as the "escrow service"
+contact (`escrow_service_setting`, configured at `/admin/settings`); buyers
+and sellers message that user via the mobile app; the escrow user expected to
+reply from `/admin/messages` but couldn't.
+
+**Root cause:** this was never escrow-specific — nobody could reply from
+`/admin/messages`. The bottom bar in the reading pane is labeled **"INTERNAL"**
+with placeholder "Add a note — visible to admins only"; it's an internal note
+field, not a reply box, and its Save button was `onSaveNote={notWiredToast}`
+(`MessagesTriagePage.tsx`) — a stub that only showed a toast, matching every
+other Phase-1/2 placeholder (Resolve/Assign/Notes — see "Known gaps" above).
+There was no send-to-participant path anywhere in this page. Separately,
+`ReadingPane`'s message-bubble `mine` flag was hardcoded to
+`senderId === participantB.id` — an arbitrary convention (whichever id ended
+up as `recipient_id` on the latest message), not tied to who's actually
+logged in, so even a wired composer would have misaligned bubbles for the
+real viewer.
+
+**Fix:**
+- `app/admin/messages/page.tsx` — captures the session returned by
+  `requireMessagesAccess()` (it already fetches
+  `auth.api.getSession(...)` internally) and passes `session.user.id` to
+  `MessagesTriagePage` as `currentUserId`, instead of discarding the return
+  value.
+- `features/messages/components/triage/MessagesTriagePage.tsx`:
+  - New required prop `currentUserId: string`.
+  - `otherParticipant`/`replyTarget` memo: whichever of `participantA`/
+    `participantB` is *not* `currentUserId`. `null` when the logged-in user
+    is neither (a pure-oversight admin browsing a thread they aren't part
+    of) — replying on their behalf would be ambiguous, so the composer
+    disables itself rather than guessing a recipient.
+  - `handleSendReply()`: POSTs `{ recipientId: replyTarget.id, content }` to
+    the existing, unmodified `POST /api/chat/messages` (already
+    session-authenticated — it derives `senderId` from `session.user.id`
+    server-side and has no role check, so it works for `admin` and
+    `internal` sessions alike, including an escrow-service account). On
+    success: clears the draft, re-fetches the thread, `router.refresh()`
+    (mirrors the existing `handleFlag`/`confirmDelete` pattern).
+  - The thread mapping's `mine` flag now reads `r.senderId === currentUserId`
+    instead of the old `participantB.id` convention — bubbles now align to
+    whoever is actually logged in, which matters once real replies exist.
+- `features/messages/components/triage/ReadingPane.tsx` — new `<form>`
+  composer row (labeled "REPLY", purple send button, `⌘⏎` hint) rendered
+  above the pre-existing "INTERNAL" note row, which is untouched and still a
+  placeholder. Input + button are disabled with an explanatory placeholder
+  ("You're not a participant in this conversation") when `replyTargetName`
+  is `null`.
+
+**No schema or API route changes** — `messages` table and
+`POST /api/chat/messages` were sufficient as-is; this was purely a missing
+client-side composer wired to an endpoint that already worked for any
+authenticated sender.
+
+**Escrow-specific note:** the escrow user must (a) exist as an `internal`
+(or `admin`) account — `escrow_service_setting` can only point at
+`role: "internal"` users (`app/admin/settings/page.tsx`) — and (b) have the
+`messages` (or legacy `chat_dashboard`) feature key granted via their RBAC
+permissions tab, since `requireMessagesAccess()` gates the whole page. Both
+of those were already true prerequisites before this fix; this phase only
+adds the ability to actually send once the escrow user is on the page.
+
+## Data flow (Phase 6 addendum)
+
+```
+app/admin/messages/page.tsx          requireMessagesAccess() → session.user.id passed as currentUserId prop
+        ▼
+MessagesTriagePage.tsx                replyTarget = the conversation participant that isn't currentUserId
+        │
+        ▼
+ReadingPane.tsx (REPLY composer)      onSendReply → handleSendReply()
+        │
+        ▼
+POST /api/chat/messages               senderId from session (server-side, unchanged route) + recipientId = replyTarget.id
+        │
+        ▼
+handleSendReply on success            clears draft → fetchThread() (re-fetch via existing GET) → router.refresh()
+```
+
+## Auth & permissions (Phase 6 addendum)
+
+No guard changes. `POST /api/chat/messages` was already reachable by any
+authenticated session with no role restriction — this phase only adds a UI
+path to it from `/admin/messages`. Page access is still gated exactly as
+before by `requireMessagesAccess()`.
+
+## Known gaps / TODOs (Phase 6 addendum)
+
+- The reply composer has no optimistic local append — it re-fetches the
+  whole thread via `GET /api/admin/messages/thread` after a successful send,
+  same latency characteristic as Flag/Delete's `router.refresh()`.
+- No draft persistence across conversation switches — `replyValue` resets on
+  `selectedId` change, matching the existing `noteValue` field's lack of
+  per-conversation state.
+- The INTERNAL note row is still exactly as unwired as before this phase —
+  this fix only addresses the reply-to-participant path, not admin-only
+  notes.

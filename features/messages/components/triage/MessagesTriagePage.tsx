@@ -37,6 +37,7 @@ import type {
 type Props = {
   initialConversations: TriageConversation[]
   initialMessages: TriageMessage[]
+  currentUserId: string
 }
 
 function formatRowTime(iso: string): string {
@@ -63,7 +64,7 @@ type ThreadApiRow = {
   starred: boolean
 }
 
-export function MessagesTriagePage({ initialConversations, initialMessages }: Props) {
+export function MessagesTriagePage({ initialConversations, initialMessages, currentUserId }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -83,6 +84,8 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [flagPending, setFlagPending] = useState(false)
   const [deletePending, setDeletePending] = useState(false)
+  const [replyValue, setReplyValue] = useState("")
+  const [replyPending, setReplyPending] = useState(false)
 
   const updateParams = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -153,6 +156,21 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
   const [threadLoading, setThreadLoading] = useState(false)
   const [threadError, setThreadError] = useState<string | null>(null)
 
+  // Who a reply from this admin session actually goes to. `null` when the
+  // logged-in user isn't one of the two participants (a pure-oversight admin
+  // browsing a buyer<->seller thread they aren't part of) — replying on their
+  // behalf would be ambiguous, so the composer disables itself in that case.
+  const replyTarget = useMemo(() => {
+    if (!activeConversation) return null
+    if (activeConversation.participantA.id === currentUserId) return activeConversation.participantB
+    if (activeConversation.participantB.id === currentUserId) return activeConversation.participantA
+    return null
+  }, [activeConversation, currentUserId])
+
+  useEffect(() => {
+    setReplyValue("")
+  }, [effectiveSelectedId])
+
   const fetchThread = useCallback(async () => {
     if (!activeConversation) {
       setThread(null)
@@ -180,7 +198,7 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
           r.senderId === activeConversation.participantA.id
             ? activeConversation.participantA.name
             : activeConversation.participantB.name,
-        mine: r.senderId === activeConversation.participantB.id,
+        mine: r.senderId === currentUserId,
         sentAt: r.createdAt,
         text: r.content,
         fileUrl: r.fileUrl,
@@ -194,11 +212,40 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
     } finally {
       setThreadLoading(false)
     }
-  }, [activeConversation])
+  }, [activeConversation, currentUserId])
 
   useEffect(() => {
     fetchThread()
   }, [fetchThread])
+
+  // Sends as the logged-in session's own user id (POST /api/chat/messages
+  // derives senderId from the session, not from anything passed here) to
+  // whichever participant isn't the current user — this is what lets an
+  // escrow-service account (or any admin/internal user who is themselves a
+  // conversation participant) actually reply from /admin/messages instead of
+  // only being able to view the thread.
+  async function handleSendReply() {
+    const content = replyValue.trim()
+    if (!content || !replyTarget || replyPending) return
+    setReplyPending(true)
+    try {
+      const res = await fetch("/api/chat/messages", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId: replyTarget.id, content }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to send reply")
+      setReplyValue("")
+      await fetchThread()
+      router.refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send reply")
+    } finally {
+      setReplyPending(false)
+    }
+  }
 
   const listRows: TriageListRow[] = useMemo(() => {
     if (mode === "conversations") {
@@ -314,6 +361,11 @@ export function MessagesTriagePage({ initialConversations, initialMessages }: Pr
             noteValue={noteValue}
             onNoteChange={setNoteValue}
             onSaveNote={notWiredToast}
+            replyValue={replyValue}
+            onReplyChange={setReplyValue}
+            onSendReply={handleSendReply}
+            replyPending={replyPending}
+            replyTargetName={replyTarget?.name ?? null}
             onFlag={handleFlag}
             onDelete={handleDeleteClick}
             onResolve={notWiredToast}

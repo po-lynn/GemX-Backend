@@ -13,7 +13,7 @@ const ADMIN_MESSAGES_QUERY_TIMEOUT_MS = 6000
 
 export default async function AdminMessagesPage() {
   await connection()
-  await requireMessagesAccess()
+  const session = await requireMessagesAccess()
 
   // Both primary, sequential (not Promise.all): MessagesTriagePage's "mode" toggle renders
   // either the conversation list or the flat message list as the page's actual content
@@ -33,7 +33,11 @@ export default async function AdminMessagesPage() {
   return (
     <FadeUp className="block h-full">
       <Suspense>
-        <MessagesTriagePage initialConversations={conversations} initialMessages={messages} />
+        <MessagesTriagePage
+          initialConversations={conversations}
+          initialMessages={messages}
+          currentUserId={session.user.id}
+        />
       </Suspense>
     </FadeUp>
   )

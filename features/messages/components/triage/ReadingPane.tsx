@@ -23,6 +23,13 @@ type Props = {
   onOverflow: () => void
   flagPending?: boolean
   deletePending?: boolean
+  replyValue: string
+  onReplyChange: (value: string) => void
+  onSendReply: () => void
+  replyPending?: boolean
+  /** Name of the other participant a reply would be sent to, or null when the
+   *  logged-in user isn't a participant in this conversation (oversight-only). */
+  replyTargetName: string | null
 }
 
 function formatTime(iso: string) {
@@ -58,6 +65,11 @@ export function ReadingPane({
   onOverflow,
   flagPending,
   deletePending,
+  replyValue,
+  onReplyChange,
+  onSendReply,
+  replyPending,
+  replyTargetName,
 }: Props) {
   const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null)
 
@@ -237,8 +249,35 @@ export function ReadingPane({
         )}
       </div>
 
+      <form
+        className="flex flex-none items-center gap-2.5 border-t border-[#ececf3] bg-white px-5 py-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSendReply()
+        }}
+      >
+        <span className="w-[62px] flex-none text-xs font-bold tracking-[0.05em] text-[#9a99a8]">REPLY</span>
+        <input
+          name="reply"
+          value={replyValue}
+          onChange={(e) => onReplyChange(e.target.value)}
+          disabled={!replyTargetName || replyPending}
+          placeholder={
+            replyTargetName ? `Reply to ${replyTargetName}…` : "You're not a participant in this conversation"
+          }
+          className="h-[38px] flex-1 rounded-[10px] border border-[#e6e6ee] bg-[#fbfbfd] px-3 text-[13px] text-[#17161c] outline-none placeholder:text-[#9a99a8] disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={!replyTargetName || !replyValue.trim() || replyPending}
+          className="h-[38px] whitespace-nowrap rounded-[10px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white disabled:opacity-50"
+        >
+          {replyPending ? "Sending…" : "Send ⌘⏎"}
+        </button>
+      </form>
+
       <div className="flex flex-none items-center gap-2.5 border-t border-[#ececf3] bg-white px-5 py-3">
-        <span className="text-xs font-bold tracking-[0.05em] text-[#9a99a8]">INTERNAL</span>
+        <span className="w-[62px] flex-none text-xs font-bold tracking-[0.05em] text-[#9a99a8]">INTERNAL</span>
         <input
           name="internal-note"
           value={noteValue}

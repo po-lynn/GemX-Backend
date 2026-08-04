@@ -50,9 +50,18 @@ anymore, since both keys gate the same merged page.
    - Delete opens a confirmation dialog, then hard-deletes the message on
      confirm (matches how delete already worked in the old Messages table
      view) and refreshes.
-8. Resolve / Export / New message / the `⋯` overflow button are still inert
-   placeholders — clicking any of them shows the same toast. The internal
-   note bar's input works but "Save" doesn't persist anything yet.
+8. **REPLY** (above the INTERNAL note bar) is a real, persisted send: type a
+   message and hit Send (or `⌘⏎`) to send it to whichever participant isn't
+   you, as yourself — this is what lets a logged-in admin/internal account
+   that's a party to the conversation (e.g. the assigned escrow-service
+   user replying to a buyer or seller) actually respond from this page. It's
+   disabled with an explanatory placeholder when you aren't one of the two
+   participants — there'd be no unambiguous recipient to send to.
+9. Resolve / Export / New message / the `⋯` overflow button are still inert
+   placeholders — clicking any of them shows the same toast. The **INTERNAL**
+   note bar's input works but "Save" doesn't persist anything yet (that's a
+   separate, still-unwired admin-only-notes feature — don't confuse it with
+   REPLY above it).
 
 All filter/sort/search/selection state lives in the URL
 (`?mode=&status=&type=&query=&sortDesc=&selectedId=`), so any view is
@@ -79,6 +88,15 @@ shareable/bookmarkable and the back button works.
 3. Thread it through the `TriageListRow` shape built in
    `MessagesTriagePage.tsx`'s `listRows` memo, and render it in
    `ConversationList.tsx`'s row markup.
+
+**Extend the REPLY composer (e.g. add attachments):** it currently only
+sends plain text via `POST /api/chat/messages` with `{ recipientId, content }`
+(see `handleSendReply()` in `MessagesTriagePage.tsx`). That endpoint already
+accepts `fileUrl`/`imageUrls`/`messageType` (see
+`ChatDashboard.tsx`'s `uploadAndSend`/`uploadImagesAndSend` for the existing
+upload-then-send pattern to copy) — extending the admin composer to support
+them is a matter of adding the upload step and passing those fields through
+in the same request body, no route changes needed.
 
 **Wire up Resolve/Assign/Notes for real** (needs new schema first — see
 "Schema impact" in the technical doc):
@@ -121,6 +139,18 @@ technical doc's "Schema impact"):
 - **"Not wired yet in this preview" toast** — expected for Resolve/Export/
   New message/`⋯` everywhere, and for Flag/Delete specifically in
   Conversations mode. Not a bug — see "Known gaps" in the technical doc.
+- **REPLY box shows "You're not a participant in this conversation" and
+  won't let you type** — expected: the logged-in account has to be one of
+  the two people in that specific conversation (e.g. the escrow-service
+  user, or the buyer/seller) to send as themselves. A supervisor/oversight
+  admin who's neither can view the thread but has no unambiguous recipient
+  to reply as, so the composer disables itself rather than guess.
+- **Escrow-service user can't even open `/admin/messages`** — separate from
+  the above: they need the `messages` (or legacy `chat_dashboard`) RBAC
+  permission granted on their account, and the account configured under
+  Escrow Settings must have `role: internal` (or `admin`) — `internal` users
+  with no messaging permission get redirected to `/admin` before ever
+  seeing a conversation.
 - **Redirected away from `/admin/messages`** — you need the `messages` or
   `chat_dashboard` RBAC permission (or `admin` role). Grant it at
   `/admin/settings` → permissions editor.
