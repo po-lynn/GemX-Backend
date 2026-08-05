@@ -7,6 +7,7 @@ vi.mock("drizzle-orm", () => ({
   ),
   eq: vi.fn(() => "eq"),
   inArray: vi.fn(() => "inArray"),
+  and: vi.fn(() => "and"),
   desc: vi.fn((x: unknown) => x),
 }))
 

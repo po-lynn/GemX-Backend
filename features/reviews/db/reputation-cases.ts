@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema"
@@ -206,6 +206,14 @@ async function computeCaseSummaries(): Promise<CaseSummary[]> {
   // nothing for them to filter.
   if (!hasAnyMatch) return []
 
+  // Scope to only the sellers that matched at least one rule this call — this
+  // table grows with every future dismiss action and has no other bound, so
+  // an unscoped scan here would grow unbounded across every admin page render
+  // (computeCaseSummaries is called by all three exported functions).
+  const candidateSellerIds = [
+    ...new Set([...matchesByRule.values()].flat().map((m) => m.sellerUserId)),
+  ]
+
   const dismissalRows = await withQueryTimeout(
     db
       .select({
@@ -214,7 +222,12 @@ async function computeCaseSummaries(): Promise<CaseSummary[]> {
         createdAt: sellerReputationAction.createdAt,
       })
       .from(sellerReputationAction)
-      .where(eq(sellerReputationAction.actionType, "dismissed")),
+      .where(
+        and(
+          eq(sellerReputationAction.actionType, "dismissed"),
+          inArray(sellerReputationAction.sellerUserId, candidateSellerIds)
+        )
+      ),
     QUERY_TIMEOUT_MS,
     "reputation-dismissals"
   )
