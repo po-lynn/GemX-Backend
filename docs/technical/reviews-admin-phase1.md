@@ -218,3 +218,35 @@ documented under **Schema impact** above).
   sequentially, and the bulk path flattens each selected case into one entry per signal. The
   action and its Zod schema were left unchanged (single `triggerKey` per call) to keep the fix
   small. Covered by three new cases in `tests/component/reputation-cases-table.test.tsx`.
+
+## Post-review: crash on any populated case (found via live-DB verification, not the test suite)
+
+After the fix wave above landed and passed its own review, a live-database browser pass (seeding
+real `seller_rating` rows to trigger `negative_streak` rather than relying on the empty-DB state)
+surfaced a Critical bug none of the twelve task reviews, the whole-branch review, or the fix
+wave's own re-review could see: **`hydrateCases()` in `features/reviews/db/reputation-cases.ts`
+crashed `/admin/reviews/cases` the moment any seller matched a rule.**
+
+Four raw-SQL sites bound a plain JS `string[]` via `= ANY(${sellerIds})`. Drizzle's `sql`
+template sends an embedded array as a single stringified parameter rather than a Postgres array
+literal, so every one of the four queries threw `PostgresError: malformed array literal` (code
+`22P02`) as soon as `sellerIds` was non-empty. Every test in the suite mocks `db.execute`, so none
+of them could exercise real Postgres array binding — the bug was invisible until a query actually
+ran against a live database with matching rows, which never happened before this point since the
+dev DB had zero `seller_rating` rows at every prior check (see "Known limitations" above).
+
+**Fix:** all four sites now build one `sql.join()`-based parameterized `IN (...)` list from
+`sellerIds` (computed once, reused across all four queries) instead of `= ANY(${sellerIds})`.
+Verified two ways: (1) a direct query against the real dev Postgres returning an actual
+`ReputationCase`, and independently a full browser session — login, table render, archive dialog,
+detail drawer, zero console errors; (2) a regression guard in `tests/unit/reputation-cases.test.ts`
+asserting no query contains `ANY(` and all four contain `IN (`, confirmed to actually fail when one
+site was temporarily reverted.
+
+**Known latent issue found during this fix, not yet fixed (zero current impact):**
+`ReputationCase.recentReviews[].tags` is typed `string[]` but Postgres's
+`array_agg(...)` result comes back from `db.execute` as a raw array-literal string
+(`"{Bad Communication,Late}"`), not a parsed array — confirmed even with an explicit `::text[]`
+cast. `ReputationCaseDrawer` never reads `.tags` today, so nothing breaks yet, but the type is a
+lie and the first code to call `.map()`/`.length` on it will crash or behave unexpectedly. Same
+"mocks can't see it" class as the bug above — worth fixing before any UI reads this field.
