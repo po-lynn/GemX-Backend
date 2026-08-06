@@ -29,8 +29,10 @@ import {
   SlidersHorizontal,
   ChevronDown,
   FileStack,
+  ShieldCheck,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
+import { useReviewsBadgeCounts } from "@/features/reviews/hooks/use-reviews-badge-counts";
 
 type NavItem = {
   href: string;
@@ -264,9 +266,50 @@ export function AdminSidebar({ className, role, permissions }: Props) {
             {totalUnread > 99 ? "99+" : totalUnread}
           </span>
         ) : null}
+        {nav.href === "/admin/reviews/cases" && openCases > 0 ? (
+          <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-100 px-1.5 text-[10.5px] font-bold text-red-600">
+            {openCases > 99 ? "99+" : openCases}
+          </span>
+        ) : null}
+        {nav.href === "/admin/reviews/archived" && archivedSellers > 0 ? (
+          <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-100 px-1.5 text-[10.5px] font-bold text-red-600">
+            {archivedSellers > 99 ? "99+" : archivedSellers}
+          </span>
+        ) : null}
       </Link>
     );
   }
+
+  const { openCases, archivedSellers } = useReviewsBadgeCounts();
+
+  const reviewsGroup: NavGroup = {
+    label: "Trust & Reputation",
+    items: [
+      {
+        label: "Reviews",
+        icon: ShieldCheck,
+        color: "#7c3aed",
+        children: [
+          { href: "/admin/reviews", label: "Overview", icon: LayoutDashboard, color: "#7c3aed", featureKey: FEATURE_KEYS.REVIEWS },
+          { href: "/admin/reviews/cases", label: "Reputation cases", icon: ShieldAlert, color: "#dc2626", featureKey: FEATURE_KEYS.REVIEWS },
+          { href: "/admin/reviews/sellers", label: "Seller ratings", icon: Users, color: "#7c3aed", featureKey: FEATURE_KEYS.REVIEWS },
+          { href: "/admin/reviews/archived", label: "Archived sellers", icon: Package, color: "#71717a", featureKey: FEATURE_KEYS.REVIEWS },
+          { href: "/admin/reviews/thresholds", label: "Thresholds", icon: SlidersHorizontal, color: "#71717a", featureKey: FEATURE_KEYS.REVIEWS },
+          { href: "/admin/reviews/audit", label: "Audit log", icon: FileText, color: "#71717a", featureKey: FEATURE_KEYS.REVIEWS },
+        ],
+      },
+    ],
+  };
+
+  // navGroups[0] is the top-level Dashboard NavItem, navGroups[1] is "Master Data" — the
+  // README specifies section order Dashboard, MASTER DATA, TRUST & REPUTATION, REQUESTS,
+  // COMMUNICATION, so Reviews is inserted right after Master Data, not first.
+  const allNavGroups: (NavItem | NavGroup)[] = [
+    navGroups[0],
+    navGroups[1],
+    reviewsGroup,
+    ...navGroups.slice(2),
+  ];
 
   function renderSubMenu(sub: NavSubMenu, visibleChildren: NavItem[]) {
     // Store key is prefixed so a sub-menu never collides with a group label.
@@ -362,7 +405,7 @@ export function AdminSidebar({ className, role, permissions }: Props) {
         style={{ scrollbarWidth: "thin", scrollbarColor: "#d7dae2 transparent" }}
       >
         <div className="space-y-0">
-          {navGroups.map((item) => {
+          {allNavGroups.map((item) => {
             if ("href" in item) {
               return (
                 <div key={item.href} className="mt-0.5">
