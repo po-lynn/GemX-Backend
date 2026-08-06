@@ -21,6 +21,7 @@ export const FEATURE_KEYS = {
   SETTINGS_PRECAUTION_TAGS:  "settings.precaution_tags",
   SETTINGS_ESCROW:           "settings.escrow",
   SETTINGS_APP_CONTENT:      "settings.app_content",
+  REVIEWS:                   "reviews",
 } as const
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
@@ -92,6 +93,12 @@ export const FEATURE_GROUPS: Array<{
       { key: FEATURE_KEYS.SETTINGS_PRECAUTION_TAGS, label: "Precaution Tags" },
       { key: FEATURE_KEYS.SETTINGS_ESCROW,          label: "Settings" },
       { key: FEATURE_KEYS.SETTINGS_APP_CONTENT,     label: "App Content" },
+    ],
+  },
+  {
+    label: "Trust & Reputation",
+    features: [
+      { key: FEATURE_KEYS.REVIEWS, label: "Reviews & Seller Reputation" },
     ],
   },
 ]

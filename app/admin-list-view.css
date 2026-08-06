@@ -609,6 +609,11 @@
 .lv-status.hidden    { color: #64748B; background: #F1F5F9; }
 .lv-status.approved  { color: #047857; background: #ECFDF5; }
 .lv-status.rejected  { color: #B91C1C; background: #FEF2F2; }
+/* Reputation-case severity variants (ReputationCasesTable's severity column) */
+.lv-status.critical  { color: #B91C1C; background: #FEF2F2; }
+.lv-status.high      { color: #C2410C; background: #FFF7ED; }
+.lv-status.medium    { color: #B45309; background: #FFFBEB; }
+.lv-status.watch     { color: #4B5468; background: #F1F2F6; }
 
 /* Days-left ring */
 .lv-ring {
