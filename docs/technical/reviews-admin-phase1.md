@@ -137,3 +137,13 @@ Additional phase-1-specific notes not already in the design spec:
   negative-streak → high, tag-concentration → medium, positive-burst → high); a seller
   triggering multiple rules carries every matched signal but is ranked/sorted by the worst
   one only.
+- **The "Closed" tab's count and its row list can disagree — by design, not a bug.**
+  `filterByTab` in `features/reviews/db/reputation-cases.ts` unconditionally returns `[]`
+  for `tab === "closed"` (closed cases aren't part of the live `seller_rating`-derived
+  summaries at all), while `getReputationCaseCounts()`'s `closed` figure comes from a
+  separate real query over `seller_reputation_action` (`archived`/`dismissed`/`warned`
+  rows in the last 90 days), which can be nonzero. So an admin can see a tab labeled
+  "Closed (5)" that renders an empty table underneath. This is current, intentional
+  phase-1 behavior — the tab's count is real, its row list simply isn't wired to a data
+  source yet — but it reads exactly like a rendering bug, so don't "fix" it without
+  revisiting the design spec first.

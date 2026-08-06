@@ -11,23 +11,29 @@ Internals/data flow: `docs/technical/reviews-admin-phase1.md`.
   convention, migrations are applied manually — don't run `db:generate`/`db:migrate` to
   "fix" a missing-table error, confirm the migration has actually been run first.
 - Any internal (non-admin) staff who need to see the Reviews area must be granted
-  `FEATURE_KEYS.REVIEWS` (`"reviews"`) via the existing permissions UI
-  (`/admin/settings/permissions` or wherever internal-role feature grants are managed in
-  this codebase). `role === "admin"` users always have access, no grant needed.
+  `FEATURE_KEYS.REVIEWS` (`"reviews"`) on their own user record: go to
+  `/admin/users/[id]/edit` for that internal user, open the **Permissions** tab (only shown
+  for `role === "internal"`, rendered by `features/users/components/UserForm.tsx`), and
+  check the Reviews & Seller Reputation permission, then save. `role === "admin"` users
+  always have access, no grant needed.
 
 ## Using it end-to-end
 
 1. Log in as an admin (or an internal user granted the `reviews` feature key).
 2. Open the sidebar — a new **Trust & Reputation** section appears (inserted right after
-   Master Data), containing an expandable **Reviews** submenu that starts open. It has 6
-   children: Overview, Reputation cases, Seller ratings, Archived sellers, Thresholds,
+   Master Data), containing an expandable **Reviews** submenu. Like every other sidebar
+   submenu, it defaults to collapsed on a fresh session (`AdminSidebar.tsx`'s own comment:
+   "sub-menus default to collapsed") and remembers its open/closed state afterward. It has
+   6 children: Overview, Reputation cases, Seller ratings, Archived sellers, Thresholds,
    Audit log. Only **Reputation cases** is fully built in phase 1 — the other five show a
    "Coming in a later phase" placeholder.
 3. Click **Reputation cases**, or go directly to `/admin/reviews/cases`. This is the
    primary working surface: a table of sellers currently flagged by one or more review
    signals, built on `ListViewCard` (see `docs/ADMIN-LIST-VIEW.md`).
 4. Use the tabs (All / Critical / Buyer reports / Closed) to filter. "Buyer reports" is
-   always empty in phase 1 (see limitations below).
+   always empty in phase 1 (see limitations below). The "Closed" tab's count can be
+   nonzero while its row list stays empty — that's expected phase-1 behavior, not a bug
+   (see `docs/technical/reviews-admin-phase1.md`'s "Known limitations" for why).
 5. Click a row to open the detail drawer (`ReputationCaseDrawer`) — seller info, the
    specific "why flagged" signals, recent buyer reviews (read-only), and the decision
    actions:
@@ -97,9 +103,13 @@ the page, the tab counts, and the sidebar API route respectively) all call
 
 **Add a new secondary action type:** extend the `reputationActionTypeEnum` in
 `drizzle/schema/reputation-schema.ts` (this *does* need a migration, since it's a Postgres
-enum), the `ReputationActionType` union in `reputation-actions.ts` and
-`reputation-cases.ts` (both actions/ and db/ files), the `secondaryActionSchema` enum in
-`reputation-actions.ts` (schemas), and add a chip/button in
+enum), the `ReputationActionType` union in `features/reviews/db/reputation-actions.ts`
+(the only file that defines or references this type — it is not used in
+`reputation-cases.ts`, in either the `db/` or `actions/` version), the
+`secondaryActionSchema` enum in `features/reviews/schemas/reputation-actions.ts` (schemas
+— required for the mutation's Zod validation to accept the new value at all, or
+`recordSecondaryActionAction` will reject it with a validation error before it ever reaches
+the DB layer), and add a chip/button in
 `ReputationCasesTable.tsx`/`ReputationCaseDrawer.tsx`.
 
 **Add a new endpoint:** follow the existing badge-counts route
@@ -118,8 +128,8 @@ from `lib/api-guard.ts`, `FEATURE_KEYS.REVIEWS`.
   `reason`), or a `triggerKey` that isn't one of the 6 known threshold ids.
 - **"Unauthorized" from a server action / 401/403 from the badge-counts route**: the
   calling user is neither `role === "admin"` nor an `internal` user holding the `reviews`
-  feature key. Grant it via the permissions UI, or confirm you're logged in as the right
-  account.
+  feature key. Grant it via that user's Permissions tab at `/admin/users/[id]/edit`, or
+  confirm you're logged in as the right account.
 - **Sidebar badge never shows a count**: the badge only renders once `openCases`/
   `archivedSellers` is greater than 0 (see `AdminSidebar.tsx`) — a "0" is invisible, not
   a bug. Also note `useReviewsBadgeCounts` fetches once on mount with no polling, so it
