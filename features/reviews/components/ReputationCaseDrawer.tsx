@@ -31,12 +31,14 @@ export function ReputationCaseDrawer({
   row: ReputationCase
   onClose: () => void
   onArchive: (sellerUserId: string, reason: string) => void
-  onDismiss: (sellerUserId: string, triggerKey: string, reason: string) => void
+  // Every trigger key on the case, not just the primary one — suppression is
+  // per (seller, rule), so a partially dismissed case reopens immediately.
+  onDismiss: (sellerUserId: string, triggerKeys: string[], reason: string) => void
   onSecondaryAction: (sellerUserId: string, actionType: string) => void
   isBusy: boolean
 }) {
   const [reason, setReason] = useState("")
-  const primarySignal = row.signals[0]
+  const triggerKeys = row.signals.map((s) => s.triggerKey)
 
   return (
     <>
@@ -111,8 +113,9 @@ export function ReputationCaseDrawer({
           <section className="lv-drawer-section">
             <h3 className="lv-drawer-section-h">Decision</h3>
             <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 10, fontSize: 12.5, marginBottom: 10 }}>
-              Archiving hides the seller&apos;s profile and all {row.activeListingsCount} listings from buyers.
-              Reviews stay attached to the record.
+              Archiving records this seller as archived and removes them from this case list. Phase 1
+              does not yet hide their profile or their {row.activeListingsCount} listings from
+              buyers — that enforcement ships in a later phase.
             </div>
             <textarea
               placeholder="Reason for the decision (stored in the audit log)…"
@@ -134,10 +137,10 @@ export function ReputationCaseDrawer({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isBusy || !reason.trim() || !primarySignal}
-                onClick={() => primarySignal && onDismiss(row.sellerUserId, primarySignal.triggerKey, reason.trim())}
+                disabled={isBusy || !reason.trim() || triggerKeys.length === 0}
+                onClick={() => onDismiss(row.sellerUserId, triggerKeys, reason.trim())}
               >
-                Dismiss flag
+                {triggerKeys.length > 1 ? `Dismiss all ${triggerKeys.length} flags` : "Dismiss flag"}
               </Button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>

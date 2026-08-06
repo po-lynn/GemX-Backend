@@ -82,22 +82,43 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
       toast.error("Archive failed", { description: result.error })
       return false
     }
-    toast.success("Seller archived", { description: "The profile and its listings are now hidden from buyers." })
+    toast.success("Seller archived", {
+      description: "Recorded in the audit log. Storefront hiding isn't enforced yet in phase 1.",
+    })
     startTransition(() => router.refresh())
     return true
   }
 
-  async function handleDismiss(sellerUserId: string, triggerKey: string, reason: string): Promise<boolean> {
-    const form = new FormData()
-    form.set("sellerUserId", sellerUserId)
-    form.set("triggerKey", triggerKey)
-    form.set("reason", reason)
-    const result = await dismissCaseAction(form)
-    if ("error" in result) {
-      toast.error("Dismiss failed", { description: result.error })
-      return false
+  // Takes every trigger key on the case, not just the first. Suppression in
+  // computeCaseSummaries is keyed per (seller, rule), so dismissing one rule on
+  // a multi-signal case leaves the others matching and the case reappears on the
+  // next render — looking to the admin like the dismiss did nothing. Sequential
+  // (no Promise.all, per the repo convention); aborts on the first failure so the
+  // error toast names what went wrong rather than partially reporting success.
+  async function handleDismiss(
+    sellerUserId: string,
+    triggerKeys: string[],
+    reason: string
+  ): Promise<boolean> {
+    if (triggerKeys.length === 0) return false
+    for (const triggerKey of triggerKeys) {
+      const form = new FormData()
+      form.set("sellerUserId", sellerUserId)
+      form.set("triggerKey", triggerKey)
+      form.set("reason", reason)
+      const result = await dismissCaseAction(form)
+      if ("error" in result) {
+        toast.error("Dismiss failed", { description: result.error })
+        startTransition(() => router.refresh())
+        return false
+      }
     }
-    toast.success("Case dismissed")
+    toast.success("Case dismissed", {
+      description:
+        triggerKeys.length > 1
+          ? `All ${triggerKeys.length} flags on this case were dismissed.`
+          : undefined,
+    })
     startTransition(() => router.refresh())
     return true
   }
@@ -135,13 +156,13 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
 
   async function handleDrawerDismiss(
     sellerUserId: string,
-    triggerKey: string,
+    triggerKeys: string[],
     reason: string,
     onClose: () => void
   ) {
     setDrawerBusy(true)
     try {
-      const ok = await handleDismiss(sellerUserId, triggerKey, reason)
+      const ok = await handleDismiss(sellerUserId, triggerKeys, reason)
       if (ok) onClose()
     } finally {
       setDrawerBusy(false)
@@ -189,10 +210,12 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
       const result =
         bulkMode === "archive"
           ? await bulkArchiveSellersAction(bulkTargets.map((r) => r.sellerUserId), bulkReason.trim())
-          : await bulkDismissCasesAction(
-              bulkTargets
-                .filter((r) => r.signals[0])
-                .map((r) => ({ sellerUserId: r.sellerUserId, triggerKey: r.signals[0].triggerKey })),
+          : // Flatten every selected case into one entry per signal — a case with
+            // two signals needs both suppressed or it reopens under the other one.
+            await bulkDismissCasesAction(
+              bulkTargets.flatMap((r) =>
+                r.signals.map((s) => ({ sellerUserId: r.sellerUserId, triggerKey: s.triggerKey }))
+              ),
               bulkReason.trim()
             )
       if ("error" in result) {
@@ -291,8 +314,14 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
             </button>
             <button
               className="lv-rowbtn"
-              disabled={disabled || !r.signals[0]}
-              onClick={() => r.signals[0] && handleDismiss(r.sellerUserId, r.signals[0].triggerKey, "Dismissed from row action")}
+              disabled={disabled || r.signals.length === 0}
+              onClick={() =>
+                void handleDismiss(
+                  r.sellerUserId,
+                  r.signals.map((s) => s.triggerKey),
+                  "Dismissed from row action"
+                )
+              }
             >
               Dismiss
             </button>
@@ -303,7 +332,7 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
             row={r}
             onClose={onClose}
             onArchive={(sellerUserId, reason) => { void handleDrawerArchive(sellerUserId, reason, onClose) }}
-            onDismiss={(sellerUserId, triggerKey, reason) => { void handleDrawerDismiss(sellerUserId, triggerKey, reason, onClose) }}
+            onDismiss={(sellerUserId, triggerKeys, reason) => { void handleDrawerDismiss(sellerUserId, triggerKeys, reason, onClose) }}
             onSecondaryAction={(sellerUserId, actionType) => { void handleDrawerSecondaryAction(sellerUserId, actionType) }}
             isBusy={drawerBusy}
           />
@@ -333,7 +362,9 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
           <DialogHeader>
             <DialogTitle className="text-base">Archive {archiveTarget?.sellerName}</DialogTitle>
             <DialogDescription>
-              This hides the seller&apos;s profile and listings from buyers. Reviews stay attached to the record.
+              This records the seller as archived and removes them from this case list. Phase 1 does
+              not yet hide their profile or listings from buyers — that enforcement ships in a later
+              phase.
             </DialogDescription>
           </DialogHeader>
           <textarea

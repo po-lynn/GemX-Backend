@@ -19,6 +19,16 @@ import { zodErrorMessage } from "@/lib/form-data"
 
 type ActionResult = { success: true } | { error: string }
 
+/**
+ * Every DB mutation below is wrapped with this so a driver-level throw (unique
+ * constraint, timeout, lost connection) reaches the caller as `{ error }` and
+ * gets surfaced by the client's existing toast.error path, instead of escaping
+ * as an unhandled rejection with no user-visible feedback.
+ */
+function mutationErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback
+}
+
 async function requireReviewsSession(): Promise<{ user: { id: string; role: string } } | null> {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return null
@@ -40,11 +50,15 @@ export async function archiveSellerAction(formData: FormData): Promise<ActionRes
   const session = await requireReviewsSession()
   if (!session) return { error: "Unauthorized" }
 
-  await archiveSeller({
-    sellerUserId: parsed.data.sellerUserId,
-    reason: parsed.data.reason,
-    adminUserId: session.user.id,
-  })
+  try {
+    await archiveSeller({
+      sellerUserId: parsed.data.sellerUserId,
+      reason: parsed.data.reason,
+      adminUserId: session.user.id,
+    })
+  } catch (err) {
+    return { error: mutationErrorMessage(err, "Failed to archive seller") }
+  }
   return { success: true }
 }
 
@@ -59,12 +73,16 @@ export async function dismissCaseAction(formData: FormData): Promise<ActionResul
   const session = await requireReviewsSession()
   if (!session) return { error: "Unauthorized" }
 
-  await dismissCase({
-    sellerUserId: parsed.data.sellerUserId,
-    triggerKey: parsed.data.triggerKey,
-    reason: parsed.data.reason,
-    adminUserId: session.user.id,
-  })
+  try {
+    await dismissCase({
+      sellerUserId: parsed.data.sellerUserId,
+      triggerKey: parsed.data.triggerKey,
+      reason: parsed.data.reason,
+      adminUserId: session.user.id,
+    })
+  } catch (err) {
+    return { error: mutationErrorMessage(err, "Failed to dismiss case") }
+  }
   return { success: true }
 }
 
@@ -79,12 +97,16 @@ export async function recordSecondaryActionAction(formData: FormData): Promise<A
   const session = await requireReviewsSession()
   if (!session) return { error: "Unauthorized" }
 
-  await recordSecondaryAction({
-    sellerUserId: parsed.data.sellerUserId,
-    actionType: parsed.data.actionType,
-    reason: parsed.data.reason,
-    adminUserId: session.user.id,
-  })
+  try {
+    await recordSecondaryAction({
+      sellerUserId: parsed.data.sellerUserId,
+      actionType: parsed.data.actionType,
+      reason: parsed.data.reason,
+      adminUserId: session.user.id,
+    })
+  } catch (err) {
+    return { error: mutationErrorMessage(err, "Failed to record the action") }
+  }
   return { success: true }
 }
 
@@ -98,8 +120,18 @@ export async function bulkArchiveSellersAction(
   const session = await requireReviewsSession()
   if (!session) return { error: "Unauthorized" }
 
-  for (const sellerUserId of parsed.data.sellerUserIds) {
-    await archiveSeller({ sellerUserId, reason: parsed.data.reason, adminUserId: session.user.id })
+  // Abort on the first failure rather than pressing on: the earlier sellers are
+  // already committed (each archiveSeller is its own statement), so reporting
+  // exactly which one broke tells the admin where the batch stopped. Silently
+  // continuing past a DB error would leave them believing the whole batch ran.
+  for (const [index, sellerUserId] of parsed.data.sellerUserIds.entries()) {
+    try {
+      await archiveSeller({ sellerUserId, reason: parsed.data.reason, adminUserId: session.user.id })
+    } catch (err) {
+      return {
+        error: `Archived ${index} of ${parsed.data.sellerUserIds.length} sellers, then failed on ${sellerUserId}: ${mutationErrorMessage(err, "Failed to archive seller")}`,
+      }
+    }
   }
   return { success: true }
 }
@@ -114,13 +146,24 @@ export async function bulkDismissCasesAction(
   const session = await requireReviewsSession()
   if (!session) return { error: "Unauthorized" }
 
-  for (const c of parsed.data.cases) {
-    await dismissCase({
-      sellerUserId: c.sellerUserId,
-      triggerKey: c.triggerKey,
-      reason: parsed.data.reason,
-      adminUserId: session.user.id,
-    })
+  // One entry per (seller, signal) — the client expands every selected case into
+  // all of its signals, because suppression in computeCaseSummaries is keyed per
+  // (seller, rule) and dismissing only one rule would let the case reopen
+  // immediately under the remaining rule. Aborts on the first failure, same
+  // reasoning as bulkArchiveSellersAction.
+  for (const [index, c] of parsed.data.cases.entries()) {
+    try {
+      await dismissCase({
+        sellerUserId: c.sellerUserId,
+        triggerKey: c.triggerKey,
+        reason: parsed.data.reason,
+        adminUserId: session.user.id,
+      })
+    } catch (err) {
+      return {
+        error: `Dismissed ${index} of ${parsed.data.cases.length} flags, then failed on ${c.sellerUserId} (${c.triggerKey}): ${mutationErrorMessage(err, "Failed to dismiss case")}`,
+      }
+    }
   }
   return { success: true }
 }

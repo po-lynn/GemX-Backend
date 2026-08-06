@@ -10,7 +10,7 @@ export default async function AdminReviewsArchivedPage() {
     <ComingSoonView
       breadcrumbLabel="Archived sellers"
       title="Archived sellers"
-      subhead="Hidden from buyers and delisted. Restoring republishes the profile with its rating history intact."
+      subhead="Archived and excluded from open cases. Restoring republishes the profile with its rating history intact."
     />
   )
 }

@@ -65,9 +65,12 @@ export const sellerReputationAction = pgTable(
     actionType: reputationActionTypeEnum("action_type").notNull(),
     triggerKey: text("trigger_key").references(() => reputationThreshold.id, { onDelete: "set null" }),
     reason: text("reason"),
-    adminUserId: text("admin_user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    // Nullable + "set null" (not "cascade"): deleting an admin user must never
+    // destroy this append-only audit trail. A cascade here would delete the
+    // `dismissed` rows that suppress a recomputed case, silently reopening
+    // cases that were already decided. New rows always carry a real admin id —
+    // only historical rows can end up null after that admin is deleted.
+    adminUserId: text("admin_user_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -86,9 +89,12 @@ export const sellerArchive = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     reason: text("reason").notNull(),
-    archivedByAdminId: text("archived_by_admin_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    // Nullable + "set null" (matches restoredByAdminId below): a cascade here
+    // would delete the whole archive row when the archiving admin is deleted,
+    // which drops the `restoredAt IS NULL` exclusion in computeCaseSummaries
+    // and makes the seller silently reappear as an open case with no record of
+    // ever having been archived.
+    archivedByAdminId: text("archived_by_admin_id").references(() => user.id, { onDelete: "set null" }),
     archivedAt: timestamp("archived_at").defaultNow().notNull(),
     // Admin-set only — no buyer-facing appeal intake exists (see design spec non-goals).
     appealStatus: sellerAppealStatusEnum("appeal_status").default("none").notNull(),

@@ -126,6 +126,61 @@ describe("getOpenReputationCases", () => {
   })
 })
 
+describe("matchTagConcentration (tag_concentration rule SQL)", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  /**
+   * Regression guard for the count(*) vs count(DISTINCT sr.id) bug.
+   *
+   * rating_tag_map is many-to-many, so the LEFT JOIN chain
+   * seller_rating -> rating_tag_map -> rating_tags emits one row per (review,
+   * tag) pair. Consider a seller with exactly 5 reviews in the last 30 days,
+   * each carrying 2 tags:
+   *
+   *   count(*)               = 10  -> passes the ">= 10 reviews" sample gate (WRONG:
+   *                                   it's a 5-review seller, far too small a sample)
+   *   count(DISTINCT sr.id)  =  5  -> correctly fails the gate
+   *
+   * The same divergence corrupts the ratio: a review with 3 unrelated tags adds
+   * 3 to a count(*) denominator, diluting a genuine Bad Communication
+   * concentration below the 25% line and suppressing a real case.
+   *
+   * The rule is raw SQL executed by Postgres, so the counting semantics can't be
+   * exercised through the db mock — the query text itself is the contract. This
+   * asserts every one of the five review-counting sites uses count(DISTINCT
+   * sr.id) and that no bare count(*) survives anywhere in the query.
+   */
+  it("counts distinct reviews, not tag-map rows, at every counting site", async () => {
+    vi.mocked(db.select).mockReturnValue(mockEmptyChain() as never)
+    vi.mocked(db.execute).mockResolvedValue([] as never)
+
+    await getReputationCaseCounts()
+
+    const tagQuery = vi
+      .mocked(db.execute)
+      // The drizzle-orm mock above replaces `sql` with a plain tagged-template
+      // capture, so what db.execute actually receives here is { strings, values }.
+      .mock.calls.map((call) => (call[0] as unknown as { strings: string[] }).strings.join(""))
+      .find((q) => q.includes("Bad Communication"))
+
+    expect(tagQuery).toBeDefined()
+    // A single count(*) anywhere reintroduces the tag-instance bug.
+    expect(tagQuery).not.toMatch(/count\(\*\)/)
+    // The sample gate: >= 10 REVIEWS, not >= 10 tag rows.
+    expect(tagQuery).toContain("count(DISTINCT sr.id) >= 10")
+    // Ratio numerator (reviews carrying the tag) and denominator (all reviews).
+    expect(tagQuery).toContain(
+      "count(DISTINCT sr.id) FILTER (WHERE rt.name = 'Bad Communication')::numeric"
+    )
+    expect(tagQuery).toContain("/ count(DISTINCT sr.id) > 0.25")
+    // Projected columns feeding the "N% of reviews tagged…" detail string.
+    expect(tagQuery).toContain("count(DISTINCT sr.id)::int AS total_count")
+    expect(tagQuery).toContain(
+      "count(DISTINCT sr.id) FILTER (WHERE rt.name = 'Bad Communication')::int AS tagged_count"
+    )
+  })
+})
+
 describe("getReputationCaseCounts", () => {
   beforeEach(() => vi.clearAllMocks())
 

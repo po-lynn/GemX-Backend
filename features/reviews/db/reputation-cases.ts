@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { and, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
@@ -112,19 +113,25 @@ async function matchNegativeStreak(): Promise<RuleMatch[]> {
 }
 
 async function matchTagConcentration(): Promise<RuleMatch[]> {
+  // count(DISTINCT sr.id), never count(*): rating_tag_map is many-to-many, so a
+  // review carrying N tags contributes N joined rows here. count(*) would count
+  // tag instances instead of reviews — inflating the denominator (suppressing
+  // real cases) and letting a low-review-count seller pass the ">= 10 reviews"
+  // sample gate on tag rows alone (5 reviews x 2 tags = 10 rows).
   const result = await withQueryTimeout(
     db.execute(sql`
       SELECT sr.seller_user_id,
-             count(*) FILTER (WHERE rt.name = 'Bad Communication')::int AS tagged_count,
-             count(*)::int AS total_count,
+             count(DISTINCT sr.id) FILTER (WHERE rt.name = 'Bad Communication')::int AS tagged_count,
+             count(DISTINCT sr.id)::int AS total_count,
              max(sr.created_at) FILTER (WHERE rt.name = 'Bad Communication') AS max_created_at
       FROM seller_rating sr
       LEFT JOIN rating_tag_map rtm ON rtm.rating_id = sr.id
       LEFT JOIN rating_tags rt ON rt.id = rtm.tag_id
       WHERE sr.created_at >= now() - interval '30 days'
       GROUP BY sr.seller_user_id
-      HAVING count(*) >= 10
-         AND count(*) FILTER (WHERE rt.name = 'Bad Communication')::numeric / count(*) > 0.25
+      HAVING count(DISTINCT sr.id) >= 10
+         AND count(DISTINCT sr.id) FILTER (WHERE rt.name = 'Bad Communication')::numeric
+             / count(DISTINCT sr.id) > 0.25
     `),
     QUERY_TIMEOUT_MS,
     "reputation-rule-tag-concentration"
@@ -189,8 +196,19 @@ const RULE_LABELS: Record<string, string> = {
   positive_burst: "Suspicious positive burst",
 }
 
-/** Computes every seller's open signals, applying dismissal suppression and archive exclusion. */
-async function computeCaseSummaries(): Promise<CaseSummary[]> {
+/**
+ * Computes every seller's open signals, applying dismissal suppression and archive exclusion.
+ *
+ * Wrapped in React's `cache()` (request-scoped memoization): the cases page
+ * calls getOpenReputationCases() and getReputationCaseCounts() in the same
+ * render, and each one calls this independently — without the memo the whole
+ * rule-matching pipeline (4 aggregate scans over seller_rating + the
+ * suppression/archive lookups) runs twice per page load. `cache()` only dedupes
+ * within a single request/render pass, so behavior is unchanged: a later
+ * request always recomputes. Outside a React request scope (e.g. Vitest),
+ * `cache()` is a pass-through, so unit tests see the un-memoized function.
+ */
+const computeCaseSummaries = cache(async function computeCaseSummaries(): Promise<CaseSummary[]> {
   const enabledIds = await getEnabledThresholdIds()
 
   const matchesByRule = new Map<string, RuleMatch[]>()
@@ -287,7 +305,7 @@ async function computeCaseSummaries(): Promise<CaseSummary[]> {
     if (rankDiff !== 0) return rankDiff
     return a.openSince.getTime() - b.openSince.getTime()
   })
-}
+})
 
 function filterByTab(summaries: CaseSummary[], tab: ReputationCaseTab): CaseSummary[] {
   if (tab === "critical") return summaries.filter((s) => s.severity === "critical")

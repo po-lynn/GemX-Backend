@@ -79,8 +79,31 @@ altered):
 | Table | Purpose | Key columns |
 |---|---|---|
 | `reputation_threshold` | Config for the 6 rules from the README, one row per rule | `id` (text PK, stable key e.g. `rating_below_archive`), `enabled`, `sortOrder`, `dataAvailable` |
-| `seller_reputation_action` | Append-only audit trail; also the dismissal-suppression record | `sellerUserId` (nullable — null only for a future `threshold_toggled` action), `actionType` (enum), `triggerKey` (nullable FK → `reputation_threshold.id`), `reason`, `adminUserId` |
-| `seller_archive` | Current archive state, one row per seller ever archived | `sellerUserId` (unique FK → `user`), `reason`, `appealStatus` (enum, admin-set only), `restoredAt` (null = currently archived) |
+| `seller_reputation_action` | Append-only audit trail; also the dismissal-suppression record | `sellerUserId` (nullable — null only for a future `threshold_toggled` action), `actionType` (enum), `triggerKey` (nullable FK → `reputation_threshold.id`), `reason`, `adminUserId` (nullable FK → `user`, **ON DELETE SET NULL**) |
+| `seller_archive` | Current archive state, one row per seller ever archived | `sellerUserId` (unique FK → `user`), `reason`, `archivedByAdminId` (nullable FK → `user`, **ON DELETE SET NULL**), `appealStatus` (enum, admin-set only), `restoredAt` (null = currently archived) |
+
+### Admin FK cascade fix (post-review)
+
+`adminUserId` and `archivedByAdminId` were originally `NOT NULL` with `ON DELETE CASCADE`.
+Deleting an admin user is a real, reachable operation (`features/users/actions/users.ts`), and
+the cascade silently destroyed decision history:
+
+- `seller_archive` — the whole archive row vanished, so the `restoredAt IS NULL` exclusion in
+  `computeCaseSummaries` stopped applying and the seller reappeared as an open case with no
+  record it had ever been archived.
+- `seller_reputation_action` — the append-only audit trail was destroyed, including the
+  `dismissed` rows that suppress recomputed cases, so dismissed cases reopened too.
+
+Both columns are now nullable with `ON DELETE SET NULL`, matching `restoredByAdminId`. The
+write path is unchanged: `writeReputationAction`/`archiveSeller` still require
+`adminUserId: string`, so every *new* row carries a real admin; only *historical* rows can
+become null once that admin is deleted. Any future UI that renders "archived by {name}" must
+handle the null case (nothing reads these columns today — the Archived sellers and Audit log
+views are still `ComingSoonView` placeholders).
+
+**Migration not yet generated.** This repo's convention is that the human owner runs
+`npm run db:generate` / `npm run db:migrate`; the schema TypeScript is the only thing changed
+here. The pending migration must drop both `NOT NULL` constraints and replace both FK actions.
 
 Note: the migration only creates the empty `reputation_threshold` table — its 6 rows are
 seeded idempotently at read time by `ensureThresholdsSeeded()` in
@@ -147,3 +170,51 @@ Additional phase-1-specific notes not already in the design spec:
   phase-1 behavior — the tab's count is real, its row list simply isn't wired to a data
   source yet — but it reads exactly like a rendering bug, so don't "fix" it without
   revisiting the design spec first.
+
+## Whole-branch review fix wave
+
+Fixes applied after the final cross-cutting review of the branch (the FK cascade fix is
+documented under **Schema impact** above).
+
+- **`tag_concentration` counted tag instances, not reviews.** `matchTagConcentration` in
+  `features/reviews/db/reputation-cases.ts` joins `seller_rating → rating_tag_map →
+  rating_tags`, which is many-to-many, so a review carrying N tags emits N rows. `count(*)`
+  therefore counted tag-instance rows: it inflated the ratio denominator (suppressing real
+  cases) and let a 5-review seller with 2 tags each pass the `>= 10` review-sample gate on
+  10 join rows alone. All five counting sites now use `count(DISTINCT sr.id)`. Guarded by a
+  query-text assertion in `tests/unit/reputation-cases.test.ts` (the rule is raw SQL run by
+  Postgres, so the query text is the only contract a mocked `db` can check).
+- **Archive UI claimed enforcement that doesn't exist.** Five strings said archiving hides the
+  seller/listings from buyers. `archiveSeller` only writes two rows — phase 1 is record-only
+  per the design spec's non-goals. Reworded in `ReputationCaseDrawer.tsx` (decision warning),
+  `ReputationCasesTable.tsx` (success toast + confirm dialog), `app/admin/reviews/cases/page.tsx`
+  (subhead) and `app/admin/reviews/archived/page.tsx` (placeholder subhead).
+- **Severity pill had no CSS.** `ReputationCasesTable` renders `.lv-status.{critical,high,
+  medium,watch}` but none of those four selectors existed, so all severities rendered
+  identically. Added next to the existing `.lv-status.*` variants in `app/admin-list-view.css`.
+- **Pipeline ran twice per page and wrote on every read.** `computeCaseSummaries` (called
+  independently by `getOpenReputationCases` and `getReputationCaseCounts` in one render) and
+  `ensureThresholdsSeeded` (an INSERT run before every threshold read) are now wrapped in
+  React's `cache()` for request-scoped memoization. This does not change behavior — `cache()`
+  dedupes only within one request, and outside a React request scope (Vitest) it is a
+  pass-through. It also does not fully remove the write-on-read: a new request still issues one
+  `INSERT … ON CONFLICT DO NOTHING`. Eliminating that needs a module-level latch or an explicit
+  admin seed action, deliberately out of scope. The sidebar badge fetch
+  (`useReviewsBadgeCounts`) was intentionally *not* pathname-gated — `AdminSidebar` renders
+  everywhere and the badge's whole purpose is panel-wide visibility of an open case.
+- **Re-archiving hit an uncaught unique-constraint violation.** `seller_archive` is unique on
+  `sellerUserId`, so a double-submit threw from `archiveSeller`'s plain insert and nothing in
+  the chain caught it — an unhandled rejection with no user-visible error. `archiveSeller` now
+  upserts (`onConflictDoUpdate`, refreshing reason/admin/`archivedAt` and clearing
+  `restoredAt`), and all five actions in `features/reviews/actions/reputation-cases.ts` wrap
+  their DB mutation in try/catch so any driver throw returns `{ error }` and reaches the
+  existing `toast.error` path. The two bulk actions abort on the first failure and report which
+  item failed rather than continuing past a DB error.
+- **Dismiss only cleared the first of multiple signals.** Suppression is keyed per
+  `(seller, rule)`, so dismissing `signals[0]` on a two-rule case let it recompute open under
+  the other rule — looking to the admin like nothing happened despite an audit row being
+  written. All three dismiss paths (row action, drawer, bulk) now dismiss every signal:
+  `handleDismiss` takes `triggerKeys: string[]` and calls `dismissCaseAction` once per key
+  sequentially, and the bulk path flattens each selected case into one entry per signal. The
+  action and its Zod schema were left unchanged (single `triggerKey` per call) to keep the fix
+  small. Covered by three new cases in `tests/component/reputation-cases-table.test.tsx`.

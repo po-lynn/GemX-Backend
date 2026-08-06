@@ -29,17 +29,38 @@ export async function writeReputationAction(input: {
   })
 }
 
-/** Archiving hides the seller (record-only in phase 1 — see design spec non-goals). */
+/**
+ * Records the seller as archived (record-only in phase 1 — see design spec
+ * non-goals; nothing is hidden from buyers yet).
+ *
+ * seller_archive has a unique index on seller_user_id, so a plain insert throws
+ * on an already-archived seller (double-click, double-submit, or a future
+ * restore-then-rearchive flow). Upsert instead: refresh the reason/admin/time
+ * and clear restoredAt so the row reflects the latest decision. The
+ * seller_reputation_action row below is append-only, so the audit trail still
+ * shows every archive event.
+ */
 export async function archiveSeller(input: {
   sellerUserId: string
   reason: string
   adminUserId: string
 }): Promise<void> {
-  await db.insert(sellerArchive).values({
-    sellerUserId: input.sellerUserId,
-    reason: input.reason,
-    archivedByAdminId: input.adminUserId,
-  })
+  await db
+    .insert(sellerArchive)
+    .values({
+      sellerUserId: input.sellerUserId,
+      reason: input.reason,
+      archivedByAdminId: input.adminUserId,
+    })
+    .onConflictDoUpdate({
+      target: sellerArchive.sellerUserId,
+      set: {
+        reason: input.reason,
+        archivedByAdminId: input.adminUserId,
+        archivedAt: new Date(),
+        restoredAt: null,
+      },
+    })
   await writeReputationAction({
     sellerUserId: input.sellerUserId,
     actionType: "archived",

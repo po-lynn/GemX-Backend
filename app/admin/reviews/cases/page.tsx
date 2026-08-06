@@ -60,8 +60,9 @@ export default async function AdminReputationCasesPage({ searchParams }: Props) 
             <span className="lv-h1-count">{counts.all} open</span>
           </h1>
           <p className="lv-subhead">
-            Sellers flagged by review signals. Archive hides the seller from buyers; dismiss closes
-            the case with a reason.
+            Sellers flagged by review signals. Archive records the decision and removes the case from
+            this list (storefront hiding isn&apos;t enforced in phase 1); dismiss closes the case with
+            a reason.
           </p>
         </div>
       </div>

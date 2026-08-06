@@ -41,8 +41,11 @@ Internals/data flow: `docs/technical/reviews-admin-phase1.md`.
      table going forward and writes `seller_archive` + a `seller_reputation_action(archived)`
      row. This is record-only in phase 1: it does not hide the seller's listings or block
      them anywhere in the storefront.
-   - **Dismiss** — requires a reason. Closes just this signal for this seller
-     (`seller_reputation_action(dismissed, triggerKey=<rule>)`) without archiving. If a new
+   - **Dismiss** — requires a reason. Closes the case without archiving, writing one
+     `seller_reputation_action(dismissed, triggerKey=<rule>)` row per signal on the case.
+     Suppression is keyed per `(seller, rule)`, so a case matching two rules needs both rows
+     or it would recompute open under the remaining rule — the UI therefore always dismisses
+     every signal (the drawer button reads "Dismiss all N flags" when N > 1). If a new
      qualifying review/tag event lands after the dismissal, the case reopens automatically.
    - Secondary chips (Warn, Limit orders, Hide listings only, Request documents, Escalate)
      — each just records an audit row (`seller_reputation_action`); none currently has any

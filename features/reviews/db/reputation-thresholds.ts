@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { db } from "@/drizzle/db"
 import { reputationThreshold } from "@/drizzle/schema/reputation-schema"
 
@@ -71,13 +72,23 @@ const DEFAULT_THRESHOLDS: ThresholdRow[] = [
   },
 ]
 
-/** Idempotent — inserts the 6 default rules if missing. Safe to call on every read. */
-export async function ensureThresholdsSeeded(): Promise<void> {
+/**
+ * Idempotent — inserts the 6 default rules if missing. Safe to call on every read.
+ *
+ * Wrapped in React's `cache()` so the seeding INSERT runs at most once per
+ * request instead of once per nested getThresholds() call. Note this does NOT
+ * eliminate the write-on-read entirely: a new request still issues one INSERT
+ * ... ON CONFLICT DO NOTHING. Removing it for good needs a different mechanism
+ * (module-level latch or an explicit admin seed action) and is out of scope for
+ * this fix wave. Outside a React request scope (Vitest), `cache()` is a
+ * pass-through, so callers see the un-memoized function.
+ */
+export const ensureThresholdsSeeded = cache(async function ensureThresholdsSeeded(): Promise<void> {
   await db
     .insert(reputationThreshold)
     .values(DEFAULT_THRESHOLDS)
     .onConflictDoNothing({ target: reputationThreshold.id })
-}
+})
 
 export async function getThresholds(): Promise<ThresholdRow[]> {
   await ensureThresholdsSeeded()
