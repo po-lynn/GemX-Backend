@@ -67,20 +67,27 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
   const [bulkTargets, setBulkTargets] = useState<ReputationCase[]>([])
   const [bulkBusy, setBulkBusy] = useState(false)
 
-  async function handleArchive(sellerUserId: string, reason: string) {
+  const [drawerBusy, setDrawerBusy] = useState(false)
+
+  // Returns whether the mutation succeeded, so callers (the row dialog's
+  // confirmArchiveDialog and the drawer's handleDrawerArchive) can decide
+  // whether to close their UI — on failure the toast carries the error and
+  // the caller should stay open so the admin can see it and retry.
+  async function handleArchive(sellerUserId: string, reason: string): Promise<boolean> {
     const form = new FormData()
     form.set("sellerUserId", sellerUserId)
     form.set("reason", reason)
     const result = await archiveSellerAction(form)
     if ("error" in result) {
       toast.error("Archive failed", { description: result.error })
-      return
+      return false
     }
     toast.success("Seller archived", { description: "The profile and its listings are now hidden from buyers." })
     startTransition(() => router.refresh())
+    return true
   }
 
-  async function handleDismiss(sellerUserId: string, triggerKey: string, reason: string) {
+  async function handleDismiss(sellerUserId: string, triggerKey: string, reason: string): Promise<boolean> {
     const form = new FormData()
     form.set("sellerUserId", sellerUserId)
     form.set("triggerKey", triggerKey)
@@ -88,23 +95,69 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
     const result = await dismissCaseAction(form)
     if ("error" in result) {
       toast.error("Dismiss failed", { description: result.error })
-      return
+      return false
     }
     toast.success("Case dismissed")
     startTransition(() => router.refresh())
+    return true
   }
 
-  async function handleSecondaryAction(sellerUserId: string, actionType: string) {
+  async function handleSecondaryAction(sellerUserId: string, actionType: string): Promise<boolean> {
     const form = new FormData()
     form.set("sellerUserId", sellerUserId)
     form.set("actionType", actionType)
     const result = await recordSecondaryActionAction(form)
     if ("error" in result) {
       toast.error("Action failed", { description: result.error })
-      return
+      return false
     }
     toast.success("Recorded")
     startTransition(() => router.refresh())
+    return true
+  }
+
+  // Drawer variants of archive/dismiss/secondary-action: unlike the row-level
+  // dialogs above, the drawer has no separate "confirm" step of its own — its
+  // buttons ARE the confirm action. So the await-then-close pattern lives here
+  // instead: track a real busy flag (drives ReputationCaseDrawer's `isBusy`,
+  // which disables its textarea/buttons) and only close the drawer once the
+  // mutation has resolved. On failure, `onClose` is never called, so the
+  // drawer stays open and the error toast is visible against it.
+  async function handleDrawerArchive(sellerUserId: string, reason: string, onClose: () => void) {
+    setDrawerBusy(true)
+    try {
+      const ok = await handleArchive(sellerUserId, reason)
+      if (ok) onClose()
+    } finally {
+      setDrawerBusy(false)
+    }
+  }
+
+  async function handleDrawerDismiss(
+    sellerUserId: string,
+    triggerKey: string,
+    reason: string,
+    onClose: () => void
+  ) {
+    setDrawerBusy(true)
+    try {
+      const ok = await handleDismiss(sellerUserId, triggerKey, reason)
+      if (ok) onClose()
+    } finally {
+      setDrawerBusy(false)
+    }
+  }
+
+  // Secondary actions don't close the drawer (the admin may fire several in a
+  // row), but still track busy so the drawer disables its controls while the
+  // request is in flight instead of allowing overlapping submissions.
+  async function handleDrawerSecondaryAction(sellerUserId: string, actionType: string) {
+    setDrawerBusy(true)
+    try {
+      await handleSecondaryAction(sellerUserId, actionType)
+    } finally {
+      setDrawerBusy(false)
+    }
   }
 
   function openArchiveDialog(row: ReputationCase) {
@@ -116,8 +169,8 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
     if (!archiveTarget) return
     setArchiving(true)
     try {
-      await handleArchive(archiveTarget.sellerUserId, archiveReason.trim())
-      setArchiveTarget(null)
+      const ok = await handleArchive(archiveTarget.sellerUserId, archiveReason.trim())
+      if (ok) setArchiveTarget(null)
     } finally {
       setArchiving(false)
     }
@@ -249,10 +302,10 @@ export function ReputationCasesTable({ cases, views, activeTab, page, pageSize, 
           <ReputationCaseDrawer
             row={r}
             onClose={onClose}
-            onArchive={(sellerUserId, reason) => { handleArchive(sellerUserId, reason); onClose() }}
-            onDismiss={(sellerUserId, triggerKey, reason) => { handleDismiss(sellerUserId, triggerKey, reason); onClose() }}
-            onSecondaryAction={handleSecondaryAction}
-            isBusy={false}
+            onArchive={(sellerUserId, reason) => { void handleDrawerArchive(sellerUserId, reason, onClose) }}
+            onDismiss={(sellerUserId, triggerKey, reason) => { void handleDrawerDismiss(sellerUserId, triggerKey, reason, onClose) }}
+            onSecondaryAction={(sellerUserId, actionType) => { void handleDrawerSecondaryAction(sellerUserId, actionType) }}
+            isBusy={drawerBusy}
           />
         )}
         renderBulkActions={(selectedRows, onClear) => (
