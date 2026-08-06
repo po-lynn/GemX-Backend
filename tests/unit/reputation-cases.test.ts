@@ -1,9 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+// Records every sql`` template built by the module under test, including the
+// ones handed to query-builder .where() rather than db.execute(), so the
+// seller-id binding test below can assert on query shape at all four
+// hydrateCases sites. Hoisted so the vi.mock factory can close over it.
+const captured = vi.hoisted(() => ({ queries: [] as string[], joinChunks: [] as unknown[][] }))
+
 vi.mock("drizzle-orm", () => ({
   sql: Object.assign(
-    (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
-    { raw: (s: string) => s }
+    (strings: TemplateStringsArray, ...values: unknown[]) => {
+      captured.queries.push([...strings].join(""))
+      return { strings, values }
+    },
+    {
+      raw: (s: string) => s,
+      join: (chunks: unknown[], separator?: unknown) => {
+        captured.joinChunks.push(chunks)
+        return { chunks, separator }
+      },
+    }
   ),
   eq: vi.fn(() => "eq"),
   inArray: vi.fn(() => "inArray"),
@@ -123,6 +138,68 @@ describe("getOpenReputationCases", () => {
     expect(result.cases).toHaveLength(1)
     expect(result.cases[0].sellerUserId).toBe("seller-1")
     expect(result.cases[0].severity).toBe("critical")
+  })
+})
+
+describe("hydrateCases seller-id binding", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    captured.queries.length = 0
+    captured.joinChunks.length = 0
+  })
+
+  /**
+   * Regression guard for the `= ANY(${sellerIds})` crash.
+   *
+   * Embedding a plain JS string[] in a raw sql`` template binds it as ONE
+   * stringified parameter, not as a Postgres array — so every hydrateCases query
+   * using `= ANY(${sellerIds})` died at runtime with:
+   *
+   *   PostgresError: malformed array literal: "VAHvEEbt..." (code 22P02)
+   *   detail: Array value must start with "{" or dimension information.
+   *
+   * That made /admin/reviews/cases throw a server-side exception the moment ANY
+   * seller had review data. It survived twelve task reviews plus a whole-branch
+   * review because every test in this suite mocks db.execute — a mock never
+   * parses an array literal, so the bug is invisible to assertions about returned
+   * data. The query SHAPE is therefore the only contract a unit test can hold:
+   * one bind per id via sql.join, spliced into an IN (...) list.
+   *
+   * The real fix was verified separately against a live Postgres database.
+   */
+  it("binds seller ids as an IN list with one parameter per id, never = ANY()", async () => {
+    // Two sellers matching rule 1 so the per-id bind count is meaningful (a
+    // single id could not distinguish one array bind from one scalar bind).
+    vi.mocked(db.select).mockReturnValue(mockEmptyChain() as never)
+    vi.mocked(db.select).mockReturnValueOnce(
+      mockGroupByHaving([
+        { sellerUserId: "seller-1", avgScore: 3.5, reviewCount: 40, maxReviewCreatedAt: new Date("2026-08-01") },
+        { sellerUserId: "seller-2", avgScore: 3.1, reviewCount: 55, maxReviewCreatedAt: new Date("2026-08-02") },
+      ]) as never
+    )
+    vi.mocked(db.execute).mockResolvedValue([] as never)
+
+    await getOpenReputationCases({ tab: "all", page: 1, limit: 20 })
+
+    // No query anywhere may reintroduce the array-in-template pattern.
+    expect(captured.queries.filter((q) => q.includes("ANY("))).toEqual([])
+
+    // All four hydrateCases sites must splice the parameterized IN list.
+    const find = (needle: string) => captured.queries.find((q) => q.includes(needle))
+    const aggQuery = find("AS avg_before_30d") // raw db.execute: rating aggregates
+    const reviewsQuery = find("AS buyer_name") // raw db.execute: recent reviews
+    const listingsQuery = find("= 'active'") // builder .where(): active listings
+    const warningsQuery = find("'warned', 'archived', 'limited_orders'") // builder .where(): prior warnings
+
+    for (const query of [aggQuery, reviewsQuery, listingsQuery, warningsQuery]) {
+      expect(query).toBeDefined()
+      expect(query).toContain("IN (")
+    }
+
+    // sql.join must receive one chunk per seller id — that is what turns into
+    // one bind parameter per id instead of a single stringified array.
+    expect(captured.joinChunks).toHaveLength(1)
+    expect(captured.joinChunks[0]).toHaveLength(2)
   })
 })
 

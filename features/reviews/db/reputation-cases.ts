@@ -319,6 +319,14 @@ function filterByTab(summaries: CaseSummary[], tab: ReputationCaseTab): CaseSumm
 async function hydrateCases(summaries: CaseSummary[]): Promise<ReputationCase[]> {
   if (summaries.length === 0) return []
   const sellerIds = summaries.map((s) => s.sellerUserId)
+  // Parameterized IN list, NOT `= ANY(${sellerIds})`: embedding a plain JS array
+  // in a raw sql`` template binds it as a single stringified parameter, so
+  // Postgres' array parser rejects it ("malformed array literal", 22P02) as soon
+  // as any seller actually has review data. sql.join emits one bind per id.
+  const sellerIdList = sql.join(
+    sellerIds.map((id) => sql`${id}`),
+    sql`, `
+  )
 
   const userRows = await withQueryTimeout(
     db
@@ -343,7 +351,7 @@ async function hydrateCases(summaries: CaseSummary[]): Promise<ReputationCase[]>
              avg(score) FILTER (WHERE created_at < now() - interval '30 days') AS avg_before_30d,
              count(*) FILTER (WHERE score <= 2)::int AS negative_count
       FROM seller_rating
-      WHERE seller_user_id = ANY(${sellerIds})
+      WHERE seller_user_id IN (${sellerIdList})
       GROUP BY seller_user_id
     `),
     QUERY_TIMEOUT_MS,
@@ -368,7 +376,7 @@ async function hydrateCases(summaries: CaseSummary[]): Promise<ReputationCase[]>
       FROM (
         SELECT sr.*, row_number() OVER (PARTITION BY sr.seller_user_id ORDER BY sr.created_at DESC) AS rn
         FROM seller_rating sr
-        WHERE sr.seller_user_id = ANY(${sellerIds})
+        WHERE sr.seller_user_id IN (${sellerIdList})
       ) ranked
       JOIN "user" u ON u.id = ranked.rater_user_id
       LEFT JOIN rating_tag_map rtm ON rtm.rating_id = ranked.id
@@ -402,7 +410,7 @@ async function hydrateCases(summaries: CaseSummary[]): Promise<ReputationCase[]>
     db
       .select({ sellerUserId: product.sellerId })
       .from(product)
-      .where(sql`${product.sellerId} = ANY(${sellerIds}) AND ${product.status} = 'active'`),
+      .where(sql`${product.sellerId} IN (${sellerIdList}) AND ${product.status} = 'active'`),
     QUERY_TIMEOUT_MS,
     "reputation-page-active-listings"
   )
@@ -416,7 +424,7 @@ async function hydrateCases(summaries: CaseSummary[]): Promise<ReputationCase[]>
       .select({ sellerUserId: sellerReputationAction.sellerUserId })
       .from(sellerReputationAction)
       .where(
-        sql`${sellerReputationAction.sellerUserId} = ANY(${sellerIds}) AND ${sellerReputationAction.actionType} IN ('warned', 'archived', 'limited_orders')`
+        sql`${sellerReputationAction.sellerUserId} IN (${sellerIdList}) AND ${sellerReputationAction.actionType} IN ('warned', 'archived', 'limited_orders')`
       ),
     QUERY_TIMEOUT_MS,
     "reputation-page-prior-warnings"
