@@ -13,6 +13,10 @@ import DatePicker from "@/components/date-picker/date-picker";
 import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
 import { ShareButtons } from "@/components/share/ShareButtons";
 import { env } from "@/data/env/client";
+import {
+  NEWS_LANGUAGES,
+  type NewsLanguage,
+} from "@/features/news/services/google-translate";
 
 const BlockNoteEditor = dynamic(
   () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
@@ -29,6 +33,37 @@ const STATUSES: { id: Status; label: string }[] = [
 function fmtDate(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function isNewsLanguage(value: string | null | undefined): value is NewsLanguage {
+  return !!value && (NEWS_LANGUAGES as readonly string[]).includes(value);
+}
+
+function initialTitlesByLang(news?: NewsRow | null): Record<NewsLanguage, string> {
+  const source = isNewsLanguage(news?.language) ? news!.language : "English";
+  const fallback = (localized: string | null | undefined) =>
+    localized?.trim() || "";
+  return {
+    English: fallback(news?.titleEn) || (source === "English" ? (news?.title ?? "") : ""),
+    Myanmar: fallback(news?.titleMy) || (source === "Myanmar" ? (news?.title ?? "") : ""),
+    Thai: fallback(news?.titleTh) || (source === "Thai" ? (news?.title ?? "") : ""),
+    Korean: fallback(news?.titleKo) || (source === "Korean" ? (news?.title ?? "") : ""),
+  };
+}
+
+function initialContentsByLang(news?: NewsRow | null): Record<NewsLanguage, string> {
+  const source = isNewsLanguage(news?.language) ? news!.language : "English";
+  const fallback = (localized: string | null | undefined, isSource: boolean) => {
+    if (localized?.trim()) return localized;
+    if (isSource) return news?.content ?? "[]";
+    return "[]";
+  };
+  return {
+    English: fallback(news?.contentEn, source === "English"),
+    Myanmar: fallback(news?.contentMy, source === "Myanmar"),
+    Thai: fallback(news?.contentTh, source === "Thai"),
+    Korean: fallback(news?.contentKo, source === "Korean"),
+  };
 }
 
 type Props = {
@@ -88,11 +123,29 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
   const isEdit = mode === "edit";
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [title, setTitle] = useState(news?.title ?? "");
+  const sourceLanguage: NewsLanguage = isNewsLanguage(news?.language)
+    ? news!.language
+    : "English";
+
+  const [editLanguage, setEditLanguage] = useState<NewsLanguage>(
+    isEdit ? sourceLanguage : "English",
+  );
+  const [titlesByLang, setTitlesByLang] = useState<Record<NewsLanguage, string>>(
+    () => initialTitlesByLang(news),
+  );
+  const [contentsByLang, setContentsByLang] = useState<Record<NewsLanguage, string>>(
+    () => initialContentsByLang(news),
+  );
+
+  const [title, setTitle] = useState(
+    isEdit ? initialTitlesByLang(news)[sourceLanguage] : (news?.title ?? ""),
+  );
   const [author, setAuthor] = useState(news?.author ?? "Gem X Newsroom");
   const [status, setStatus] = useState<Status>((news?.status as Status) ?? "draft");
   const [dirty, setDirty] = useState(false);
-  const [content, setContent] = useState(news?.content ?? "[]");
+  const [content, setContent] = useState(
+    isEdit ? initialContentsByLang(news)[sourceLanguage] : (news?.content ?? "[]"),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,12 +153,24 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
     id: news?.id ?? "",
     title,
     content,
+    editLanguage: isEdit ? editLanguage : undefined,
     enabled: isEdit,
   });
 
   useEffect(() => {
     if (autoSaveState === "saved") setDirty(false);
   }, [autoSaveState]);
+
+  function switchEditLanguage(next: NewsLanguage) {
+    if (next === editLanguage) return;
+    const nextTitles = { ...titlesByLang, [editLanguage]: title };
+    const nextContents = { ...contentsByLang, [editLanguage]: content };
+    setTitlesByLang(nextTitles);
+    setContentsByLang(nextContents);
+    setEditLanguage(next);
+    setTitle(nextTitles[next] ?? "");
+    setContent(nextContents[next] ?? "[]");
+  }
 
   const publishDateValue = news?.publish ? new Date(news.publish).toISOString().slice(0, 10) : "";
   const articleId = news?.id ? news.id.slice(0, 8).toUpperCase() : null;
@@ -227,6 +292,10 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
       <form ref={formRef} onSubmit={e => { e.preventDefault(); submit(); }}>
         {isEdit && news && <input type="hidden" name="newsId" value={news.id} />}
         <input type="hidden" name="status" value={status} />
+        {isEdit && <input type="hidden" name="editLanguage" value={editLanguage} />}
+        {/* Keep controlled fields in FormData */}
+        <input type="hidden" name="title" value={title} />
+        <input type="hidden" name="content" value={content} />
 
         <div className="n-editor-shell">
           {/* ─── Main article frame ─── */}
@@ -257,18 +326,53 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
                 <span style={{ flex: 1 }} />
               </div>
 
+              {isEdit && (
+                <div style={{ marginBottom: 14, maxWidth: 280 }}>
+                  <label className="n-label" htmlFor="news-edit-language" style={{ display: "block", marginBottom: 8 }}>
+                    Language
+                  </label>
+                  <select
+                    id="news-edit-language"
+                    className="nf-input"
+                    value={editLanguage}
+                    onChange={(e) => {
+                      switchEditLanguage(e.target.value as NewsLanguage);
+                    }}
+                  >
+                    {NEWS_LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}{lang === sourceLanguage ? " (source)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="ud-help" style={{ display: "block", marginTop: 6 }}>
+                    Switch language to edit that locale’s title and content. Saving updates only the selected language.
+                  </span>
+                </div>
+              )}
+
               {/* Large title */}
-              <label className="n-label" htmlFor="news-title" style={{ display: "block", marginBottom: 6 }}>Title</label>
+              <label className="n-label" htmlFor="news-title" style={{ display: "block", marginBottom: 6 }}>
+                Title{isEdit ? ` (${editLanguage})` : ""}
+              </label>
               <input
                 id="news-title"
                 className="n-title-input"
-                name="title"
                 value={title}
-                onChange={e => { setTitle(e.target.value); setDirty(true); }}
+                onChange={e => {
+                  setTitle(e.target.value);
+                  setTitlesByLang((prev) => ({ ...prev, [editLanguage]: e.target.value }));
+                  setDirty(true);
+                }}
                 placeholder="Announcement title…"
                 required
                 maxLength={500}
               />
+              {!isEdit && (
+                <span className="ud-help" style={{ display: "block", marginTop: 6 }}>
+                  Language is auto-detected from the title. Title and content are translated into English, Myanmar, Thai, and Korean via Google Translate on save.
+                </span>
+              )}
 
               {/* Author + reading time */}
               <div className="nf-two-col">
@@ -323,17 +427,21 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
                   </svg>
                 </span>
                 <div>
-                  <div className="nf-card-title">Content</div>
+                  <div className="nf-card-title">Content{isEdit ? ` (${editLanguage})` : ""}</div>
                   <div className="nf-card-sub">The body of your announcement.</div>
                 </div>
               </div>
 
-              {/* Body editor */}
+              {/* Body editor — remount when language changes so initial content reloads */}
               <BlockNoteEditor
-                name="content"
-                initialContent={news?.content}
+                key={isEdit ? `content-${editLanguage}` : "content-create"}
+                name="contentEditor"
+                initialContent={content}
                 onContentChange={(json) => {
                   setContent(json);
+                  if (isEdit) {
+                    setContentsByLang((prev) => ({ ...prev, [editLanguage]: json }));
+                  }
                   setDirty(true);
                 }}
               />
@@ -474,6 +582,10 @@ export function NewsForm({ mode, news, prevHref, nextHref, listPosition, listTot
                       <strong>{fmtDate(news.publish)}</strong>
                     </div>
                   )}
+                  <div className="n-meta-row">
+                    <span>Source language</span>
+                    <strong>{sourceLanguage}</strong>
+                  </div>
                   <div className="n-meta-row">
                     <span>ID</span>
                     <strong style={{ fontFamily: "var(--font-geist-mono, ui-monospace, monospace)", fontSize: 11 }}>

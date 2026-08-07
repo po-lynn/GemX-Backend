@@ -6,7 +6,16 @@ export type ArticleRow = {
   id: string;
   title: string;
   slug: string;
+  language: string;
+  titleEn: string | null;
+  titleMy: string | null;
+  titleTh: string | null;
+  titleKo: string | null;
   content: string;
+  contentEn: string | null;
+  contentMy: string | null;
+  contentTh: string | null;
+  contentKo: string | null;
   author: string;
   category: string;
   coverImage: string | null;
@@ -117,6 +126,15 @@ export async function createArticleInDb(input: {
   category?: string;
   coverImage?: string | null;
   isFeatured?: boolean;
+  language?: string;
+  titleEn?: string | null;
+  titleMy?: string | null;
+  titleTh?: string | null;
+  titleKo?: string | null;
+  contentEn?: string | null;
+  contentMy?: string | null;
+  contentTh?: string | null;
+  contentKo?: string | null;
 }): Promise<string> {
   const [inserted] = await db
     .insert(articles)
@@ -127,6 +145,15 @@ export async function createArticleInDb(input: {
       author: input.author,
       status: input.status,
       publishDate: input.publishDate ?? null,
+      language: input.language ?? "English",
+      titleEn: input.titleEn ?? null,
+      titleMy: input.titleMy ?? null,
+      titleTh: input.titleTh ?? null,
+      titleKo: input.titleKo ?? null,
+      contentEn: input.contentEn ?? null,
+      contentMy: input.contentMy ?? null,
+      contentTh: input.contentTh ?? null,
+      contentKo: input.contentKo ?? null,
       ...(input.category !== undefined ? { category: input.category } : {}),
       coverImage: input.coverImage ?? null,
       isFeatured: input.isFeatured ?? false,
@@ -147,6 +174,15 @@ export async function updateArticleInDb(
     category?: string;
     coverImage?: string | null;
     isFeatured?: boolean;
+    language?: string;
+    titleEn?: string | null;
+    titleMy?: string | null;
+    titleTh?: string | null;
+    titleKo?: string | null;
+    contentEn?: string | null;
+    contentMy?: string | null;
+    contentTh?: string | null;
+    contentKo?: string | null;
   }
 ): Promise<{ justPublished: boolean; title?: string }> {
   const updates = Object.fromEntries(

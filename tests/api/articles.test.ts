@@ -30,9 +30,20 @@ const articleRow = {
   id: "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
   title: "Gemstone Identification: How to Verify Gemstones",
   slug: "gemstone-identification",
+  language: "English",
+  titleEn: "Gemstone Identification: How to Verify Gemstones",
+  titleMy: "ကျောက်စိမ်း စိစစ်ခြင်း",
+  titleTh: "การระบุพลอย",
+  titleKo: "보석 감별",
   content: JSON.stringify([
     { type: "paragraph", content: [{ type: "text", text: "Short guide body." }] },
   ]),
+  contentEn: JSON.stringify([
+    { type: "paragraph", content: [{ type: "text", text: "Short guide body." }] },
+  ]),
+  contentMy: "[]",
+  contentTh: "[]",
+  contentKo: "[]",
   author: "Gem X Newsroom",
   category: "gemology",
   coverImage: null,
@@ -61,6 +72,14 @@ describe("GET /api/articles", () => {
     // Short content still shows a 1-minute floor
     expect(data.articles[0].readTime).toBe(1)
     expect(data.articles[0].category).toBe("gemology")
+  })
+
+  // Validates ?lang remaps title from the matching title_* column
+  it("localizes list title when lang query is set", async () => {
+    const req = new Request("http://localhost/api/articles?lang=Thai")
+    const res = await listGET(req as NextRequest)
+    const data = await res.json()
+    expect(data.articles[0].title).toBe("การระบุพลอย")
   })
 
   // Validates search/category/featured params are forwarded to the db layer
@@ -107,6 +126,14 @@ describe("GET /api/articles/[id]", () => {
     expect(data.readTime).toBe(1)
     expect(data.category).toBe("gemology")
     expect(data.isFeatured).toBe(false)
+  })
+
+  // Validates ?lang remaps title on the detail endpoint
+  it("localizes detail title when lang query is set", async () => {
+    const req = new Request(`http://localhost/api/articles/${articleRow.id}?lang=Korean`)
+    const res = await detailGET(req as NextRequest, params(articleRow.id))
+    const data = await res.json()
+    expect(data.title).toBe("보석 감별")
   })
 
   // Validates drafts are hidden from the public endpoint

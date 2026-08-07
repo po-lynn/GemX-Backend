@@ -78,6 +78,13 @@ export const product = pgTable(
     sku: text("sku").unique(),
     title: text("title").notNull(),
     description: text("description"),
+    /** Source language of description: English | Myanmar | Thai | Korean */
+    language: text("language").notNull().default("English"),
+    /** Localized descriptions (source locale copies `description`; others from Google Translate on create). */
+    descriptionEn: text("description_en"),
+    descriptionMy: text("description_my"),
+    descriptionTh: text("description_th"),
+    descriptionKo: text("description_ko"),
     /** Product identification / treatment: Natural, Heat Treated, Treatments, Others */
     identification: productIdentificationEnum("identification").default("Natural"),
     price: decimal("price", { precision: 14, scale: 2 }).notNull(),

@@ -868,6 +868,12 @@ export type ProductForEdit = {
   sku: string | null
   title: string
   description: string | null
+  /** Source language of description: English | Myanmar | Thai | Korean */
+  language: string
+  descriptionEn: string | null
+  descriptionMy: string | null
+  descriptionTh: string | null
+  descriptionKo: string | null
   identification: string | null
   price: string
   currency: "USD" | "MMK"
@@ -917,6 +923,11 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       sku: product.sku,
       title: product.title,
       description: product.description,
+      language: product.language,
+      descriptionEn: product.descriptionEn,
+      descriptionMy: product.descriptionMy,
+      descriptionTh: product.descriptionTh,
+      descriptionKo: product.descriptionKo,
       identification: product.identification,
       price: product.price,
       currency: product.currency,
@@ -1030,6 +1041,11 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     sku: row.sku,
     title: row.title,
     description: row.description,
+    language: row.language ?? "English",
+    descriptionEn: row.descriptionEn ?? null,
+    descriptionMy: row.descriptionMy ?? null,
+    descriptionTh: row.descriptionTh ?? null,
+    descriptionKo: row.descriptionKo ?? null,
     identification: row.identification ?? null,
     price: String(row.price),
     currency: row.currency,
@@ -1076,6 +1092,12 @@ export type CreateProductInput = ProductCreate & {
   sellerId: string
   categoryId: string
   verifiedBy?: string | null
+  /** Source language of description (English | Myanmar | Thai | Korean). */
+  language?: string
+  descriptionEn?: string | null
+  descriptionMy?: string | null
+  descriptionTh?: string | null
+  descriptionKo?: string | null
 }
 
 /** Generate SKU with category short code prefix, e.g. RUBY-5EE3A8CE04 */
@@ -1100,6 +1122,11 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
     title: input.title,
     sku,
     description: input.description ?? null,
+    language: input.language ?? "English",
+    descriptionEn: input.descriptionEn ?? null,
+    descriptionMy: input.descriptionMy ?? null,
+    descriptionTh: input.descriptionTh ?? null,
+    descriptionKo: input.descriptionKo ?? null,
     identification: input.identification ?? null,
     price: input.price,
     currency: input.currency,
@@ -1196,6 +1223,11 @@ export type UpdateProductInput = {
   title?: string
   sku?: string | null
   description?: string | null
+  language?: string
+  descriptionEn?: string | null
+  descriptionMy?: string | null
+  descriptionTh?: string | null
+  descriptionKo?: string | null
   identification?: ProductIdentification | null
   price?: string
   currency?: "USD" | "MMK"
@@ -1292,6 +1324,11 @@ export async function updateProductInDb(
     }
   }
   if (rest.description !== undefined) updates.description = rest.description
+  if (rest.language !== undefined) updates.language = rest.language
+  if (rest.descriptionEn !== undefined) updates.descriptionEn = rest.descriptionEn
+  if (rest.descriptionMy !== undefined) updates.descriptionMy = rest.descriptionMy
+  if (rest.descriptionTh !== undefined) updates.descriptionTh = rest.descriptionTh
+  if (rest.descriptionKo !== undefined) updates.descriptionKo = rest.descriptionKo
   if (rest.identification !== undefined) updates.identification = rest.identification
   if (rest.price !== undefined) updates.price = rest.price
   if (rest.currency !== undefined) updates.currency = rest.currency

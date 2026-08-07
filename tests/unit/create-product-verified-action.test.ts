@@ -38,6 +38,23 @@ vi.mock("@/features/users/db/users", () => ({
   getUsersPaginatedFromDb: vi.fn().mockResolvedValue({ users: [], total: 0 }),
 }))
 
+vi.mock("@/features/products/services/localize-description", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/features/products/services/localize-description")
+  >("@/features/products/services/localize-description")
+  return {
+    ...actual,
+    buildLocalizedProductDescription: vi.fn().mockResolvedValue({
+      sourceLanguage: "English",
+      description: "",
+      descriptionEn: "",
+      descriptionMy: "",
+      descriptionTh: "",
+      descriptionKo: "",
+    }),
+  }
+})
+
 const VALID_CATEGORY_ID = "3f2f1a10-1111-4a2b-8c3d-9e8f7a6b5c4d"
 
 function validCreateFormData(overrides: Record<string, string> = {}): FormData {
@@ -65,7 +82,11 @@ describe("createProductAction — GemX Verified on create", () => {
     const result = await createProductAction(
       validCreateFormData({ moderationStatus: "approved", isVerified: "on" })
     )
-    expect(result).toEqual({ success: true, productId: "prod-new-1" })
+    expect(result).toEqual({
+      success: true,
+      productId: "prod-new-1",
+      language: "English",
+    })
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({ isVerified: true, verifiedBy: "admin-1" })
     )
@@ -78,7 +99,11 @@ describe("createProductAction — GemX Verified on create", () => {
     const result = await createProductAction(
       validCreateFormData({ moderationStatus: "pending", isVerified: "on" })
     )
-    expect(result).toEqual({ success: true, productId: "prod-new-1" })
+    expect(result).toEqual({
+      success: true,
+      productId: "prod-new-1",
+      language: "English",
+    })
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({ isVerified: false, verifiedBy: null })
     )
@@ -89,7 +114,11 @@ describe("createProductAction — GemX Verified on create", () => {
     const { createProductInDb } = await import("@/features/products/db/products")
     const { createProductAction } = await import("@/features/products/actions/products")
     const result = await createProductAction(validCreateFormData({ moderationStatus: "approved" }))
-    expect(result).toEqual({ success: true, productId: "prod-new-1" })
+    expect(result).toEqual({
+      success: true,
+      productId: "prod-new-1",
+      language: "English",
+    })
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({ isVerified: false, verifiedBy: null })
     )

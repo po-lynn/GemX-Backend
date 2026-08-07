@@ -10,6 +10,8 @@ type Options = {
   title: string;
   author: string;
   content: string;
+  /** When set, autosave writes the matching localized title/content columns. */
+  editLanguage?: string;
   enabled: boolean;
   debounceMs?: number;
 };
@@ -24,6 +26,7 @@ export function useAutoSave({
   title,
   author,
   content,
+  editLanguage,
   enabled,
   debounceMs = 3000,
 }: Options): Return {
@@ -51,6 +54,7 @@ export function useAutoSave({
       formData.set("title", title);
       formData.set("author", author);
       formData.set("content", content);
+      if (editLanguage) formData.set("editLanguage", editLanguage);
 
       autoSaveArticleAction(formData)
         .then((result) => {
@@ -65,7 +69,7 @@ export function useAutoSave({
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [id, title, author, content, enabled, debounceMs]);
+  }, [id, title, author, content, editLanguage, enabled, debounceMs]);
 
   return { autoSaveState, lastAutoSaved };
 }

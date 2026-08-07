@@ -5,7 +5,16 @@ import { and, eq, ne, ilike, desc, sql, type SQL } from "drizzle-orm";
 export type NewsRow = {
   id: string;
   title: string;
+  language: string;
+  titleEn: string | null;
+  titleMy: string | null;
+  titleTh: string | null;
+  titleKo: string | null;
   content: string;
+  contentEn: string | null;
+  contentMy: string | null;
+  contentTh: string | null;
+  contentKo: string | null;
   author: string;
   category: string;
   coverImage: string | null;
@@ -119,6 +128,15 @@ export async function createNewsInDb(input: {
   category?: string;
   coverImage?: string | null;
   isFeatured?: boolean;
+  language?: string;
+  titleEn?: string | null;
+  titleMy?: string | null;
+  titleTh?: string | null;
+  titleKo?: string | null;
+  contentEn?: string | null;
+  contentMy?: string | null;
+  contentTh?: string | null;
+  contentKo?: string | null;
 }): Promise<string> {
   const [inserted] = await db
     .insert(news)
@@ -127,6 +145,15 @@ export async function createNewsInDb(input: {
       content: input.content,
       status: input.status,
       publish: input.publish ?? null,
+      language: input.language ?? "English",
+      titleEn: input.titleEn ?? null,
+      titleMy: input.titleMy ?? null,
+      titleTh: input.titleTh ?? null,
+      titleKo: input.titleKo ?? null,
+      contentEn: input.contentEn ?? null,
+      contentMy: input.contentMy ?? null,
+      contentTh: input.contentTh ?? null,
+      contentKo: input.contentKo ?? null,
       ...(input.author !== undefined ? { author: input.author } : {}),
       ...(input.category !== undefined ? { category: input.category } : {}),
       coverImage: input.coverImage ?? null,
@@ -147,6 +174,15 @@ export async function updateNewsInDb(
     category?: string;
     coverImage?: string | null;
     isFeatured?: boolean;
+    language?: string;
+    titleEn?: string | null;
+    titleMy?: string | null;
+    titleTh?: string | null;
+    titleKo?: string | null;
+    contentEn?: string | null;
+    contentMy?: string | null;
+    contentTh?: string | null;
+    contentKo?: string | null;
   }
 ): Promise<boolean> {
   const updates = Object.fromEntries(

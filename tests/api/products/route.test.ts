@@ -6,6 +6,7 @@ import { getPrivilegeAssistBrowse } from "@/features/products/db/cache/products"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
+import { buildLocalizedProductDescription } from "@/features/products/services/localize-description"
 import { auth } from "@/lib/auth"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -28,6 +29,9 @@ vi.mock("@/features/points/db/points", () => ({
 }))
 vi.mock("@/features/collector-piece-show-requests/db/collector-piece-show-requests", () => ({
   getApprovedCollectorPieceProductIds: vi.fn(),
+}))
+vi.mock("@/features/products/services/localize-description", () => ({
+  buildLocalizedProductDescription: vi.fn(),
 }))
 
 /** Valid category UUID for product create tests (categoryId is required). */
@@ -265,6 +269,15 @@ describe("POST /api/products", () => {
       success: true,
       remainingPoints: 9_500,
     })
+    // Empty description: no Google calls; still returns a localization payload.
+    vi.mocked(buildLocalizedProductDescription).mockResolvedValue({
+      sourceLanguage: "English",
+      description: "",
+      descriptionEn: "",
+      descriptionMy: "",
+      descriptionTh: "",
+      descriptionKo: "",
+    })
   })
 
   afterEach(() => {
@@ -366,13 +379,86 @@ describe("POST /api/products", () => {
     const data = await res.json()
     expect(data).toHaveProperty("success", true)
     expect(data).toHaveProperty("productId", "prod-123")
+    expect(data).toHaveProperty("language", "English")
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Ruby",
         sellerId: "user-1",
         categoryId: VALID_CATEGORY_ID,
+        language: "English",
       })
     )
+  })
+
+  it("translates description into EN/MY/TH/KO and persists localized fields", async () => {
+    // Validates POST detects language and saves all four description columns.
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", role: "user" },
+    } as never)
+    vi.mocked(createProductInDb).mockResolvedValue("prod-loc")
+    vi.mocked(buildLocalizedProductDescription).mockResolvedValue({
+      sourceLanguage: "English",
+      description: "Natural ruby from Mogok",
+      descriptionEn: "Natural ruby from Mogok",
+      descriptionMy: "မိုးကုတ်မှ သဘာဝပတ္တမြား",
+      descriptionTh: "ทับทิมธรรมชาติจากโมกอค",
+      descriptionKo: "모곡산 천연 루비",
+    })
+
+    const req = new Request("http://localhost/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...validLooseStoneBody,
+        description: "Natural ruby from Mogok",
+      }),
+    })
+    const res = await POST(req as NextRequest)
+    expect(res.status).toBe(201)
+    const data = await res.json()
+    expect(data).toMatchObject({
+      success: true,
+      productId: "prod-loc",
+      language: "English",
+    })
+    expect(buildLocalizedProductDescription).toHaveBeenCalledWith(
+      "Natural ruby from Mogok",
+    )
+    expect(createProductInDb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Natural ruby from Mogok",
+        language: "English",
+        descriptionEn: "Natural ruby from Mogok",
+        descriptionMy: "မိုးကုတ်မှ သဘာဝပတ္တမြား",
+        descriptionTh: "ทับทิมธรรมชาติจากโมกอค",
+        descriptionKo: "모곡산 천연 루비",
+      }),
+    )
+  })
+
+  it("returns 503 when Google Translate is not configured", async () => {
+    // Missing API key should fail create before insert.
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", role: "user" },
+    } as never)
+    vi.mocked(buildLocalizedProductDescription).mockRejectedValue(
+      new Error(
+        "Google Translate is not configured. Set GOOGLE_TRANSLATE_API_KEY to auto-translate product descriptions.",
+      ),
+    )
+    const req = new Request("http://localhost/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...validLooseStoneBody,
+        description: "Natural ruby",
+      }),
+    })
+    const res = await POST(req as NextRequest)
+    expect(res.status).toBe(503)
+    const data = await res.json()
+    expect(data.error).toMatch(/GOOGLE_TRANSLATE_API_KEY/)
+    expect(createProductInDb).not.toHaveBeenCalled()
   })
 
   it("returns 500 when createProductInDb throws", async () => {

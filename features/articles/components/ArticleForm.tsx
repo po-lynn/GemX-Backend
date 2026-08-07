@@ -13,6 +13,10 @@ import DatePicker from "@/components/date-picker/date-picker";
 import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
 import { ShareButtons } from "@/components/share/ShareButtons";
 import { env } from "@/data/env/client";
+import {
+  NEWS_LANGUAGES,
+  type NewsLanguage,
+} from "@/features/news/services/google-translate";
 
 const BlockNoteEditor = dynamic(
   () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
@@ -29,6 +33,36 @@ const STATUSES: { id: Status; label: string }[] = [
 function fmtDate(d: Date | string | null | undefined): string | null {
   if (!d) return null;
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function isArticleLanguage(value: string | null | undefined): value is NewsLanguage {
+  return !!value && (NEWS_LANGUAGES as readonly string[]).includes(value);
+}
+
+function initialTitlesByLang(article?: ArticleRow | null): Record<NewsLanguage, string> {
+  const source = isArticleLanguage(article?.language) ? article!.language : "English";
+  const fallback = (localized: string | null | undefined) => localized?.trim() || "";
+  return {
+    English: fallback(article?.titleEn) || (source === "English" ? (article?.title ?? "") : ""),
+    Myanmar: fallback(article?.titleMy) || (source === "Myanmar" ? (article?.title ?? "") : ""),
+    Thai: fallback(article?.titleTh) || (source === "Thai" ? (article?.title ?? "") : ""),
+    Korean: fallback(article?.titleKo) || (source === "Korean" ? (article?.title ?? "") : ""),
+  };
+}
+
+function initialContentsByLang(article?: ArticleRow | null): Record<NewsLanguage, string> {
+  const source = isArticleLanguage(article?.language) ? article!.language : "English";
+  const fallback = (localized: string | null | undefined, isSource: boolean) => {
+    if (localized?.trim()) return localized;
+    if (isSource) return article?.content ?? "[]";
+    return "[]";
+  };
+  return {
+    English: fallback(article?.contentEn, source === "English"),
+    Myanmar: fallback(article?.contentMy, source === "Myanmar"),
+    Thai: fallback(article?.contentTh, source === "Thai"),
+    Korean: fallback(article?.contentKo, source === "Korean"),
+  };
 }
 
 function getSavebarStatusClass({
@@ -88,9 +122,27 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
   const isEdit = mode === "edit";
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [title, setTitle] = useState(article?.title ?? "");
+  const sourceLanguage: NewsLanguage = isArticleLanguage(article?.language)
+    ? article!.language
+    : "English";
+
+  const [editLanguage, setEditLanguage] = useState<NewsLanguage>(
+    isEdit ? sourceLanguage : "English",
+  );
+  const [titlesByLang, setTitlesByLang] = useState<Record<NewsLanguage, string>>(
+    () => initialTitlesByLang(article),
+  );
+  const [contentsByLang, setContentsByLang] = useState<Record<NewsLanguage, string>>(
+    () => initialContentsByLang(article),
+  );
+
+  const [title, setTitle] = useState(
+    isEdit ? initialTitlesByLang(article)[sourceLanguage] : (article?.title ?? ""),
+  );
   const [author, setAuthor] = useState(article?.author ?? "");
-  const [content, setContent] = useState(article?.content ?? "[]");
+  const [content, setContent] = useState(
+    isEdit ? initialContentsByLang(article)[sourceLanguage] : (article?.content ?? "[]"),
+  );
   const [status, setStatus] = useState<Status>((article?.status as Status) ?? "draft");
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -101,12 +153,24 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
     title,
     author,
     content,
+    editLanguage: isEdit ? editLanguage : undefined,
     enabled: isEdit,
   });
 
   useEffect(() => {
     if (autoSaveState === "saved") setDirty(false);
   }, [autoSaveState]);
+
+  function switchEditLanguage(next: NewsLanguage) {
+    if (next === editLanguage) return;
+    const nextTitles = { ...titlesByLang, [editLanguage]: title };
+    const nextContents = { ...contentsByLang, [editLanguage]: content };
+    setTitlesByLang(nextTitles);
+    setContentsByLang(nextContents);
+    setEditLanguage(next);
+    setTitle(nextTitles[next] ?? "");
+    setContent(nextContents[next] ?? "[]");
+  }
 
   const publishDateValue = article?.publishDate
     ? new Date(article.publishDate).toISOString().slice(0, 10)
@@ -234,6 +298,9 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
       <form ref={formRef} onSubmit={e => { e.preventDefault(); submit(); }}>
         {isEdit && article && <input type="hidden" name="articleId" value={article.id} />}
         <input type="hidden" name="status" value={status} />
+        {isEdit && <input type="hidden" name="editLanguage" value={editLanguage} />}
+        <input type="hidden" name="title" value={title} />
+        <input type="hidden" name="content" value={content} />
 
         <div className="n-editor-shell">
           {/* ─── Main article frame ─── */}
@@ -264,18 +331,53 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
                 <span style={{ flex: 1 }} />
               </div>
 
+              {isEdit && (
+                <div style={{ marginBottom: 14, maxWidth: 280 }}>
+                  <label className="n-label" htmlFor="article-edit-language" style={{ display: "block", marginBottom: 8 }}>
+                    Language
+                  </label>
+                  <select
+                    id="article-edit-language"
+                    className="af-input"
+                    value={editLanguage}
+                    onChange={(e) => {
+                      switchEditLanguage(e.target.value as NewsLanguage);
+                    }}
+                  >
+                    {NEWS_LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}{lang === sourceLanguage ? " (source)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="ud-help" style={{ display: "block", marginTop: 6 }}>
+                    Switch language to edit that locale’s title and content. Saving updates only the selected language.
+                  </span>
+                </div>
+              )}
+
               {/* Large title */}
-              <label className="n-label" htmlFor="article-title" style={{ display: "block", marginBottom: 6 }}>Title</label>
+              <label className="n-label" htmlFor="article-title" style={{ display: "block", marginBottom: 6 }}>
+                Title{isEdit ? ` (${editLanguage})` : ""}
+              </label>
               <input
                 id="article-title"
                 className="n-title-input"
-                name="title"
                 value={title}
-                onChange={e => { setTitle(e.target.value); setDirty(true); }}
+                onChange={e => {
+                  setTitle(e.target.value);
+                  setTitlesByLang((prev) => ({ ...prev, [editLanguage]: e.target.value }));
+                  setDirty(true);
+                }}
                 placeholder="Article title…"
                 required
                 maxLength={500}
               />
+              {!isEdit && (
+                <span className="ud-help" style={{ display: "block", marginTop: 6 }}>
+                  Language is auto-detected from the title. Title and content are translated into English, Myanmar, Thai, and Korean via Google Translate on save.
+                </span>
+              )}
 
               {/* Author + reading time */}
               <div className="af-two-col">
@@ -330,17 +432,21 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
                   </svg>
                 </span>
                 <div>
-                  <div className="af-card-title">Content</div>
+                  <div className="af-card-title">Content{isEdit ? ` (${editLanguage})` : ""}</div>
                   <div className="af-card-sub">The body of your article.</div>
                 </div>
               </div>
 
-              {/* Body editor */}
+              {/* Body editor — remount when language changes so initial content reloads */}
               <BlockNoteEditor
-                name="content"
-                initialContent={article?.content}
+                key={isEdit ? `content-${editLanguage}` : "content-create"}
+                name="contentEditor"
+                initialContent={content}
                 onContentChange={(json) => {
                   setContent(json);
+                  if (isEdit) {
+                    setContentsByLang((prev) => ({ ...prev, [editLanguage]: json }));
+                  }
                   setDirty(true);
                 }}
               />
@@ -495,6 +601,10 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
                       <strong>{fmtDate(article.publishDate)}</strong>
                     </div>
                   )}
+                  <div className="n-meta-row">
+                    <span>Source language</span>
+                    <strong>{sourceLanguage}</strong>
+                  </div>
                   <div className="n-meta-row">
                     <span>ID</span>
                     <strong style={{ fontFamily: "var(--font-geist-mono, ui-monospace, monospace)", fontSize: 11 }}>

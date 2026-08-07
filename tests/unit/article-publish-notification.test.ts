@@ -8,6 +8,7 @@ vi.mock("@/features/articles/db/articles", () => ({
   updateArticleInDb: vi.fn(),
   createArticleInDb: vi.fn(),
   deleteArticleInDb: vi.fn(),
+  getArticleById: vi.fn(),
 }));
 
 vi.mock("@/lib/action-guard", () => ({
@@ -19,11 +20,12 @@ vi.mock("@/features/notifications/services/global-push", () => ({
 }));
 
 import { updateArticleAction } from "@/features/articles/actions/articles";
-import { updateArticleInDb } from "@/features/articles/db/articles";
+import { updateArticleInDb, getArticleById } from "@/features/articles/db/articles";
 import { requireActionRole } from "@/lib/action-guard";
 import { sendArticlePublishedNotification } from "@/features/notifications/services/global-push";
 
 const mockUpdateArticleInDb = vi.mocked(updateArticleInDb);
+const mockGetArticleById = vi.mocked(getArticleById);
 const mockRequireActionRole = vi.mocked(requireActionRole);
 const mockSendNotification = vi.mocked(sendArticlePublishedNotification);
 
@@ -43,6 +45,29 @@ describe("updateArticleAction notification guard", () => {
     vi.clearAllMocks();
     mockRequireActionRole.mockResolvedValue({ user: { id: "admin-1" } } as never);
     mockSendNotification.mockResolvedValue(undefined as never);
+    mockGetArticleById.mockResolvedValue({
+      id: VALID_ID,
+      title: "Test Article",
+      slug: "test-article",
+      language: "English",
+      titleEn: "Test Article",
+      titleMy: null,
+      titleTh: null,
+      titleKo: null,
+      content: "[]",
+      contentEn: "[]",
+      contentMy: null,
+      contentTh: null,
+      contentKo: null,
+      author: "",
+      category: "general",
+      coverImage: null,
+      isFeatured: false,
+      status: "draft",
+      publishDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   });
 
   // Reproduces the "Publish now" click: db layer reports a genuine draft -> published

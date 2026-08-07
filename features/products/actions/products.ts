@@ -13,7 +13,13 @@ import {
   deleteProductInDb,
   verifyProductInDb,
   unverifyProductInDb,
+  getProductById,
 } from "@/features/products/db/products"
+import {
+  buildLocalizedProductDescription,
+  isProductLanguage,
+  localizedDescriptionFieldsForLanguage,
+} from "@/features/products/services/localize-description"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
 import { user } from "@/drizzle/schema/auth-schema"
@@ -112,6 +118,16 @@ export async function createProductAction(formData: FormData) {
     effectiveSellerId = (String(formData.get("sellerId") ?? "").trim() || null) ?? session.user.id
   }
 
+  let localized: Awaited<ReturnType<typeof buildLocalizedProductDescription>>
+  try {
+    localized = await buildLocalizedProductDescription(
+      parsed.data.description?.trim() ?? "",
+    )
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Translation failed"
+    return { error: message }
+  }
+
   if (!isOwnProduct && (parsed.data.isFeatured ?? false) && (parsed.data.featured ?? 0) > 0) {
     const deduction = await deductUserPoints(effectiveSellerId, parsed.data.featured ?? 0)
     if (!deduction.success) {
@@ -122,7 +138,12 @@ export async function createProductAction(formData: FormData) {
   const productId = await createProductInDb({
     title: parsed.data.title,
     sku: parsed.data.sku,
-    description: parsed.data.description,
+    description: localized.description || null,
+    language: localized.sourceLanguage,
+    descriptionEn: localized.descriptionEn || null,
+    descriptionMy: localized.descriptionMy || null,
+    descriptionTh: localized.descriptionTh || null,
+    descriptionKo: localized.descriptionKo || null,
     identification: parsed.data.identification,
     price: parsed.data.price,
     currency: parsed.data.currency,
@@ -159,7 +180,7 @@ export async function createProductAction(formData: FormData) {
   })
 
   revalidateProductsCache(productId)
-  return { success: true, productId }
+  return { success: true, productId, language: localized.sourceLanguage }
 }
 
 export async function updateProductAction(formData: FormData) {
@@ -260,12 +281,29 @@ export async function updateProductAction(formData: FormData) {
     if (!ok) return { error: "Insufficient points balance" }
   }
 
+  const editLanguageRaw = emptyToNull(formData.get("editLanguage"))
+  const editLanguage = isProductLanguage(editLanguageRaw) ? editLanguageRaw : undefined
+  const previous = editLanguage
+    ? await getProductById(productId)
+    : null
+
+  const localizedDescription =
+    editLanguage && data.description !== undefined
+      ? localizedDescriptionFieldsForLanguage(
+          editLanguage,
+          data.description ?? "",
+          previous?.language,
+        )
+      : {
+          description: data.description,
+        }
+
   await updateProductInDb(
     productId,
     {
       title: data.title,
       sku: data.sku,
-      description: data.description,
+      ...localizedDescription,
       identification: data.identification,
       price: data.price,
       currency: data.currency,

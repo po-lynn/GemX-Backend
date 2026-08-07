@@ -6,6 +6,9 @@
 
 ## Recent changes
 
+- **Product description auto-translate (Google)** – On **admin product create** and **POST `/api/products`**, detects description language and translates into the other three of **English / Myanmar / Thai / Korean**. Stored on **`product`**: `language`, `descriptionEn/My/Th/Ko`. **Admin edit** uses a per-language dropdown (no re-translate on save), same pattern as news/articles. See [docs/api/products.md](./api/products.md) and [docs/guides/product-description-google-translate.md](./guides/product-description-google-translate.md).
+- **Articles auto-translate (Google)** – Same as news: on create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean**. Stored on **`articles`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/articles`** and **GET `/api/articles/:id`** accept optional **`lang`**. Admin edit uses a per-language dropdown (no re-translate on edit). See **7** and [docs/api/articles.md](./api/articles.md).
+- **News auto-translate (Google)** – On create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean** via **Google Cloud Translation API**. Stored on **`news`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/news`** and **GET `/api/news/:id`** accept optional **`lang`**. See **6** and [docs/api/news.md](./api/news.md).
 - **Premium dealer auto-renew toggle** – Added **PATCH `/api/mobile/premium-dealers/auto-renew`** (auth): toggles `autoRenew` on the current user's active premium dealer subscription. Body: `autoRenew`. Previously the "Turn off"/"Turn on" auto-renew pill on the "Become Premium" screen (already-premium state) was client-side only and never persisted — the daily renewal cron (`POST /api/cron/renew-premium-dealers`) would still renew using the value set at activation time regardless of what the pill showed. This endpoint makes the toggle actually persist. Returns **400** `{ "error": "No active premium dealer subscription" }` if the user has no active, non-expired subscription. See **5.4.3d**.
 - **Social login (mobile)** – **POST `/api/mobile/google-login`** has been replaced by **POST `/api/mobile/social-login`** (no auth — issues a session): mobile app sends `provider` + the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. Generic by `provider`, but only `"google"` is wired/verified today (unsupported providers return **400**). First-time sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). **New:** first-time sign-ins can also submit the Screen-1 profile fields (`name`, `country`, `state`, `city`, `address`, `gender`, `dateOfBirth`, `nrc`, KYC URLs) in the same call — written only on signup, never on a returning login; `nrc` is validated as a Myanmar NRC only when `country` is Myanmar or unset, otherwise stored as a plain passport/national ID. See **3.3**.
 - **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
@@ -145,8 +148,8 @@
 | DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
 | GET    | `/api/news`            | No   | List news. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                             |
 | GET    | `/api/news/:id`        | No   | Get single news by ID (published only). Includes `readTime`                                                                                                                                              |
-| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                         |
-| GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`                                                                                                                                           |
+| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status`, `search`, `category`, `featured`, `lang` (all optional). Returns `readTime` per item + `categoryCounts`                                                  |
+| GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`. Optional `lang`                                                                                                                          |
 | GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
 | GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
@@ -3412,6 +3415,7 @@ News items are managed in the admin; the mobile app can list and read **publishe
 | `search`   | string | —           | Case-insensitive match on title (search bar).                                                   |
 | `category` | string | —           | Filter chip: `general`, `market`, `gemology`, `guides`, or `product`. Invalid values = no filter. |
 | `featured` | string | —           | `true` returns only featured items (hero card); `false` returns only non-featured.              |
+| `lang`     | string | —           | Optional: `English` \| `Myanmar` \| `Thai` \| `Korean`. Remaps `title` and `content` from localized columns. |
 
 Invalid query values never return an error — they fall back to the defaults above.
 
@@ -3420,6 +3424,7 @@ Invalid query values never return an error — they fall back to the defaults ab
 - First page (published only): `GET /api/news`
 - With pagination: `GET /api/news?page=2&limit=10`
 - Featured hero card: `GET /api/news?featured=true&limit=1`
+- Localized Thai: `GET /api/news?lang=Thai`
 - Search within a category: `GET /api/news?search=ruby&category=market`
 - Drafts (if needed for internal use): `GET /api/news?status=draft`
 
@@ -3514,6 +3519,7 @@ Articles are managed in the admin; the mobile app can list and read **published*
 | `search`   | string | —           | Case-insensitive match on title (search bar).                                                   |
 | `category` | string | —           | Filter chip: `general`, `market`, `gemology`, `guides`, or `product`. Invalid values = no filter. |
 | `featured` | string | —           | `true` returns only featured items (hero card); `false` returns only non-featured.              |
+| `lang`     | string | —           | Optional: `English` \| `Myanmar` \| `Thai` \| `Korean`. Remaps `title` and `content` from localized columns. |
 
 Invalid query values never return an error — they fall back to the defaults above.
 
@@ -3523,6 +3529,7 @@ Invalid query values never return an error — they fall back to the defaults ab
 - With pagination: `GET /api/articles?page=2&limit=10`
 - Featured hero card: `GET /api/articles?featured=true&limit=1`
 - Search within a category: `GET /api/articles?search=gemstone&category=gemology`
+- Localized Thai: `GET /api/articles?lang=Thai`
 
 **Success (200):**
 
@@ -3533,7 +3540,16 @@ Invalid query values never return an error — they fall back to the defaults ab
       "id": "uuid",
       "title": "Article title",
       "slug": "article-slug",
+      "language": "English",
+      "titleEn": "Article title",
+      "titleMy": null,
+      "titleTh": null,
+      "titleKo": null,
       "content": "[]",
+      "contentEn": "[]",
+      "contentMy": null,
+      "contentTh": null,
+      "contentKo": null,
       "author": "Author name",
       "category": "gemology",
       "coverImage": "https://.../cover.jpg",
@@ -3553,11 +3569,12 @@ Invalid query values never return an error — they fall back to the defaults ab
 - **articles:** Array of articles (ordered by publishDate, newest first; falls back to createdAt when publishDate is null).
 - **total:** Total number of items matching the filter (for pagination).
 - **categoryCounts:** Published-article count per category plus `all`, for the filter chips. Not affected by `search`/`featured`. Categories with zero items are omitted.
+- **language / title\* / content\*:** Source locale and localized title/body columns (same pattern as news).
 - **category:** One of `general`, `market`, `gemology`, `guides`, `product` (category badge).
 - **coverImage:** Cover image URL or `null` (16:9 cover / thumbnail).
 - **isFeatured:** `true` for the hero card item.
 - **readTime:** Estimated reading time in whole minutes (computed server-side at 200 wpm, minimum 1) — render as "4 min read".
-- **content:** Stored as JSON (e.g. BlockNote document); parse in the app for rich text.
+- **content:** Stored as JSON (e.g. BlockNote document); parse in the app for rich text. With `?lang=`, remapped from the matching `content*` column when present.
 - **slug:** URL-friendly identifier; can be used for SEO or detail routes.
 
 ---
@@ -3568,16 +3585,27 @@ Invalid query values never return an error — they fall back to the defaults ab
 
 **Auth:** Not required.
 
+**Query:** optional `lang` (`English` \| `Myanmar` \| `Thai` \| `Korean`) — remaps `title` and `content`.
+
 Returns a single published article by ID. Draft items return **404**.
 
-**Success (200):** Single article object (same shape as list items, including `readTime`).
+**Success (200):** Single article object (same shape as list items, including `readTime` and localized fields).
 
 ```json
 {
   "id": "uuid",
   "title": "Article title",
   "slug": "article-slug",
+  "language": "English",
+  "titleEn": "Article title",
+  "titleMy": null,
+  "titleTh": null,
+  "titleKo": null,
   "content": "[]",
+  "contentEn": "[]",
+  "contentMy": null,
+  "contentTh": null,
+  "contentKo": null,
   "author": "Author name",
   "category": "gemology",
   "coverImage": "https://.../cover.jpg",
