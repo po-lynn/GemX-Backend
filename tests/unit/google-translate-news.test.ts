@@ -85,6 +85,7 @@ describe("localizedFieldsForLanguage", () => {
   })
 })
 
+describe("buildLocalizedNews", () => {
   const originalFetch = global.fetch
 
   beforeEach(() => {
