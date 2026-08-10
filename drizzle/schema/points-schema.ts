@@ -68,10 +68,10 @@ export const pointPurchaseRequest = pgTable(
 
 /**
  * Unified ledger of all point movements per user.
- * type: "topup" | "premium_activation" | "feature_activation" | "registration_bonus" | "admin_adjustment"
+ * type: "topup" | "premium_activation" | "feature_activation" | "registration_bonus" | "monthly_bonus" | "admin_adjustment"
  * direction: "credit" | "debit"
  * status: "completed" | "pending" | "cancelled" | "rejected"
- * referenceType: "purchase_request" | "premium_package" | "product" | "registration"
+ * referenceType: "purchase_request" | "premium_package" | "product" | "registration" | "monthly_bonus"
  */
 export const pointTransaction = pgTable(
   "point_transaction",

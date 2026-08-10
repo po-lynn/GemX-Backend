@@ -1458,7 +1458,7 @@ export async function getPointTransactionsPaginated(opts: {
 
   const filterCondition =
     filter === "topups"
-      ? and(or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      ? and(or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus"), eq(pointTransaction.type, "monthly_bonus")), eq(pointTransaction.status, "completed"))
       : filter === "spent"
       ? and(eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
       : filter === "pending"
@@ -1514,7 +1514,7 @@ export async function getPointTransactionCounts(): Promise<{
   for (const r of rows) {
     all++
     if (r.status === "pending") pending++
-    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus" || r.type === "monthly_bonus")) topups++
     else if (r.status === "completed" && r.direction === "debit") spent++
   }
   return { all, topups, spent, pending }
@@ -1532,7 +1532,7 @@ export async function getUserPointTransactionCounts(
   for (const r of rows) {
     all++;
     if (r.status === "pending") pending++;
-    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++;
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus" || r.type === "monthly_bonus")) topups++;
     else if (r.status === "completed" && r.direction === "debit") spent++;
   }
   return { all, topups, spent, pending };
@@ -1547,7 +1547,7 @@ export async function getUserPointHistory(
 
   const filterCondition =
     filter === "topups"
-      ? and(eq(pointTransaction.userId, userId), or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      ? and(eq(pointTransaction.userId, userId), or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus"), eq(pointTransaction.type, "monthly_bonus")), eq(pointTransaction.status, "completed"))
       : filter === "spent"
       ? and(eq(pointTransaction.userId, userId), eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
       : filter === "pending"
