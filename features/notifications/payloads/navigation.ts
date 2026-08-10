@@ -1,6 +1,6 @@
 import type { NotificationScreen } from "@/features/notifications/types";
 
-/** FCM `data` keys the Flutter app reads for notification tap navigation. */
+/** FCM `data` keys the mobile app reads for notification tap navigation. */
 const FCM_DATA_KEYS = {
   type: "type",
   screen: "screen",
@@ -23,7 +23,7 @@ export type NavigationDataInput = {
 };
 
 /**
- * Build FCM data payload for notification-click routing in Flutter.
+ * Build FCM data payload for notification-click routing in the mobile app.
  * All values are strings (FCM requirement).
  */
 export function buildNavigationData(input: NavigationDataInput): Record<string, string> {

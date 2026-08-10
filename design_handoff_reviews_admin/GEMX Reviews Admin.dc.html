@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: Outfit, system-ui, sans-serif; -webkit-font-smoothing: antialiased; background: #F7F7F9; color: #18181B; }
+  a { color: #7C3AED; text-decoration: none; }
+  a:hover { color: #6D28D9; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #D9D9E0; border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
+  @keyframes slideUp { from { transform: translateY(14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+</style>
+</helmet>
+
+<div style="display: flex; height: 100vh; min-width: 1320px; overflow: hidden; background: #F7F7F9;">
+
+  <!-- SIDEBAR -->
+  <aside style="width: 264px; flex: 0 0 264px; background: #FFFFFF; border-right: 1px solid #EDEDF0; display: flex; flex-direction: column; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 20px 22px 22px;">
+      <div style="width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #E9D8FD; display: flex; align-items: center; justify-content: center; color: #7C3AED; font-size: 15px;">◈</div>
+      <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em;">GemX</div>
+      <div style="flex: 1;"></div>
+      <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #7C3AED; background: #F3EBFF; border-radius: 6px; padding: 4px 8px;">ADMIN</span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; padding: 0 14px 20px;">
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #7C3AED; font-size: 14px; width: 18px;">▦</span>Dashboard
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 20px 12px 8px;">
+        <span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; color: #A1A1AA;">MASTER DATA</span>
+        <div style="flex: 1;"></div>
+        <span style="color: #C4C4CC; font-size: 11px;">⌄</span>
+      </div>
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #6366F1; font-size: 14px; width: 18px;">◰</span>Products
+      </button>
+      <button onClick="{{ toggleConfig }}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #7C3AED; font-size: 14px; width: 18px;">⚙</span><span style="flex: 1;">Configuration</span><span style="color: #C4C4CC; font-size: 11px;">{{ configChevron }}</span>
+      </button>
+      <sc-if value="{{ configOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; margin-left: 22px; padding-left: 12px; border-left: 1px solid #EDEDF0;">
+          <sc-for list="{{ configItems }}" as="c" hint-placeholder-count="5">
+            <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #52525B;" style-hover="background: #F7F7F9;">
+              <span style="color: {{ c.color }}; font-size: 13px; width: 16px;">{{ c.icon }}</span>{{ c.label }}
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 20px 12px 8px;">
+        <span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; color: #A1A1AA;">TRUST &amp; REPUTATION</span>
+        <div style="flex: 1;"></div>
+        <span style="color: #C4C4CC; font-size: 11px;">⌄</span>
+      </div>
+      <button onClick="{{ toggleReviews }}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 600; color: {{ reviewsParentFg }}; background: {{ reviewsParentBg }};" style-hover="background: #F3EBFF;">
+        <span style="color: #7C3AED; font-size: 14px; width: 18px;">★</span><span style="flex: 1;">Reviews</span>
+        <span style="font-size: 10.5px; font-weight: 600; color: #DC2626; background: #FEE2E2; border-radius: 6px; padding: 2px 7px;">38</span>
+        <span style="color: #C4C4CC; font-size: 11px;">{{ reviewsChevron }}</span>
+      </button>
+      <sc-if value="{{ reviewsOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; margin-left: 22px; padding-left: 12px; border-left: 1px solid #EDEDF0;">
+          <sc-for list="{{ reviewItems }}" as="n" hint-placeholder-count="6">
+            <button onClick="{{ n.go }}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 9px; font-size: 14px; font-weight: {{ n.weight }}; color: {{ n.fg }}; background: {{ n.bg }};" style-hover="background: #F3EBFF;">
+              <span style="color: {{ n.iconFg }}; font-size: 13px; width: 16px;">{{ n.icon }}</span><span style="flex: 1;">{{ n.label }}</span>
+              <sc-if value="{{ n.count }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size: 10.5px; font-weight: 600; color: {{ n.pillFg }}; background: {{ n.pillBg }}; border-radius: 6px; padding: 2px 6px;">{{ n.count }}</span>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 20px 12px 8px;">
+        <span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; color: #A1A1AA;">REQUESTS</span>
+        <div style="flex: 1;"></div>
+        <span style="color: #C4C4CC; font-size: 11px;">⌄</span>
+      </div>
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #F59E0B; font-size: 14px; width: 18px;">▤</span>Payment Transactions
+      </button>
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #F59E0B; font-size: 14px; width: 18px;">◉</span>Collector Requests
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 8px; padding: 20px 12px 8px;">
+        <span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; color: #A1A1AA;">COMMUNICATION</span>
+        <div style="flex: 1;"></div>
+        <span style="color: #C4C4CC; font-size: 11px;">⌄</span>
+      </div>
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #6366F1; font-size: 14px; width: 18px;">✉</span><span style="flex: 1;">Messages</span>
+        <span style="font-size: 10.5px; font-weight: 600; color: #FFFFFF; background: #DC2626; border-radius: 99px; padding: 2px 7px;">3</span>
+      </button>
+      <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+        <span style="color: #EC4899; font-size: 14px; width: 18px;">☺</span>Users
+      </button>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+
+    <header style="height: 64px; flex: 0 0 64px; background: #FFFFFF; border-bottom: 1px solid #EDEDF0; display: flex; align-items: center; gap: 16px; padding: 0 26px;">
+      <div>
+        <div style="font-size: 15px; font-weight: 600;">Admin Panel</div>
+        <div style="font-size: 12px; color: #71717A;">GemX Marketplace</div>
+      </div>
+      <div style="flex: 1;"></div>
+      <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 14px; width: 300px; border: 1px solid #EDEDF0; border-radius: 10px; background: #FBFBFC;" style-focus="border-color: #C4B5FD;">
+        <span style="color: #A1A1AA; font-size: 13px;">⌕</span>
+        <input placeholder="Search sellers, buyers, reviews…" style="all: unset; flex: 1; font-family: Outfit, sans-serif; font-size: 13.5px; color: #18181B;" />
+        <span style="font-size: 11px; color: #A1A1AA;">⌘K</span>
+      </div>
+      <button style="all: unset; cursor: pointer; position: relative; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #52525B;" style-hover="background: #F7F7F9;">
+        ⌂
+        <span style="position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; border-radius: 99px; background: #DC2626; color: #FFF; font-size: 9.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFF;">5</span>
+      </button>
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <div style="width: 30px; height: 30px; border-radius: 50%; background: #F3EBFF; color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 600;">A</div>
+        <span style="font-size: 14px; font-weight: 500; color: #3F3F46;">Admin</span>
+        <span style="color: #A1A1AA; font-size: 11px;">⌄</span>
+      </div>
+    </header>
+
+    <main style="flex: 1; overflow-y: auto; padding: 22px 26px 44px;">
+
+      <!-- PAGE HEADER -->
+      <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px;">
+        <div style="min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #A1A1AA; margin-bottom: 8px;">
+            <span>Admin</span><span>›</span><span>Reviews</span><span>›</span><span style="color: #52525B;">{{ crumb }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h1 style="margin: 0; font-size: 25px; font-weight: 600; letter-spacing: -0.02em;">{{ pageTitle }}</h1>
+            <span style="font-size: 12.5px; font-weight: 600; color: #7C3AED; background: #F3EBFF; border-radius: 8px; padding: 4px 10px;">{{ pageCount }}</span>
+          </div>
+          <div style="font-size: 14px; color: #71717A; margin-top: 6px; max-width: 720px; text-wrap: pretty;">{{ pageSub }}</div>
+        </div>
+        <div style="flex: 1;"></div>
+        <div style="display: flex; gap: 10px; padding-top: 28px;">
+          <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 15px; border: 1px solid #EDEDF0; border-radius: 10px; background: #FFF; font-size: 13.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">
+            <span style="font-size: 12px; color: #71717A;">⤓</span>Export Excel
+          </button>
+          <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 10px; background: #7C3AED; color: #FFF; font-size: 13.5px; font-weight: 600;" style-hover="background: #6D28D9;">
+            <span style="font-size: 13px;">＋</span>{{ primaryCta }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ OVERVIEW ============ -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 16px; animation: fadeIn 0.25s ease;">
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 18px 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 13px; font-weight: 500; color: #71717A;">{{ k.label }}</span>
+                  <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 7px; background: {{ k.deltaBg }}; color: {{ k.deltaFg }};">{{ k.delta }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 7px; margin-top: 12px;">
+                  <span style="font-size: 30px; font-weight: 600; letter-spacing: -0.03em;">{{ k.value }}</span>
+                  <span style="font-size: 13px; font-weight: 500; color: #A1A1AA;">{{ k.unit }}</span>
+                </div>
+                <div style="font-size: 12.5px; color: #71717A; margin-top: 6px;">{{ k.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px;">
+            <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 20px 22px 16px;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 15.5px; font-weight: 600;">Buyer reviews received</div>
+                  <div style="font-size: 12.5px; color: #71717A; margin-top: 3px;">Daily, last 30 days · reviews publish immediately</div>
+                </div>
+                <div style="display: flex; gap: 14px;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #52525B;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #8B5CF6;"></span>4–5 ★</div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #52525B;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #FCA5A5;"></span>1–2 ★</div>
+                </div>
+              </div>
+              <div style="height: 200px; margin-top: 20px; display: flex; align-items: flex-end; gap: 5px;">
+                <sc-for list="{{ trend }}" as="t" hint-placeholder-count="30">
+                  <div title="{{ t.tip }}" style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 100%;" style-hover="opacity: 0.75;">
+                    <div style="height: {{ t.low }}; background: #FCA5A5; border-radius: 3px 3px 0 0;"></div>
+                    <div style="height: {{ t.pos }}; background: linear-gradient(180deg, #A78BFA, #7C3AED); border-radius: 0 0 3px 3px;"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #F4F4F6; font-size: 11.5px; color: #A1A1AA;">
+                <span>Jul 06</span><span>Jul 13</span><span>Jul 20</span><span>Jul 27</span><span>Aug 04</span>
+              </div>
+            </div>
+
+            <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 20px 22px;">
+              <div style="font-size: 15.5px; font-weight: 600;">Rating distribution</div>
+              <div style="font-size: 12.5px; color: #71717A; margin-top: 3px;">All buyer reviews, marketplace-wide</div>
+              <div style="display: flex; align-items: center; gap: 20px; margin: 18px 0 16px;">
+                <div>
+                  <div style="font-size: 38px; font-weight: 600; letter-spacing: -0.035em; line-height: 1;">4.32</div>
+                  <div style="color: #F59E0B; font-size: 14px; letter-spacing: 1px; margin-top: 5px;">★★★★<span style="color: #E4E4E7;">★</span></div>
+                  <div style="font-size: 12.5px; color: #71717A; margin-top: 5px;">142,806 reviews</div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                  <sc-for list="{{ dist }}" as="d" hint-placeholder-count="5">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 12px; font-weight: 500; color: #71717A; width: 8px;">{{ d.stars }}</span>
+                      <span style="color: #F59E0B; font-size: 10px;">★</span>
+                      <div style="flex: 1; height: 7px; border-radius: 99px; background: #F4F4F6; overflow: hidden;">
+                        <div style="height: 100%; width: {{ d.pct }}; background: {{ d.color }}; border-radius: 99px;"></div>
+                      </div>
+                      <span style="font-size: 11.5px; color: #71717A; width: 34px; text-align: right;">{{ d.pct }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="border-top: 1px solid #F4F4F6; padding-top: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <span style="font-size: 12.5px; font-weight: 600; color: #71717A;">RATING TAG USAGE</span>
+                  <span style="font-size: 12px; color: #A1A1AA;">3 tags active</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 9px;">
+                  <sc-for list="{{ tags }}" as="t" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; border: 1px solid {{ t.border }}; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 12.5px; font-weight: 500;"><span style="font-size: 10px;">{{ t.icon }}</span>{{ t.label }}</span>
+                      <div style="flex: 1; height: 6px; border-radius: 99px; background: #F4F4F6; overflow: hidden;">
+                        <div style="height: 100%; width: {{ t.pct }}; background: {{ t.bar }};"></div>
+                      </div>
+                      <span style="font-size: 12px; color: #71717A; width: 46px; text-align: right;">{{ t.n }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px;">
+            <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 15px; border-bottom: 1px solid #F4F4F6;">
+                <div>
+                  <div style="font-size: 15.5px; font-weight: 600;">Sellers at risk of archiving</div>
+                  <div style="font-size: 12.5px; color: #71717A; margin-top: 3px;">Rating below threshold or sustained negative reviews</div>
+                </div>
+                <button onClick="{{ goCases }}" style="all: unset; cursor: pointer; font-size: 13px; font-weight: 600; color: #7C3AED;" style-hover="text-decoration: underline;">Open cases →</button>
+              </div>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #FBFBFC;">
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 10px 22px;">SELLER</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 10px 12px;">RATING</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 10px 12px;">30D CHANGE</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 10px 12px;">1–2★ SHARE</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 10px 22px;">TRIGGER</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ watchlist }}" as="w" hint-placeholder-count="5">
+                    <tr style="border-top: 1px solid #F4F4F6;" style-hover="background: #FBFBFC;">
+                      <td style="padding: 12px 22px;">
+                        <div style="display: flex; align-items: center; gap: 11px;">
+                          <div style="width: 30px; height: 30px; border-radius: 9px; background: {{ w.avBg }}; color: {{ w.avFg }}; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600;">{{ w.initials }}</div>
+                          <div>
+                            <div style="font-size: 13.5px; font-weight: 500;">{{ w.name }}</div>
+                            <div style="font-size: 11.5px; color: #A1A1AA;">{{ w.id }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                          <span style="color: #F59E0B; font-size: 11px;">★</span>
+                          <span style="font-size: 13.5px;">{{ w.rating }}</span>
+                          <span style="font-size: 12px; color: #A1A1AA;">{{ w.reviews }}</span>
+                        </div>
+                      </td>
+                      <td style="padding: 12px;"><span style="font-size: 13px; font-weight: 500; color: {{ w.changeFg }};">{{ w.change }}</span></td>
+                      <td style="padding: 12px; font-size: 13px;">{{ w.lowShare }}</td>
+                      <td style="padding: 12px 22px;"><span style="font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ w.sigBg }}; color: {{ w.sigFg }};">{{ w.signal }}</span></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 20px 22px;">
+                <div style="font-size: 15.5px; font-weight: 600;">Case pipeline</div>
+                <div style="display: flex; flex-direction: column; gap: 13px; margin-top: 17px;">
+                  <sc-for list="{{ workload }}" as="q" hint-placeholder-count="4">
+                    <div>
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-size: 13.5px; color: #52525B;">{{ q.label }}</span>
+                        <span style="font-size: 13px; font-weight: 500; color: {{ q.fg }};">{{ q.value }}</span>
+                      </div>
+                      <div style="height: 6px; border-radius: 99px; background: #F4F4F6; overflow: hidden;">
+                        <div style="height: 100%; width: {{ q.pct }}; background: {{ q.fg }}; border-radius: 99px;"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 20px 22px; flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <div style="font-size: 15.5px; font-weight: 600;">Recent admin actions</div>
+                  <button onClick="{{ goAudit }}" style="all: unset; cursor: pointer; font-size: 13px; font-weight: 600; color: #7C3AED;" style-hover="text-decoration: underline;">Audit log →</button>
+                </div>
+                <div style="display: flex; flex-direction: column; margin-top: 14px;">
+                  <sc-for list="{{ activity }}" as="a" hint-placeholder-count="4">
+                    <div style="display: flex; gap: 11px; padding: 10px 0; border-bottom: 1px solid #F4F4F6;">
+                      <div style="width: 7px; height: 7px; border-radius: 50%; background: {{ a.dot }}; margin-top: 6px; flex: 0 0 7px;"></div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 13.5px; color: #3F3F46; line-height: 1.45;">{{ a.text }}</div>
+                        <div style="font-size: 12px; color: #A1A1AA; margin-top: 3px;">{{ a.meta }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ REPUTATION CASES ============ -->
+      <sc-if value="{{ isCases }}" hint-placeholder-val="{{ false }}">
+        <div style="animation: fadeIn 0.25s ease;">
+          <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 26px; padding: 0 20px; border-bottom: 1px solid #F4F4F6;">
+              <sc-for list="{{ caseTabs }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.go }}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 15px 2px; border-bottom: 2px solid {{ t.border }}; font-size: 14px; font-weight: {{ t.weight }}; color: {{ t.fg }};" style-hover="color: #7C3AED;">
+                  {{ t.label }}<span style="font-size: 11.5px; font-weight: 600; color: {{ t.pillFg }}; background: {{ t.pillBg }}; border-radius: 6px; padding: 2px 7px;">{{ t.count }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 14px 20px;">
+              <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 13px; width: 300px; border: 1px solid #EDEDF0; border-radius: 10px; background: #FBFBFC;" style-focus="border-color: #C4B5FD;">
+                <span style="color: #A1A1AA; font-size: 13px;">⌕</span>
+                <input placeholder="Search…" style="all: unset; flex: 1; font-family: Outfit, sans-serif; font-size: 13.5px; color: #18181B;" />
+                <span style="font-size: 11px; color: #A1A1AA;">⌘K</span>
+              </div>
+              <div style="width: 1px; height: 24px; background: #EDEDF0; margin: 0 4px;"></div>
+              <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 13px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;"><span style="color: #71717A; font-size: 12px;">⚟</span>Filter<span style="color: #A1A1AA; font-size: 11px;">⌄</span></button>
+              <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 13px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;"><span style="color: #71717A; font-size: 12px;">◫</span>Group<span style="color: #A1A1AA; font-size: 11px;">⌄</span></button>
+              <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 10px; background: #7C3AED; color: #FFF; font-size: 13.5px; font-weight: 600;" style-hover="background: #6D28D9;"><span style="font-size: 12px;">⇅</span>Sort: Severity<span style="opacity: 0.8; font-size: 11px;">⌄</span></button>
+              <div style="flex: 1;"></div>
+              <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 13px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;"><span style="color: #71717A; font-size: 12px;">▥</span>Columns</button>
+              <button style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 13px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;"><span style="color: #71717A; font-size: 12px;">⤓</span>Export<span style="color: #A1A1AA; font-size: 11px;">⌄</span></button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 11px 20px; border-top: 1px solid #F4F4F6; background: #FBFBFC; border-radius: 0 0 14px 14px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA;">ACTIVE</span>
+              <span style="display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border: 1px solid #EDEDF0; border-radius: 8px; background: #FFF; font-size: 12.5px; color: #52525B;">Sort <span style="color: #A1A1AA;">by</span> <span style="font-weight: 600; color: #18181B;">Severity · descending</span><span style="color: #A1A1AA; cursor: pointer;">✕</span></span>
+              <span style="display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border: 1px solid #EDEDF0; border-radius: 8px; background: #FFF; font-size: 12.5px; color: #52525B;">Status <span style="color: #A1A1AA;">is</span> <span style="font-weight: 600; color: #18181B;">Open</span><span style="color: #A1A1AA; cursor: pointer;">✕</span></span>
+              <div style="flex: 1;"></div>
+              <button style="all: unset; cursor: pointer; font-size: 12.5px; font-weight: 500; color: #7C3AED;" style-hover="text-decoration: underline;">Clear all</button>
+            </div>
+          </div>
+
+          <sc-if value="{{ selectionCount }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-radius: 12px; background: #2E1065; margin-bottom: 16px; animation: slideUp 0.18s ease;">
+              <span style="font-size: 13.5px; font-weight: 600; color: #F5F3FF;">{{ selectionLabel }}</span>
+              <div style="flex: 1;"></div>
+              <button onClick="{{ bulkArchive }}" style="all: unset; cursor: pointer; height: 32px; padding: 0 13px; border-radius: 9px; background: #DC2626; color: #FFF; font-size: 12.5px; font-weight: 600;" style-hover="background: #B91C1C;">Archive selected</button>
+              <button onClick="{{ bulkDismiss }}" style="all: unset; cursor: pointer; height: 32px; padding: 0 13px; border-radius: 9px; border: 1px solid #5B21B6; color: #EDE9FE; font-size: 12.5px; font-weight: 600;" style-hover="background: #4C1D95;">Dismiss flags</button>
+              <button onClick="{{ clearSelection }}" style="all: unset; cursor: pointer; height: 32px; padding: 0 10px; font-size: 12.5px; font-weight: 500; color: #C4B5FD;" style-hover="color: #FFF;">Clear</button>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; gap: 16px; align-items: flex-start;">
+            <div style="flex: 1; min-width: 0; background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #F4F4F6;">
+                    <th style="width: 44px; padding: 12px 0 12px 20px;"><input type="checkbox" checked="{{ allSelected }}" onChange="{{ toggleAll }}" style="width: 15px; height: 15px; accent-color: #7C3AED; cursor: pointer;" /></th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">SELLER &amp; WHY IT WAS FLAGGED</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 130px;">RATING</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 124px;">NEGATIVE MIX</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 128px;">SEVERITY</th>
+                    <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 104px;">OPEN FOR</th>
+                    <th style="text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px; width: 178px;">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+                    <tr onClick="{{ r.open }}" style="border-bottom: 1px solid #F4F4F6; cursor: pointer; background: {{ r.rowBg }};" style-hover="background: #FBFBFC;">
+                      <td onClick="{{ r.stop }}" style="padding: 15px 0 15px 20px; vertical-align: top;"><input type="checkbox" checked="{{ r.checked }}" onChange="{{ r.toggle }}" style="width: 15px; height: 15px; accent-color: #7C3AED; cursor: pointer;" /></td>
+                      <td style="padding: 13px 12px; vertical-align: top;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <div style="width: 28px; height: 28px; border-radius: 9px; background: {{ r.avBg }}; color: {{ r.avFg }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">{{ r.initials }}</div>
+                          <span style="font-size: 14px; font-weight: 600;">{{ r.seller }}</span>
+                          <span style="font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 6px; background: {{ r.tierBg }}; color: {{ r.tierFg }};">{{ r.tier }}</span>
+                          <span style="font-size: 11.5px; color: #A1A1AA;">{{ r.id }}</span>
+                        </div>
+                        <div style="font-size: 13.5px; color: #52525B; line-height: 1.5; margin-top: 6px; max-width: 520px; text-wrap: pretty;">{{ r.summary }}</div>
+                        <div style="display: flex; gap: 7px; margin-top: 8px;">
+                          <sc-for list="{{ r.tags }}" as="tg" hint-placeholder-count="2">
+                            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 99px; border: 1px solid {{ tg.border }}; background: {{ tg.bg }}; color: {{ tg.fg }};"><span style="font-size: 9px;">{{ tg.icon }}</span>{{ tg.label }}</span>
+                          </sc-for>
+                        </div>
+                      </td>
+                      <td style="padding: 13px 12px; vertical-align: top;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                          <span style="font-size: 14.5px; font-weight: 500;">{{ r.rating }}</span>
+                          <span style="color: #F59E0B; font-size: 11px;">★</span>
+                          <span style="font-size: 12px; font-weight: 600; color: {{ r.changeFg }};">{{ r.change }}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #A1A1AA; margin-top: 4px;">{{ r.reviews }} reviews</div>
+                      </td>
+                      <td style="padding: 16px 12px; vertical-align: top;">
+                        <div style="display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: #F4F4F6;">
+                          <div style="width: {{ r.d5 }}; background: #7C3AED;"></div>
+                          <div style="width: {{ r.d4 }}; background: #A78BFA;"></div>
+                          <div style="width: {{ r.d3 }}; background: #FCD34D;"></div>
+                          <div style="width: {{ r.d2 }}; background: #FB923C;"></div>
+                          <div style="width: {{ r.d1 }}; background: #DC2626;"></div>
+                        </div>
+                        <div style="font-size: 12px; color: #B91C1C; margin-top: 7px;">{{ r.lowShare }} at 1–2★</div>
+                      </td>
+                      <td style="padding: 13px 12px; vertical-align: top;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ r.sevBg }}; color: {{ r.sevFg }};"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{ r.sevFg }};"></span>{{ r.severity }}</span>
+                        <div style="font-size: 12px; color: #71717A; margin-top: 6px;">{{ r.trigger }}</div>
+                      </td>
+                      <td style="padding: 13px 12px; vertical-align: top;">
+                        <div style="font-size: 13.5px; color: {{ r.slaFg }};">{{ r.openFor }}</div>
+                        <div style="font-size: 12px; color: #A1A1AA; margin-top: 3px;">{{ r.sla }}</div>
+                      </td>
+                      <td onClick="{{ r.stop }}" style="padding: 13px 20px; vertical-align: top;">
+                        <div style="display: flex; justify-content: flex-end; gap: 7px;">
+                          <button onClick="{{ r.archive }}" style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 8px; background: #FEE2E2; color: #B91C1C; font-size: 12.5px; font-weight: 600;" style-hover="background: #DC2626; color: #FFF;">Archive</button>
+                          <button onClick="{{ r.dismiss }}" style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 8px; background: #F4F4F6; color: #3F3F46; font-size: 12.5px; font-weight: 600;" style-hover="background: #E4E4E7;">Dismiss</button>
+                          <button onClick="{{ r.openBtn }}" style="all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #EDEDF0; color: #71717A; font-size: 13px; display: flex; align-items: center; justify-content: center;" style-hover="background: #F7F7F9;">›</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #FBFBFC; border-top: 1px solid #F4F4F6;">
+                <span style="font-size: 12.5px; color: #71717A;">{{ pageLabel }}</span>
+                <div style="display: flex; gap: 7px;">
+                  <button style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 8px; background: #FFF; font-size: 12.5px; font-weight: 500; color: #A1A1AA;">Previous</button>
+                  <button style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 8px; background: #FFF; font-size: 12.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Next</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- CASE PANEL -->
+            <sc-if value="{{ selected }}" hint-placeholder-val="{{ true }}">
+              <aside style="width: 392px; flex: 0 0 392px; background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; position: sticky; top: 0; max-height: calc(100vh - 128px); overflow-y: auto; animation: slideUp 0.2s ease;">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #F4F4F6;">
+                  <div style="display: flex; align-items: center; gap: 9px;">
+                    <span style="font-size: 14.5px; font-weight: 600;">Reputation case</span>
+                    <span style="font-size: 11.5px; color: #A1A1AA;">{{ selected.caseId }}</span>
+                  </div>
+                  <button onClick="{{ closePanel }}" style="all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 8px; color: #71717A; display: flex; align-items: center; justify-content: center; font-size: 14px;" style-hover="background: #F7F7F9;">✕</button>
+                </div>
+
+                <div style="padding: 18px 20px; border-bottom: 1px solid #F4F4F6;">
+                  <div style="display: flex; align-items: center; gap: 11px;">
+                    <div style="width: 38px; height: 38px; border-radius: 11px; background: {{ selected.avBg }}; color: {{ selected.avFg }}; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 600;">{{ selected.initials }}</div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 14.5px; font-weight: 600;">{{ selected.seller }}</div>
+                      <div style="font-size: 12.5px; color: #71717A;">{{ selected.sellerMeta }}</div>
+                    </div>
+                    <span style="font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ selected.sevBg }}; color: {{ selected.sevFg }};">{{ selected.severity }}</span>
+                  </div>
+                  <div style="display: flex; gap: 18px; margin-top: 16px;">
+                    <div>
+                      <div style="font-size: 24px; font-weight: 600; letter-spacing: -0.03em;">{{ selected.rating }}</div>
+                      <div style="color: #F59E0B; font-size: 12px; letter-spacing: 1px;">{{ selected.filled }}<span style="color: #E4E4E7;">{{ selected.empty }}</span></div>
+                      <div style="font-size: 12px; color: #A1A1AA; margin-top: 3px;">{{ selected.reviews }} reviews</div>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 5px; padding-top: 3px;">
+                      <sc-for list="{{ selected.dist }}" as="d" hint-placeholder-count="5">
+                        <div style="display: flex; align-items: center; gap: 7px;">
+                          <span style="font-size: 11px; color: #71717A; width: 7px;">{{ d.stars }}</span>
+                          <div style="flex: 1; height: 6px; border-radius: 99px; background: #F4F4F6; overflow: hidden;">
+                            <div style="height: 100%; width: {{ d.pct }}; background: {{ d.color }};"></div>
+                          </div>
+                          <span style="font-size: 11px; color: #A1A1AA; width: 30px; text-align: right;">{{ d.pct }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="padding: 18px 20px; border-bottom: 1px solid #F4F4F6;">
+                  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #A1A1AA; margin-bottom: 11px;">WHY THIS SELLER IS FLAGGED</div>
+                  <div style="display: flex; flex-direction: column; gap: 9px;">
+                    <sc-for list="{{ selected.signals }}" as="s" hint-placeholder-count="4">
+                      <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px; border-radius: 10px; background: {{ s.bg }};">
+                        <span style="font-size: 12px; color: {{ s.fg }};">{{ s.icon }}</span>
+                        <div style="flex: 1;">
+                          <div style="font-size: 13px; font-weight: 500; color: #27272A;">{{ s.label }}</div>
+                          <div style="font-size: 12.5px; color: #71717A; margin-top: 2px; line-height: 1.45;">{{ s.detail }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="padding: 18px 20px; border-bottom: 1px solid #F4F4F6;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px;">
+                    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #A1A1AA;">RECENT BUYER REVIEWS</span>
+                    <span style="font-size: 12px; color: #A1A1AA;">read only</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <sc-for list="{{ selected.recent }}" as="rev" hint-placeholder-count="3">
+                      <div style="border: 1px solid #F4F4F6; border-radius: 11px; padding: 11px 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span style="color: #F59E0B; font-size: 11px; letter-spacing: 0.5px;">{{ rev.filled }}<span style="color: #E4E4E7;">{{ rev.empty }}</span></span>
+                          <span style="font-size: 12.5px; font-weight: 500; color: #27272A;">{{ rev.buyer }}</span>
+                          <div style="flex: 1;"></div>
+                          <span style="font-size: 11.5px; color: #A1A1AA;">{{ rev.when }}</span>
+                        </div>
+                        <div style="font-size: 12.5px; color: #52525B; line-height: 1.5; margin-top: 7px;">{{ rev.text }}</div>
+                        <div style="display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap;">
+                          <sc-for list="{{ rev.tags }}" as="tg" hint-placeholder-count="1">
+                            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 99px; border: 1px solid {{ tg.border }}; background: {{ tg.bg }}; color: {{ tg.fg }};"><span style="font-size: 9px;">{{ tg.icon }}</span>{{ tg.label }}</span>
+                          </sc-for>
+                          <span style="font-size: 11.5px; color: #A1A1AA;">{{ rev.meta }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="padding: 18px 20px; border-bottom: 1px solid #F4F4F6;">
+                  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #A1A1AA; margin-bottom: 11px;">SELLER RECORD</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 11px 12px;">
+                    <sc-for list="{{ selected.context }}" as="c" hint-placeholder-count="4">
+                      <div>
+                        <div style="font-size: 11.5px; color: #A1A1AA;">{{ c.k }}</div>
+                        <div style="font-size: 13px; font-weight: 500; color: #27272A; margin-top: 3px;">{{ c.v }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="padding: 18px 20px;">
+                  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #A1A1AA; margin-bottom: 10px;">DECISION</div>
+                  <div style="display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA; margin-bottom: 11px;">
+                    <span style="color: #B91C1C; font-size: 12px;">!</span>
+                    <div style="font-size: 12.5px; color: #991B1B; line-height: 1.45;">Archiving hides the seller’s profile and all {{ selected.listings }} listings from buyers. Reviews stay attached to the record.</div>
+                  </div>
+                  <textarea placeholder="Reason for the decision (stored in the audit log)…" style="width: 100%; height: 64px; resize: none; border: 1px solid #EDEDF0; border-radius: 10px; padding: 10px 11px; font-family: Outfit, sans-serif; font-size: 13px; color: #27272A; background: #FBFBFC;" style-focus="border-color: #C4B5FD; background: #FFF;"></textarea>
+                  <div style="display: flex; gap: 9px; margin-top: 11px;">
+                    <button onClick="{{ selected.archive }}" style="all: unset; cursor: pointer; flex: 1; height: 38px; border-radius: 10px; background: #DC2626; color: #FFF; font-size: 13.5px; font-weight: 600; text-align: center; line-height: 38px;" style-hover="background: #B91C1C;">Archive seller</button>
+                    <button onClick="{{ selected.dismiss }}" style="all: unset; cursor: pointer; flex: 1; height: 38px; border-radius: 10px; border: 1px solid #EDEDF0; color: #3F3F46; font-size: 13.5px; font-weight: 600; text-align: center; line-height: 36px;" style-hover="background: #F7F7F9;">Dismiss flag</button>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px;">
+                    <sc-for list="{{ secondaryActions }}" as="a" hint-placeholder-count="4">
+                      <button style="all: unset; cursor: pointer; height: 31px; padding: 0 12px; border-radius: 9px; border: 1px solid #EDEDF0; background: #FFF; font-size: 12.5px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">{{ a }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </aside>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SELLER RATINGS ============ -->
+      <sc-if value="{{ isSellers }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 16px; animation: fadeIn 0.25s ease;">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+            <sc-for list="{{ sellerKpis }}" as="k" hint-placeholder-count="4">
+              <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 17px 20px;">
+                <div style="font-size: 13px; color: #71717A;">{{ k.label }}</div>
+                <div style="font-size: 26px; font-weight: 600; letter-spacing: -0.03em; margin-top: 8px;">{{ k.value }}</div>
+                <div style="font-size: 12.5px; color: #71717A; margin-top: 5px;">{{ k.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 15px 20px; border-bottom: 1px solid #F4F4F6;">
+              <div style="font-size: 15.5px; font-weight: 600;">Seller rating profiles</div>
+              <div style="flex: 1;"></div>
+              <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Tier: all ⌄</button>
+              <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Status: all ⌄</button>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 1px solid #F4F4F6;">
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px;">SELLER</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">RATING</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">DISTRIBUTION</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">REVIEWS</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">LISTINGS</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">GMV (30D)</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px;">STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ sellers }}" as="s" hint-placeholder-count="8">
+                  <tr style="border-bottom: 1px solid #F4F4F6;" style-hover="background: #FBFBFC;">
+                    <td style="padding: 13px 20px;">
+                      <div style="display: flex; align-items: center; gap: 11px;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: {{ s.avBg }}; color: {{ s.avFg }}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">{{ s.initials }}</div>
+                        <div>
+                          <div style="font-size: 13.5px; font-weight: 500;">{{ s.name }}</div>
+                          <div style="font-size: 11.5px; color: #A1A1AA;">{{ s.id }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding: 13px;">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 14px; font-weight: 500;">{{ s.rating }}</span>
+                        <span style="color: #F59E0B; font-size: 11px;">★</span>
+                        <span style="font-size: 12px; font-weight: 600; color: {{ s.changeFg }};">{{ s.change }}</span>
+                      </div>
+                    </td>
+                    <td style="padding: 13px; width: 156px;">
+                      <div style="display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: #F4F4F6;">
+                        <div style="width: {{ s.d5 }}; background: #7C3AED;"></div>
+                        <div style="width: {{ s.d4 }}; background: #A78BFA;"></div>
+                        <div style="width: {{ s.d3 }}; background: #FCD34D;"></div>
+                        <div style="width: {{ s.d2 }}; background: #FB923C;"></div>
+                        <div style="width: {{ s.d1 }}; background: #DC2626;"></div>
+                      </div>
+                    </td>
+                    <td style="padding: 13px; font-size: 13.5px;">{{ s.reviews }}</td>
+                    <td style="padding: 13px; font-size: 13.5px;">{{ s.listings }}</td>
+                    <td style="padding: 13px; font-size: 13.5px;">{{ s.gmv }}</td>
+                    <td style="padding: 13px 20px;"><span style="font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ s.stBg }}; color: {{ s.stFg }};">{{ s.status }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ ARCHIVED ============ -->
+      <sc-if value="{{ isArchived }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 16px; animation: fadeIn 0.25s ease;">
+          <div style="display: flex; align-items: flex-start; gap: 11px; padding: 14px 18px; border-radius: 12px; background: #FFF; border: 1px solid #EDEDF0;">
+            <span style="color: #B91C1C; font-size: 14px;">!</span>
+            <div style="font-size: 13.5px; color: #52525B; line-height: 1.5;">Archived sellers are hidden from search, their listings are delisted and buyers can no longer start a chat. Existing orders continue under escrow. Restoring re-publishes the profile with its rating history intact.</div>
+          </div>
+          <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 15px 20px; border-bottom: 1px solid #F4F4F6;">
+              <div style="font-size: 15.5px; font-weight: 600;">Archived sellers</div>
+              <div style="flex: 1;"></div>
+              <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Reason: all ⌄</button>
+              <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Export Excel</button>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 1px solid #F4F4F6;">
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px;">SELLER</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">RATING AT ARCHIVE</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">REASON</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">ARCHIVED</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">BY</th>
+                  <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">APPEAL</th>
+                  <th style="text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px;">ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ archived }}" as="a" hint-placeholder-count="6">
+                  <tr style="border-bottom: 1px solid #F4F4F6;" style-hover="background: #FBFBFC;">
+                    <td style="padding: 13px 20px;">
+                      <div style="display: flex; align-items: center; gap: 11px;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: #F4F4F6; color: #71717A; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">{{ a.initials }}</div>
+                        <div>
+                          <div style="font-size: 13.5px; font-weight: 500; color: #52525B;">{{ a.name }}</div>
+                          <div style="font-size: 11.5px; color: #A1A1AA;">{{ a.id }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding: 13px;">
+                      <span style="font-size: 13.5px;">{{ a.rating }}</span>
+                      <span style="color: #F59E0B; font-size: 11px;"> ★</span>
+                      <span style="font-size: 12px; color: #A1A1AA;"> · {{ a.reviews }}</span>
+                    </td>
+                    <td style="padding: 13px; font-size: 13.5px; color: #52525B; max-width: 260px;">{{ a.reason }}</td>
+                    <td style="padding: 13px; font-size: 13px; color: #71717A;">{{ a.date }}</td>
+                    <td style="padding: 13px; font-size: 13.5px; color: #52525B;">{{ a.by }}</td>
+                    <td style="padding: 13px;"><span style="font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ a.apBg }}; color: {{ a.apFg }};">{{ a.appeal }}</span></td>
+                    <td style="padding: 13px 20px;">
+                      <div style="display: flex; justify-content: flex-end; gap: 7px;">
+                        <button onClick="{{ a.restore }}" style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 8px; background: #F3EBFF; color: #6D28D9; font-size: 12.5px; font-weight: 600;" style-hover="background: #7C3AED; color: #FFF;">Restore</button>
+                        <button style="all: unset; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #EDEDF0; color: #3F3F46; font-size: 12.5px; font-weight: 600;" style-hover="background: #F7F7F9;">Record</button>
+                      </div>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ THRESHOLDS ============ -->
+      <sc-if value="{{ isRules }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; animation: fadeIn 0.25s ease;">
+          <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden;">
+            <div style="padding: 17px 20px; border-bottom: 1px solid #F4F4F6;">
+              <div style="font-size: 15.5px; font-weight: 600;">Case thresholds</div>
+              <div style="font-size: 12.5px; color: #71717A; margin-top: 3px;">When a seller crosses a threshold a case opens for an admin — nothing is archived automatically</div>
+            </div>
+            <sc-for list="{{ rules }}" as="r" hint-placeholder-count="6">
+              <div style="display: flex; align-items: center; gap: 15px; padding: 15px 20px; border-bottom: 1px solid #F4F4F6;" style-hover="background: #FBFBFC;">
+                <div style="font-size: 12px; color: #A1A1AA; width: 20px;">{{ r.order }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 14px; font-weight: 600;">{{ r.name }}</div>
+                  <div style="font-size: 13px; color: #71717A; margin-top: 4px; line-height: 1.45;">{{ r.logic }}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 14px; font-weight: 500;">{{ r.hits }}</div>
+                  <div style="font-size: 11.5px; color: #A1A1AA;">cases / 30d</div>
+                </div>
+                <div style="width: 36px; height: 21px; border-radius: 99px; background: {{ r.toggleBg }}; padding: 2px; display: flex; justify-content: {{ r.toggleJustify }}; cursor: pointer;">
+                  <div style="width: 17px; height: 17px; border-radius: 50%; background: #FFF;"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; padding: 20px 22px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 15.5px; font-weight: 600;">Seller rating tags</div>
+                  <div style="font-size: 12.5px; color: #71717A; margin-top: 3px;">Managed in Configuration → Seller Rating Tags</div>
+                </div>
+                <span style="font-size: 12px; color: #A1A1AA;">3 total</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 9px; margin-top: 16px;">
+                <sc-for list="{{ tagConfig }}" as="t" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border: 1px solid #F4F4F6; border-radius: 11px;">
+                    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; padding: 4px 10px; border-radius: 99px; border: 1px solid {{ t.border }}; background: {{ t.bg }}; color: {{ t.fg }};"><span style="font-size: 10px;">{{ t.icon }}</span>{{ t.label }}</span>
+                    <div style="flex: 1;"></div>
+                    <span style="font-size: 11.5px; font-weight: 500; padding: 3px 8px; border-radius: 6px; background: {{ t.sBg }}; color: {{ t.sFg }};">{{ t.sentiment }}</span>
+                    <span style="font-size: 12.5px; color: #52525B; width: 52px; text-align: right;">{{ t.usage }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size: 12.5px; color: #A1A1AA; margin-top: 12px; line-height: 1.5;">Tag counts feed the negative-tag threshold. Hidden tags stay in the system but are not offered to buyers.</div>
+            </div>
+            <div style="background: #2E1065; border-radius: 14px; padding: 20px 22px;">
+              <div style="font-size: 15px; font-weight: 600; color: #F5F3FF;">Case outcomes</div>
+              <div style="font-size: 12.5px; color: #C4B5FD; margin-top: 4px;">Cases opened this month and how they closed</div>
+              <div style="display: flex; align-items: baseline; gap: 9px; margin-top: 16px;">
+                <span style="font-size: 34px; font-weight: 600; color: #C4B5FD; letter-spacing: -0.03em;">31%</span>
+                <span style="font-size: 13px; color: #C4B5FD;">ended in an archive</span>
+              </div>
+              <div style="height: 7px; border-radius: 99px; background: #4C1D95; margin-top: 14px; overflow: hidden; display: flex;">
+                <div style="height: 100%; width: 31%; background: #F87171;"></div>
+                <div style="height: 100%; width: 22%; background: #FBBF24;"></div>
+                <div style="height: 100%; width: 47%; background: #A78BFA;"></div>
+              </div>
+              <div style="display: flex; gap: 16px; margin-top: 11px; font-size: 12px; color: #C4B5FD;">
+                <span>31% archived</span><span>22% warned</span><span>47% dismissed</span>
+              </div>
+              <div style="font-size: 12.5px; color: #A78BFA; margin-top: 12px; line-height: 1.5;">4 of 29 archives were reversed on appeal in the last 90 days.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ AUDIT ============ -->
+      <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FFF; border: 1px solid #EDEDF0; border-radius: 14px; overflow: hidden; animation: fadeIn 0.25s ease;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 15px 20px; border-bottom: 1px solid #F4F4F6;">
+            <div style="font-size: 15.5px; font-weight: 600;">Review &amp; reputation actions</div>
+            <div style="flex: 1;"></div>
+            <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Actor: all ⌄</button>
+            <button style="all: unset; cursor: pointer; height: 34px; padding: 0 12px; border: 1px solid #EDEDF0; border-radius: 9px; font-size: 13px; font-weight: 500; color: #3F3F46;" style-hover="background: #F7F7F9;">Export Excel</button>
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid #F4F4F6;">
+                <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px; width: 176px;">TIMESTAMP</th>
+                <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 176px;">ACTOR</th>
+                <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px; width: 160px;">ACTION</th>
+                <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px;">TARGET</th>
+                <th style="text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #A1A1AA; padding: 12px 20px;">REASON</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ audit }}" as="a" hint-placeholder-count="10">
+                <tr style="border-bottom: 1px solid #F4F4F6;" style-hover="background: #FBFBFC;">
+                  <td style="padding: 12px 20px; font-size: 13px; color: #71717A;">{{ a.ts }}</td>
+                  <td style="padding: 12px;">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <div style="width: 24px; height: 24px; border-radius: 50%; background: {{ a.avBg }}; color: {{ a.avFg }}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;">{{ a.initials }}</div>
+                      <span style="font-size: 13.5px; font-weight: 500;">{{ a.actor }}</span>
+                    </div>
+                  </td>
+                  <td style="padding: 12px;"><span style="font-size: 11.5px; font-weight: 500; padding: 4px 9px; border-radius: 7px; background: {{ a.acBg }}; color: {{ a.acFg }};">{{ a.action }}</span></td>
+                  <td style="padding: 12px; font-size: 13px; color: #52525B;">{{ a.target }}</td>
+                  <td style="padding: 12px 20px; font-size: 13.5px; color: #52525B;">{{ a.reason }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 12px 17px; border-radius: 11px; background: #2E1065; color: #F5F3FF; font-size: 13.5px; font-weight: 500; box-shadow: 0 14px 34px rgba(46, 16, 101, 0.24); animation: slideUp 0.2s ease; z-index: 40;">
+      <span style="color: #C4B5FD;">✓</span>{{ toast }}
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1512, &quot;height&quot;: 950}}">
+const TAG = {
+  fast: { label: 'Fast Communication', icon: '▲', border: '#BBF7D0', bg: '#F0FDF4', fg: '#15803D' },
+  best: { label: 'Best Seller', icon: '▲', border: '#BBF7D0', bg: '#F0FDF4', fg: '#15803D' },
+  bad: { label: 'Bad Communication', icon: '▼', border: '#FECACA', bg: '#FEF2F2', fg: '#B91C1C' }
+};
+
+const VIEWS = [
+  { id: 'overview', label: 'Overview', icon: '◎', crumb: 'Overview', title: 'Reviews overview', count2: '142,806 reviews', sub: 'Buyer reviews publish immediately. This is where the marketplace rating and seller reputation are monitored.', cta: 'New threshold' },
+  { id: 'cases', label: 'Reputation cases', icon: '⚑', count: '38', crumb: 'Reputation cases', title: 'Reputation cases', count2: '38 open', sub: 'Sellers flagged by review signals. Archive hides the seller from buyers; dismiss closes the case with a reason.', cta: 'New case' },
+  { id: 'sellers', label: 'Seller ratings', icon: '★', crumb: 'Seller ratings', title: 'Seller ratings', count2: '4,182 sellers', sub: 'Every rated seller with its rating, distribution and review volume.', cta: 'Export view' },
+  { id: 'archived', label: 'Archived sellers', icon: '⌫', count: '29', crumb: 'Archived sellers', title: 'Archived sellers', count2: '29 archived', sub: 'Hidden from buyers and delisted. Restoring republishes the profile with its rating history intact.', cta: 'Archive seller' },
+  { id: 'rules', label: 'Thresholds', icon: '⚙', crumb: 'Thresholds', title: 'Case thresholds', count2: '6 rules', sub: 'What opens a reputation case, and how the seller rating tags feed those rules.', cta: 'New threshold' },
+  { id: 'audit', label: 'Audit log', icon: '⧉', crumb: 'Audit log', title: 'Audit log', count2: '1,204 entries', sub: 'Every archive, restore, warning and threshold change, with the admin who made it.', cta: 'Export log' }
+];
+
+const SEV = {
+  Critical: { bg: '#FEE2E2', fg: '#B91C1C' },
+  High: { bg: '#FFEDD5', fg: '#C2410C' },
+  Medium: { bg: '#FEF9C3', fg: '#A16207' },
+  Watch: { bg: '#F4F4F6', fg: '#52525B' }
+};
+
+const rev = (stars, buyer, when, text, tags, meta) => ({ stars: stars, buyer: buyer, when: when, text: text, tagKeys: tags, meta: meta });
+
+const CASES = [
+  { caseId: 'CSE-1182', id: 'SLR-51204', seller: 'Pyin Oo Lwin Stones', initials: 'PS', avBg: '#FEE2E2', avFg: '#B91C1C',
+    tier: 'STANDARD', tierBg: '#F4F4F6', tierFg: '#52525B', sellerMeta: 'Standard seller · Mandalay · joined 2024',
+    summary: 'Rating fell to 3.84 after 23 one and two-star reviews in three weeks, mostly citing undisclosed damage and non-delivery.',
+    tagKeys: ['bad'], rating: '3.84', stars: 4, change: '−0.51', changeFg: '#B91C1C', reviews: '204',
+    d5: '38%', d4: '21%', d3: '18%', d2: '12%', d1: '11%', lowShare: '23%',
+    severity: 'Critical', trigger: 'Below 3.8 threshold', openFor: '6 days', sla: 'Decision overdue', slaFg: '#B91C1C', listings: '14',
+    dist: [{ stars: '5', pct: '38%', color: '#7C3AED' }, { stars: '4', pct: '21%', color: '#A78BFA' }, { stars: '3', pct: '18%', color: '#FCD34D' }, { stars: '2', pct: '12%', color: '#FB923C' }, { stars: '1', pct: '11%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Rating below archive threshold', detail: '3.84 against a 3.80 floor, sustained for 14 days.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Negative review streak', detail: '9 of the last 12 buyer reviews are 1–2★.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Non-delivery reports', detail: '5 buyers reported no shipment after escrow funding.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '!', label: 'Bad Communication tag', detail: 'Attached to 41 of 204 reviews, 6× the marketplace rate.', bg: '#FFF7ED', fg: '#C2410C' }
+    ],
+    recent: [
+      rev(1, 'Zaw Min Oo', '2d ago', 'Paid three weeks ago, no shipment and no reply to any of my messages.', ['bad'], 'Verified buyer · ORD-770881'),
+      rev(1, 'Su Myat Noe', '4d ago', 'Stone arrived chipped and the seller refused to discuss a refund.', ['bad'], 'Verified buyer · ORD-769420'),
+      rev(2, 'Hnin Wai', '6d ago', 'Weight was under what the listing said. Communication was very slow.', ['bad'], 'Verified buyer · ORD-768755')
+    ],
+    context: [{ k: 'Active listings', v: '14' }, { k: 'GMV (30d)', v: '44M MMK' }, { k: 'Open escrow disputes', v: '6' }, { k: 'Prior warnings', v: '2' }] },
+
+  { caseId: 'CSE-1179', id: 'SLR-40218', seller: 'Bagan Stone Traders', initials: 'BS', avBg: '#FFEDD5', avFg: '#C2410C',
+    tier: 'STANDARD', tierBg: '#F4F4F6', tierFg: '#52525B', sellerMeta: 'Standard seller · Bagan · joined 2023',
+    summary: 'Three buyers reported the seller offering partial refunds in exchange for higher ratings; rating dropped 0.34 in 30 days.',
+    tagKeys: ['best', 'bad'], rating: '4.71', stars: 5, change: '−0.34', changeFg: '#B91C1C', reviews: '342',
+    d5: '64%', d4: '18%', d3: '8%', d2: '4%', d1: '6%', lowShare: '10%',
+    severity: 'Critical', trigger: 'Rating manipulation reports', openFor: '3 days', sla: 'Due in 21h', slaFg: '#A16207', listings: '31',
+    dist: [{ stars: '5', pct: '64%', color: '#7C3AED' }, { stars: '4', pct: '18%', color: '#A78BFA' }, { stars: '3', pct: '8%', color: '#FCD34D' }, { stars: '2', pct: '4%', color: '#FB923C' }, { stars: '1', pct: '6%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Incentivised rating evidence', detail: '3 buyers submitted chat screenshots offering refunds for 5★.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Rating trend break', detail: '−0.34 over 30 days after two years of stability.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Best Seller tag inflation', detail: '28 Best Seller tags from accounts with no completed order.', bg: '#FFF7ED', fg: '#C2410C' }
+    ],
+    recent: [
+      rev(1, 'Zaw Min Oo', '1d ago', 'Seller asked me to change my rating to 5 stars in exchange for a partial refund.', ['bad'], 'Verified buyer · report attached'),
+      rev(2, 'Aung Kaung Myat', '3d ago', 'Only offered a refund after I mentioned leaving a review.', ['bad'], 'Verified buyer · ORD-768401'),
+      rev(5, 'Nay Lin', '5d ago', 'Best seller, perfect, contact me for discount on other channel.', ['best'], 'No verified order · flagged')
+    ],
+    context: [{ k: 'Active listings', v: '31' }, { k: 'GMV (30d)', v: '96M MMK' }, { k: 'Open escrow disputes', v: '4' }, { k: 'Prior warnings', v: '1' }] },
+
+  { caseId: 'CSE-1176', id: 'SLR-30887', seller: 'Shwe Gems House', initials: 'SG', avBg: '#F3EBFF', avFg: '#6D28D9',
+    tier: 'PREMIUM', tierBg: '#F3EBFF', tierFg: '#6D28D9', sellerMeta: 'Premium seller · Yangon · joined 2021',
+    summary: 'Colour and weight complaints concentrated on emerald listings; five escrow disputes opened in the same period.',
+    tagKeys: ['bad', 'fast'], rating: '4.58', stars: 5, change: '−0.22', changeFg: '#B91C1C', reviews: '812',
+    d5: '61%', d4: '22%', d3: '9%', d2: '4%', d1: '4%', lowShare: '8%',
+    severity: 'High', trigger: 'Dispute rate above 4%', openFor: '2 days', sla: 'Due in 2 days', slaFg: '#52525B', listings: '58',
+    dist: [{ stars: '5', pct: '61%', color: '#7C3AED' }, { stars: '4', pct: '22%', color: '#A78BFA' }, { stars: '3', pct: '9%', color: '#FCD34D' }, { stars: '2', pct: '4%', color: '#FB923C' }, { stars: '1', pct: '4%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Dispute rate', detail: '5 escrow disputes across 118 orders this month.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Listing accuracy complaints', detail: '11 reviews mention colour or weight mismatch.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '✓', label: 'Long tenure, strong base', detail: '812 reviews with an 83% positive share.', bg: '#F0FDF4', fg: '#15803D' }
+    ],
+    recent: [
+      rev(1, 'Kyaw Zin Htet', '1d ago', 'Stone was not the colour shown in the listing photos and the seller stopped replying after payment cleared.', ['bad'], 'Verified buyer · 6,000,000 MMK'),
+      rev(2, 'Aung Kaung Myat', '2d ago', 'The ruby had a visible crack that was not disclosed.', ['bad'], 'Verified buyer · 3,300,000 MMK'),
+      rev(5, 'Thiri Aung', '4d ago', 'Certificate matched and packaging was secure.', ['fast'], 'Verified buyer · ORD-767120')
+    ],
+    context: [{ k: 'Active listings', v: '58' }, { k: 'GMV (30d)', v: '208M MMK' }, { k: 'Open escrow disputes', v: '5' }, { k: 'Prior warnings', v: '0' }] },
+
+  { caseId: 'CSE-1171', id: 'SLR-11902', seller: 'Mandalay Jade Co.', initials: 'MJ', avBg: '#FEF9C3', avFg: '#A16207',
+    tier: 'PREMIUM', tierBg: '#F3EBFF', tierFg: '#6D28D9', sellerMeta: 'Premium seller · Mandalay · joined 2020',
+    summary: 'Rating is high but 46 five-star reviews arrived in 24 hours from accounts sharing four device fingerprints.',
+    tagKeys: ['best'], rating: '4.92', stars: 5, change: '+0.11', changeFg: '#15803D', reviews: '1,204',
+    d5: '82%', d4: '11%', d3: '4%', d2: '2%', d1: '1%', lowShare: '3%',
+    severity: 'High', trigger: 'Suspicious positive burst', openFor: '18 hours', sla: 'Due in 30h', slaFg: '#52525B', listings: '96',
+    dist: [{ stars: '5', pct: '82%', color: '#7C3AED' }, { stars: '4', pct: '11%', color: '#A78BFA' }, { stars: '3', pct: '4%', color: '#FCD34D' }, { stars: '2', pct: '2%', color: '#FB923C' }, { stars: '1', pct: '1%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Device cluster', detail: '46 reviews from accounts sharing 4 device fingerprints.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'No verified purchase', detail: '41 of the 46 have no completed escrow.', bg: '#FEF2F2', fg: '#B91C1C' },
+      { icon: '!', label: 'Templated text', detail: '91% text similarity across the burst.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '✓', label: 'Genuine core reviews', detail: '1,158 reviews predate the burst and pass all checks.', bg: '#F0FDF4', fg: '#15803D' }
+    ],
+    recent: [
+      rev(5, 'Nay Lin', '18h ago', 'Best seller in Myanmar, everything perfect, buy now, best price guaranteed.', ['best'], 'No verified order · shared device'),
+      rev(5, 'Min Thant', '19h ago', 'Best seller in Myanmar, perfect service, best price.', ['best'], 'No verified order · same device'),
+      rev(5, 'Hnin Wai', '5d ago', 'Third purchase from this seller, grading certificate was genuine.', ['fast', 'best'], 'Verified buyer · 4,750,000 MMK')
+    ],
+    context: [{ k: 'Active listings', v: '96' }, { k: 'GMV (30d)', v: '412M MMK' }, { k: 'Open escrow disputes', v: '2' }, { k: 'Prior warnings', v: '0' }] },
+
+  { caseId: 'CSE-1168', id: 'SLR-22415', seller: 'Inle Fine Jewels', initials: 'IF', avBg: '#F4F4F6', avFg: '#52525B',
+    tier: 'STANDARD', tierBg: '#F4F4F6', tierFg: '#52525B', sellerMeta: 'Standard seller · Nyaung Shwe · joined 2022',
+    summary: 'Bad Communication tags on a third of recent reviews, plus one unverified fraud allegation from a cancelled order.',
+    tagKeys: ['bad'], rating: '4.40', stars: 4, change: '−0.09', changeFg: '#B91C1C', reviews: '566',
+    d5: '54%', d4: '26%', d3: '12%', d2: '5%', d1: '3%', lowShare: '8%',
+    severity: 'Medium', trigger: 'Negative tag concentration', openFor: '4 days', sla: 'Due in 3 days', slaFg: '#52525B', listings: '22',
+    dist: [{ stars: '5', pct: '54%', color: '#7C3AED' }, { stars: '4', pct: '26%', color: '#A78BFA' }, { stars: '3', pct: '12%', color: '#FCD34D' }, { stars: '2', pct: '5%', color: '#FB923C' }, { stars: '1', pct: '3%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Negative tag concentration', detail: '34% of reviews in 30 days carry Bad Communication.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '!', label: 'Unverified allegation', detail: 'Fraud claim from a buyer whose order was cancelled.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '✓', label: 'No disputed shipments', detail: 'All funded orders delivered, average 9 days.', bg: '#F0FDF4', fg: '#15803D' }
+    ],
+    recent: [
+      rev(3, 'Su Myat Noe', '1d ago', 'Stone is fine but delivery took eleven days and I had to follow up three times.', ['bad'], 'Verified buyer · 890,000 MMK'),
+      rev(1, 'Ko Ko Lay', '2d ago', 'Fake stones, do not buy from this shop, I will report to the police.', ['bad'], 'Order cancelled · unverified'),
+      rev(5, 'Thiri Aung', '6d ago', 'Good communication and fair price for the clarity.', ['fast'], 'Verified buyer · ORD-767905')
+    ],
+    context: [{ k: 'Active listings', v: '22' }, { k: 'GMV (30d)', v: '131M MMK' }, { k: 'Open escrow disputes', v: '1' }, { k: 'Prior warnings', v: '0' }] },
+
+  { caseId: 'CSE-1164', id: 'SLR-33871', seller: 'Naypyidaw Gem Trade', initials: 'NG', avBg: '#F4F4F6', avFg: '#52525B',
+    tier: 'STANDARD', tierBg: '#F4F4F6', tierFg: '#52525B', sellerMeta: 'Standard seller · Naypyidaw · joined 2023',
+    summary: 'Two buyers reported pressure to withdraw negative reviews. Rating is otherwise stable at 4.66.',
+    tagKeys: ['fast'], rating: '4.66', stars: 5, change: '+0.02', changeFg: '#15803D', reviews: '441',
+    d5: '68%', d4: '20%', d3: '7%', d2: '3%', d1: '2%', lowShare: '5%',
+    severity: 'Watch', trigger: 'Buyer reports', openFor: '9 hours', sla: 'Due in 6 days', slaFg: '#52525B', listings: '37',
+    dist: [{ stars: '5', pct: '68%', color: '#7C3AED' }, { stars: '4', pct: '20%', color: '#A78BFA' }, { stars: '3', pct: '7%', color: '#FCD34D' }, { stars: '2', pct: '3%', color: '#FB923C' }, { stars: '1', pct: '2%', color: '#DC2626' }],
+    signals: [
+      { icon: '!', label: 'Review withdrawal pressure', detail: '2 buyer reports in 14 days, no evidence attached yet.', bg: '#FFF7ED', fg: '#C2410C' },
+      { icon: '✓', label: 'Stable rating', detail: '+0.02 over 30 days across 441 reviews.', bg: '#F0FDF4', fg: '#15803D' },
+      { icon: '✓', label: 'No open disputes', detail: 'All 74 orders this month closed cleanly.', bg: '#F0FDF4', fg: '#15803D' }
+    ],
+    recent: [
+      rev(2, 'Min Thant', '9h ago', 'Seller kept messaging me to take down my review after the sale.', ['bad'], 'Verified buyer · ORD-771401'),
+      rev(5, 'Thet Naing', '3d ago', 'Fast replies and the listing was accurate.', ['fast'], 'Verified buyer · ORD-770002'),
+      rev(4, 'Ei Mon', '5d ago', 'Good stone, packaging could be better.', ['fast'], 'Verified buyer · ORD-769511')
+    ],
+    context: [{ k: 'Active listings', v: '37' }, { k: 'GMV (30d)', v: '118M MMK' }, { k: 'Open escrow disputes', v: '0' }, { k: 'Prior warnings', v: '0' }] }
+];
+
+class Component extends DCLogic {
+  state = { view: 'overview', selectedId: 'CSE-1182', checked: {}, tab: 'All', toast: '', closed: {}, reviewsOpen: true, configOpen: false };
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: '' }), 2800);
+  }
+
+  closeCase(caseId, verb) {
+    const closed = Object.assign({}, this.state.closed);
+    closed[caseId] = true;
+    this.setState({ closed: closed, selectedId: this.state.selectedId === caseId ? null : this.state.selectedId });
+    this.flash(verb + ' · ' + caseId + ' logged to audit trail');
+  }
+
+  renderVals() {
+    const st = this.state;
+    const view = VIEWS.find(v => v.id === st.view) || VIEWS[0];
+    const vis = CASES.filter(c => !st.closed[c.caseId]);
+    const checkedIds = Object.keys(st.checked).filter(k => st.checked[k] && !st.closed[k]);
+    const sel = vis.find(c => c.caseId === st.selectedId);
+    const stars = n => ({ filled: '★'.repeat(n), empty: '★'.repeat(5 - n) });
+    const tagsOf = keys => (keys || []).map(k => TAG[k]);
+    const closedCount = Object.keys(st.closed).length;
+
+    const reviewItems = VIEWS.map(v => {
+      const active = st.view === v.id;
+      return {
+        label: v.label, icon: v.icon, count: v.count,
+        fg: active ? '#6D28D9' : '#52525B',
+        bg: active ? '#F3EBFF' : 'transparent',
+        iconFg: active ? '#7C3AED' : '#A1A1AA',
+        weight: active ? '600' : '500',
+        pillBg: v.id === 'cases' ? '#FEE2E2' : '#F4F4F6',
+        pillFg: v.id === 'cases' ? '#DC2626' : '#71717A',
+        go: () => this.setState({ view: v.id })
+      };
+    });
+
+    const rows = vis.map(c => Object.assign({}, c, {
+      checked: !!st.checked[c.caseId],
+      rowBg: st.selectedId === c.caseId ? '#FAF7FF' : '#FFFFFF',
+      sevBg: SEV[c.severity].bg, sevFg: SEV[c.severity].fg,
+      tags: tagsOf(c.tagKeys),
+      open: () => this.setState({ selectedId: c.caseId }),
+      openBtn: () => this.setState({ selectedId: c.caseId }),
+      stop: e => e.stopPropagation(),
+      toggle: () => {
+        const ch = Object.assign({}, st.checked); ch[c.caseId] = !ch[c.caseId]; this.setState({ checked: ch });
+      },
+      archive: () => this.closeCase(c.caseId, 'Archived ' + c.seller),
+      dismiss: () => this.closeCase(c.caseId, 'Flag dismissed for ' + c.seller)
+    }));
+
+    const selected = sel ? Object.assign({}, sel, stars(sel.stars), {
+      sevBg: SEV[sel.severity].bg, sevFg: SEV[sel.severity].fg,
+      recent: sel.recent.map(r => Object.assign({}, r, stars(r.stars), { tags: tagsOf(r.tagKeys) })),
+      archive: () => this.closeCase(sel.caseId, 'Archived ' + sel.seller),
+      dismiss: () => this.closeCase(sel.caseId, 'Flag dismissed for ' + sel.seller)
+    }) : null;
+
+    const caseTabs = [
+      { label: 'All', count: String(38 - closedCount) },
+      { label: 'Critical', count: '7' },
+      { label: 'Buyer reports', count: '14' },
+      { label: 'Closed', count: String(64 + closedCount) }
+    ].map(t => {
+      const active = st.tab === t.label;
+      return Object.assign({}, t, {
+        border: active ? '#7C3AED' : 'transparent',
+        fg: active ? '#7C3AED' : '#71717A',
+        weight: active ? '600' : '500',
+        pillBg: active ? '#F3EBFF' : '#F4F4F6',
+        pillFg: active ? '#7C3AED' : '#71717A',
+        go: () => this.setState({ tab: t.label })
+      });
+    });
+
+    const trend = [];
+    for (let i = 0; i < 30; i++) {
+      const base = 44 + Math.round(26 * Math.sin(i / 3.1)) + (i % 7 === 0 ? 16 : 0) + Math.round(i * 0.7);
+      const low = 6 + (i % 5) * 2;
+      trend.push({ pos: base + '%', low: low + '%', tip: 'Day ' + (i + 1) + ': ' + (base * 9) + ' positive, ' + (low * 9) + ' negative' });
+    }
+
+    const seller = (name, id, initials, avBg, avFg) => ({ name: name, id: id, initials: initials, avBg: avBg, avFg: avFg });
+
+    return {
+      reviewItems: reviewItems,
+      reviewsOpen: st.reviewsOpen,
+      reviewsChevron: st.reviewsOpen ? '⌃' : '⌄',
+      reviewsParentFg: st.reviewsOpen ? '#6D28D9' : '#3F3F46',
+      reviewsParentBg: st.reviewsOpen ? '#FAF7FF' : 'transparent',
+      toggleReviews: () => this.setState({ reviewsOpen: !st.reviewsOpen }),
+      configOpen: st.configOpen,
+      configChevron: st.configOpen ? '⌃' : '⌄',
+      toggleConfig: () => this.setState({ configOpen: !st.configOpen }),
+      configItems: [
+        { label: 'Category', icon: '⊞', color: '#6366F1' },
+        { label: 'Laboratory', icon: '⚗', color: '#10B981' },
+        { label: 'Origin', icon: '⊕', color: '#0EA5E9' },
+        { label: 'Seller Rating Tags', icon: '⌗', color: '#7C3AED' },
+        { label: 'Precaution Tags', icon: '⛨', color: '#F59E0B' }
+      ],
+
+      crumb: view.crumb, pageTitle: view.title, pageCount: view.count2 || view.count, pageSub: view.sub, primaryCta: view.cta,
+      isOverview: st.view === 'overview', isCases: st.view === 'cases', isSellers: st.view === 'sellers',
+      isArchived: st.view === 'archived', isRules: st.view === 'rules', isAudit: st.view === 'audit',
+      goCases: () => this.setState({ view: 'cases' }),
+      goAudit: () => this.setState({ view: 'audit' }),
+      toast: st.toast,
+
+      kpis: [
+        { label: 'Marketplace rating', value: '4.32', unit: '/ 5', delta: '+0.08', deltaBg: '#F0FDF4', deltaFg: '#15803D', note: 'Across 4,182 rated sellers' },
+        { label: 'Buyer reviews', value: '18,240', unit: '30d', delta: '+12.4%', deltaBg: '#F0FDF4', deltaFg: '#15803D', note: '94% from verified orders' },
+        { label: 'Sellers flagged', value: String(38 - closedCount), unit: 'open cases', delta: '12 late', deltaBg: '#FEF9C3', deltaFg: '#A16207', note: '7 at critical severity' },
+        { label: 'Sellers archived', value: '29', unit: '30d', delta: '+9', deltaBg: '#FEE2E2', deltaFg: '#B91C1C', note: '4 reversed on appeal' }
+      ],
+      trend: trend,
+      dist: [
+        { stars: '5', pct: '58%', color: '#7C3AED' },
+        { stars: '4', pct: '24%', color: '#A78BFA' },
+        { stars: '3', pct: '9%', color: '#FCD34D' },
+        { stars: '2', pct: '4%', color: '#FB923C' },
+        { stars: '1', pct: '5%', color: '#DC2626' }
+      ],
+      tags: [
+        Object.assign({}, TAG.fast, { n: '6,412', pct: '78%', bar: '#22C55E' }),
+        Object.assign({}, TAG.best, { n: '4,180', pct: '52%', bar: '#22C55E' }),
+        Object.assign({}, TAG.bad, { n: '1,921', pct: '24%', bar: '#DC2626' })
+      ],
+      watchlist: [
+        Object.assign(seller('Pyin Oo Lwin Stones', 'SLR-51204', 'PS', '#FEE2E2', '#B91C1C'), { rating: '3.84', reviews: '· 204', change: '−0.51', changeFg: '#B91C1C', lowShare: '23%', signal: 'Below 3.8 threshold', sigBg: '#FEE2E2', sigFg: '#B91C1C' }),
+        Object.assign(seller('Bagan Stone Traders', 'SLR-40218', 'BS', '#FFEDD5', '#C2410C'), { rating: '4.71', reviews: '· 342', change: '−0.34', changeFg: '#B91C1C', lowShare: '10%', signal: 'Rating manipulation', sigBg: '#FEE2E2', sigFg: '#B91C1C' }),
+        Object.assign(seller('Shwe Gems House', 'SLR-30887', 'SG', '#F3EBFF', '#6D28D9'), { rating: '4.58', reviews: '· 812', change: '−0.22', changeFg: '#B91C1C', lowShare: '8%', signal: 'Dispute spike', sigBg: '#FFEDD5', sigFg: '#C2410C' }),
+        Object.assign(seller('Mandalay Jade Co.', 'SLR-11902', 'MJ', '#FEF9C3', '#A16207'), { rating: '4.92', reviews: '· 1,204', change: '+0.11', changeFg: '#15803D', lowShare: '3%', signal: 'Positive review burst', sigBg: '#FFEDD5', sigFg: '#C2410C' }),
+        Object.assign(seller('Inle Fine Jewels', 'SLR-22415', 'IF', '#F4F4F6', '#52525B'), { rating: '4.40', reviews: '· 566', change: '−0.09', changeFg: '#B91C1C', lowShare: '8%', signal: 'Bad Communication tags', sigBg: '#F4F4F6', sigFg: '#52525B' })
+      ],
+      workload: [
+        { label: 'Open cases', value: String(38 - closedCount), pct: '38%', fg: '#7C3AED' },
+        { label: 'Critical severity', value: '7', pct: '18%', fg: '#DC2626' },
+        { label: 'Decision overdue', value: '12', pct: '32%', fg: '#F59E0B' },
+        { label: 'Appeals pending', value: '5', pct: '13%', fg: '#0EA5E9' }
+      ],
+      activity: [
+        { text: 'Ei Ei Khine archived Golden Lotus Gems after its rating fell to 3.42 across 61 reviews.', meta: '22 min ago · seller hidden from buyers', dot: '#DC2626' },
+        { text: 'Threshold “Rating below 3.8” opened a case for Pyin Oo Lwin Stones.', meta: '1h ago · automatic case', dot: '#F59E0B' },
+        { text: 'May Thu dismissed the flag on Yangon Ruby Gallery, no policy breach found.', meta: '3h ago · case closed', dot: '#22C55E' },
+        { text: 'Thura Win restored Ayeyarwady Stones after a successful appeal.', meta: '5h ago · listings republished', dot: '#7C3AED' }
+      ],
+
+      caseTabs: caseTabs,
+      rows: rows,
+      selected: selected,
+      closePanel: () => this.setState({ selectedId: null }),
+      allSelected: checkedIds.length === vis.length && vis.length > 0,
+      toggleAll: () => {
+        const all = checkedIds.length === vis.length;
+        const ch = {};
+        if (!all) vis.forEach(c => { ch[c.caseId] = true; });
+        this.setState({ checked: ch });
+      },
+      selectionCount: checkedIds.length > 0,
+      selectionLabel: checkedIds.length + ' case' + (checkedIds.length === 1 ? '' : 's') + ' selected',
+      clearSelection: () => this.setState({ checked: {} }),
+      bulkArchive: () => {
+        const closed = Object.assign({}, st.closed);
+        checkedIds.forEach(id => { closed[id] = true; });
+        this.setState({ closed: closed, checked: {} });
+        this.flash('Archived ' + checkedIds.length + ' sellers · reason required per seller');
+      },
+      bulkDismiss: () => {
+        const closed = Object.assign({}, st.closed);
+        checkedIds.forEach(id => { closed[id] = true; });
+        this.setState({ closed: closed, checked: {} });
+        this.flash('Dismissed ' + checkedIds.length + ' flags');
+      },
+      pageLabel: 'Showing 1–' + vis.length + ' of ' + (38 - closedCount) + ' open cases',
+      secondaryActions: ['Warn seller', 'Limit new orders', 'Hide listings only', 'Request documents', 'Escalate'],
+
+      sellerKpis: [
+        { label: 'Rated sellers', value: '4,182', note: '312 added this month' },
+        { label: 'Sellers below 4.0', value: '148', note: '3.5% of rated sellers' },
+        { label: 'Below archive threshold', value: '19', note: 'Rating under 3.8 for 14+ days' },
+        { label: 'Currently archived', value: '29', note: '5 appeals pending review' }
+      ],
+      sellers: [
+        Object.assign(seller('Mandalay Jade Co.', 'SLR-11902', 'MJ', '#F3EBFF', '#6D28D9'), { rating: '4.92', change: '+0.11', changeFg: '#15803D', d5: '82%', d4: '11%', d3: '4%', d2: '2%', d1: '1%', reviews: '1,204', listings: '96', gmv: '412M MMK', status: 'Case open', stBg: '#FEF9C3', stFg: '#A16207' }),
+        Object.assign(seller('Bagan Stone Traders', 'SLR-40218', 'BS', '#FEE2E2', '#B91C1C'), { rating: '4.71', change: '−0.34', changeFg: '#B91C1C', d5: '64%', d4: '18%', d3: '8%', d2: '4%', d1: '6%', reviews: '342', listings: '31', gmv: '96M MMK', status: 'Case open', stBg: '#FEF9C3', stFg: '#A16207' }),
+        Object.assign(seller('Shwe Gems House', 'SLR-30887', 'SG', '#F4F4F6', '#52525B'), { rating: '4.58', change: '−0.22', changeFg: '#B91C1C', d5: '61%', d4: '22%', d3: '9%', d2: '4%', d1: '4%', reviews: '812', listings: '58', gmv: '208M MMK', status: 'Case open', stBg: '#FEF9C3', stFg: '#A16207' }),
+        Object.assign(seller('Inle Fine Jewels', 'SLR-22415', 'IF', '#F4F4F6', '#52525B'), { rating: '4.40', change: '−0.09', changeFg: '#B91C1C', d5: '54%', d4: '26%', d3: '12%', d2: '5%', d1: '3%', reviews: '566', listings: '22', gmv: '131M MMK', status: 'Active', stBg: '#F0FDF4', stFg: '#15803D' }),
+        Object.assign(seller('Yangon Ruby Gallery', 'SLR-18330', 'YR', '#F3EBFF', '#6D28D9'), { rating: '4.86', change: '+0.04', changeFg: '#15803D', d5: '76%', d4: '17%', d3: '4%', d2: '2%', d1: '1%', reviews: '978', listings: '64', gmv: '355M MMK', status: 'Active', stBg: '#F0FDF4', stFg: '#15803D' }),
+        Object.assign(seller('Pyin Oo Lwin Stones', 'SLR-51204', 'PS', '#FEE2E2', '#B91C1C'), { rating: '3.84', change: '−0.51', changeFg: '#B91C1C', d5: '38%', d4: '21%', d3: '18%', d2: '12%', d1: '11%', reviews: '204', listings: '14', gmv: '44M MMK', status: 'Archive pending', stBg: '#FEE2E2', stFg: '#B91C1C' }),
+        Object.assign(seller('GemX Premium', 'SLR-10044', 'GP', '#F3EBFF', '#6D28D9'), { rating: '4.00', change: 'new', changeFg: '#A1A1AA', d5: '0%', d4: '100%', d3: '0%', d2: '0%', d1: '0%', reviews: '1', listings: '5', gmv: '6M MMK', status: 'New seller', stBg: '#F4F4F6', stFg: '#52525B' }),
+        Object.assign(seller('Naypyidaw Gem Trade', 'SLR-33871', 'NG', '#F4F4F6', '#52525B'), { rating: '4.66', change: '+0.02', changeFg: '#15803D', d5: '68%', d4: '20%', d3: '7%', d2: '3%', d1: '2%', reviews: '441', listings: '37', gmv: '118M MMK', status: 'Watch', stBg: '#F4F4F6', stFg: '#52525B' })
+      ],
+
+      archived: [
+        { initials: 'GL', name: 'Golden Lotus Gems', id: 'SLR-44120', rating: '3.42', reviews: '61 reviews', reason: 'Rating below threshold, 18 non-delivery reports', date: '04 Aug 2026', by: 'Ei Ei Khine', appeal: 'None', apBg: '#F4F4F6', apFg: '#52525B', restore: () => this.flash('Restored Golden Lotus Gems · listings republished') },
+        { initials: 'MS', name: 'Mogok Star Trading', id: 'SLR-39877', rating: '3.61', reviews: '128 reviews', reason: 'Repeated item-not-as-described complaints', date: '01 Aug 2026', by: 'May Thu', appeal: 'Under review', apBg: '#FEF9C3', apFg: '#A16207', restore: () => this.flash('Restored Mogok Star Trading · listings republished') },
+        { initials: 'TG', name: 'Thanlwin Gem Co.', id: 'SLR-47201', rating: '4.10', reviews: '76 reviews', reason: 'Paid review scheme across 4 buyer accounts', date: '28 Jul 2026', by: 'Ei Ei Khine', appeal: 'Rejected', apBg: '#FEE2E2', apFg: '#B91C1C', restore: () => this.flash('Restored Thanlwin Gem Co. · listings republished') },
+        { initials: 'AS', name: 'Ayeyarwady Stones', id: 'SLR-41556', rating: '3.78', reviews: '212 reviews', reason: 'Rating below threshold during courier failure', date: '24 Jul 2026', by: 'Thura Win', appeal: 'Upheld · restored', apBg: '#F0FDF4', apFg: '#15803D', restore: () => this.flash('Restored Ayeyarwady Stones · listings republished') },
+        { initials: 'SH', name: 'Sagaing Heritage Jade', id: 'SLR-50033', rating: '3.55', reviews: '44 reviews', reason: 'Undisclosed treatment on 9 listings', date: '19 Jul 2026', by: 'May Thu', appeal: 'None', apBg: '#F4F4F6', apFg: '#52525B', restore: () => this.flash('Restored Sagaing Heritage Jade · listings republished') },
+        { initials: 'KM', name: 'Kalaw Mineral House', id: 'SLR-45890', rating: '3.20', reviews: '38 reviews', reason: 'Abandoned account, 12 unfulfilled orders', date: '11 Jul 2026', by: 'System', appeal: 'None', apBg: '#F4F4F6', apFg: '#52525B', restore: () => this.flash('Restored Kalaw Mineral House · listings republished') }
+      ],
+
+      rules: [
+        { order: '01', name: 'Rating below archive threshold', logic: 'If rating < 3.80 with ≥30 reviews for 14 days → open a critical case', hits: '19', toggleBg: '#7C3AED', toggleJustify: 'flex-end' },
+        { order: '02', name: 'Negative review streak', logic: 'If 7 of the last 10 buyer reviews are 1–2★ → open a case', hits: '34', toggleBg: '#7C3AED', toggleJustify: 'flex-end' },
+        { order: '03', name: 'Bad Communication concentration', logic: 'If the Bad Communication tag appears on >25% of reviews in 30 days → open a case', hits: '22', toggleBg: '#7C3AED', toggleJustify: 'flex-end' },
+        { order: '04', name: 'Non-delivery reports', logic: 'If ≥3 buyers report no shipment after escrow funding in 30 days → open a critical case', hits: '11', toggleBg: '#7C3AED', toggleJustify: 'flex-end' },
+        { order: '05', name: 'Suspicious positive burst', logic: 'If >20 reviews arrive in 24h at 3× baseline or from one device cluster → freeze rating and open a case', hits: '9', toggleBg: '#7C3AED', toggleJustify: 'flex-end' },
+        { order: '06', name: 'Auto-archive on threshold breach', logic: 'Archive without an admin decision when rating < 3.50 for 30 days', hits: '0', toggleBg: '#D4D4D8', toggleJustify: 'flex-start' }
+      ],
+      tagConfig: [
+        Object.assign({}, TAG.fast, { sentiment: 'Positive', sBg: '#F0FDF4', sFg: '#15803D', usage: '6,412' }),
+        Object.assign({}, TAG.best, { sentiment: 'Positive', sBg: '#F0FDF4', sFg: '#15803D', usage: '4,180' }),
+        Object.assign({}, TAG.bad, { sentiment: 'Negative', sBg: '#FEF2F2', sFg: '#B91C1C', usage: '1,921' })
+      ],
+
+      audit: [
+        { ts: '04 Aug 2026 · 10:41', actor: 'Ei Ei Khine', initials: 'EK', avBg: '#FEE2E2', avFg: '#B91C1C', action: 'Archived seller', acBg: '#FEE2E2', acFg: '#B91C1C', target: 'SLR-44120', reason: 'Rating 3.42 with 18 non-delivery reports' },
+        { ts: '04 Aug 2026 · 10:05', actor: 'System', initials: 'SY', avBg: '#FEF9C3', avFg: '#A16207', action: 'Case opened', acBg: '#FEF9C3', acFg: '#A16207', target: 'CSE-1182 · SLR-51204', reason: 'Threshold 01 · rating below 3.80' },
+        { ts: '04 Aug 2026 · 09:31', actor: 'May Thu', initials: 'MT', avBg: '#F3EBFF', avFg: '#6D28D9', action: 'Flag dismissed', acBg: '#F0FDF4', acFg: '#15803D', target: 'CSE-1160 · SLR-18330', reason: 'Complaints traced to courier, not seller' },
+        { ts: '04 Aug 2026 · 08:47', actor: 'Thura Win', initials: 'TW', avBg: '#F4F4F6', avFg: '#52525B', action: 'Restored seller', acBg: '#F3EBFF', acFg: '#6D28D9', target: 'SLR-41556', reason: 'Appeal upheld, courier failure documented' },
+        { ts: '04 Aug 2026 · 08:12', actor: 'Ei Ei Khine', initials: 'EK', avBg: '#FEE2E2', avFg: '#B91C1C', action: 'Warned seller', acBg: '#FEF9C3', acFg: '#A16207', target: 'SLR-40218', reason: 'Second rating manipulation report' },
+        { ts: '03 Aug 2026 · 22:04', actor: 'System', initials: 'SY', avBg: '#FEF9C3', avFg: '#A16207', action: 'Rating frozen', acBg: '#EFF6FF', acFg: '#1D4ED8', target: 'SLR-11902', reason: 'Threshold 05 · 46 reviews in 24h from 4 devices' },
+        { ts: '03 Aug 2026 · 21:36', actor: 'May Thu', initials: 'MT', avBg: '#F3EBFF', avFg: '#6D28D9', action: 'Limited orders', acBg: '#EFF6FF', acFg: '#1D4ED8', target: 'SLR-30887', reason: 'Dispute rate above 4% pending case review' },
+        { ts: '03 Aug 2026 · 19:50', actor: 'Thura Win', initials: 'TW', avBg: '#F4F4F6', avFg: '#52525B', action: 'Threshold edited', acBg: '#F4F4F6', acFg: '#52525B', target: 'Threshold 02', reason: 'Streak window widened from 8 to 10 reviews' },
+        { ts: '03 Aug 2026 · 18:15', actor: 'Ei Ei Khine', initials: 'EK', avBg: '#FEE2E2', avFg: '#B91C1C', action: 'Archived seller', acBg: '#FEE2E2', acFg: '#B91C1C', target: 'SLR-47201', reason: 'Paid review scheme across 4 buyer accounts' },
+        { ts: '03 Aug 2026 · 16:02', actor: 'May Thu', initials: 'MT', avBg: '#F3EBFF', avFg: '#6D28D9', action: 'Appeal rejected', acBg: '#FEE2E2', acFg: '#B91C1C', target: 'SLR-47201', reason: 'Evidence of coordinated reviews confirmed' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

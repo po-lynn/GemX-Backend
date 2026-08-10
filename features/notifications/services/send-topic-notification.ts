@@ -48,9 +48,6 @@ function buildTopicMessage(
       : undefined,
     android: {
       priority: "high",
-      notification: {
-        clickAction: "FLUTTER_NOTIFICATION_CLICK",
-      },
     },
     apns: {
       payload: {
@@ -65,7 +62,7 @@ function buildTopicMessage(
 
 /**
  * Send a push notification to an FCM topic (no per-device tokens or user auth).
- * Devices subscribe client-side, e.g. Flutter: `FirebaseMessaging.instance.subscribeToTopic('global')`.
+ * Devices subscribe client-side, e.g. React Native: `messaging().subscribeToTopic('global')`.
  */
 export async function sendPushToTopic(
   topic: string,
