@@ -195,7 +195,7 @@ export async function autoSaveArticleAction(formData: FormData) {
   if (!session) return { error: "Unauthorized" };
 
   const previous = await getArticleById(parsed.data.articleId);
-  const updates = parsed.data.editLanguage
+  const updates: Parameters<typeof updateArticleInDb>[1] = parsed.data.editLanguage
     ? {
         ...localizedFieldsForLanguage(
           parsed.data.editLanguage,

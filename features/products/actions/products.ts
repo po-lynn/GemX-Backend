@@ -281,7 +281,9 @@ export async function updateProductAction(formData: FormData) {
     if (!ok) return { error: "Insufficient points balance" }
   }
 
-  const editLanguageRaw = emptyToNull(formData.get("editLanguage"))
+  const editLanguageField = formData.get("editLanguage")
+  const editLanguageRaw =
+    typeof editLanguageField === "string" ? emptyToNull(editLanguageField) : null
   const editLanguage = isProductLanguage(editLanguageRaw) ? editLanguageRaw : undefined
   const previous = editLanguage
     ? await getProductById(productId)
