@@ -53,6 +53,7 @@ export async function sendChatMessageNotification(
   }
 
   const body = truncatePreview(preview || "New message");
+  const pushTitle = input.title?.trim() || senderName;
   const data = buildChatMessageNotificationData({
     senderId,
     recipientId,
@@ -60,7 +61,7 @@ export async function sendChatMessageNotification(
   });
 
   const pushResult = await sendPushNotificationToUserIds([recipientId], {
-    title: senderName,
+    title: pushTitle,
     body,
     data,
   });

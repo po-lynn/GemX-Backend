@@ -7,7 +7,13 @@
 CRON_SECRET=your-cron-secret
 ```
 
-No DB migration required (uses `point_setting` keys).
+No DB migration required for settings (uses `point_setting` keys).
+
+**One-time:** seed the GemX notifications system user (chat sender):
+
+```bash
+psql "$DATABASE_URL" -f scripts/create-gemx-notifications-system-user.sql
+```
 
 ## Configure (admin)
 
@@ -41,6 +47,11 @@ curl -X POST "http://localhost:3000/api/cron/monthly-bonus-points" \
 - Cycle 1 on start date; cycle 2 at start+30 days; … up to N cycles.
 - Every non-banned, non-archived user receives the amount once per cycle.
 - Ledger: `point_transaction.type = monthly_bonus`, `referenceId = mb:{YYYY-MM-DD}:c{n}`.
+- After each successful credit, a chat message is sent from **GemX** (`sys-gemx-notifications`) with English title/body, plus the normal chat FCM push and realtime broadcast.
+
+## Extending locale
+
+Copy lives in `features/points/constants/monthly-bonus-notify.ts` (`en` / `my` / `th` / `ko`). Runtime currently always passes `"en"`. When users have a language preference, pass that locale into `getMonthlyBonusNotifyCopy`.
 
 ## Common errors
 
@@ -50,3 +61,4 @@ curl -X POST "http://localhost:3000/api/cron/monthly-bonus-points" \
 | Cron 401 | Wrong bearer token |
 | Cron `skipped: missing_start_date` | Set start date in admin UI |
 | Users not credited | Confirm program enabled; check they are not banned/archived |
+| Points granted but no chat | Run `scripts/create-gemx-notifications-system-user.sql`; check server logs for `[monthly-bonus]` |

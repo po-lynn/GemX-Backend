@@ -9,6 +9,7 @@ import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { pointSetting, pointTransaction } from "@/drizzle/schema/points-schema"
 import { creditUserPoints, logPointTransaction } from "@/features/points/db/points"
+import { notifyMonthlyBonusGranted } from "@/features/points/services/notify-monthly-bonus"
 
 const MONTHLY_BONUS_ENABLED_KEY = "monthly_bonus_enabled"
 const MONTHLY_BONUS_AMOUNT_KEY = "monthly_bonus_amount"
@@ -298,6 +299,11 @@ export async function grantDueMonthlyBonusPoints(
             referenceId,
             referenceType: "monthly_bonus",
             description: `Monthly bonus (month ${cycle}/${settings.cycles})`,
+          })
+          // Best-effort chat + push; never fail the grant on notify errors.
+          await notifyMonthlyBonusGranted({
+            userId,
+            amount: settings.amount,
           })
           usersCredited++
         } catch (e) {

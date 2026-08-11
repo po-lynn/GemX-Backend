@@ -13,6 +13,10 @@ vi.mock("@/features/points/db/points", () => ({
   logPointTransaction: vi.fn(),
 }))
 
+vi.mock("@/features/points/services/notify-monthly-bonus", () => ({
+  notifyMonthlyBonusGranted: vi.fn().mockResolvedValue(undefined),
+}))
+
 import {
   addUtcDays,
   buildMonthlyBonusSchedule,
@@ -22,6 +26,7 @@ import {
   utcDayDiff,
 } from "@/features/points/db/monthly-bonus"
 import { creditUserPoints, logPointTransaction } from "@/features/points/db/points"
+import { notifyMonthlyBonusGranted } from "@/features/points/services/notify-monthly-bonus"
 import { db } from "@/drizzle/db"
 
 describe("monthly bonus schedule helpers", () => {
@@ -122,5 +127,14 @@ describe("grantDueMonthlyBonusPoints", () => {
         referenceType: "monthly_bonus",
       }),
     )
+    expect(notifyMonthlyBonusGranted).toHaveBeenCalledTimes(2)
+    expect(notifyMonthlyBonusGranted).toHaveBeenCalledWith({
+      userId: "u1",
+      amount: 100,
+    })
+    expect(notifyMonthlyBonusGranted).toHaveBeenCalledWith({
+      userId: "u2",
+      amount: 100,
+    })
   })
 })

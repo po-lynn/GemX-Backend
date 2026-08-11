@@ -81,6 +81,8 @@ export type ChatMessageNotificationInput = {
   senderId: string;
   recipientId: string;
   senderName?: string | null;
+  /** Optional push title override (defaults to sender display name). */
+  title?: string | null;
   preview: string;
 };
 

@@ -5,8 +5,8 @@
   "scripts": {
     "prepare": "husky",
     "postinstall": "patch-package",
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
