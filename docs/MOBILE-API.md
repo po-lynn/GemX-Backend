@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Premium dealer package upgrade (mobile)** – Added **POST `/api/mobile/premium-dealers/upgrade`** (auth): upgrade an active premium dealer package to a higher tier by paying **only the points difference** (`target.pointsRequired − current.pointsRequired`). Server resolves current package, target package, tier level, and cost from the database — the client must not send prices. Cancels the previous subscription row, creates a new active row (same `startDate` / `expiresAt` / `autoRenew`), and logs `point_transaction` (`type: premium_upgrade`). **GET `/api/mobile/premium-dealers/settings`** now includes **`level`** (1-based tier from admin package order). See **5.4.3e**.
 - **Monthly bonus points** – Admin **Point Packages** can enable a recurring program (amount, 1/3/6/12 cycles, distribution start date). Daily cron **`POST /api/cron/monthly-bonus-points`** grants **+points every 30 days** to all non-banned/non-archived users and writes `point_transaction` (`type: monthly_bonus`). See [docs/guides/monthly-bonus-points.md](./guides/monthly-bonus-points.md) and [docs/api/cron-monthly-bonus-points.md](./api/cron-monthly-bonus-points.md).
 - **Product description auto-translate (Google)** – On **admin product create** and **POST `/api/products`**, detects description language and translates into the other three of **English / Myanmar / Thai / Korean**. Stored on **`product`**: `language`, `descriptionEn/My/Th/Ko`. **Admin edit** uses a per-language dropdown (no re-translate on save), same pattern as news/articles. See [docs/api/products.md](./api/products.md) and [docs/guides/product-description-google-translate.md](./guides/product-description-google-translate.md).
 - **Articles auto-translate (Google)** – Same as news: on create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean**. Stored on **`articles`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/articles`** and **GET `/api/articles/:id`** accept optional **`lang`**. Admin edit uses a per-language dropdown (no re-translate on edit). See **7** and [docs/api/articles.md](./api/articles.md).
@@ -97,8 +98,9 @@
 | GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
 | GET    | `/api/mobile/points/balance` | Yes  | Current user's point balance breakdown (`available`, `reserved`, `lifetime`). See **5.4.2a**. |
 | GET    | `/api/mobile/points/history` | Yes  | Current user's point balance + paginated transaction ledger. Query: `filter` (`all`\|`topups`\|`spent`\|`pending`), `page`, `limit`. See **5.4.2b**. |
-| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See **5.4.3**.                                                                                                                     |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`, `level`). See **5.4.3**.                                                                                                                     |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for the selected package. Body: `packageName`, `autoRenew`. See **5.4.3a**.                                                                                                                          |
+| POST   | `/api/mobile/premium-dealers/upgrade` | Yes  | Upgrade active premium dealer package by paying only the tier price difference. Body: `targetPackageName`. See **5.4.3e**.                                                                                                                          |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status (`active`, `packageName`, `expiresAt`). See **5.4.3b**.                                                                                                           |
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of users with active (non-expired) premium dealer status (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See **5.4.3c**. |
 | PATCH  | `/api/mobile/premium-dealers/auto-renew` | Yes | Toggle auto-renew on the current user's active premium dealer subscription. Body: `autoRenew`. See **5.4.3d**. |
@@ -2076,12 +2078,14 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
       "name": "Basic Package",
       "pointsRequired": 100,
       "durationDays": 30,
+      "level": 1,
       "recommended": false
     },
     {
       "name": "Standard Package",
       "pointsRequired": 250,
       "durationDays": 30,
+      "level": 2,
       "recommended": true
     }
   ]
@@ -2092,9 +2096,11 @@ Use this endpoint to load available premium dealer packages in the mobile app. I
 | ----- | ---- | ----------- |
 | `premiumDealerPackages` | array | Premium dealer package options. |
 | `name` | string | Package display name. Pass this to `POST /api/mobile/premium-dealers/activate`. |
-| `pointsRequired` | number | Points deducted from the user's balance to activate this package. |
+| `pointsRequired` | number | Points deducted from the user's balance to activate this package (full price). Upgrades charge only the difference vs the current tier — see **5.4.3e**. |
 | `durationDays` | number | How many days the premium dealer status stays active after activation. |
+| `level` | number | 1-based tier level from admin package order (lower = entry tier). Use to show upgrade options above the user's current level. |
 | `recommended` | boolean | `true` for the second package when there are 2+ packages (highlight this option in the UI). |
+| `enabled` | boolean | Present and `false` when the package is disabled in admin settings (omit when enabled). Disabled packages cannot be activated or upgraded to. |
 
 **Errors:**
 
@@ -2308,6 +2314,79 @@ Turns automatic renewal on or off for the current user's **active** premium deal
 - **400** – `{ "error": "No active premium dealer subscription" }` — user has no active, non-expired subscription row to toggle.
 - **401** – `{ "error": "Unauthorized" }`
 - **500** – `{ "error": "Failed to update auto-renew" }`
+
+---
+
+### 5.4.3e Upgrade premium dealer package (mobile)
+
+**POST** `/api/mobile/premium-dealers/upgrade`
+
+**Auth:** Required. `Authorization: Bearer <session_token>`.
+
+Upgrade the user's **active** premium dealer package to a **higher** tier by paying **only the points difference** between the two packages. Example: Gold = 10,000 pts, Diamond = 20,000 pts → upgrade cost = **10,000 pts** (not the full Diamond price).
+
+The server reads the user's current active subscription, resolves both packages from `premium_dealers_packages_json`, compares **level** (admin-configured order from **5.4.3**), and computes cost as `target.pointsRequired − current.pointsRequired`. **Do not send prices or current package from the mobile client.**
+
+**Prerequisites:** User must already have an active, non-expired premium dealer subscription (**5.4.3b**). Call **GET `/api/mobile/premium-dealers/settings`** to list tiers and show upgrade options where `level` is greater than the current package's level.
+
+**Request body (JSON):**
+
+```json
+{ "targetPackageName": "Diamond Package" }
+```
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `targetPackageName` | string | Yes | Exact name of the higher-tier package to upgrade to (from **5.4.3**). Max 120 chars. |
+
+**Server-side flow:**
+
+1. Authenticate user
+2. Load current active `premium_dealers_packages` row (non-expired)
+3. Resolve current and target packages from DB settings
+4. Validate target exists and is enabled
+5. Require `target.level > current.level`
+6. Compute `upgradeCost = target.pointsRequired − current.pointsRequired`
+7. Check `user.points >= upgradeCost`
+8. DB transaction: deduct `upgradeCost`, mark old subscription `cancelled`, insert new active subscription (same `startDate`, `expiresAt`, `autoRenew`), update user cache, insert `point_transaction` (`type: premium_upgrade`)
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "previousPackageName": "Gold Package",
+  "packageName": "Diamond Package",
+  "pointsUsed": 10000,
+  "remainingPoints": 5000,
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "expiresAt": "2026-02-01T00:00:00.000Z",
+  "autoRenew": true,
+  "status": "active"
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `previousPackageName` | string | Package before upgrade. |
+| `packageName` | string | New active package name. |
+| `pointsUsed` | number | Points deducted (tier difference only). |
+| `remainingPoints` | number | User's balance after deduction. |
+| `startDate` | string | Unchanged from pre-upgrade subscription period. |
+| `expiresAt` | string | Unchanged expiry of the current billing period. |
+| `autoRenew` | boolean | Preserved from the previous active subscription. |
+| `status` | string | Always `"active"` on success. |
+
+**Errors:**
+
+- **400** – `{ "error": "Invalid upgrade request" }` — missing/invalid `targetPackageName`.
+- **401** – `{ "error": "Unauthorized" }`
+- **404** – `{ "error": "Package not found" }` — target package name not in settings or disabled.
+- **409** – `{ "error": "No active premium dealer subscription to upgrade" }` — user is not currently premium.
+- **409** – `{ "error": "Current premium dealer package is no longer available" }` — active subscription references a package removed/disabled in admin settings.
+- **409** – `{ "error": "Target package must be a higher tier than your current package" }` — same tier, lower tier, or equal price.
+- **422** – `{ "error": "Insufficient points balance" }`
+- **500** – `{ "error": "Failed to upgrade premium dealer package" }`
 
 ---
 
@@ -3734,8 +3813,9 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 | GET    | `/api/mobile/feature-settings` | No   | Full feature settings: `homeFeaturedLimit` + `pricingTiers` (with optional `enabled`). See 5.4.1b.         |
 | GET    | `/api/mobile/points/balance` | Yes  | Point balance breakdown (`available`, `reserved`, `lifetime`). See 5.4.2a.                                  |
 | GET    | `/api/mobile/points/history` | Yes  | Point balance + paginated ledger (`filter`, `page`, `limit`). See 5.4.2b.                                   |
-| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
+| GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`, `level`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
+| POST   | `/api/mobile/premium-dealers/upgrade` | Yes  | Upgrade active premium package (pay tier difference only). See 5.4.3e.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
 | GET    | `/api/mobile/premium-dealers` | No   | Public list of active premium dealers (`userId`, `name`, `username`, `image`, `city`, `ratingScore`, `firstPremiumDealerYear`, `premiumSinceDate`, `packageName`, `startDate`, `expiresAt`, `autoRenew`, `presence`, `status`, `lastSeenAt`). See 5.4.3c. |
 | PATCH  | `/api/mobile/premium-dealers/auto-renew` | Yes | Toggle auto-renew on the current user's active premium dealer subscription. See 5.4.3d. |
