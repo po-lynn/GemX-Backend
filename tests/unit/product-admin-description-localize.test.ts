@@ -60,6 +60,7 @@ vi.mock("@/features/products/services/localize-description", async () => {
   >("@/features/products/services/localize-description")
   return {
     ...actual,
+    buildLocalizedProductTitle: vi.fn(),
     buildLocalizedProductDescription: vi.fn(),
   }
 })
@@ -70,11 +71,20 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe("createProductAction — description localization", () => {
-  it("stores all four description locales from Google Translate on create", async () => {
-    const { buildLocalizedProductDescription } = await import(
-      "@/features/products/services/localize-description"
-    )
+describe("createProductAction — title + description localization", () => {
+  it("stores all four title and description locales from Google Translate on create", async () => {
+    const {
+      buildLocalizedProductTitle,
+      buildLocalizedProductDescription,
+    } = await import("@/features/products/services/localize-description")
+    vi.mocked(buildLocalizedProductTitle).mockResolvedValue({
+      sourceLanguage: "English",
+      title: "Ruby",
+      titleEn: "Ruby",
+      titleMy: "ပတ္တမြား",
+      titleTh: "ทับทิม",
+      titleKo: "루비",
+    })
     vi.mocked(buildLocalizedProductDescription).mockResolvedValue({
       sourceLanguage: "English",
       description: "Natural ruby",
@@ -104,8 +114,14 @@ describe("createProductAction — description localization", () => {
       productId: "prod-1",
       language: "English",
     })
+    expect(buildLocalizedProductTitle).toHaveBeenCalledWith("Ruby")
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({
+        title: "Ruby",
+        titleEn: "Ruby",
+        titleMy: "ပတ္တမြား",
+        titleTh: "ทับทิม",
+        titleKo: "루비",
         description: "Natural ruby",
         language: "English",
         descriptionEn: "Natural ruby",
@@ -117,10 +133,10 @@ describe("createProductAction — description localization", () => {
   })
 
   it("returns translation error without inserting when Google is not configured", async () => {
-    const { buildLocalizedProductDescription } = await import(
+    const { buildLocalizedProductTitle } = await import(
       "@/features/products/services/localize-description"
     )
-    vi.mocked(buildLocalizedProductDescription).mockRejectedValue(
+    vi.mocked(buildLocalizedProductTitle).mockRejectedValue(
       new Error("Google Translate is not configured. Set GOOGLE_TRANSLATE_API_KEY"),
     )
     const { createProductInDb } = await import("@/features/products/db/products")
@@ -143,8 +159,8 @@ describe("createProductAction — description localization", () => {
   })
 })
 
-describe("updateProductAction — per-language description edit", () => {
-  it("updates only the selected locale column when editLanguage is set", async () => {
+describe("updateProductAction — per-language title + description edit", () => {
+  it("updates only the selected locale columns when editLanguage is set", async () => {
     // Same behavior as news/articles: no re-translate on edit.
     const { getProductById, updateProductInDb } = await import(
       "@/features/products/db/products"
@@ -152,6 +168,11 @@ describe("updateProductAction — per-language description edit", () => {
     vi.mocked(getProductById).mockResolvedValue({
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       language: "English",
+      title: "Ruby",
+      titleEn: "Ruby",
+      titleMy: "old-my-title",
+      titleTh: "old-th-title",
+      titleKo: "old-ko-title",
       description: "Natural ruby",
       descriptionEn: "Natural ruby",
       descriptionMy: "old-my",
@@ -163,6 +184,7 @@ describe("updateProductAction — per-language description edit", () => {
     const fd = new FormData()
     fd.set("productId", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     fd.set("editLanguage", "Thai")
+    fd.set("title", "ทับทิม")
     fd.set("description", "ทับทิมธรรมชาติ")
     fd.set("isOwnProduct", "true")
 
@@ -174,12 +196,15 @@ describe("updateProductAction — per-language description edit", () => {
     expect(updateProductInDb).toHaveBeenCalledWith(
       "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       expect.objectContaining({
+        titleTh: "ทับทิม",
         descriptionTh: "ทับทิมธรรมชาติ",
       }),
       expect.anything(),
     )
     const updateArg = vi.mocked(updateProductInDb).mock.calls[0]![1]
+    expect(updateArg).not.toHaveProperty("title")
     expect(updateArg).not.toHaveProperty("description")
+    expect(updateArg).not.toHaveProperty("titleEn")
     expect(updateArg).not.toHaveProperty("descriptionEn")
   })
 })

@@ -554,6 +554,20 @@
       "when": 1786083000000,
       "tag": "0079_product_description_translations",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1786084000000,
+      "tag": "0080_product_title_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1786940975782,
+      "tag": "0081_blushing_nocturne",
+      "breakpoints": true
     }
   ]
 }
