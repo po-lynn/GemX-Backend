@@ -763,6 +763,15 @@ export async function creditUserPoints(
   return { success: true, updatedPoints: updated.points };
 }
 
+/** Active marketplace users (not banned, not archived). */
+export async function listActiveUserIds(): Promise<string[]> {
+  const rows = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(and(eq(user.banned, false), eq(user.archived, false)));
+  return rows.map((r) => r.id);
+}
+
 /** Deduct points only when user has enough balance. Returns remaining points on success. */
 export async function deductUserPoints(
   userId: string,

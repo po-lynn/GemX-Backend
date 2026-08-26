@@ -6,7 +6,9 @@ import {
   index,
   boolean,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth-schema";
 
 /**
@@ -68,10 +70,10 @@ export const pointPurchaseRequest = pgTable(
 
 /**
  * Unified ledger of all point movements per user.
- * type: "topup" | "premium_activation" | "feature_activation" | "registration_bonus" | "monthly_bonus" | "admin_adjustment"
+ * type: "topup" | "premium_activation" | "feature_activation" | "registration_bonus" | "monthly_bonus" | "admin_adjustment" | "surprise_bonus"
  * direction: "credit" | "debit"
  * status: "completed" | "pending" | "cancelled" | "rejected"
- * referenceType: "purchase_request" | "premium_package" | "product" | "registration" | "monthly_bonus"
+ * referenceType: "purchase_request" | "premium_package" | "product" | "registration" | "monthly_bonus" | "surprise_bonus_campaign"
  */
 export const pointTransaction = pgTable(
   "point_transaction",
@@ -96,6 +98,9 @@ export const pointTransaction = pgTable(
     index("pt_userId_type_idx").on(table.userId, table.type),
     index("pt_userId_status_idx").on(table.userId, table.status),
     index("pt_userId_createdAt_idx").on(table.userId, table.createdAt),
+    uniqueIndex("pt_user_type_ref_uidx")
+      .on(table.userId, table.type, table.referenceId)
+      .where(sql`${table.referenceId} IS NOT NULL`),
   ]
 );
 

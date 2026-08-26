@@ -7,24 +7,18 @@ import {
   getFeatureSettings,
   getPremiumDealersSettings,
 } from "@/features/points/db/points";
-import {
-  countEligibleMonthlyBonusUsers,
-  getMonthlyBonusSettings,
-} from "@/features/points/db/monthly-bonus";
 import { CreditSettingsForm } from "@/features/points/components/CreditSettingsForm";
 import { FadeUp } from "@/components/admin/motion";
 
 export default async function AdminCreditPage() {
   await connection();
   await requireFeatureAccess(FEATURE_KEYS.CREDIT_PACKAGES);
-  const [management, packages, featureSettings, dealerSettings, monthlyBonus, monthlyBonusEligibleCount] =
+  const [management, packages, featureSettings, dealerSettings] =
     await Promise.all([
       getPointManagementSettings(),
       getPointPurchasePackagesSettings(),
       getFeatureSettings(),
       getPremiumDealersSettings(),
-      getMonthlyBonusSettings(),
-      countEligibleMonthlyBonusUsers(),
     ]);
 
   return (
@@ -36,8 +30,6 @@ export default async function AdminCreditPage() {
           packages={packages.packages}
           featureSettings={featureSettings}
           dealerPackages={dealerSettings.packages}
-          monthlyBonus={monthlyBonus}
-          monthlyBonusEligibleCount={monthlyBonusEligibleCount}
         />
       </div>
     </FadeUp>

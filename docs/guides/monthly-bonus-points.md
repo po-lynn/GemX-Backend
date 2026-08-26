@@ -17,8 +17,8 @@ psql "$DATABASE_URL" -f scripts/create-gemx-notifications-system-user.sql
 
 ## Configure (admin)
 
-1. Open **Admin → Point Packages** (`/admin/credit`).
-2. Click **Monthly Bonus** (header) or **Configure** on the Defaults tab card.
+1. Open **Admin → Point Transactions** (`/admin/credit/transactions`).
+2. Click **Monthly Bonus Points** (header, left of **Top-up**). The settings drawer slides in from the right, same as Top-up.
 3. Set:
    - Enable program
    - Points per month

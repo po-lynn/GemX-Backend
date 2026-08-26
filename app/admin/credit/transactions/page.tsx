@@ -9,6 +9,10 @@ import {
 } from "@/features/points/db/points"
 import { PointTransactionsTable } from "@/features/points/components/PointTransactionsTable"
 import { PointActionButtons } from "@/features/points/components/PointActionButtons"
+import {
+  countEligibleMonthlyBonusUsers,
+  getMonthlyBonusSettings,
+} from "@/features/points/db/monthly-bonus"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp } from "@/components/admin/motion"
 import { withQueryTimeout } from "@/lib/query-timeout"
@@ -69,6 +73,11 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
     ADMIN_TRANSACTIONS_QUERY_TIMEOUT_MS
   )
 
+  // Settings for the header Monthly Bonus popup — sequential after counts so this
+  // page still holds at most one extra pooler connection of its own at a time.
+  const monthlyBonus = await getMonthlyBonusSettings()
+  const monthlyBonusEligibleCount = await countEligibleMonthlyBonusUsers()
+
   const views: ViewTab[] = [
     { id: "all",     label: "All",     count: counts.all },
     { id: "topups",  label: "Top-ups", count: counts.topups },
@@ -96,7 +105,10 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
           </h1>
           <p className="lv-subhead">Full ledger of every point movement across all user accounts.</p>
         </div>
-        <PointActionButtons />
+        <PointActionButtons
+          monthlyBonus={monthlyBonus}
+          monthlyBonusEligibleCount={monthlyBonusEligibleCount}
+        />
       </div>
 
       <PointTransactionsTable

@@ -2,16 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, CalendarDays } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { CalendarClock, CalendarDays, Check, X } from "lucide-react"
 import { saveMonthlyBonusSettingsAction } from "@/features/points/actions/points"
 import { cn } from "@/lib/utils"
 
@@ -70,8 +61,8 @@ type Props = {
 }
 
 /**
- * Outer shell keeps Dialog mounted; form remounts via `key` when opened/settings
- * change so draft state resets without setState-in-effect.
+ * Right-side drawer (same pattern as Top-up). Form remounts via `key` when
+ * opened/settings change so draft state resets without setState-in-effect.
  */
 export function MonthlyBonusSettingsDialog({
   open,
@@ -79,6 +70,8 @@ export function MonthlyBonusSettingsDialog({
   initial,
   eligibleUserCount,
 }: Props) {
+  if (!open) return null
+
   const formKey = [
     initial.enabled ? "1" : "0",
     String(initial.amount),
@@ -87,27 +80,23 @@ export function MonthlyBonusSettingsDialog({
   ].join(":")
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {open ? (
-        <MonthlyBonusSettingsForm
-          key={formKey}
-          initial={initial}
-          eligibleUserCount={eligibleUserCount}
-          onOpenChange={onOpenChange}
-        />
-      ) : null}
-    </Dialog>
+    <MonthlyBonusSettingsForm
+      key={formKey}
+      initial={initial}
+      eligibleUserCount={eligibleUserCount}
+      onClose={() => onOpenChange(false)}
+    />
   )
 }
 
 function MonthlyBonusSettingsForm({
   initial,
   eligibleUserCount,
-  onOpenChange,
+  onClose,
 }: {
   initial: MonthlyBonusSettings
   eligibleUserCount: number
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
 }) {
   const router = useRouter()
   const [enabled, setEnabled] = useState(initial.enabled)
@@ -138,172 +127,313 @@ function MonthlyBonusSettingsForm({
       setError(result.error)
       return
     }
-    onOpenChange(false)
+    onClose()
     router.refresh()
   }
 
   return (
-    <DialogContent className="max-w-xl gap-0 p-0 overflow-hidden">
-      <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-100">
-        <DialogTitle className="text-[17px] font-semibold tracking-tight">
-          Monthly Bonus Points Setting
-        </DialogTitle>
-        <DialogDescription className="text-[13px] text-slate-500">
-          Grant bonus points to every registered user every 30 days from the
-          distribution start date.
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-          <div>
-            <div className="text-[14px] font-semibold text-slate-800">
-              Enable {cycles}-Month Bonus Program
-            </div>
-            <div className="text-[12.5px] text-slate-500 mt-0.5">
-              When on, the daily cron credits each due cycle automatically.
+    <>
+      <div className="lv-drawer-backdrop" onClick={onClose} />
+      <aside className="lv-drawer" role="dialog" aria-label="Monthly bonus points settings">
+        <header className="lv-drawer-head">
+          <div
+            className="rt-head-icon"
+            style={{
+              background: "#f5f3ff",
+              color: "#6d28d9",
+              border: "1.5px solid #ddd6fe",
+            }}
+          >
+            <CalendarClock style={{ width: 20, height: 20 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="lv-drawer-title">Monthly Bonus Points</div>
+            <div className="lv-drawer-sub">
+              Credit all registered users every 30 days
             </div>
           </div>
+          <button className="lv-drawer-close" onClick={onClose} aria-label="Close">
+            <X style={{ width: 16, height: 16 }} />
+          </button>
+        </header>
+
+        <div className="lv-drawer-body">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "var(--lv-panel-2)",
+              border: "1px solid var(--lv-border)",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lv-text)" }}>
+                Enable {cycles}-Month Bonus Program
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--lv-text-3)", marginTop: 2 }}>
+                When on, the daily cron credits each due cycle automatically.
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              onClick={() => setEnabled((v) => !v)}
+              className={cn(
+                "relative h-7 w-12 shrink-0 rounded-full transition-colors",
+                enabled ? "bg-violet-600" : "bg-slate-300",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
+                  enabled && "translate-x-5",
+                )}
+              />
+            </button>
+          </div>
+
+          <h3 className="lv-drawer-section-h">Amount &amp; duration</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--lv-text-2)" }}>
+                Monthly bonus amount (points)
+              </span>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="number"
+                  min={0}
+                  value={amount}
+                  onChange={(e) =>
+                    setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))
+                  }
+                  style={{ ...inputStyle, paddingRight: 108 }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: "var(--lv-text-3)",
+                    background: "var(--lv-panel-2)",
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    pointerEvents: "none",
+                  }}
+                >
+                  Points/month
+                </span>
+              </div>
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--lv-text-2)" }}>
+                Bonus duration
+              </span>
+              <select
+                value={cycles}
+                onChange={(e) =>
+                  setCycles(Number(e.target.value) as MonthlyBonusCycles)
+                }
+                style={inputStyle}
+              >
+                {MONTHLY_BONUS_CYCLE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n} Month{n === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--lv-text-2)" }}>
+                Distribution start date
+              </span>
+              <div style={{ position: "relative" }}>
+                <CalendarDays
+                  style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 14,
+                    height: 14,
+                    color: "var(--lv-text-3)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: 34 }}
+                />
+              </div>
+            </label>
+          </div>
+
+          {schedule.length > 0 && (
+            <div>
+              <h3 className="lv-drawer-section-h">
+                Bonus schedule ({cycles} month{cycles === 1 ? "" : "s"})
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 8,
+                }}
+              >
+                {schedule.map((item) => (
+                  <div
+                    key={item.cycle}
+                    style={{
+                      borderRadius: 10,
+                      border: "1px solid var(--lv-border)",
+                      background: "#fff",
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lv-text-3)" }}>
+                        Month {item.cycle}
+                      </span>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          width: 20,
+                          height: 20,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                          background: "#f0f9ff",
+                          color: "#0284c7",
+                        }}
+                      >
+                        <Check style={{ width: 12, height: 12 }} strokeWidth={3} />
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--lv-text)" }}>
+                      {item.label}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#6d28d9", marginTop: 2 }}>
+                      +{item.points.toLocaleString()} PTS
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              borderRadius: 10,
+              border: "1px solid #ede9fe",
+              background: "#f5f3ff",
+              padding: "12px 14px",
+              fontSize: 13,
+              color: "#4c1d95",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "6px 16px",
+            }}
+          >
+            <span>
+              <strong>Status:</strong>{" "}
+              {enabled ? `${cycles}-Month Bonus Active` : "Disabled"}
+            </span>
+            <span>
+              <strong>Rate:</strong> {amount.toLocaleString()} Pts/Month
+            </span>
+            <span>
+              <strong>Total Eligible:</strong> {eligibleUserCount.toLocaleString()} users
+            </span>
+          </div>
+
+          {error && (
+            <p
+              style={{
+                fontSize: 13,
+                color: "#b91c1c",
+                borderRadius: 8,
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+                padding: "8px 12px",
+                margin: 0,
+              }}
+            >
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="lv-drawer-foot" style={{ justifyContent: "flex-start" }}>
           <button
             type="button"
-            role="switch"
-            aria-checked={enabled}
-            onClick={() => setEnabled((v) => !v)}
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-              enabled ? "bg-violet-600" : "bg-slate-300",
-            )}
+            onClick={handleSave}
+            disabled={loading}
+            style={{
+              padding: "9px 20px",
+              borderRadius: 8,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+              opacity: loading ? 0.5 : 1,
+              background: "#6d28d9",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+            }}
           >
-            <span
-              className={cn(
-                "absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
-                enabled && "translate-x-5",
-              )}
-            />
+            <CalendarClock style={{ width: 14, height: 14 }} />
+            {loading ? "Saving…" : "Save Changes"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              padding: "9px 16px",
+              borderRadius: 8,
+              border: "1px solid var(--lv-border)",
+              background: "none",
+              color: "var(--lv-text-2)",
+              fontWeight: 500,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Cancel
           </button>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-[0.04em]">
-              Monthly Bonus Amount (Points)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                className="w-full px-[11px] py-[9px] pr-24 rounded-lg border border-slate-200 bg-white text-[15px] outline-none focus:border-violet-600 focus:ring-[3px] focus:ring-violet-600/10"
-                value={amount}
-                onChange={(e) =>
-                  setAmount(Math.max(0, Math.floor(Number(e.target.value) || 0)))
-                }
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
-                Points/month
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-[0.04em]">
-              Bonus Duration
-            </label>
-            <select
-              className="w-full px-[11px] py-[9px] rounded-lg border border-slate-200 bg-white text-[15px] outline-none focus:border-violet-600 focus:ring-[3px] focus:ring-violet-600/10"
-              value={cycles}
-              onChange={(e) =>
-                setCycles(Number(e.target.value) as MonthlyBonusCycles)
-              }
-            >
-              {MONTHLY_BONUS_CYCLE_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {n} Month{n === 1 ? "" : "s"}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5 max-w-xs">
-          <label className="text-[12px] font-semibold text-slate-400 uppercase tracking-[0.04em]">
-            Distribution Start Date
-          </label>
-          <div className="relative">
-            <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="date"
-              className="w-full pl-9 pr-[11px] py-[9px] rounded-lg border border-slate-200 bg-white text-[15px] outline-none focus:border-violet-600 focus:ring-[3px] focus:ring-violet-600/10"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {schedule.length > 0 && (
-          <div>
-            <div className="text-[13px] font-semibold text-slate-700 mb-2.5">
-              Bonus Schedule ({cycles} Month{cycles === 1 ? "" : "s"} Period)
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {schedule.map((item) => (
-                <div
-                  key={item.cycle}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,20,35,0.04)]"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[12px] font-semibold text-slate-500">
-                      Month {item.cycle}
-                    </span>
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-sky-50 text-sky-600">
-                      <Check className="h-3 w-3" strokeWidth={3} />
-                    </span>
-                  </div>
-                  <div className="text-[13px] font-medium text-slate-800">
-                    {item.label}
-                  </div>
-                  <div className="text-[12px] font-semibold text-violet-600 mt-0.5">
-                    +{item.points.toLocaleString()} PTS
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-[13px] text-violet-900 flex flex-wrap gap-x-4 gap-y-1">
-          <span>
-            <strong>Status:</strong>{" "}
-            {enabled ? `${cycles}-Month Bonus Active` : "Disabled"}
-          </span>
-          <span>
-            <strong>Rate:</strong> {amount.toLocaleString()} Pts/Month
-          </span>
-          <span>
-            <strong>Total Eligible:</strong>{" "}
-            {eligibleUserCount.toLocaleString()} users
-          </span>
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-600 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-            {error}
-          </p>
-        )}
-      </div>
-
-      <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
-        <Button type="button" onClick={handleSave} disabled={loading}>
-          {loading ? "Saving…" : "Save Changes"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+      </aside>
+    </>
   )
+}
+
+const inputStyle: React.CSSProperties = {
+  fontSize: 13,
+  padding: "9px 12px",
+  border: "1px solid var(--lv-border)",
+  borderRadius: 8,
+  outline: "none",
+  width: "100%",
+  background: "#fff",
+  color: "var(--lv-text)",
 }

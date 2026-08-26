@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Surprise Bonus (admin All Users top-up)** – Admin can credit **all active users** via a queued campaign (`surprise_bonus_batch`). Each successful grant writes a `point_transaction` with **`type: surprise_bonus`**, **`direction: credit`**, **`referenceType: surprise_bonus_campaign`**, **`referenceId`** = campaign UUID (visible on **GET `/api/mobile/points/history`** with `filter=all`). The same grant creates an in-app **`app_notification`** row and sends an **FCM push** to registered devices (title `{campaignName} 🎁`, body `You received {N} surprise bonus points!`). Push `data`: `type=surprise_bonus`, `screen=home`, `campaignId`, `points`. Requires **POST `/api/push/register`** after login. See **5.4.2b** and **9**. Guides: [admin-top-up.md](./guides/admin-top-up.md), [surprise-bonus-cron.md](./guides/surprise-bonus-cron.md), [cron-surprise-bonus-push.md](./api/cron-surprise-bonus-push.md).
 - **Monthly bonus points** – Admin **Point Packages** can enable a recurring program (amount, 1/3/6/12 cycles, distribution start date). Daily cron **`POST /api/cron/monthly-bonus-points`** grants **+points every 30 days** to all non-banned/non-archived users and writes `point_transaction` (`type: monthly_bonus`). See [docs/guides/monthly-bonus-points.md](./guides/monthly-bonus-points.md) and [docs/api/cron-monthly-bonus-points.md](./api/cron-monthly-bonus-points.md).
 - **Product description auto-translate (Google)** – On **admin product create** and **POST `/api/products`**, detects description language and translates into the other three of **English / Myanmar / Thai / Korean**. Stored on **`product`**: `language`, `descriptionEn/My/Th/Ko`. **Admin edit** uses a per-language dropdown (no re-translate on save), same pattern as news/articles. See [docs/api/products.md](./api/products.md) and [docs/guides/product-description-google-translate.md](./guides/product-description-google-translate.md).
 - **Articles auto-translate (Google)** – Same as news: on create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean**. Stored on **`articles`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/articles`** and **GET `/api/articles/:id`** accept optional **`lang`**. Admin edit uses a per-language dropdown (no re-translate on edit). See **7** and [docs/api/articles.md](./api/articles.md).
@@ -62,7 +63,7 @@
 - **GET /api/profile/:id** – Added public profile endpoint for viewing another seller and their active listings. No auth required.
 - **Mobile register points credit** – `POST /api/mobile/register` now auto-credits the new user with configured **default registration points** (added directly to `user.points` after successful sign-up).
 - **GET /api/products/:id** – Response includes **`createdAt`** and **`updatedAt`** (ISO 8601 strings). Not returned on product list endpoints. See **5.2**.
-- **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (any user with a registered push token). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped.
+- **Push notifications** – When a new article is published (create or update to published), the backend sends an FCM push to all registered mobile app users (any user with a registered push token). Mobile app must register the device token via **POST /api/push/register** (auth required) with body `{ "token": "<fcm_token>", "platform": "android" | "ios" }`. Optional **DELETE /api/push/register** with body `{ "token": "<fcm_token>" }` to unregister. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` to send; if unset, push is skipped. **Also:** Surprise Bonus All Users top-up sends a per-user FCM with `data.type=surprise_bonus` — see **9**.
 - **Register** – Request body now accepts optional fields: `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`. Validation errors from the auth provider (e.g. password too short) are returned in the `error` field instead of a generic message.
 - **GET /api/products** – Public list returns **active** products only by default; use query `status` to override. Query params include `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, optional **`newest=true`** (new-products list: pure **`createdAt` desc**, ignored when **`search`** is set), optional **`sortBy`** / **`sortOrder`**, and optional **`createdFrom`** / **`createdTo`** (YYYY-MM-DD). **`isCollectorPiece=true`:** public (no auth required) — returns all active collector pieces with masked data only (see above). **Default sort** (no `search`, no `newest`, no `sortBy`/`sortOrder`): collector → privilege assist → featured → promotion → `createdAt` (newest). **With `search`:** relevance first, then the same priority fields, then `createdAt` ( **`newest` is ignored** ). **New products:** `?newest=true` or `?newest=1` → newest listings by `createdAt` only (filters like `categoryId` still apply). **Explicit sort:** `sortBy` / `sortOrder` in the URL → admin-style column sort (when there is no `search`). Responses do **not** include a numeric `featured` field—only **`isFeatured`** (boolean) and **`featured_expires_at`** (ISO 8601 or `null`).
 - **GET /api/products/mine** – Same query params as list all, including `isCollectorPiece`, `isPrivilegeAssist`, and `isPromotion`. Returns all statuses by default (seller sees full list). Collector-piece rows are shown as owner data (no public masking), since this endpoint is seller-scoped. Same sort order as public list when filters apply.
@@ -154,8 +155,8 @@
 | GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
 | GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
-| POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login.                                                                                             |
-| DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout.                                                                                                                                             |
+| POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login. Required to receive Surprise Bonus and other pushes. See **9**. |
+| DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout. See **9**. |
 
 
 List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate (including `?isCollectorPiece=true`, which returns only masked public data). **GET /api/products/:id** for collector pieces without approval returns `no-store` (user-specific `requestStatus`). **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
@@ -2970,13 +2971,13 @@ Returns the authenticated user's point balance split into three buckets. Suitabl
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-Returns the user's current balance alongside a paginated transaction ledger (newest first). Covers all ledger entries — top-ups, registration bonus, feature purchases, premium dealer activations, admin debits, etc.
+Returns the user's current balance alongside a paginated transaction ledger (newest first). Covers all ledger entries — top-ups, registration bonus, monthly bonus, **surprise bonus**, feature purchases, premium dealer activations, admin debits, etc.
 
 **Query params:**
 
 | Param | Type | Default | Description |
 | ----- | ---- | ------- | ----------- |
-| `filter` | string | `all` | `all` — every row; `topups` — completed credits (type `topup` or `registration_bonus`); `spent` — completed debits; `pending` — rows with `status` `pending`. |
+| `filter` | string | `all` | `all` — every row; `topups` — completed credits of type `topup`, `registration_bonus`, or `monthly_bonus` (**not** `surprise_bonus` — use `all` for those); `spent` — completed debits; `pending` — rows with `status` `pending`. |
 | `page` | number | `1` | Page number (min 1). |
 | `limit` | number | `20` | Items per page (min 1, max 50). |
 
@@ -2992,6 +2993,18 @@ Returns the user's current balance alongside a paginated transaction ledger (new
   "transactions": [
     {
       "id": "uuid-here",
+      "type": "surprise_bonus",
+      "direction": "credit",
+      "amount": 500,
+      "status": "completed",
+      "description": "Surprise bonus: Sweet December",
+      "paymentMethod": null,
+      "referenceId": "campaign-uuid",
+      "referenceType": "surprise_bonus_campaign",
+      "createdAt": "2026-08-25T10:00:00.000Z"
+    },
+    {
+      "id": "uuid-here-2",
       "type": "topup",
       "direction": "credit",
       "amount": 100,
@@ -3003,7 +3016,7 @@ Returns the user's current balance alongside a paginated transaction ledger (new
       "createdAt": "2026-05-15T10:00:00.000Z"
     },
     {
-      "id": "uuid-here-2",
+      "id": "uuid-here-3",
       "type": "premium_activation",
       "direction": "debit",
       "amount": 100,
@@ -3028,18 +3041,20 @@ Returns the user's current balance alongside a paginated transaction ledger (new
 | `balance` | object | Same shape as **GET `/api/mobile/points/balance`** (`available`, `reserved`, `lifetime`). |
 | `transactions` | array | Ledger rows for this user, newest first. |
 | `transactions[].id` | string | Row UUID. |
-| `transactions[].type` | string | `topup`, `registration_bonus`, `feature_purchase`, `premium_activation`, `admin_credit`, `admin_debit`, etc. |
+| `transactions[].type` | string | `topup`, `registration_bonus`, `monthly_bonus`, **`surprise_bonus`**, `feature_purchase`, `premium_activation`, `admin_credit`, `admin_debit`, etc. |
 | `transactions[].direction` | string | `"credit"` (points added) or `"debit"` (points deducted). |
 | `transactions[].amount` | number | Points involved (always positive). |
 | `transactions[].status` | string | `"completed"`, `"pending"`, or `"rejected"`. |
-| `transactions[].description` | string \| null | Human-readable note (e.g. `"Top-up via KBZ Pay"`, `"Premium · Basic Package"`). |
+| `transactions[].description` | string \| null | Human-readable note (e.g. `"Surprise bonus: Sweet December"`, `"Top-up via KBZ Pay"`). |
 | `transactions[].paymentMethod` | string \| null | Payment method name for top-up rows; `null` otherwise. |
-| `transactions[].referenceId` | string \| null | UUID of the linked record (purchase request, premium subscription, etc.). |
-| `transactions[].referenceType` | string \| null | Type of the linked record (e.g. `"purchase_request"`, `"premium_package"`, `"registration"`). |
+| `transactions[].referenceId` | string \| null | UUID of the linked record (purchase request, premium subscription, **surprise bonus campaign**, etc.). |
+| `transactions[].referenceType` | string \| null | Type of the linked record (e.g. `"purchase_request"`, `"premium_package"`, `"registration"`, **`"surprise_bonus_campaign"`**). |
 | `transactions[].createdAt` | string | ISO 8601 timestamp. |
 | `pagination.total` | number | Total matching rows (for page count calculation). |
 | `pagination.page` | number | Current page. |
 | `pagination.limit` | number | Page size. |
+
+**Surprise Bonus credits:** When an admin runs **All Users** top-up, each recipient gets one ledger row (`type: surprise_bonus`, `referenceType: surprise_bonus_campaign`). The same grant triggers an FCM push (see **9**) and an `app_notification` row. Idempotent: re-processing the same campaign for the same user does not double-credit.
 
 **Errors:**
 
@@ -3659,16 +3674,60 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 
 ---
 
-## 9. Quick flow for React Native
+## 9. Push notifications (FCM)
+
+Mobile must register the device FCM token after login to receive pushes. Backend requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`; if unset, push is skipped (credits / `app_notification` still apply where relevant).
+
+### 9.1 Register / unregister
+
+**POST** `/api/push/register` (auth) — body `{ "token": "<fcm_token>", "platform": "android" | "ios" }` (platform optional). Call after login and whenever the FCM token refreshes.
+
+**DELETE** `/api/push/register` (auth) — body `{ "token": "<fcm_token>" }`. Call on logout.
+
+### 9.2 Surprise Bonus push
+
+When an admin runs **All Users** Surprise Bonus top-up, each newly credited user (with a registered token) receives an FCM notification. Produced by the same `surprise_bonus_batch` queue that credits points (local inline drain or Edge Function → `POST /api/cron/surprise-bonus-push`).
+
+| Field | Value |
+| ----- | ----- |
+| Notification title | `{campaignName} 🎁` (e.g. `Sweet December 🎁`) |
+| Notification body | `You received {N} surprise bonus points!` |
+| Ledger | `point_transaction.type = surprise_bonus` — see **5.4.2b** |
+| In-app row | `app_notification` with `type = surprise_bonus` (same title/message) |
+
+**FCM `data` (all string values):**
+
+| Key | Example | Description |
+| --- | ------- | ----------- |
+| `type` | `surprise_bonus` | Use to route the tap handler |
+| `screen` | `home` | Suggested landing screen |
+| `campaignId` | `uuid` | Surprise bonus campaign id |
+| `points` | `500` | Points credited |
+
+**Mobile handling:** On notification open, if `data.type === "surprise_bonus"`, refresh wallet (`GET /api/mobile/points/balance` or `.../history`) and optionally navigate to `home` / wallet. Users without a registered token still receive the ledger credit and `app_notification` row (no phone banner).
+
+### 9.3 Other push types (summary)
+
+| Trigger | `data.type` / notes |
+| ------- | ------------------- |
+| Article / news published | Topic or device broadcast — see admin global push; often `screen=article` / `screen=news` |
+| Chat message | Receiver-only; see **5.4d** |
+| Welcome / login | After register / social-login |
+| **Surprise Bonus** | `type=surprise_bonus` — this section |
+
+---
+
+## 10. Quick flow for React Native
 
 1. **Auth**
   - Call `POST /api/mobile/register` or `POST /api/mobile/login`.
   - From the response, read and store the session token (exact key depends on better-auth response; often `session.token` or similar).
   - On every protected request, set header: `Authorization: Bearer <stored_token>`.
+  - **Register FCM:** `POST /api/push/register` with `{ "token": "<fcm_token>", "platform": "android" | "ios" }` after login (see **9**). Handle Surprise Bonus taps via `data.type === "surprise_bonus"`.
   - Load feature options: call `GET /api/mobile/feature-pricing-tiers` and let user select `durationDays` + `points`.
   - To buy points (top-up): call `GET /api/mobile/points/packages` to load packages and payment methods → user selects a package and transfers payment → submit `POST /api/mobile/points/purchase-requests` with transfer details → admin approves → points are credited. Track status with `GET /api/mobile/points/purchase-requests`. See **5.4.2**.
   - **Wallet header (balance only):** `GET /api/mobile/points/balance` → `{ available, reserved, lifetime }`. See **5.4.2a**.
-  - **Wallet / transaction history screen:** `GET /api/mobile/points/history?filter=all&page=1&limit=20` → balance + paginated ledger. Filter options: `topups`, `spent`, `pending`. See **5.4.2b**.
+  - **Wallet / transaction history screen:** `GET /api/mobile/points/history?filter=all&page=1&limit=20` → balance + paginated ledger (includes **`surprise_bonus`** credits). Filter options: `topups`, `spent`, `pending`. See **5.4.2b**.
   - To feature a product: send `isFeatured`, `featured`, and `featureDurationDays` in `POST /api/products` or `PATCH /api/products/:id`.
 2. **Categories**
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
@@ -3715,7 +3774,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 
 ---
 
-## 10. Error format
+## 11. Error format
 
 - **Body:** `{ "error": "Human-readable message" }`.
 - **Validation (400):** May also include `details`: `{ "fieldName": ["error message"] }`.
@@ -3723,7 +3782,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 
 ---
 
-## 11. Summary table
+## 12. Summary table
 
 
 | Method | Path                   | Auth | Description                                                                                                 |
@@ -3733,7 +3792,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
 | GET    | `/api/mobile/feature-settings` | No   | Full feature settings: `homeFeaturedLimit` + `pricingTiers` (with optional `enabled`). See 5.4.1b.         |
 | GET    | `/api/mobile/points/balance` | Yes  | Point balance breakdown (`available`, `reserved`, `lifetime`). See 5.4.2a.                                  |
-| GET    | `/api/mobile/points/history` | Yes  | Point balance + paginated ledger (`filter`, `page`, `limit`). See 5.4.2b.                                   |
+| GET    | `/api/mobile/points/history` | Yes  | Point balance + paginated ledger (`filter`, `page`, `limit`; includes `surprise_bonus`). See 5.4.2b. |
 | GET    | `/api/mobile/premium-dealers/settings` | No   | Get premium dealer package options (`name`, `pointsRequired`, `durationDays`). See 5.4.3.                           |
 | POST   | `/api/mobile/premium-dealers/activate` | Yes  | Spend points to activate premium dealer status for a package. See 5.4.3a.                                           |
 | GET    | `/api/mobile/premium-dealers/status`   | Yes  | Get current user's active premium dealer status. See 5.4.3b.                                                        |
@@ -3787,5 +3846,7 @@ Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`,
 | GET    | `/api/mobile/about-us` | No   | Published About Us content (story, terms/privacy metadata, company info, app version). See 8.1.             |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms, active only, sorted by `sortOrder`. See 8.2.                                 |
 | GET    | `/api/mobile/help-support` | No | Published Help & Support content (`faqs`, `contact`, `hours`, `reportForm`). See 8.3.                    |
+| POST   | `/api/push/register`   | Yes  | Register FCM token (required for Surprise Bonus and other pushes). See **9**.                              |
+| DELETE | `/api/push/register`   | Yes  | Unregister FCM token. See **9**.                                                                            |
 
 

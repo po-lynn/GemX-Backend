@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Gift, CreditCard, Package, Plus, Trash2, Info, Star, Shield, Eye, CalendarClock } from "lucide-react";
+import { Gift, CreditCard, Package, Plus, Trash2, Info, Star, Shield, Eye } from "lucide-react";
 import { saveCreditSettingsAction } from "@/features/points/actions/points";
 import type {
   PaymentMethod,
@@ -10,16 +10,7 @@ import type {
   FeaturePricingTier,
   PremiumDealerPackage,
 } from "@/features/points/db/points";
-import { MonthlyBonusSettingsDialog } from "@/features/points/components/MonthlyBonusSettingsDialog";
 import { cn } from "@/lib/utils";
-
-/** Mirrors server MonthlyBonusSettings — keep client-safe (no db imports). */
-type MonthlyBonusSettings = {
-  enabled: boolean;
-  amount: number;
-  cycles: 1 | 3 | 6 | 12;
-  startDate: string | null;
-};
 
 // ─── Internal state types ─────────────────────────────────────────────────────
 
@@ -72,8 +63,6 @@ type Props = {
   packages: PointPurchasePackage[];
   featureSettings: { homeFeaturedLimit: number; pricingTiers: FeaturePricingTier[] };
   dealerPackages: PremiumDealerPackage[];
-  monthlyBonus: MonthlyBonusSettings;
-  monthlyBonusEligibleCount: number;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -226,13 +215,9 @@ function RailTab({
 function DefaultsTab({
   value,
   onChange,
-  monthlyBonus,
-  onOpenMonthlyBonus,
 }: {
   value: number;
   onChange: (v: number) => void;
-  monthlyBonus: MonthlyBonusSettings;
-  onOpenMonthlyBonus: () => void;
 }) {
   return (
     <div className="p-6 space-y-8">
@@ -266,38 +251,6 @@ function DefaultsTab({
               Recommended: 5–25 pts to onboard without abuse.
             </span>
           </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex gap-3">
-            <IconTile color="purple">
-              <CalendarClock className="w-3.5 h-3.5" />
-            </IconTile>
-            <div>
-              <h3 className="text-[15px] font-semibold text-slate-800">
-                Monthly Bonus Points
-              </h3>
-              <p className="text-[13px] text-slate-500 mt-0.5 max-w-md">
-                Schedule recurring credits every 30 days for all registered users.
-              </p>
-              <p className="text-[12.5px] text-slate-500 mt-2">
-                {monthlyBonus.enabled
-                  ? `${monthlyBonus.cycles}-Month Bonus Active · ${monthlyBonus.amount} Pts/Month${
-                      monthlyBonus.startDate ? ` · starts ${monthlyBonus.startDate}` : ""
-                    }`
-                  : "Program disabled"}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onOpenMonthlyBonus}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:border-violet-300 hover:text-violet-700 transition-colors"
-          >
-            Configure
-          </button>
         </div>
       </div>
     </div>
@@ -1255,15 +1208,12 @@ export function CreditSettingsForm({
   packages: initialPackages,
   featureSettings: initialFeatureSettings,
   dealerPackages: initialDealerPackages,
-  monthlyBonus,
-  monthlyBonusEligibleCount,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("packages");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [monthlyBonusOpen, setMonthlyBonusOpen] = useState(false);
 
   const [defaultPts, setDefaultPts] = useState(defaultRegistrationPoints);
 
@@ -1378,25 +1328,12 @@ export function CreditSettingsForm({
           </p>
         </div>
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          {monthlyBonus.enabled && (
-            <span className="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-full bg-violet-50 text-violet-700">
-              {monthlyBonus.cycles}-Month Bonus Active · {monthlyBonus.amount} Pts/Month
-            </span>
-          )}
           {saved && (
             <span className="flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Saved
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => setMonthlyBonusOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-[14px] font-medium text-slate-700 hover:border-violet-300 hover:text-violet-700 transition-colors"
-          >
-            <CalendarClock className="w-4 h-4" />
-            Monthly Bonus
-          </button>
           <button
             type="submit"
             disabled={loading}
@@ -1492,8 +1429,6 @@ export function CreditSettingsForm({
             <DefaultsTab
               value={defaultPts}
               onChange={setDefaultPts}
-              monthlyBonus={monthlyBonus}
-              onOpenMonthlyBonus={() => setMonthlyBonusOpen(true)}
             />
           )}
           {tab === "methods" && (
@@ -1538,13 +1473,6 @@ export function CreditSettingsForm({
           {error}
         </p>
       )}
-
-      <MonthlyBonusSettingsDialog
-        open={monthlyBonusOpen}
-        onOpenChange={setMonthlyBonusOpen}
-        initial={monthlyBonus}
-        eligibleUserCount={monthlyBonusEligibleCount}
-      />
     </form>
   );
 }
