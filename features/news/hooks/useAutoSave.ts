@@ -9,6 +9,8 @@ type Options = {
   id: string;
   title: string;
   content: string;
+  /** When set, autosave writes the matching localized title/content columns. */
+  editLanguage?: string;
   enabled: boolean;
   debounceMs?: number;
 };
@@ -22,6 +24,7 @@ export function useAutoSave({
   id,
   title,
   content,
+  editLanguage,
   enabled,
   debounceMs = 3000,
 }: Options): Return {
@@ -48,6 +51,7 @@ export function useAutoSave({
       formData.set("newsId", id);
       formData.set("title", title);
       formData.set("content", content);
+      if (editLanguage) formData.set("editLanguage", editLanguage);
 
       autoSaveNewsAction(formData)
         .then((result) => {
@@ -62,7 +66,7 @@ export function useAutoSave({
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [id, title, content, enabled, debounceMs]);
+  }, [id, title, content, editLanguage, enabled, debounceMs]);
 
   return { autoSaveState, lastAutoSaved };
 }

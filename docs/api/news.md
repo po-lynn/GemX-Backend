@@ -1,76 +1,31 @@
-# News API
+# API: News localized titles & content
 
-Consumed by the **mobile app** (News tab of the "News & Articles" screen). Public — no auth.
+Mobile: **yes**.
 
-## GET /api/news
+## New/updated fields on news items
 
-**Auth:** public
-**Query params** (validated by `newsListQuerySchema` in `features/news/schemas/news.ts`; invalid values fall back to defaults):
+| Field | Type |
+|-------|------|
+| `language` | `English` \| `Myanmar` \| `Thai` \| `Korean` |
+| `titleEn` `titleMy` `titleTh` `titleKo` | string \| null |
+| `contentEn` `contentMy` `contentTh` `contentKo` | string \| null |
 
-| Param | Type | Default | Notes |
-|-------|------|---------|-------|
-| `page` | int ≥ 1 | 1 | |
-| `limit` | int 1–100 | 20 | |
-| `status` | `draft` \| `published` | `published` | |
-| `search` | string ≤ 200 | — | case-insensitive title match |
-| `category` | `general` \| `market` \| `gemology` \| `guides` \| `product` | — | filter chip |
-| `featured` | `true` \| `false` | — | `featured=true` fetches the hero card |
+## Query: `lang`
 
-**Response 200:**
+On **GET `/api/news`** and **GET `/api/news/:id`**:
 
-```json
-{
-  "news": [
-    {
-      "id": "3f8a2b1c-...",
-      "title": "မြန်မာနိုင်ငံသည် သဘာဝသယံဇာတ...",
-      "content": "[{...BlockNote JSON...}]",
-      "author": "Gem X Newsroom",
-      "category": "market",
-      "coverImage": "https://.../cover.jpg",
-      "isFeatured": true,
-      "status": "published",
-      "publish": "2026-06-05T00:00:00.000Z",
-      "createdAt": "2026-06-01T00:00:00.000Z",
-      "updatedAt": "2026-06-05T00:00:00.000Z",
-      "readTime": 6
-    }
-  ],
-  "total": 9,
-  "categoryCounts": { "all": 9, "market": 4, "gemology": 3, "guides": 2 }
-}
-```
+| Value | Effect |
+|-------|--------|
+| omitted | `title` / `content` are the original source fields |
+| `English` / `Myanmar` / `Thai` / `Korean` | Remap `title` and `content` from the matching columns when present |
 
-- `readTime` — estimated minutes (200 wpm, min 1), computed server-side.
-- `categoryCounts` — published-news counts per category for the filter chips; unaffected by `search`/`featured`. Cached for ~30s (`getCachedNewsCategoryCounts`) since it's an unindexed `GROUP BY` — can lag up to ~90s behind a very recent publish/unpublish.
-- Sorted by publish date (falling back to creation date), newest first.
-
-**Errors:**
-- `500 {"error": "Failed to fetch news"}` — unexpected error
-- `503 {"error": "News is taking longer than usual to load — please retry"}` with `Retry-After: 3` — the list or category-count query didn't complete within 6s (see `docs/technical/connection-pool-hardening.md`); safe to retry
-
-**Example:**
+### Examples
 
 ```bash
-curl "http://localhost:3000/api/news?category=market&featured=true&limit=1"
+curl -s "http://localhost:3000/api/news?lang=Myanmar"
+curl -s "http://localhost:3000/api/news/<uuid>?lang=Thai"
 ```
 
-## GET /api/news/[id]
+## Admin create
 
-**Auth:** public. Only `published` items are returned.
-
-**Response 200:** a single news object (same shape as list items, including `readTime`), plus `isBookmarked` (boolean).
-
-**Auth (optional):** if a valid session is present, `isBookmarked` reflects that user's bookmark state and the response is `Cache-Control: no-store` (personalized). Without a session, `isBookmarked` is always `false` and the response keeps the shared `public, s-maxage=60` cache.
-
-**Errors:**
-- `404 {"error": "News not found"}` — missing or unpublished
-- `500 {"error": "Failed to fetch news"}`
-
-**Example:**
-
-```bash
-curl "http://localhost:3000/api/news/3f8a2b1c-4d5e-4f60-8a7b-9c0d1e2f3a4b"
-```
-
-**Caching:** both endpoints return `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+`createNewsAction` requires `GOOGLE_TRANSLATE_API_KEY`. On failure: `{ "error": "…" }` and no insert.

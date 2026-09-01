@@ -32,7 +32,16 @@ const words = Array.from({ length: 450 }, (_, i) => `word${i}`).join(" ")
 const newsRow = {
   id: "3f8a2b1c-4d5e-4f60-8a7b-9c0d1e2f3a4b",
   title: "Market update",
+  language: "English",
+  titleEn: "Market update",
+  titleMy: "ဈေးကွက်",
+  titleTh: "ตลาด",
+  titleKo: "시장",
   content: JSON.stringify([{ type: "paragraph", content: [{ type: "text", text: words }] }]),
+  contentEn: JSON.stringify([{ type: "paragraph", content: [{ type: "text", text: words }] }]),
+  contentMy: "[]",
+  contentTh: "[]",
+  contentKo: "[]",
   author: "Gem X Newsroom",
   category: "market",
   coverImage: "https://cdn.example.com/cover.jpg",
@@ -66,6 +75,15 @@ describe("GET /api/news", () => {
     expect(data.news[0].readTime).toBe(3)
     expect(data.news[0].category).toBe("market")
     expect(data.news[0].isFeatured).toBe(true)
+    expect(data.news[0].language).toBe("English")
+  })
+
+  // Validates ?lang remaps title from the matching title_* column
+  it("localizes list title when lang query is set", async () => {
+    const req = new Request("http://localhost/api/news?lang=Thai")
+    const res = await listGET(req as NextRequest)
+    const data = await res.json()
+    expect(data.news[0].title).toBe("ตลาด")
   })
 
   // Validates search/category/featured params are forwarded to the db layer

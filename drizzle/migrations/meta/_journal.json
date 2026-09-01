@@ -505,6 +505,69 @@
       "when": 1785934339663,
       "tag": "0071_married_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786030387244,
+      "tag": "0072_dazzling_chimera",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1786074083300,
+      "tag": "0074_bored_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1786081000000,
+      "tag": "0075_news_content_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1786074634269,
+      "tag": "0076_stale_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1786082000000,
+      "tag": "0077_articles_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1786076348445,
+      "tag": "0078_dear_smiling_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1786083000000,
+      "tag": "0079_product_description_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1786084000000,
+      "tag": "0080_product_title_translations",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1786940975782,
+      "tag": "0081_blushing_nocturne",
+      "breakpoints": true
     }
   ]
 }

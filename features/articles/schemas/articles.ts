@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { contentCategorySchema } from "@/features/news/schemas/news";
+import { contentCategorySchema, newsLanguageSchema } from "@/features/news/schemas/news";
 
 export const articleCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(500),
@@ -16,6 +16,8 @@ export const articleUpdateSchema = z.object({
   articleId: z.string().uuid(),
   title: z.string().min(1).max(500).optional(),
   content: z.string().max(500_000).optional(),
+  /** Which locale's title/content fields are being edited. */
+  editLanguage: newsLanguageSchema.optional(),
   author: z.string().max(200).optional(),
   category: contentCategorySchema.optional(),
   coverImage: z.url().max(2_000).optional().nullable(),
@@ -40,4 +42,6 @@ export const articleListQuerySchema = z.object({
     .transform((v) => v === "true")
     .optional()
     .catch(undefined),
+  /** Prefer localized title/content columns for this UI language. */
+  lang: newsLanguageSchema.optional().catch(undefined),
 });

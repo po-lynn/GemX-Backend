@@ -6,6 +6,10 @@ import {
 } from "@/features/articles/db/articles";
 import { articleListQuerySchema } from "@/features/articles/schemas/articles";
 import { estimateReadTimeMinutes } from "@/lib/read-time";
+import {
+  pickLocalizedContent,
+  pickLocalizedTitle,
+} from "@/features/news/services/google-translate";
 
 export async function GET(request: NextRequest) {
   await connection();
@@ -26,10 +30,20 @@ export async function GET(request: NextRequest) {
       getArticleCategoryCountsFromDb(),
     ]);
 
-    const articles = items.map((item) => ({
-      ...item,
-      readTime: estimateReadTimeMinutes(item.content),
-    }));
+    const articles = items.map((item) => {
+      const title = query.lang
+        ? pickLocalizedTitle(item, query.lang)
+        : item.title;
+      const content = query.lang
+        ? pickLocalizedContent(item, query.lang)
+        : item.content;
+      return {
+        ...item,
+        title,
+        content,
+        readTime: estimateReadTimeMinutes(content),
+      };
+    });
     return jsonCached({ articles, total, categoryCounts });
   } catch (error) {
     console.error("GET /api/articles:", error);

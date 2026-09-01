@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NEWS_LANGUAGES } from "@/features/news/services/google-translate";
 
 /** Content categories shown as filter chips in the mobile app. */
 export const CONTENT_CATEGORIES = [
@@ -10,6 +11,8 @@ export const CONTENT_CATEGORIES = [
 ] as const;
 
 export const contentCategorySchema = z.enum(CONTENT_CATEGORIES);
+
+export const newsLanguageSchema = z.enum(NEWS_LANGUAGES);
 
 export const newsCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(500),
@@ -26,6 +29,8 @@ export const newsUpdateSchema = z.object({
   newsId: z.string().uuid(),
   title: z.string().min(1).max(500).optional(),
   content: z.string().max(500_000).optional(),
+  /** Which locale's title/content fields are being edited. */
+  editLanguage: newsLanguageSchema.optional(),
   author: z.string().max(200).optional(),
   category: contentCategorySchema.optional(),
   coverImage: z.url().max(2_000).optional().nullable(),
@@ -50,4 +55,6 @@ export const newsListQuerySchema = z.object({
     .transform((v) => v === "true")
     .optional()
     .catch(undefined),
+  /** Prefer localized title/content columns for this UI language. */
+  lang: newsLanguageSchema.optional().catch(undefined),
 });

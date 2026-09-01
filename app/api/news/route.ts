@@ -5,6 +5,10 @@ import { newsListQuerySchema } from "@/features/news/schemas/news";
 import { estimateReadTimeMinutes } from "@/lib/read-time";
 import { getCachedNewsCategoryCounts } from "@/features/news/db/cache/news";
 import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout";
+import {
+  pickLocalizedContent,
+  pickLocalizedTitle,
+} from "@/features/news/services/google-translate";
 
 /** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
 export const maxDuration = 10;
@@ -48,10 +52,20 @@ export async function GET(request: NextRequest) {
       "news-category-counts"
     );
 
-    const news = items.map((item) => ({
-      ...item,
-      readTime: estimateReadTimeMinutes(item.content),
-    }));
+    const news = items.map((item) => {
+      const title = query.lang
+        ? pickLocalizedTitle(item, query.lang)
+        : item.title
+      const content = query.lang
+        ? pickLocalizedContent(item, query.lang)
+        : item.content
+      return {
+        ...item,
+        title,
+        content,
+        readTime: estimateReadTimeMinutes(content),
+      }
+    });
     return jsonCached({ news, total, categoryCounts });
   } catch (error) {
     if (error instanceof QueryTimeoutError) {

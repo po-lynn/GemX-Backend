@@ -52,9 +52,56 @@ import type { CategoryRow } from "@/features/categories/db/categories"
 import type { LaboratoryOption } from "@/features/laboratory/db/laboratory"
 import type { OriginOption } from "@/features/origin/db/origin"
 import type { FeaturePricingTier } from "@/features/points/db/points"
+import {
+  PRODUCT_LANGUAGES,
+  isProductLanguage,
+  type ProductLanguage,
+} from "@/features/products/services/localize-description"
 
 const MAX_PRODUCT_IMAGES = 10
 const MAX_PRODUCT_VIDEOS = 5
+
+function initialDescriptionsByLang(
+  product?: ProductForEdit | null,
+): Record<ProductLanguage, string> {
+  const source = isProductLanguage(product?.language) ? product!.language : "English"
+  const fallback = (localized: string | null | undefined) => localized?.trim() || ""
+  return {
+    English:
+      fallback(product?.descriptionEn) ||
+      (source === "English" ? (product?.description ?? "") : ""),
+    Myanmar:
+      fallback(product?.descriptionMy) ||
+      (source === "Myanmar" ? (product?.description ?? "") : ""),
+    Thai:
+      fallback(product?.descriptionTh) ||
+      (source === "Thai" ? (product?.description ?? "") : ""),
+    Korean:
+      fallback(product?.descriptionKo) ||
+      (source === "Korean" ? (product?.description ?? "") : ""),
+  }
+}
+
+function initialTitlesByLang(
+  product?: ProductForEdit | null,
+): Record<ProductLanguage, string> {
+  const source = isProductLanguage(product?.language) ? product!.language : "English"
+  const fallback = (localized: string | null | undefined) => localized?.trim() || ""
+  return {
+    English:
+      fallback(product?.titleEn) ||
+      (source === "English" ? (product?.title ?? "") : ""),
+    Myanmar:
+      fallback(product?.titleMy) ||
+      (source === "Myanmar" ? (product?.title ?? "") : ""),
+    Thai:
+      fallback(product?.titleTh) ||
+      (source === "Thai" ? (product?.title ?? "") : ""),
+    Korean:
+      fallback(product?.titleKo) ||
+      (source === "Korean" ? (product?.title ?? "") : ""),
+  }
+}
 
 const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
 
@@ -686,6 +733,40 @@ export function ProductForm({
 
   const [notesTab, setNotesTab] = useState<"description" | "extra">("description")
 
+  const sourceLanguage: ProductLanguage = isProductLanguage(product?.language)
+    ? product!.language
+    : "English"
+  const [editLanguage, setEditLanguage] = useState<ProductLanguage>(
+    mode === "edit" ? sourceLanguage : "English",
+  )
+  const [titlesByLang, setTitlesByLang] = useState<Record<ProductLanguage, string>>(
+    () => initialTitlesByLang(product),
+  )
+  const [titleText, setTitleText] = useState(() =>
+    mode === "edit"
+      ? initialTitlesByLang(product)[sourceLanguage]
+      : (product?.title ?? ""),
+  )
+  const [descriptionsByLang, setDescriptionsByLang] = useState<
+    Record<ProductLanguage, string>
+  >(() => initialDescriptionsByLang(product))
+  const [descriptionText, setDescriptionText] = useState(() =>
+    mode === "edit"
+      ? initialDescriptionsByLang(product)[sourceLanguage]
+      : (product?.description ?? ""),
+  )
+
+  function switchEditLanguage(next: ProductLanguage) {
+    if (next === editLanguage) return
+    const nextTitles = { ...titlesByLang, [editLanguage]: titleText }
+    const nextDescriptions = { ...descriptionsByLang, [editLanguage]: descriptionText }
+    setTitlesByLang(nextTitles)
+    setDescriptionsByLang(nextDescriptions)
+    setEditLanguage(next)
+    setTitleText(nextTitles[next] ?? "")
+    setDescriptionText(nextDescriptions[next] ?? "")
+  }
+
   const featuredPointsDefault =
     typeof (product as { featured?: unknown } | null | undefined)?.featured === "number"
       ? (product as { featured: number }).featured
@@ -718,6 +799,17 @@ export function ProductForm({
   // Gem hue for themed accents
   const currentCategory = categories.find((c) => c.id === product?.categoryId)
   const gemHue = getGemHue(currentCategory?.name)
+
+  useEffect(() => {
+    const nextTitles = initialTitlesByLang(product)
+    const nextDescriptions = initialDescriptionsByLang(product)
+    const source = isProductLanguage(product?.language) ? product!.language : "English"
+    setTitlesByLang(nextTitles)
+    setDescriptionsByLang(nextDescriptions)
+    setEditLanguage(mode === "edit" ? source : "English")
+    setTitleText(mode === "edit" ? nextTitles[source] : (product?.title ?? ""))
+    setDescriptionText(mode === "edit" ? nextDescriptions[source] : (product?.description ?? ""))
+  }, [product?.id, product?.language, product?.title, product?.titleEn, product?.titleMy, product?.titleTh, product?.titleKo, product?.description, product?.descriptionEn, product?.descriptionMy, product?.descriptionTh, product?.descriptionKo, mode])
 
   useEffect(() => {
     const [p1, p2, p3] = parseDimensions(product?.dimensions)
@@ -1000,6 +1092,14 @@ export function ProductForm({
         setJewelleryGemstones([])
         setSellerPick(null)
         setIsOwnProduct(true)
+        setDescriptionText("")
+        setDescriptionsByLang({
+          English: "",
+          Myanmar: "",
+          Thai: "",
+          Korean: "",
+        })
+        setEditLanguage("English")
       }
       router.push("/admin/products")
       router.refresh()
@@ -1660,9 +1760,43 @@ export function ProductForm({
               </div>
             </div>
             <div className="pd-sec-body">
+              {isEdit && (
+                <div className="pd-field" style={{ marginBottom: 14, maxWidth: 280 }}>
+                  <label htmlFor="productEditLanguage" className="pd-label">
+                    Language
+                  </label>
+                  <select
+                    id="productEditLanguage"
+                    name="editLanguage"
+                    className="pd-input"
+                    value={editLanguage}
+                    onChange={(e) => {
+                      switchEditLanguage(e.target.value as ProductLanguage)
+                      setDirty(true)
+                    }}
+                  >
+                    {PRODUCT_LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                        {lang === sourceLanguage ? " (source)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pd-hint" style={{ display: "block", marginTop: 6 }}>
+                    Switch language to edit that locale&apos;s title and description. Saving
+                    updates only the selected language (no re-translate).
+                  </span>
+                </div>
+              )}
               <div className="pd-field">
                 <label htmlFor="title" className="pd-label">
-                  Title <span className="req">*</span>
+                  Title{isEdit ? ` (${editLanguage})` : ""} <span className="req">*</span>
+                  {!isEdit && (
+                    <span className="pd-label-hint">
+                      {" "}
+                      Auto-translated to EN / Myanmar / Thai / Korean on save
+                    </span>
+                  )}
                 </label>
                 <input
                   id="title"
@@ -1670,7 +1804,18 @@ export function ProductForm({
                   type="text"
                   required
                   maxLength={200}
-                  defaultValue={product?.title ?? ""}
+                  value={titleText}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setTitleText(value)
+                    if (isEdit) {
+                      setTitlesByLang((prev) => ({
+                        ...prev,
+                        [editLanguage]: value,
+                      }))
+                    }
+                    setDirty(true)
+                  }}
                   placeholder="Product title"
                   className="pd-input"
                 />
@@ -2266,15 +2411,31 @@ export function ProductForm({
               <div className={notesTab !== "description" ? "hidden" : undefined}>
                 <div className="pd-field">
                   <label htmlFor="productDescription" className="pd-label">
-                    Description{" "}
-                    <span className="pd-label-hint">Shown on the listing · max 5,000 chars</span>
+                    Description
+                    {isEdit ? ` (${editLanguage})` : ""}{" "}
+                    <span className="pd-label-hint">
+                      {isEdit
+                        ? "Shown on the listing · max 5,000 chars"
+                        : "Auto-translated to EN / Myanmar / Thai / Korean on save · max 5,000 chars"}
+                    </span>
                   </label>
                   <textarea
                     id="productDescription"
                     name="description"
                     rows={8}
                     maxLength={5000}
-                    defaultValue={product?.description ?? ""}
+                    value={descriptionText}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setDescriptionText(value)
+                      if (isEdit) {
+                        setDescriptionsByLang((prev) => ({
+                          ...prev,
+                          [editLanguage]: value,
+                        }))
+                      }
+                      setDirty(true)
+                    }}
                     placeholder="Describe the product, condition, provenance, or anything buyers should know…"
                     className="pd-textarea"
                     style={{ minHeight: 130 }}

@@ -109,6 +109,12 @@ describe("list query schemas", () => {
     expect(parsed.limit).toBe(20)
   })
 
+  // Validates optional lang on article list queries
+  it("accepts lang on articleListQuerySchema", () => {
+    const parsed = articleListQuerySchema.parse({ lang: "Myanmar" })
+    expect(parsed.lang).toBe("Myanmar")
+  })
+
   // Validates every design category is present in the enum
   it("supports all design categories", () => {
     expect(CONTENT_CATEGORIES).toEqual(

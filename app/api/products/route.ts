@@ -12,6 +12,7 @@ import { maskPrice } from "@/lib/formatters"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
 import type { AdminProductRow } from "@/features/products/db/products"
 import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout"
+import { buildLocalizedProductDescription, buildLocalizedProductTitle } from "@/features/products/services/localize-description"
 
 /** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
 export const maxDuration = 10
@@ -229,6 +230,18 @@ export async function POST(request: NextRequest) {
     const featuredPoints =
       (parsed.data.isFeatured ?? false) ? Math.max(0, parsed.data.featured ?? 0) : 0
 
+    let localizedTitle: Awaited<ReturnType<typeof buildLocalizedProductTitle>>
+    let localizedDescription: Awaited<ReturnType<typeof buildLocalizedProductDescription>>
+    try {
+      localizedTitle = await buildLocalizedProductTitle(parsed.data.title)
+      localizedDescription = await buildLocalizedProductDescription(
+        parsed.data.description?.trim() ?? "",
+      )
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Translation failed"
+      return jsonError(message, 503)
+    }
+
     if (featuredPoints > 0) {
       const { available } = await getUserPointBalance(session.user.id)
       if (available < featuredPoints) {
@@ -243,6 +256,17 @@ export async function POST(request: NextRequest) {
 
     const createInput = {
       ...parsed.data,
+      title: localizedTitle.title,
+      titleEn: localizedTitle.titleEn || null,
+      titleMy: localizedTitle.titleMy || null,
+      titleTh: localizedTitle.titleTh || null,
+      titleKo: localizedTitle.titleKo || null,
+      description: localizedDescription.description || null,
+      language: localizedTitle.sourceLanguage,
+      descriptionEn: localizedDescription.descriptionEn || null,
+      descriptionMy: localizedDescription.descriptionMy || null,
+      descriptionTh: localizedDescription.descriptionTh || null,
+      descriptionKo: localizedDescription.descriptionKo || null,
       sellerId: session.user.id,
       jewelleryGemstones: Array.isArray(parsed.data.jewelleryGemstones)
         ? parsed.data.jewelleryGemstones
@@ -250,7 +274,10 @@ export async function POST(request: NextRequest) {
     }
     const productId = await createProductInDb(createInput)
     revalidateProductsCache(productId)
-    return jsonUncached({ success: true, productId }, { status: 201 })
+    return jsonUncached(
+      { success: true, productId, language: localizedTitle.sourceLanguage },
+      { status: 201 },
+    )
   } catch (error) {
     console.error("POST /api/products:", error)
     return jsonError("Failed to create product", 500)

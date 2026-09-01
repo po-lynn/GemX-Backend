@@ -18,10 +18,11 @@ vi.mock("@/features/notifications/services/global-push", () => ({
 }));
 
 import { autoSaveNewsAction } from "@/features/news/actions/news";
-import { updateNewsInDb } from "@/features/news/db/news";
+import { getNewsById, updateNewsInDb } from "@/features/news/db/news";
 import { requireActionRole } from "@/lib/action-guard";
 
 const mockUpdateNewsInDb = vi.mocked(updateNewsInDb);
+const mockGetNewsById = vi.mocked(getNewsById);
 const mockRequireActionRole = vi.mocked(requireActionRole);
 
 const VALID_ID = "a9737f10-b7e1-4dd0-8f20-a421bfa8cd1f";
@@ -40,6 +41,28 @@ describe("autoSaveNewsAction", () => {
     vi.clearAllMocks();
     mockRequireActionRole.mockResolvedValue({ user: { id: "admin-1" } } as never);
     mockUpdateNewsInDb.mockResolvedValue(true);
+    mockGetNewsById.mockResolvedValue({
+      id: VALID_ID,
+      title: "Test Article",
+      language: "English",
+      titleEn: "Test Article",
+      titleMy: null,
+      titleTh: null,
+      titleKo: null,
+      content: "[]",
+      contentEn: "[]",
+      contentMy: null,
+      contentTh: null,
+      contentKo: null,
+      author: "Gem X Newsroom",
+      category: "general",
+      coverImage: null,
+      isFeatured: false,
+      status: "draft",
+      publish: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   });
 
   it("returns error when newsId is not a valid uuid", async () => {
@@ -70,6 +93,29 @@ describe("autoSaveNewsAction", () => {
     expect(mockUpdateNewsInDb).toHaveBeenCalledWith(VALID_ID, {
       title: "Test Article",
       content: "[]",
+    });
+  });
+
+  it("writes localized columns when editLanguage is set", async () => {
+    // Thai edit should update titleTh/contentTh only (source is English)
+    await autoSaveNewsAction(
+      makeFormData({ editLanguage: "Thai", title: "หัวข้อ", content: '[{"t":"th"}]' }),
+    );
+    expect(mockUpdateNewsInDb).toHaveBeenCalledWith(VALID_ID, {
+      titleTh: "หัวข้อ",
+      contentTh: '[{"t":"th"}]',
+    });
+  });
+
+  it("also updates canonical title/content when editing the source language", async () => {
+    await autoSaveNewsAction(
+      makeFormData({ editLanguage: "English", title: "Updated EN", content: "[1]" }),
+    );
+    expect(mockUpdateNewsInDb).toHaveBeenCalledWith(VALID_ID, {
+      titleEn: "Updated EN",
+      contentEn: "[1]",
+      title: "Updated EN",
+      content: "[1]",
     });
   });
 

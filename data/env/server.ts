@@ -17,18 +17,16 @@ const firebaseSchema = {
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 }
 
-/** Optional: Azure Translator (required only when auto-translating news). */
-const azureTranslatorSchema = {
-  AZURE_TRANSLATOR_KEY: z.string().optional(),
-  AZURE_TRANSLATOR_REGION: z.string().optional(),
-  AZURE_TRANSLATOR_ENDPOINT: z.string().url().optional(),
+/** Optional: Google Cloud Translation API (auto-translate news on create). */
+const googleTranslateSchema = {
+  GOOGLE_TRANSLATE_API_KEY: z.string().optional(),
 }
 
 export const env = createEnv({
   server: {
     ...dbSchema,
     ...firebaseSchema,
-    ...azureTranslatorSchema,
+    ...googleTranslateSchema,
     AUTH_SECRET: z.string().min(1),
     AUTH_URL: z.string().min(1),
   },
