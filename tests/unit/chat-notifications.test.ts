@@ -78,4 +78,24 @@ describe("sendChatMessageNotification", () => {
       })
     );
   });
+
+  it("uses optional title override for system / branded pushes", async () => {
+    // Monthly-bonus and similar system messages pass an explicit push title.
+    await sendChatMessageNotification({
+      messageId: "m3",
+      senderId: "sys",
+      recipientId: "r3",
+      senderName: "GemX",
+      title: "Your monthly bonus points have arrived! 🗓️",
+      preview: "Your monthly drop of 100 points is ready.",
+    });
+
+    expect(sendPushNotificationToUserIds).toHaveBeenCalledWith(
+      ["r3"],
+      expect.objectContaining({
+        title: "Your monthly bonus points have arrived! 🗓️",
+        body: "Your monthly drop of 100 points is ready.",
+      })
+    );
+  });
 });

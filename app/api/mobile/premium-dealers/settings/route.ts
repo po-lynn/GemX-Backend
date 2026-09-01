@@ -1,6 +1,9 @@
 import { NextRequest, connection } from "next/server"
 import { jsonCached, jsonError } from "@/lib/api"
-import { getPremiumDealersSettings } from "@/features/points/db/points"
+import {
+  getPremiumDealerPackageLevel,
+  getPremiumDealersSettings,
+} from "@/features/points/db/points"
 
 /**
  * GET /api/mobile/premium-dealers/settings
@@ -16,8 +19,10 @@ export async function GET(_request: NextRequest) {
         name: p.name,
         pointsRequired: p.pointsRequired,
         durationDays: p.durationDays,
+        level: getPremiumDealerPackageLevel(p.name, settings.packages),
         // Second package is recommended when there are 2+ packages (matches design intent)
         recommended: settings.packages.length >= 2 && i === 1,
+        ...(p.enabled === false ? { enabled: false } : {}),
       })),
     })
   } catch (e) {

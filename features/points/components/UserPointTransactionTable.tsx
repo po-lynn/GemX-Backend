@@ -33,6 +33,7 @@ function fmtPts(n: number): string {
 const TYPE_LABELS: Record<string, string> = {
   topup:               "Top-up",
   premium_activation:  "Premium",
+  premium_upgrade:     "Premium upgrade",
   feature_activation:  "Feature",
   registration_bonus:  "Bonus",
   admin_adjustment:    "Adjustment",
@@ -41,6 +42,7 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   topup:               <ArrowDownLeft style={{ width: 11, height: 11 }} />,
   premium_activation:  <Star style={{ width: 11, height: 11 }} />,
+  premium_upgrade:     <Star style={{ width: 11, height: 11 }} />,
   feature_activation:  <TrendingUp style={{ width: 11, height: 11 }} />,
   registration_bonus:  <Gift style={{ width: 11, height: 11 }} />,
   admin_adjustment:    <Settings style={{ width: 11, height: 11 }} />,
@@ -222,6 +224,7 @@ const filterDefs: FilterDef[] = [
     options: [
       { value: "topup",               label: "Top-up" },
       { value: "premium_activation",  label: "Premium" },
+      { value: "premium_upgrade",     label: "Premium upgrade" },
       { value: "feature_activation",  label: "Feature" },
       { value: "registration_bonus",  label: "Bonus" },
       { value: "admin_adjustment",    label: "Adjustment" },

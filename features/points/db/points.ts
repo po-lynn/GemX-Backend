@@ -41,9 +41,53 @@ export type PremiumDealerPackage = {
   enabled?: boolean;
 };
 
+/** 1-based tier index from admin package list order (lower = entry tier). */
+export type PremiumDealerPackageWithLevel = PremiumDealerPackage & { level: number };
+
 export type PremiumDealersSettings = {
   packages: PremiumDealerPackage[];
 };
+
+/** Packages visible/selectable in mobile (enabled !== false), preserving admin order. */
+export function listEnabledPremiumDealerPackages(
+  packages: PremiumDealerPackage[],
+): PremiumDealerPackage[] {
+  return packages.filter((p) => p.enabled !== false);
+}
+
+/**
+ * 1-based tier level from admin-configured package order (array index + 1).
+ * Returns 0 when the name is not found.
+ */
+export function getPremiumDealerPackageLevel(
+  packageName: string,
+  packages: PremiumDealerPackage[],
+): number {
+  const idx = packages.findIndex((p) => p.name === packageName);
+  return idx >= 0 ? idx + 1 : 0;
+}
+
+export type PremiumDealerUpgradeFailureReason =
+  | "no_active_subscription"
+  | "current_package_not_found"
+  | "target_package_not_found"
+  | "target_not_higher"
+  | "insufficient_points";
+
+export type PremiumDealerUpgradeSuccess = {
+  previousPackageName: string;
+  packageName: string;
+  pointsUsed: number;
+  remainingPoints: number;
+  startDate: Date;
+  expiresAt: Date;
+  autoRenew: boolean;
+  status: "active";
+};
+
+export type PremiumDealerUpgradeResult =
+  | ({ success: true } & PremiumDealerUpgradeSuccess)
+  | { success: false; reason: PremiumDealerUpgradeFailureReason };
 
 export type AdminCreatePurchaseRequestInput = {
   userId: string;
@@ -525,6 +569,133 @@ export async function activatePremiumDealer(
   });
 
   return result;
+}
+
+/**
+ * Upgrade an active premium dealer package to a higher tier.
+ * Charges only the points difference (target − current) from DB-configured prices.
+ * Preserves the current subscription period (start/end dates) and auto-renew flag.
+ */
+export async function upgradePremiumDealerPackage(
+  userId: string,
+  targetPackageName: string,
+): Promise<PremiumDealerUpgradeResult> {
+  const settings = await getPremiumDealersSettings();
+  const orderedPackages = settings.packages;
+
+  const [currentSub] = await db
+    .select({
+      id: premiumDealersPackage.id,
+      packageName: premiumDealersPackage.packageName,
+      startDate: premiumDealersPackage.startDate,
+      endDate: premiumDealersPackage.endDate,
+      autoRenew: premiumDealersPackage.autoRenew,
+    })
+    .from(premiumDealersPackage)
+    .where(
+      and(
+        eq(premiumDealersPackage.userId, userId),
+        eq(premiumDealersPackage.status, "active"),
+        gt(premiumDealersPackage.endDate, sql`now()`),
+      ),
+    )
+    .orderBy(desc(premiumDealersPackage.createdAt))
+    .limit(1);
+
+  if (!currentSub) {
+    return { success: false, reason: "no_active_subscription" };
+  }
+
+  const currentPkg = orderedPackages.find(
+    (p) => p.name === currentSub.packageName && p.enabled !== false,
+  );
+  if (!currentPkg) {
+    return { success: false, reason: "current_package_not_found" };
+  }
+
+  const targetPkg = orderedPackages.find(
+    (p) => p.name === targetPackageName && p.enabled !== false,
+  );
+  if (!targetPkg) {
+    return { success: false, reason: "target_package_not_found" };
+  }
+
+  const currentLevel = getPremiumDealerPackageLevel(currentPkg.name, orderedPackages);
+  const targetLevel = getPremiumDealerPackageLevel(targetPkg.name, orderedPackages);
+  const upgradeCost =
+    Math.max(0, Math.floor(targetPkg.pointsRequired)) -
+    Math.max(0, Math.floor(currentPkg.pointsRequired));
+
+  if (targetLevel <= currentLevel || upgradeCost <= 0) {
+    return { success: false, reason: "target_not_higher" };
+  }
+
+  const subscriptionId = crypto.randomUUID();
+
+  const txResult = await db.transaction(async (tx) => {
+    const [updatedUser] = await tx
+      .update(user)
+      .set({ points: sql`${user.points} - ${upgradeCost}` })
+      .where(and(eq(user.id, userId), gte(user.points, upgradeCost)))
+      .returning({ points: user.points });
+
+    if (!updatedUser) return null;
+
+    await tx
+      .update(premiumDealersPackage)
+      .set({ status: "cancelled" })
+      .where(eq(premiumDealersPackage.id, currentSub.id));
+
+    await tx
+      .update(user)
+      .set({
+        role: "portal",
+        premiumDealerPackageName: targetPkg.name,
+        premiumDealerExpiresAt: currentSub.endDate,
+      })
+      .where(eq(user.id, userId));
+
+    await tx.insert(premiumDealersPackage).values({
+      id: subscriptionId,
+      userId,
+      packageName: targetPkg.name,
+      startDate: currentSub.startDate,
+      endDate: currentSub.endDate,
+      autoRenew: currentSub.autoRenew,
+      status: "active",
+    });
+
+    await tx.insert(pointTransaction).values({
+      userId,
+      type: "premium_upgrade",
+      direction: "debit",
+      amount: upgradeCost,
+      status: "completed",
+      referenceId: subscriptionId,
+      referenceType: "premium_package",
+      description: `Premium upgrade · ${currentPkg.name} → ${targetPkg.name}`,
+    });
+
+    return {
+      remainingPoints: updatedUser.points,
+    };
+  });
+
+  if (!txResult) {
+    return { success: false, reason: "insufficient_points" };
+  }
+
+  return {
+    success: true,
+    previousPackageName: currentPkg.name,
+    packageName: targetPkg.name,
+    pointsUsed: upgradeCost,
+    remainingPoints: txResult.remainingPoints,
+    startDate: currentSub.startDate,
+    expiresAt: currentSub.endDate,
+    autoRenew: currentSub.autoRenew,
+    status: "active",
+  };
 }
 
 /**
@@ -1458,7 +1629,7 @@ export async function getPointTransactionsPaginated(opts: {
 
   const filterCondition =
     filter === "topups"
-      ? and(or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      ? and(or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus"), eq(pointTransaction.type, "monthly_bonus")), eq(pointTransaction.status, "completed"))
       : filter === "spent"
       ? and(eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
       : filter === "pending"
@@ -1514,7 +1685,7 @@ export async function getPointTransactionCounts(): Promise<{
   for (const r of rows) {
     all++
     if (r.status === "pending") pending++
-    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus" || r.type === "monthly_bonus")) topups++
     else if (r.status === "completed" && r.direction === "debit") spent++
   }
   return { all, topups, spent, pending }
@@ -1532,7 +1703,7 @@ export async function getUserPointTransactionCounts(
   for (const r of rows) {
     all++;
     if (r.status === "pending") pending++;
-    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus")) topups++;
+    else if (r.status === "completed" && (r.type === "topup" || r.type === "registration_bonus" || r.type === "monthly_bonus")) topups++;
     else if (r.status === "completed" && r.direction === "debit") spent++;
   }
   return { all, topups, spent, pending };
@@ -1547,7 +1718,7 @@ export async function getUserPointHistory(
 
   const filterCondition =
     filter === "topups"
-      ? and(eq(pointTransaction.userId, userId), or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus")), eq(pointTransaction.status, "completed"))
+      ? and(eq(pointTransaction.userId, userId), or(eq(pointTransaction.type, "topup"), eq(pointTransaction.type, "registration_bonus"), eq(pointTransaction.type, "monthly_bonus")), eq(pointTransaction.status, "completed"))
       : filter === "spent"
       ? and(eq(pointTransaction.userId, userId), eq(pointTransaction.direction, "debit"), eq(pointTransaction.status, "completed"))
       : filter === "pending"
