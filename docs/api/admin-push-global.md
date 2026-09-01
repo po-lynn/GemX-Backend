@@ -6,7 +6,7 @@ Broadcast a push notification to every device subscribed to the FCM topic **`glo
 
 **Auth:** Admin session (cookie). Requires `role: admin`.
 
-**Mobile:** Indirect — Flutter subscribes to `global` on startup; no Bearer token required to receive.
+**Mobile:** Indirect — the React Native app subscribes to `global` on startup; no Bearer token required to receive.
 
 ### Request body (`adminGlobalPushBodySchema`)
 

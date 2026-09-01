@@ -211,6 +211,7 @@ export async function autoSaveArticleAction(formData: FormData) {
         content: parsed.data.content,
       };
 
+  // Only regenerate slug when the canonical source title changes.
   if (updates.title !== undefined) {
     updates.slug = slugify(updates.title);
   }

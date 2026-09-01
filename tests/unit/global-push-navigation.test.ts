@@ -6,7 +6,7 @@ import {
 } from "@/features/notifications/payloads/navigation";
 
 describe("buildNavigationData", () => {
-  // Flutter reads `screen` + ids from FCM data on notification tap.
+  // Mobile app reads `screen` + ids from FCM data on notification tap.
   it("builds article navigation payload with articleId and title", () => {
     const data = buildArticleNotificationData(
       "11111111-1111-1111-1111-111111111111",

@@ -44,6 +44,14 @@ vi.mock("@/features/products/services/localize-description", async () => {
   >("@/features/products/services/localize-description")
   return {
     ...actual,
+    buildLocalizedProductTitle: vi.fn().mockResolvedValue({
+      sourceLanguage: "English",
+      title: "Test Ruby",
+      titleEn: "Test Ruby",
+      titleMy: "Test Ruby",
+      titleTh: "Test Ruby",
+      titleKo: "Test Ruby",
+    }),
     buildLocalizedProductDescription: vi.fn().mockResolvedValue({
       sourceLanguage: "English",
       description: "",

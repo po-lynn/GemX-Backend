@@ -6,7 +6,7 @@ import { getPrivilegeAssistBrowse } from "@/features/products/db/cache/products"
 import { createProductInDb, getAdminProductsFromDb } from "@/features/products/db/products"
 import { deductUserPoints, getUserPointBalance } from "@/features/points/db/points"
 import { getApprovedCollectorPieceProductIds } from "@/features/collector-piece-show-requests/db/collector-piece-show-requests"
-import { buildLocalizedProductDescription } from "@/features/products/services/localize-description"
+import { buildLocalizedProductDescription, buildLocalizedProductTitle } from "@/features/products/services/localize-description"
 import { auth } from "@/lib/auth"
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -31,6 +31,7 @@ vi.mock("@/features/collector-piece-show-requests/db/collector-piece-show-reques
   getApprovedCollectorPieceProductIds: vi.fn(),
 }))
 vi.mock("@/features/products/services/localize-description", () => ({
+  buildLocalizedProductTitle: vi.fn(),
   buildLocalizedProductDescription: vi.fn(),
 }))
 
@@ -269,6 +270,14 @@ describe("POST /api/products", () => {
       success: true,
       remainingPoints: 9_500,
     })
+    vi.mocked(buildLocalizedProductTitle).mockResolvedValue({
+      sourceLanguage: "English",
+      title: "Ruby",
+      titleEn: "Ruby",
+      titleMy: "ပတ္တမြား",
+      titleTh: "ทับทิม",
+      titleKo: "루비",
+    })
     // Empty description: no Google calls; still returns a localization payload.
     vi.mocked(buildLocalizedProductDescription).mockResolvedValue({
       sourceLanguage: "English",
@@ -390,12 +399,20 @@ describe("POST /api/products", () => {
     )
   })
 
-  it("translates description into EN/MY/TH/KO and persists localized fields", async () => {
-    // Validates POST detects language and saves all four description columns.
+  it("translates title and description into EN/MY/TH/KO and persists localized fields", async () => {
+    // Validates POST detects title language and saves title + description locale columns.
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },
     } as never)
     vi.mocked(createProductInDb).mockResolvedValue("prod-loc")
+    vi.mocked(buildLocalizedProductTitle).mockResolvedValue({
+      sourceLanguage: "English",
+      title: "Ruby",
+      titleEn: "Ruby",
+      titleMy: "ပတ္တမြား",
+      titleTh: "ทับทิม",
+      titleKo: "루비",
+    })
     vi.mocked(buildLocalizedProductDescription).mockResolvedValue({
       sourceLanguage: "English",
       description: "Natural ruby from Mogok",
@@ -421,11 +438,17 @@ describe("POST /api/products", () => {
       productId: "prod-loc",
       language: "English",
     })
+    expect(buildLocalizedProductTitle).toHaveBeenCalledWith("Ruby")
     expect(buildLocalizedProductDescription).toHaveBeenCalledWith(
       "Natural ruby from Mogok",
     )
     expect(createProductInDb).toHaveBeenCalledWith(
       expect.objectContaining({
+        title: "Ruby",
+        titleEn: "Ruby",
+        titleMy: "ပတ္တမြား",
+        titleTh: "ทับทิม",
+        titleKo: "루비",
         description: "Natural ruby from Mogok",
         language: "English",
         descriptionEn: "Natural ruby from Mogok",
@@ -441,9 +464,9 @@ describe("POST /api/products", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", role: "user" },
     } as never)
-    vi.mocked(buildLocalizedProductDescription).mockRejectedValue(
+    vi.mocked(buildLocalizedProductTitle).mockRejectedValue(
       new Error(
-        "Google Translate is not configured. Set GOOGLE_TRANSLATE_API_KEY to auto-translate product descriptions.",
+        "Google Translate is not configured. Set GOOGLE_TRANSLATE_API_KEY to auto-translate product titles.",
       ),
     )
     const req = new Request("http://localhost/api/products", {
