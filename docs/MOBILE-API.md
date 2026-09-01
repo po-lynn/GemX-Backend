@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Product search + `productType` filter** – **GET `/api/products`** supports **`search`** together with **`productType`** (`loose_stone` \| `jewellery`) and other list filters. Search matches title, description, and seller; `productType` narrows results (AND). Use when the user searches from a type tab (e.g. Loose Stones only). Autocomplete (**GET `/api/products/suggestions`**) is still global (all types); pass `productType` on the list call after submit. See **5.1**, **5.1.2**, and **Search and filter** examples.
 - **Surprise Bonus (admin All Users top-up)** – Admin can credit **all active users** via a queued campaign (`surprise_bonus_batch`). Each successful grant writes a `point_transaction` with **`type: surprise_bonus`**, **`direction: credit`**, **`referenceType: surprise_bonus_campaign`**, **`referenceId`** = campaign UUID (visible on **GET `/api/mobile/points/history`** with `filter=all`). The same grant creates an in-app **`app_notification`** row and sends an **FCM push** to registered devices (title `{campaignName} 🎁`, body `You received {N} surprise bonus points!`). Push `data`: `type=surprise_bonus`, `screen=home`, `campaignId`, `points`. Requires **POST `/api/push/register`** after login. See **5.4.2b** and **9**. Guides: [admin-top-up.md](./guides/admin-top-up.md), [surprise-bonus-cron.md](./guides/surprise-bonus-cron.md), [cron-surprise-bonus-push.md](./api/cron-surprise-bonus-push.md).
 - **Monthly bonus points** – Admin **Point Packages** can enable a recurring program (amount, 1/3/6/12 cycles, distribution start date). Daily cron **`POST /api/cron/monthly-bonus-points`** grants **+points every 30 days** to all non-banned/non-archived users and writes `point_transaction` (`type: monthly_bonus`). See [docs/guides/monthly-bonus-points.md](./guides/monthly-bonus-points.md) and [docs/api/cron-monthly-bonus-points.md](./api/cron-monthly-bonus-points.md).
 - **Product description auto-translate (Google)** – On **admin product create** and **POST `/api/products`**, detects description language and translates into the other three of **English / Myanmar / Thai / Korean**. Stored on **`product`**: `language`, `descriptionEn/My/Th/Ko`. **Admin edit** uses a per-language dropdown (no re-translate on save), same pattern as news/articles. See [docs/api/products.md](./api/products.md) and [docs/guides/product-description-google-translate.md](./guides/product-description-google-translate.md).
@@ -82,7 +83,7 @@
 - **Feature pricing tiers (mobile)** – Added **GET `/api/mobile/feature-pricing-tiers`** (no auth). Returns only `durationDays` + `points` options (from `feature_pricing_tiers_json`) for mobile selection UI.
 - **Premium dealers packages (mobile)** – Added **GET `/api/mobile/premium-dealers/settings`** (no auth). Returns premium dealer package options (`name`, `pointsRequired`, `durationDays`) for the premium dealer activation UI. See **5.4.3**.
 - **Purchase points (mobile)** – Added **POST `/api/mobile/points/purchase`** (auth required). Request body: `{ "currency": "mmk" | "usd" | "krw", "amount": number }`. Backend converts amount to points using point settings and credits user balance. Returns updated points balance.
-- **Product search (fast and smart)** – Main search: when the user taps "Search", call **GET /api/products** with `search`, `page`, and `limit` only (omit other filters). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET /api/products/suggestions?q=...** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
+- **Product search (fast and smart)** – Main search: call **GET `/api/products`** with `search`, `page`, and `limit`. Optionally add **`productType`** (`loose_stone` \| `jewellery`) or other filters to scope results (e.g. search only within Loose Stones). Backend uses full-text search (title + description) and seller match; results are ranked by relevance then collector/privilege/featured/newest. Autocomplete: **GET `/api/products/suggestions?q=...`** returns distinct product title suggestions (min 2 chars for `q`; optional `limit` 5–10; not filtered by type). Response: `{ "suggestions": [{ "label": "Sapphire" }, ...] }`, ordered by title starts-with, then contains, then newest. Caching: product list 60s/300s; suggestions 30s/60s. **Instruction and guide for mobile:** see **5.1** (instruction table), **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors).
 
 ---
 
@@ -138,7 +139,7 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license). Allowed: `jpeg`, `png`, `webp`, `pdf`; max 10 MB. Returns `{ "url": "..." }`. See **4.6**.                                           |
 | PATCH  | `/api/mobile/profile`       | Yes  | Update profile/KYC fields: `name`, `nrc` (Myanmar-format-validated only when `country` is Myanmar/unset, else a free-text passport/ID), `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. **`search` + `productType`** (and other filters) can be combined. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All listing statuses by default; optional **`moderationStatus`** (`pending` \| `approved` \| `rejected`). Same other query params as list all. See **5.3**.                                                                                                                    |
@@ -629,11 +630,20 @@ Use the returned `url` as:
 
 | Step | Action | Endpoint / params |
 |------|--------|-------------------|
-| 1. **Autocomplete** | While the user types in the search bar, after debounce (200–300 ms) and only if query length ≥ 2 | **GET /api/products/suggestions?q=&lt;query&gt;** (optional: `limit`, default 5, max 10). Show the returned `suggestions` under the input. |
-| 2. **Run search** | When the user taps **Search** or taps a suggestion | **GET /api/products?search=&lt;query&gt;&page=1&limit=20** — send **only** `search`, `page`, and `limit` (no other filters). |
-| 3. **Pagination** | Load more results | Same **GET /api/products** with same `search` and `limit`, increment `page`. |
+| 1. **Autocomplete** | While the user types in the search bar, after debounce (200–300 ms) and only if query length ≥ 2 | **GET /api/products/suggestions?q=&lt;query&gt;** (optional: `limit`, default 5, max 10). Suggestions are **not** filtered by `productType` (all active products). Show the returned `suggestions` under the input. |
+| 2. **Run search** | When the user taps **Search** or taps a suggestion | **GET /api/products?search=&lt;query&gt;&page=1&limit=20** — minimum: `search`, `page`, `limit`. **Optional:** add **`productType=loose_stone`** or **`productType=jewellery`** when the user is on a type tab (search within that type only). Other filters (`categoryId`, `shape`, etc.) may also be combined. |
+| 3. **Pagination** | Load more results | Same **GET /api/products** with the **same** `search`, `productType` (if any), other active filters, and `limit`; increment `page`. |
 | 4. **Errors** | Suggestions request fails | Hide suggestions; user can still tap Search to run full search. |
 | 5. **Errors** | Product list request fails | Show error + retry; do not leave list empty without feedback. |
+
+**Search + product type (examples):**
+
+```
+GET /api/products?search=sapphire&productType=loose_stone&page=1&limit=20
+GET /api/products?search=ring&productType=jewellery&page=1&limit=20
+```
+
+Omit `productType` to search across **all** product types (default global search).
 
 Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Code reference: [CODE-SEARCH-SUGGESTIONS.md](./CODE-SEARCH-SUGGESTIONS.md).
 
@@ -644,7 +654,7 @@ Details: **5.1.1** (suggestions API), **5.1.2** (debouncing, flows, errors). Cod
 **Collector pieces (`isCollectorPiece=true`):** **No auth required** — the list is public. Returns all active collector pieces but with masked data only: `imageUrl` and `maskedPrice` (e.g. `"1xxxxx"`) are set; `title`, `price`, `sellerName`, and all spec fields are `null`. For full details on `GET /api/products/:id`, owner (seller) can access full data while authenticated; other users must submit a show-request (see **5.4.4**) and wait for admin approval. These responses use shared CDN cache (60s/300s).
 
 **Sort order:**  
-- **With `search`:** (1) full-text **relevance**, (2) collector pieces, (3) privilege assist, (4) featured, (5) promotion, (6) `createdAt` (newest first). **`newest=true` is ignored** so search always uses this ordering.  
+- **With `search`:** (1) full-text **relevance**, (2) collector pieces, (3) privilege assist, (4) featured, (5) promotion, (6) `createdAt` (newest first). **`newest=true` is ignored** so search always uses this ordering. **`productType` and other filters apply** — results must match the search term **and** each active filter.  
 - **No `search`, default browse / filters only:** (1) collector pieces, (2) privilege assist, (3) featured, (4) promotion, (5) `createdAt` (newest first).  
 - **No `search`, new-products list:** `newest=true` or `newest=1` → sort by **`createdAt` only** (newest first). You can combine with filters (e.g. `categoryId`, `productType`).  
 - **No `search`, explicit admin sort:** `sortBy` and/or `sortOrder` in the query → sort by that column only (same as admin).  
@@ -659,8 +669,8 @@ The API does **not** return a numeric `featured` field—only **`isFeatured`** (
 | ------------------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
 | `page`              | number  | 1        | Page number                                                                              |
 | `limit`             | number  | 20       | Items per page (max 100)                                                                 |
-| `search`            | string  | -        | Search in title and seller                                                               |
-| `productType`       | string  | -        | Filter by type: `loose_stone` or `jewellery`                                             |
+| `search`            | string  | -        | Search in title, description, and seller (full-text + partial match). Combines with `productType` and other filters (AND). |
+| `productType`       | string  | -        | Filter by type: `loose_stone` or `jewellery`. Use with `search` to search within one type only. |
 | `categoryId`        | string  | -        | Filter by category UUID (from GET /api/categories)                                       |
 | `status`            | string  | `active` | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to active. |
 | `stoneCut`          | string  | -        | Filter by cut: `Faceted` or `Cabochon` (loose stones)                                    |
@@ -682,7 +692,7 @@ The API does **not** return a numeric `featured` field—only **`isFeatured`** (
 
 #### 5.1.1 Product search suggestions (autocomplete)
 
-Use this endpoint to show autocomplete suggestions as the user types in the product search bar. When the user taps a suggestion or the "Search" button, call **GET /api/products** with `search=<query>&page=1&limit=20` (and no other filters) to show results in the product list.
+Use this endpoint to show autocomplete suggestions as the user types in the product search bar. When the user taps a suggestion or the "Search" button, call **GET /api/products** with `search=<query>&page=1&limit=20`. Add **`productType`** on that list call if the UI is scoped to Loose Stones or Jewellery (suggestions themselves are not type-filtered).
 
 **GET** `/api/products/suggestions`
 
@@ -711,7 +721,7 @@ Use this endpoint to show autocomplete suggestions as the user types in the prod
 
 **When `q` is empty or shorter than 2 characters:** Response is `{ "suggestions": [] }` (200).
 
-**Use in app:** Debounce input (e.g. 200–300 ms) and call this endpoint when `q.length >= 2`. On suggestion tap or "Search" submit, navigate to the product list and call `GET /api/products?search=<final_query>&page=1&limit=20` (do not send other filters).
+**Use in app:** Debounce input (e.g. 200–300 ms) and call this endpoint when `q.length >= 2`. On suggestion tap or "Search" submit, navigate to the product list and call `GET /api/products?search=<final_query>&page=1&limit=20`, optionally with `productType=loose_stone` or `productType=jewellery` when searching from a type tab.
 
 **Caching:** `Cache-Control: public, s-maxage=30, stale-while-revalidate=60`. Same `q` may be served from edge cache. Rate limiting on this endpoint is recommended for production.
 
@@ -721,14 +731,14 @@ Use this endpoint to show autocomplete suggestions as the user types in the prod
 
 #### 5.1.2 Mobile search UX: debouncing, flows, and errors
 
-**Quick guide:** See the instruction table in **5.1** above. Summary: debounce suggestions (200–300 ms), call suggestions only when `q.length >= 2`, on submit/suggestion tap call list with `search` only, then paginate with same endpoint.
+**Quick guide:** See the instruction table in **5.1** above. Summary: debounce suggestions (200–300 ms), call suggestions only when `q.length >= 2`, on submit/suggestion tap call list with `search` (+ optional `productType` from the active tab), then paginate with the same params.
 
 **Debouncing for suggestions:** On each change of the search input, start a debounce timer (recommended 200–300 ms). When the timer fires, if `q.length >= 2`, call **GET /api/products/suggestions?q=...**. Cancel any in-flight suggestions request when the user types again (new request replaces the previous one). Do not send a request on every keystroke.
 
 **Request flow:**
 1. **While typing:** Debounced calls to **GET /api/products/suggestions?q=...**; show the returned suggestions under the input.
-2. **On "Search" tap or suggestion tap:** Navigate to the product list screen and call **GET /api/products?search=&lt;final_query&gt;&page=1&limit=20** with no other query params (filters are cleared for this search).
-3. **Product list:** Use the same **GET /api/products** for pagination (increment `page`, keep `search` and `limit`).
+2. **On "Search" tap or suggestion tap:** Navigate to the product list screen and call **GET /api/products?search=&lt;final_query&gt;&page=1&limit=20**. If the screen has a **Loose Stones / Jewellery** tab (or equivalent), include **`productType=loose_stone`** or **`productType=jewellery`** so search is scoped to that type. Omit `productType` for global search across all types.
+3. **Product list:** Use the same **GET /api/products** for pagination (increment `page`, keep `search`, `productType` if set, and `limit`).
 
 **Error handling:**
 - **Suggestions request fails (network or 5xx):** Hide or clear the suggestions list; do not block the user. They can still tap "Search" to run the full search.
@@ -769,6 +779,8 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 
 When `search` is present, results are ordered by **relevance** (full-text rank) first, then collector piece, privilege assist, featured, then newest.
 
+**Combining `search` with filters:** All query params are **AND**ed. For example, `search=sapphire&productType=loose_stone` returns active loose stones whose title/description/seller matches “sapphire”. The same applies to `categoryId`, `shape`, `origin`, etc. **`productType` is the usual filter to pair with search** when the app has separate Loose Stone vs Jewellery browse/search tabs.
+
 **Pagination**
 
 - Response includes `total` (total number of items). Use it to compute total pages: `totalPages = Math.ceil(total / limit)`.
@@ -783,10 +795,17 @@ GET /api/products
 GET /api/products?page=1&limit=20
 ```
 
-**2. Search by keyword (e.g. “sapphire”)**
+**2. Search by keyword (e.g. “sapphire”) — all types**
 
 ```
 GET /api/products?search=sapphire
+```
+
+**2a. Search + product type (e.g. sapphire loose stones only)**
+
+```
+GET /api/products?search=sapphire&productType=loose_stone
+GET /api/products?search=ring&productType=jewellery&page=1&limit=20
 ```
 
 **3. Search + pagination (second page of search results, 10 per page)**
