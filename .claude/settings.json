@@ -133,7 +133,19 @@
       "Bash(./node_modules/.bin/eslint tests/setup-component.ts tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)",
       "Bash(./node_modules/.bin/eslint features/messages/components/triage/ReadingPane.tsx features/messages/components/triage/MessagesTriagePage.tsx features/messages/types/triage.ts)",
       "Bash(./node_modules/.bin/eslint features/chat/components/AdminAllConversationsView.tsx)",
-      "Bash(./node_modules/.bin/eslint features/messages/ features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)"
+      "Bash(./node_modules/.bin/eslint features/messages/ features/chat/components/AdminAllConversationsView.tsx tests/component/messages-triage-page.test.tsx tests/component/admin-all-conversations-view.test.tsx)",
+      "Bash(xargs -I{} sh -c 'echo ---{}---; cat {}')",
+      "mcp__chrome-devtools__fill_form",
+      "mcp__chrome-devtools__wait_for",
+      "mcp__chrome-devtools__close_page",
+      "Bash(kill 537750)",
+      "Bash(awk '/^diff --git a\\\\/components\\\\/admin\\\\/AdminSidebar.tsx/,/^diff --git a\\\\/docs\\\\/api/' .superpowers/sdd/2026-08-04-reviews-admin-phase1/review-b9d4451..bb95f8f.diff)",
+      "Bash(awk '/^diff --git a\\\\/features\\\\/rbac\\\\/feature-keys.ts/,/^diff --git a\\\\/features\\\\/reviews\\\\/actions/' .superpowers/sdd/2026-08-04-reviews-admin-phase1/review-b9d4451..bb95f8f.diff)",
+      "Bash(echo \"=== exit:$? ===\")",
+      "Bash(gh auth *)",
+      "Bash(ssh -G git@github.com)",
+      "Bash(ssh -i ~/.ssh/mgpolinn -T git@github.com)",
+      "Bash(ssh -i ~/.ssh/id_rsa_ppa -T git@github.com)"
     ],
     "additionalDirectories": [
       "/home/po/me/2026/Jade/infinity-gemx/docs/superpowers/specs",

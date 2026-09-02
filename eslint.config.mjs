@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Static design-handoff reference files, not application code.
     "design_handoff_messages_triage/**",
     "design_handoff_reviews_admin/**",
+    // Nested git worktrees are separate checkouts with their own lint config;
+    // never descend into them from the parent repo's lint run.
+    ".claude/worktrees/**",
   ]),
   {
     rules: {

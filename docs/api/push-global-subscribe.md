@@ -2,7 +2,7 @@
 
 ## POST `/api/push/global/subscribe`
 
-Register an FCM device token on the **`global`** topic. Used by the **web** app after `getToken()`; Flutter may use client `subscribeToTopic` instead.
+Register an FCM device token on the **`global`** topic. Used by the **web** app after `getToken()`; the React Native app may use client `subscribeToTopic` instead.
 
 **Auth:** None
 

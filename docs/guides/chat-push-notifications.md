@@ -20,28 +20,33 @@
 
 Notification **title** = sender name, **body** = message preview.
 
-## Flutter example
+## React Native example
 
-```dart
+```js
 // On chat screen open
-Timer.periodic(Duration(seconds: 30), (_) async {
-  await http.put(
-    Uri.parse('$baseUrl/api/chat/viewing'),
-    headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-    body: jsonEncode({'peerId': peerUserId}),
-  );
-});
+const interval = setInterval(async () => {
+  await fetch(`${baseUrl}/api/chat/viewing`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ peerId: peerUserId }),
+  });
+}, 30_000);
 
-// On dispose / back
-await http.delete(
-  Uri.parse('$baseUrl/api/chat/viewing'),
-  headers: {'Authorization': 'Bearer $token'},
-);
+// On unmount / back
+useEffect(() => {
+  return () => {
+    clearInterval(interval);
+    fetch(`${baseUrl}/api/chat/viewing`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  };
+}, []);
 
-// Notification tap
-void onNotificationTap(Map<String, dynamic> data) {
-  if (data['screen'] == 'chat' && data['senderId'] != null) {
-    navigator.push(ChatRoute(userId: data['senderId']));
+// Notification tap (via @react-native-firebase/messaging)
+function onNotificationTap(data) {
+  if (data.screen === 'chat' && data.senderId) {
+    navigation.navigate('Chat', { userId: data.senderId });
   }
 }
 ```

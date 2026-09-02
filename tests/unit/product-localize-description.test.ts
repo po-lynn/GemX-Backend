@@ -19,9 +19,59 @@ import {
 } from "@/features/news/services/google-translate"
 import {
   buildLocalizedProductDescription,
+  buildLocalizedProductTitle,
   pickLocalizedDescription,
+  pickLocalizedTitle,
   localizedDescriptionFieldsForLanguage,
+  localizedTitleFieldsForLanguage,
 } from "@/features/products/services/localize-description"
+
+describe("buildLocalizedProductTitle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it("throws when title is blank", async () => {
+    await expect(buildLocalizedProductTitle("   ")).rejects.toThrow(/title is required/i)
+    expect(isGoogleTranslateConfigured).not.toHaveBeenCalled()
+  })
+
+  it("throws when Google Translate is not configured", async () => {
+    vi.mocked(isGoogleTranslateConfigured).mockReturnValue(false)
+    await expect(buildLocalizedProductTitle("Natural ruby")).rejects.toThrow(
+      /GOOGLE_TRANSLATE_API_KEY/,
+    )
+  })
+
+  it("detects English and translates into Myanmar, Thai, and Korean", async () => {
+    // When source is English, fill the other three locales via translateText.
+    vi.mocked(isGoogleTranslateConfigured).mockReturnValue(true)
+    vi.mocked(detectNewsLanguage).mockResolvedValue("English")
+    vi.mocked(translateText).mockImplementation(async (_text, _from, to) => {
+      if (to === "Myanmar") return "မြန်မာ"
+      if (to === "Thai") return "ไทย"
+      if (to === "Korean") return "한국어"
+      return _text
+    })
+
+    const result = await buildLocalizedProductTitle("Natural ruby")
+
+    expect(detectNewsLanguage).toHaveBeenCalledWith("Natural ruby")
+    expect(translateText).toHaveBeenCalledTimes(3)
+    expect(result).toEqual({
+      sourceLanguage: "English",
+      title: "Natural ruby",
+      titleEn: "Natural ruby",
+      titleMy: "မြန်မာ",
+      titleTh: "ไทย",
+      titleKo: "한국어",
+    })
+  })
+})
 
 describe("buildLocalizedProductDescription", () => {
   beforeEach(() => {
@@ -97,6 +147,24 @@ describe("buildLocalizedProductDescription", () => {
   })
 })
 
+describe("pickLocalizedTitle", () => {
+  const row = {
+    title: "fallback",
+    titleEn: "English title",
+    titleMy: "Myanmar title",
+    titleTh: "Thai title",
+    titleKo: "Korean title",
+  }
+
+  it("returns canonical title when lang is omitted", () => {
+    expect(pickLocalizedTitle(row)).toBe("fallback")
+  })
+
+  it("returns the matching locale column when present", () => {
+    expect(pickLocalizedTitle(row, "Thai")).toBe("Thai title")
+  })
+})
+
 describe("pickLocalizedDescription", () => {
   const row = {
     description: "fallback",
@@ -121,6 +189,22 @@ describe("pickLocalizedDescription", () => {
         "Korean",
       ),
     ).toBe("fallback")
+  })
+})
+
+describe("localizedTitleFieldsForLanguage", () => {
+  it("updates only the selected locale column when editing a non-source language", () => {
+    const fields = localizedTitleFieldsForLanguage("Thai", "ทับทิม", "English")
+    expect(fields).toEqual({ titleTh: "ทับทิม" })
+    expect(fields).not.toHaveProperty("title")
+  })
+
+  it("also updates canonical title when editing the source language", () => {
+    const fields = localizedTitleFieldsForLanguage("English", "Natural ruby", "English")
+    expect(fields).toEqual({
+      titleEn: "Natural ruby",
+      title: "Natural ruby",
+    })
   })
 })
 

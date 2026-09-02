@@ -71,7 +71,7 @@ curl "http://localhost:3000/api/products?isFeatured=true&limit=4"
 
 Creating with `isFeatured: true` and `featured > 0` deducts that many points from the seller's balance (`400` if insufficient).
 
-When `description` is non-empty, the server detects its language (English / Myanmar / Thai / Korean) via Google Cloud Translation and translates into the other three locales. Values are saved on the `product` row as `language`, `description`, `descriptionEn`, `descriptionMy`, `descriptionTh`, `descriptionKo`. Requires `GOOGLE_TRANSLATE_API_KEY`. Empty/omitted description skips translation.
+The server detects the **title** language (English / Myanmar / Thai / Korean) via Google Cloud Translation and translates into the other three locales (`titleEn`, `titleMy`, `titleTh`, `titleKo`). `product.language` is set from the title source language. When `description` is non-empty, the same process fills `descriptionEn/My/Th/Ko`. Requires `GOOGLE_TRANSLATE_API_KEY`. Empty/omitted description skips description translation only.
 
 **Response 201:** `{ "success": true, "productId": "...", "language": "English" }`
 
@@ -79,7 +79,7 @@ When `description` is non-empty, the server detects its language (English / Myan
 - `400 {"error": "...", "details": {...}}` — validation failure
 - `400 {"error": "Insufficient points balance"}`
 - `401 {"error": "Unauthorized"}`
-- `503 {"error": "Google Translate is not configured…"}` — missing/invalid key when description is present
+- `503 {"error": "Google Translate is not configured…"}` — missing/invalid key (title always requires translation)
 - `500 {"error": "Failed to create product"}`
 
 **Example:**

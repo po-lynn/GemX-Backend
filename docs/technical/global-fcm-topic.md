@@ -17,7 +17,7 @@
 ## Data flow
 
 ```
-Flutter startup
+Mobile app startup
   → subscribeToTopic("global")   // no login required
 
 Admin / publish hooks
@@ -27,7 +27,7 @@ Admin / publish hooks
   → FCM → all subscribed devices
 
 User taps notification
-  → Flutter reads data.screen, data.articleId | data.newsId
+  → Mobile app reads data.screen, data.articleId | data.newsId
   → navigates to detail screen
 ```
 
