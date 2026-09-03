@@ -807,9 +807,11 @@ export function ProductForm({
     setTitlesByLang(nextTitles)
     setDescriptionsByLang(nextDescriptions)
     setEditLanguage(mode === "edit" ? source : "English")
-    setDescriptionText(mode === "edit" ? next[source] : (product?.description ?? ""))
-  // Field-level deps: avoid resetting on every product object identity change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- product fields listed explicitly
+    setDescriptionText(
+      mode === "edit" ? nextDescriptions[source] : (product?.description ?? ""),
+    )
+    // Field-level deps: avoid resetting on every product object identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- product fields listed explicitly
   }, [product?.id, product?.language, product?.description, product?.descriptionEn, product?.descriptionMy, product?.descriptionTh, product?.descriptionKo, mode])
 
   useEffect(() => {
