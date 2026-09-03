@@ -1,0 +1,9 @@
+# Minimal Supabase config for Edge Functions in this monorepo.
+# Deploy: supabase functions deploy process-background-jobs
+# See docs/guides/surprise-bonus-cron.md
+
+[project]
+id = "gemx"
+
+[functions.process-background-jobs]
+verify_jwt = false

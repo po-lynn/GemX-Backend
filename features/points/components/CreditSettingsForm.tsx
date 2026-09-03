@@ -220,35 +220,37 @@ function DefaultsTab({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="p-6">
-      <header className="mb-[18px]">
-        <h2 className="text-[17px] font-semibold tracking-tight mb-1">
-          Default points for new users
-        </h2>
-        <p className="text-[13.5px] text-slate-400">
-          Credited automatically the moment a user creates an account.
-        </p>
-      </header>
-      <div className="max-w-[260px]">
-        <div className={fieldCls}>
-          <span className={labelCls}>Initial points</span>
-          <div className="relative">
-            <input
-              className={cn(inputCls, "pr-12 font-mono")}
-              type="number"
-              min={0}
-              value={value}
-              onChange={(e) =>
-                onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))
-              }
-            />
-            <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded pointer-events-none">
-              pts
+    <div className="p-6 space-y-8">
+      <div>
+        <header className="mb-[18px]">
+          <h2 className="text-[17px] font-semibold tracking-tight mb-1">
+            Default points for new users
+          </h2>
+          <p className="text-[13.5px] text-slate-400">
+            Credited automatically the moment a user creates an account.
+          </p>
+        </header>
+        <div className="max-w-[260px]">
+          <div className={fieldCls}>
+            <span className={labelCls}>Initial points</span>
+            <div className="relative">
+              <input
+                className={cn(inputCls, "pr-12 font-mono")}
+                type="number"
+                min={0}
+                value={value}
+                onChange={(e) =>
+                  onChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))
+                }
+              />
+              <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded pointer-events-none">
+                pts
+              </span>
+            </div>
+            <span className="text-[13px] text-slate-400">
+              Recommended: 5–25 pts to onboard without abuse.
             </span>
           </div>
-          <span className="text-[13px] text-slate-400">
-            Recommended: 5–25 pts to onboard without abuse.
-          </span>
         </div>
       </div>
     </div>
@@ -1424,7 +1426,10 @@ export function CreditSettingsForm({
         {/* Right pane */}
         <section className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
           {tab === "defaults" && (
-            <DefaultsTab value={defaultPts} onChange={setDefaultPts} />
+            <DefaultsTab
+              value={defaultPts}
+              onChange={setDefaultPts}
+            />
           )}
           {tab === "methods" && (
             <MethodsTab

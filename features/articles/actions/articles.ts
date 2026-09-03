@@ -195,24 +195,21 @@ export async function autoSaveArticleAction(formData: FormData) {
   if (!session) return { error: "Unauthorized" };
 
   const previous = await getArticleById(parsed.data.articleId);
-  const updates: Parameters<typeof updateArticleInDb>[1] = {
-    author: parsed.data.author,
-  };
-
-  if (parsed.data.editLanguage) {
-    Object.assign(
-      updates,
-      localizedFieldsForLanguage(
-        parsed.data.editLanguage,
-        parsed.data.title,
-        parsed.data.content,
-        previous?.language,
-      ),
-    );
-  } else {
-    updates.title = parsed.data.title;
-    updates.content = parsed.data.content;
-  }
+  const updates: Parameters<typeof updateArticleInDb>[1] = parsed.data.editLanguage
+    ? {
+        ...localizedFieldsForLanguage(
+          parsed.data.editLanguage,
+          parsed.data.title,
+          parsed.data.content,
+          previous?.language,
+        ),
+        author: parsed.data.author,
+      }
+    : {
+        title: parsed.data.title,
+        author: parsed.data.author,
+        content: parsed.data.content,
+      };
 
   // Only regenerate slug when the canonical source title changes.
   if (updates.title !== undefined) {

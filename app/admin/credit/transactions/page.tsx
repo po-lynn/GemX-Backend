@@ -9,6 +9,7 @@ import {
 } from "@/features/points/db/points"
 import { PointTransactionsTable } from "@/features/points/components/PointTransactionsTable"
 import { PointActionButtons } from "@/features/points/components/PointActionButtons"
+import { countActiveUsers } from "@/features/points/db/surprise-bonus"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp } from "@/components/admin/motion"
 import { withQueryTimeout } from "@/lib/query-timeout"
@@ -60,7 +61,7 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
   // TODO: getPointTransactionCounts() (features/points/db/points.ts, ~line 1503) loads
   // every pointTransaction row and aggregates in JS instead of a SQL aggregate — an
   // unbounded full-table scan that only gets slower as the ledger grows. That's a
-  // separate, worse performance issue than "needs a timeout"; follow-up should rewrite
+  // separate, deeper performance issue than "needs a timeout"; follow-up should rewrite
   // it as a grouped/filtered COUNT query. Wrapping with withTimeout here only bounds
   // how long this page waits on it, it does not fix the scan itself.
   const counts = await withTimeout<PointCounts>(
@@ -68,6 +69,9 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
     UNKNOWN_POINT_COUNTS,
     ADMIN_TRANSACTIONS_QUERY_TIMEOUT_MS
   )
+
+  // Active user count for All Users top-up drawer (sequential after counts).
+  const activeUserCount = await countActiveUsers()
 
   const views: ViewTab[] = [
     { id: "all",     label: "All",     count: counts.all },
@@ -96,7 +100,7 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
           </h1>
           <p className="lv-subhead">Full ledger of every point movement across all user accounts.</p>
         </div>
-        <PointActionButtons />
+        <PointActionButtons activeUserCount={activeUserCount} />
       </div>
 
       <PointTransactionsTable

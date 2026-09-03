@@ -1,6 +1,5 @@
 "use server";
 
-import { canAdminManageUsers } from "@/features/users/permissions/users";
 import {
   getPointManagementSettings,
   savePremiumDealersSettings,
@@ -25,6 +24,7 @@ import {
 } from "@/features/points/db/points";
 import type { PointPurchasePackagesSettings } from "@/features/points/db/points";
 import { requireActionRole } from "@/lib/action-guard";
+import { canAdminManageUsers } from "@/features/users/permissions/users";
 
 /** Legacy form: only default registration points + 3 earning rates (points per 1 unit). */
 export async function savePointsSettingsAction(formData: FormData) {
