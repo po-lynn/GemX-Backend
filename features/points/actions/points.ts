@@ -23,11 +23,6 @@ import {
   adminCreatePointPurchaseRequest,
 } from "@/features/points/db/points";
 import type { PointPurchasePackagesSettings } from "@/features/points/db/points";
-import {
-  MONTHLY_BONUS_CYCLE_OPTIONS,
-  saveMonthlyBonusSettings,
-  type MonthlyBonusCycles,
-} from "@/features/points/db/monthly-bonus";
 import { requireActionRole } from "@/lib/action-guard";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
 
@@ -409,36 +404,4 @@ export async function adminActivatePremiumDealerAction(formData: FormData) {
   if (!result) return { error: "Insufficient points — approve a purchase request first" };
 
   return { success: true, ...result };
-}
-
-export async function saveMonthlyBonusSettingsAction(formData: FormData) {
-  const session = await requireActionRole(canAdminManageUsers);
-  if (!session) return { error: "Unauthorized" };
-
-  const enabled =
-    formData.get("enabled") === "true" || formData.get("enabled") === "on";
-  const amount = parseIntForm(formData.get("amount"), 0);
-  const cyclesRaw = parseIntForm(formData.get("cycles"), 6);
-  const cycles = (MONTHLY_BONUS_CYCLE_OPTIONS as readonly number[]).includes(
-    cyclesRaw,
-  )
-    ? (cyclesRaw as MonthlyBonusCycles)
-    : 6;
-  const startDateRaw = String(formData.get("startDate") ?? "").trim();
-  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(startDateRaw) ? startDateRaw : null;
-
-  if (enabled && amount <= 0) {
-    return { error: "Monthly bonus amount must be greater than 0 when enabled." };
-  }
-  if (enabled && !startDate) {
-    return { error: "Distribution start date is required when the program is enabled." };
-  }
-
-  await saveMonthlyBonusSettings({
-    enabled,
-    amount: Math.max(0, amount),
-    cycles,
-    startDate,
-  });
-  return { success: true };
 }

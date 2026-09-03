@@ -15,16 +15,30 @@ No DB migration required for settings (uses `point_setting` keys).
 psql "$DATABASE_URL" -f scripts/create-gemx-notifications-system-user.sql
 ```
 
-## Configure (admin)
+## Configure
 
-1. Open **Admin → Point Transactions** (`/admin/credit/transactions`).
-2. Click **Monthly Bonus Points** (header, left of **Top-up**). The settings drawer slides in from the right, same as Top-up.
-3. Set:
-   - Enable program
-   - Points per month
-   - Duration: 1 / 3 / 6 / 12 months
-   - Distribution start date
-4. Preview the schedule, then **Save Changes**.
+There is **no admin UI** on Point Transactions for this program anymore. Settings live in `point_setting`:
+
+| Key | Storage |
+|-----|---------|
+| `monthly_bonus_enabled` | value `0` / `1` |
+| `monthly_bonus_amount` | value int |
+| `monthly_bonus_cycles` | value `1` \| `3` \| `6` \| `12` |
+| `monthly_bonus_start_date` | value_text `YYYY-MM-DD` |
+
+Example (SQL):
+
+```sql
+INSERT INTO point_setting (key, value, value_text) VALUES
+  ('monthly_bonus_enabled', 1, NULL),
+  ('monthly_bonus_amount', 100, NULL),
+  ('monthly_bonus_cycles', 6, NULL),
+  ('monthly_bonus_start_date', 0, '2026-01-01')
+ON CONFLICT (key) DO UPDATE
+SET value = EXCLUDED.value, value_text = EXCLUDED.value_text;
+```
+
+(Or update existing rows via Drizzle Studio / SQL editor.)
 
 ## Cron
 
@@ -59,6 +73,6 @@ Copy lives in `features/points/constants/monthly-bonus-notify.ts` (`en` / `my` /
 |---------|-----|
 | Cron 500 Cron not configured | Set `CRON_SECRET` |
 | Cron 401 | Wrong bearer token |
-| Cron `skipped: missing_start_date` | Set start date in admin UI |
-| Users not credited | Confirm program enabled; check they are not banned/archived |
+| Cron `skipped: missing_start_date` | Set `monthly_bonus_start_date` in `point_setting` |
+| Users not credited | Confirm `monthly_bonus_enabled=1`; check they are not banned/archived |
 | Points granted but no chat | Run `scripts/create-gemx-notifications-system-user.sql`; check server logs for `[monthly-bonus]` |

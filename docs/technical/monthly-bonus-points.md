@@ -2,9 +2,11 @@
 
 ## What changed
 
-Admin can configure a **Monthly Bonus Points** program (enable, amount, duration 1/3/6/12 months, distribution start date). A **daily cron** grants points to all non-banned, non-archived users every **30 days** from the start date, for up to N cycles. Each grant writes a `point_transaction` row (`type: monthly_bonus`).
+A **daily cron** grants points to all non-banned, non-archived users every **30 days** from a configured start date, for up to N cycles. Each grant writes a `point_transaction` row (`type: monthly_bonus`).
 
 After each successful credit, the cron also sends a **GemX system chat message** (+ chat push / realtime broadcast) so the user is notified in-app.
+
+**Admin UI removed:** the **Monthly Bonus Points** button / settings drawer on Point Transactions is gone. Configure via `point_setting` keys (see guide).
 
 ### Files
 
@@ -14,17 +16,13 @@ After each successful credit, the cron also sends a **GemX system chat message**
 | `features/points/services/notify-monthly-bonus.ts` | Chat + push notify after grant |
 | `features/points/constants/monthly-bonus-notify.ts` | System sender id + EN/MY/TH/KO copy |
 | `scripts/create-gemx-notifications-system-user.sql` | Seed `sys-gemx-notifications` user |
-| `features/points/actions/points.ts` | `saveMonthlyBonusSettingsAction` |
-| `features/points/components/MonthlyBonusSettingsDialog.tsx` | Admin right-side drawer (same as Top-up) |
-| `features/points/components/PointActionButtons.tsx` | Header button on Point Transactions (left of Top-up) |
-| `app/admin/credit/transactions/page.tsx` | Loads settings + eligible user count |
 | `app/api/cron/monthly-bonus-points/route.ts` | Cron endpoint |
 | `vercel.json` | Daily schedule `0 1 * * *` |
 
 ## Data flow
 
 ```
-Admin saves settings → point_setting keys
+point_setting keys
   monthly_bonus_enabled / amount / cycles / start_date
 
 Daily cron POST /api/cron/monthly-bonus-points (Bearer CRON_SECRET)
@@ -58,7 +56,6 @@ Stored in existing `point_setting` KV:
 
 ## Auth
 
-- Admin UI / save action: `canAdminManageUsers`
 - Cron: `Authorization: Bearer $CRON_SECRET`
 - Chat sender: system user `sys-gemx-notifications` (banned+archived; no credentials)
 
