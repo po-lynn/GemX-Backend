@@ -17,8 +17,10 @@ import {
 } from "@/features/products/db/products"
 import {
   buildLocalizedProductDescription,
+  buildLocalizedProductTitle,
   isProductLanguage,
   localizedDescriptionFieldsForLanguage,
+  localizedTitleFieldsForLanguage,
 } from "@/features/products/services/localize-description"
 import { db } from "@/drizzle/db"
 import { product } from "@/drizzle/schema/product-schema"
@@ -118,9 +120,11 @@ export async function createProductAction(formData: FormData) {
     effectiveSellerId = (String(formData.get("sellerId") ?? "").trim() || null) ?? session.user.id
   }
 
-  let localized: Awaited<ReturnType<typeof buildLocalizedProductDescription>>
+  let localizedTitle: Awaited<ReturnType<typeof buildLocalizedProductTitle>>
+  let localizedDescription: Awaited<ReturnType<typeof buildLocalizedProductDescription>>
   try {
-    localized = await buildLocalizedProductDescription(
+    localizedTitle = await buildLocalizedProductTitle(parsed.data.title)
+    localizedDescription = await buildLocalizedProductDescription(
       parsed.data.description?.trim() ?? "",
     )
   } catch (e) {
@@ -136,14 +140,18 @@ export async function createProductAction(formData: FormData) {
   }
 
   const productId = await createProductInDb({
-    title: parsed.data.title,
+    title: localizedTitle.title,
     sku: parsed.data.sku,
-    description: localized.description || null,
-    language: localized.sourceLanguage,
-    descriptionEn: localized.descriptionEn || null,
-    descriptionMy: localized.descriptionMy || null,
-    descriptionTh: localized.descriptionTh || null,
-    descriptionKo: localized.descriptionKo || null,
+    titleEn: localizedTitle.titleEn || null,
+    titleMy: localizedTitle.titleMy || null,
+    titleTh: localizedTitle.titleTh || null,
+    titleKo: localizedTitle.titleKo || null,
+    description: localizedDescription.description || null,
+    language: localizedTitle.sourceLanguage,
+    descriptionEn: localizedDescription.descriptionEn || null,
+    descriptionMy: localizedDescription.descriptionMy || null,
+    descriptionTh: localizedDescription.descriptionTh || null,
+    descriptionKo: localizedDescription.descriptionKo || null,
     identification: parsed.data.identification,
     price: parsed.data.price,
     currency: parsed.data.currency,
@@ -180,7 +188,7 @@ export async function createProductAction(formData: FormData) {
   })
 
   revalidateProductsCache(productId)
-  return { success: true, productId, language: localized.sourceLanguage }
+  return { success: true, productId, language: localizedTitle.sourceLanguage }
 }
 
 export async function updateProductAction(formData: FormData) {
@@ -289,6 +297,17 @@ export async function updateProductAction(formData: FormData) {
     ? await getProductById(productId)
     : null
 
+  const localizedTitle =
+    editLanguage && data.title !== undefined
+      ? localizedTitleFieldsForLanguage(
+          editLanguage,
+          data.title,
+          previous?.language,
+        )
+      : {
+          title: data.title,
+        }
+
   const localizedDescription =
     editLanguage && data.description !== undefined
       ? localizedDescriptionFieldsForLanguage(
@@ -303,7 +322,7 @@ export async function updateProductAction(formData: FormData) {
   await updateProductInDb(
     productId,
     {
-      title: data.title,
+      ...localizedTitle,
       sku: data.sku,
       ...localizedDescription,
       identification: data.identification,

@@ -867,8 +867,12 @@ export type ProductForEdit = {
   id: string
   sku: string | null
   title: string
+  titleEn: string | null
+  titleMy: string | null
+  titleTh: string | null
+  titleKo: string | null
   description: string | null
-  /** Source language of description: English | Myanmar | Thai | Korean */
+  /** Source language of title: English | Myanmar | Thai | Korean */
   language: string
   descriptionEn: string | null
   descriptionMy: string | null
@@ -922,6 +926,10 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
       id: product.id,
       sku: product.sku,
       title: product.title,
+      titleEn: product.titleEn,
+      titleMy: product.titleMy,
+      titleTh: product.titleTh,
+      titleKo: product.titleKo,
       description: product.description,
       language: product.language,
       descriptionEn: product.descriptionEn,
@@ -1040,6 +1048,10 @@ export async function getProductById(id: string): Promise<ProductForEdit | null>
     id: row.id,
     sku: row.sku,
     title: row.title,
+    titleEn: row.titleEn ?? null,
+    titleMy: row.titleMy ?? null,
+    titleTh: row.titleTh ?? null,
+    titleKo: row.titleKo ?? null,
     description: row.description,
     language: row.language ?? "English",
     descriptionEn: row.descriptionEn ?? null,
@@ -1092,8 +1104,12 @@ export type CreateProductInput = ProductCreate & {
   sellerId: string
   categoryId: string
   verifiedBy?: string | null
-  /** Source language of description (English | Myanmar | Thai | Korean). */
+  /** Source language of title (English | Myanmar | Thai | Korean). */
   language?: string
+  titleEn?: string | null
+  titleMy?: string | null
+  titleTh?: string | null
+  titleKo?: string | null
   descriptionEn?: string | null
   descriptionMy?: string | null
   descriptionTh?: string | null
@@ -1121,6 +1137,10 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
   const values: typeof product.$inferInsert = {
     title: input.title,
     sku,
+    titleEn: input.titleEn ?? null,
+    titleMy: input.titleMy ?? null,
+    titleTh: input.titleTh ?? null,
+    titleKo: input.titleKo ?? null,
     description: input.description ?? null,
     language: input.language ?? "English",
     descriptionEn: input.descriptionEn ?? null,
@@ -1221,6 +1241,10 @@ export async function createProductInDb(input: CreateProductInput): Promise<stri
 
 export type UpdateProductInput = {
   title?: string
+  titleEn?: string | null
+  titleMy?: string | null
+  titleTh?: string | null
+  titleKo?: string | null
   sku?: string | null
   description?: string | null
   language?: string
@@ -1301,6 +1325,10 @@ export async function updateProductInDb(
 
   const updates: Partial<typeof product.$inferInsert> = {}
   if (rest.title !== undefined) updates.title = rest.title
+  if (rest.titleEn !== undefined) updates.titleEn = rest.titleEn
+  if (rest.titleMy !== undefined) updates.titleMy = rest.titleMy
+  if (rest.titleTh !== undefined) updates.titleTh = rest.titleTh
+  if (rest.titleKo !== undefined) updates.titleKo = rest.titleKo
   if (rest.sku !== undefined) {
     updates.sku = rest.sku
   } else {

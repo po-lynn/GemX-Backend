@@ -1,44 +1,41 @@
-# Guide: Global FCM topic (Flutter + backend)
+# Guide: Global FCM topic (React Native + backend)
 
-## Flutter (app startup, no login)
+## React Native (app startup, no login)
 
-```dart
-import 'package:firebase_messaging/firebase_messaging.dart';
+```js
+import messaging from '@react-native-firebase/messaging';
 
-Future<void> subscribeToGlobalTopic() async {
-  await FirebaseMessaging.instance.subscribeToTopic('global');
+async function subscribeToGlobalTopic() {
+  await messaging().subscribeToTopic('global');
 }
 ```
 
-Call from `main()` or your app initializer after Firebase is initialized.
+Call during app initialization after Firebase is initialized.
 
 ## Handle notification tap navigation
 
-```dart
-void handleNotificationData(Map<String, dynamic> data) {
-  final screen = data['screen'] as String?;
-  switch (screen) {
+```js
+function handleNotificationData(data) {
+  switch (data.screen) {
     case 'article':
-      final id = data['articleId'] as String?;
-      if (id != null) navigator.push(ArticleDetailRoute(id: id));
+      if (data.articleId) navigation.navigate('ArticleDetail', { id: data.articleId });
       break;
     case 'news':
-      final id = data['newsId'] as String?;
-      if (id != null) navigator.push(NewsDetailRoute(id: id));
+      if (data.newsId) navigation.navigate('NewsDetail', { id: data.newsId });
       break;
     case 'home':
     default:
-      navigator.pushNamed('/home');
+      navigation.navigate('Home');
   }
 }
 
 // Foreground / background tap
-FirebaseMessaging.onMessageOpenedApp.listen((m) {
-  handleNotificationData(m.data);
+messaging().onNotificationOpenedApp(remoteMessage => {
+  handleNotificationData(remoteMessage.data);
 });
 ```
 
-Also handle `getInitialMessage()` for cold start.
+Also handle `getInitialNotification()` for cold start.
 
 ## Backend env
 
@@ -81,6 +78,6 @@ Article deep link:
 
 | Symptom | Fix |
 |---------|-----|
-| No devices receive push | Confirm Flutter subscribed to `global`; check Firebase project matches backend env |
+| No devices receive push | Confirm the app subscribed to `global`; check Firebase project matches backend env |
 | 503 from admin API | Set `FIREBASE_*` in `.env.local` |
-| Tap does nothing | Read `message.data` (not `notification` only) in Flutter |
+| Tap does nothing | Read `remoteMessage.data` (not `notification` only) in the app |

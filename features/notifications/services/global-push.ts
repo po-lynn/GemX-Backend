@@ -25,7 +25,7 @@ async function sendGlobalPushNotification(
   return sendPushToTopic(FCM_GLOBAL_TOPIC, payload);
 }
 
-/** Article published — includes articleId for Flutter deep link. */
+/** Article published — includes articleId for mobile deep link. */
 export async function sendArticlePublishedNotification(
   input: ArticlePublishedNotificationInput
 ): Promise<TopicPushResult> {
@@ -36,7 +36,7 @@ export async function sendArticlePublishedNotification(
   });
 }
 
-/** News published — includes newsId for Flutter deep link. */
+/** News published — includes newsId for mobile deep link. */
 export async function sendNewsPublishedNotification(
   input: NewsPublishedNotificationInput
 ): Promise<TopicPushResult> {
