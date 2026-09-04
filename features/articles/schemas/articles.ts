@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { contentCategorySchema, newsLanguageSchema } from "@/features/news/schemas/news";
+import {
+  contentCategorySchema,
+  contentTypeSchema,
+  newsLanguageSchema,
+} from "@/features/content/schemas/content";
 
 export const articleCreateSchema = z.object({
   title: z.string().min(1, "Title is required").max(500),
   content: z.string().max(500_000).default("[]"),
   author: z.string().max(200).default(""),
+  type: contentTypeSchema.default("article"),
   category: contentCategorySchema.default("general"),
   coverImage: z.url().max(2_000).optional().nullable(),
   isFeatured: z.coerce.boolean().default(false),
@@ -19,6 +24,7 @@ export const articleUpdateSchema = z.object({
   /** Which locale's title/content fields are being edited. */
   editLanguage: newsLanguageSchema.optional(),
   author: z.string().max(200).optional(),
+  type: contentTypeSchema.optional(),
   category: contentCategorySchema.optional(),
   coverImage: z.url().max(2_000).optional().nullable(),
   isFeatured: z.coerce.boolean().optional(),
@@ -36,6 +42,7 @@ export const articleListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).catch(20).default(20),
   status: z.enum(["draft", "published"]).catch("published").default("published"),
   search: z.string().max(200).optional(),
+  type: contentTypeSchema.optional().catch(undefined),
   category: contentCategorySchema.optional().catch(undefined),
   featured: z
     .enum(["true", "false"])

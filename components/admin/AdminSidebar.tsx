@@ -16,7 +16,6 @@ import {
   Eye,
   FlaskConical,
   Globe,
-  Newspaper,
   FileText,
   ClipboardList,
   MessageSquare,
@@ -146,8 +145,7 @@ const navGroups: (NavItem | NavGroup)[] = [
   {
     label: "Content",
     items: [
-      { href: "/admin/news",     label: "News",     icon: Newspaper, color: "#22c55e", featureKey: FEATURE_KEYS.NEWS },
-      { href: "/admin/articles", label: "Articles", icon: FileText,  color: "#64748b", featureKey: FEATURE_KEYS.ARTICLES },
+      { href: "/admin/articles", label: "News & Articles", icon: FileText, color: "#64748b", featureKey: FEATURE_KEYS.ARTICLES },
     ],
   },
   {

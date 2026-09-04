@@ -106,8 +106,11 @@ export function ArticlesTable({ articles: items, page, total, pageSize, view, vi
                 {row.isFeatured && <span title="Featured" style={{ color: "#D97706", marginRight: 5 }}>★</span>}
                 {row.title}
               </span>
-              <span className="n-titlecell-meta-row">
+                <span className="n-titlecell-meta-row">
                 <span className="n-titlecell-id">{shortId}</span>
+                <span style={{ fontSize: 11, color: "var(--lv-text-3)" }}>
+                  · {row.type === "news" ? "News" : "Articles"}
+                </span>
                 <span style={{ fontSize: 11, color: "var(--lv-text-3)", textTransform: "capitalize" }}>
                   · {row.category}
                 </span>

@@ -9,7 +9,7 @@ import {
   isGoogleTranslateConfigured,
   translateText,
   type NewsLanguage,
-} from "@/features/news/services/google-translate"
+} from "@/features/content/services/google-translate"
 
 export type ProductLanguage = NewsLanguage
 export { NEWS_LANGUAGES as PRODUCT_LANGUAGES }

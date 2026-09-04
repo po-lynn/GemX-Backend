@@ -5,11 +5,11 @@ import { estimateReadTimeMinutes } from "@/lib/read-time";
 import { auth } from "@/lib/auth";
 import { isArticleBookmarked } from "@/features/bookmarks/db/article-bookmarks";
 import { z } from "zod";
-import { newsLanguageSchema } from "@/features/news/schemas/news";
+import { newsLanguageSchema } from "@/features/content/schemas/content";
 import {
   pickLocalizedContent,
   pickLocalizedTitle,
-} from "@/features/news/services/google-translate";
+} from "@/features/content/services/google-translate";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
