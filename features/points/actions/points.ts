@@ -391,6 +391,44 @@ export async function adminCreatePointPurchaseRequestAction(formData: FormData) 
   return { success: true, id: row.id };
 }
 
+/** Admin session, or internal session holding the Credit Transactions feature key. */
+async function requireCreditTransactionsSession() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
+  if (session.user.role === "admin") return session;
+  if (session.user.role === "internal") {
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions");
+    if (await checkInternalAccess(session.user.id, FEATURE_KEYS.CREDIT_TRANSACTIONS)) return session;
+  }
+  return null;
+}
+
+export async function enqueueSurpriseBonusAction(
+  campaignName: string,
+  pointsPerUser: number,
+  note?: string
+): Promise<
+  | {
+      success: true;
+      campaignId: string;
+      totalUsers: number;
+      pointsPerUser: number;
+      campaignName: string;
+      processedInline?: boolean;
+    }
+  | { error: string }
+> {
+  const session = await requireCreditTransactionsSession();
+  if (!session) return { error: "Unauthorized" };
+
+  return enqueueSurpriseBonusForAllUsers({
+    campaignName,
+    pointsPerUser,
+    note,
+    createdBy: session.user.id,
+  });
+}
+
 export async function adminActivatePremiumDealerAction(formData: FormData) {
   const session = await requireActionRole(canAdminManageUsers);
   if (!session) return { error: "Unauthorized" };

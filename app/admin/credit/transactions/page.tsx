@@ -64,7 +64,7 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
   // TODO: getPointTransactionCounts() (features/points/db/points.ts, ~line 1503) loads
   // every pointTransaction row and aggregates in JS instead of a SQL aggregate — an
   // unbounded full-table scan that only gets slower as the ledger grows. That's a
-  // separate, worse performance issue than "needs a timeout"; follow-up should rewrite
+  // separate, deeper performance issue than "needs a timeout"; follow-up should rewrite
   // it as a grouped/filtered COUNT query. Wrapping with withTimeout here only bounds
   // how long this page waits on it, it does not fix the scan itself.
   const counts = await withTimeout<PointCounts>(

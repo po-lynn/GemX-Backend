@@ -148,7 +148,6 @@ if (gate.error) return gate.error
 
 | Route | Reason |
 |-------|--------|
-| `GET/POST /api/admin/feature-settings` | App-wide feature flags; too sensitive to expose to internal users |
 | `POST /api/admin/push/global` | Global push broadcast; admin-only by design |
 | `GET /api/admin/users/suggest` | User lookup helper; tied to the admin-only users feature |
 

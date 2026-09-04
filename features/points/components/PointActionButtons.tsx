@@ -7,6 +7,7 @@ import { Search, Minus, X, ArrowDownToLine, CalendarClock, Users, UserPlus, Info
 import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
+  enqueueSurpriseBonusAction,
 } from "@/features/points/actions/points"
 import { searchUsersForPickerAction } from "@/features/users/actions/users"
 import { MonthlyBonusSettingsDialog } from "@/features/points/components/MonthlyBonusSettingsDialog"
