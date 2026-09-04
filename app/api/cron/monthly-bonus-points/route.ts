@@ -1,5 +1,6 @@
 import { NextRequest, connection } from "next/server"
 import { jsonError, jsonUncached } from "@/lib/api"
+import { requireCronSecret } from "@/lib/api-guard"
 import { grantDueMonthlyBonusPoints } from "@/features/points/db/monthly-bonus"
 
 /**
@@ -10,11 +11,8 @@ import { grantDueMonthlyBonusPoints } from "@/features/points/db/monthly-bonus"
 export async function POST(request: NextRequest) {
   await connection()
 
-  const secret = process.env.CRON_SECRET
-  if (!secret) return jsonError("Cron not configured", 500)
-
-  const auth = request.headers.get("authorization")
-  if (auth !== `Bearer ${secret}`) return jsonError("Unauthorized", 401)
+  const authError = requireCronSecret(request)
+  if (authError) return authError
 
   try {
     const result = await grantDueMonthlyBonusPoints()

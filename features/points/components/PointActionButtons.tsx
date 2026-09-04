@@ -7,6 +7,7 @@ import { Search, Minus, X, ArrowDownToLine, Users, UserPlus, Info } from "lucide
 import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
+  enqueueSurpriseBonusAction,
 } from "@/features/points/actions/points"
 import { searchUsersForPickerAction } from "@/features/users/actions/users"
 
@@ -159,26 +160,13 @@ function PointActionDrawer({
     startTransition(async () => {
       try {
         if (mode === "topup" && recipientMode === "all") {
-          const res = await fetch("/api/admin/points/surprise-bonus", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              campaignName: campaignName.trim(),
-              pointsPerUser: n,
-              note: note.trim() || undefined,
-            }),
-          })
-          const result = (await res.json()) as
-            | {
-                success: true
-                campaignId: string
-                totalUsers: number
-                pointsPerUser: number
-                campaignName: string
-              }
-            | { error: string }
-          if (!res.ok || "error" in result) {
-            toast.error("error" in result ? result.error : "Failed to start surprise bonus")
+          const result = await enqueueSurpriseBonusAction(
+            campaignName.trim(),
+            n,
+            note.trim() || undefined,
+          )
+          if ("error" in result) {
+            toast.error(result.error)
             return
           }
           toast.success(

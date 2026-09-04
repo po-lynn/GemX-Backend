@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server"
+import { timingSafeEqual } from "node:crypto"
 import { auth } from "@/lib/auth"
 import { jsonError } from "@/lib/api"
 
@@ -46,6 +47,25 @@ export async function requireAdminOrFeature(
     }
   }
   return { error: jsonError("Forbidden", 403) }
+}
+
+/**
+ * Validates `Authorization: Bearer <CRON_SECRET>` with a constant-time comparison
+ * (plain `!==` on secrets leaks timing information byte-by-byte).
+ * Returns an error Response, or null when the request is authorized.
+ */
+export function requireCronSecret(request: NextRequest): Response | null {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return jsonError("Cron not configured", 500)
+
+  const auth = request.headers.get("authorization") ?? ""
+  const expected = `Bearer ${secret}`
+  const a = Buffer.from(auth)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return jsonError("Unauthorized", 401)
+  }
+  return null
 }
 
 /** Same as requireAdminOrFeature, but internal role is allowed if it holds ANY of the given keys. */

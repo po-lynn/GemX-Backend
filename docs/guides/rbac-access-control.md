@@ -191,5 +191,5 @@ These are not in `FEATURE_KEYS` and cannot be enabled for internal users:
 - **Categories** — `adminOnly: true` in sidebar, `requireAdmin()` on all pages
 - **Users** — `adminOnly: true` in sidebar, `requireAdmin()` on all pages; `/api/admin/users/suggest` inline-guarded
 - **Permissions** — `adminOnly: true` in sidebar, `requireAdmin()` on page, admin check in `savePermissions` Server Action
-- **Feature settings** — no sidebar entry; `/api/admin/feature-settings` inline-guarded
+- **Feature settings** — no sidebar entry; saved via `saveCreditSettingsAction` (Server Action) as part of the Credit Settings form, not a dedicated route
 - **Global push broadcast** — no sidebar entry; `/api/admin/push/global` inline-guarded

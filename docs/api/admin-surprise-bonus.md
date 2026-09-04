@@ -1,60 +1,43 @@
-# POST /api/admin/points/surprise-bonus
+# enqueueSurpriseBonusAction (server action)
 
-Create a Surprise Bonus campaign for all active users and enqueue the first database job.
+`features/points/actions/points.ts` — creates a Surprise Bonus campaign for all active users and
+enqueues the first database job. Called directly from the client component
+(`PointActionButtons.tsx`), not via `fetch`.
 
-- **Local/dev:** drains pending jobs in this request (`processedInline: true`) unless `SURPRISE_BONUS_SYNC_PROCESS=false`.
+- **Local/dev:** drains pending jobs in this call (`processedInline: true`) unless `SURPRISE_BONUS_SYNC_PROCESS=false`.
 - **Production:** returns after enqueue; Edge Cron credits users (`processedInline: false`).
 
 ## Auth
 
-Admin session with `credit.transactions` feature (or admin role).
+Admin session, or internal session holding the `credit.transactions` (`FEATURE_KEYS.CREDIT_TRANSACTIONS`) feature key. Checked via a local `requireCreditTransactionsSession` helper (same `checkInternalAccess` RBAC path as `lib/api-guard.ts`'s `requireAdminOrFeature`, since server actions read the cookie session via `next/headers` rather than a `NextRequest`).
 
-## Request
+## Signature
 
-```json
-{
-  "campaignName": "Sweet December",
-  "pointsPerUser": 500,
-  "note": "Optional note"
-}
+```ts
+enqueueSurpriseBonusAction(
+  campaignName: string,
+  pointsPerUser: number,
+  note?: string,
+): Promise<
+  | { success: true; campaignId: string; totalUsers: number; pointsPerUser: number; campaignName: string }
+  | { error: string }
+>
 ```
-
-| Field | Type | Required |
-|-------|------|----------|
-| `campaignName` | string | yes |
-| `pointsPerUser` | positive int | yes |
-| `note` | string | no |
-
-## Response 200
-
-```json
-{
-  "success": true,
-  "campaignId": "uuid",
-  "totalUsers": 1256,
-  "pointsPerUser": 500,
-  "campaignName": "Sweet December",
-  "processedInline": true
-}
-```
-
-| Field | Meaning |
-|-------|---------|
-| `processedInline` | `true` if this request drained the queue and credited users |
 
 ## Errors
 
-- **400** — validation / no active users
-- **401/403** — unauthorized
-- **500** — inline drain failure (e.g. missing RPC)
+- `{ error: "Unauthorized" }` — no session, or internal session lacking the feature key
+- `{ error: "..." }` — validation failure or no active users, from `enqueueSurpriseBonusForAllUsers` (e.g. "Amount must be a positive number.", "Campaign name is required.", "No active users found.")
 
 ## Example
 
-```bash
-curl -X POST "http://localhost:3000/api/admin/points/surprise-bonus" \
-  -H "Content-Type: application/json" \
-  -H "Cookie: <admin-session>" \
-  -d '{"campaignName":"Sweet December","pointsPerUser":500}'
+```ts
+const result = await enqueueSurpriseBonusAction("Sweet December", 500, "Optional note")
+if ("error" in result) {
+  toast.error(result.error)
+} else {
+  // result.campaignId feeds the GET poll below
+}
 ```
 
 **Mobile:** no (admin only).

@@ -1,0 +1,183 @@
+<h2>App Content admin — revised mockup</h2>
+<p class="subtitle">Draft/publish chrome removed (single Save per tab), drag handles replaced with up/down buttons, fixed icon picker for Follow Us. Click the tabs to switch.</p>
+
+<style>
+  .ac-wrap{--green:#2ba25f;--green-d:#1f8a4f;--green-soft:#e9f5ee;--bd:#e6ebe7;--ink:#18211c;--muted:#78847c;--muted2:#aab3ac;
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);background:#f4f6f4;padding:20px;border-radius:14px;}
+  .ac-topbar{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--bd);border-radius:14px;padding:12px 18px;margin-bottom:16px;}
+  .ac-crumb{font:600 13px 'Plus Jakarta Sans';color:var(--muted);display:flex;align-items:center;gap:10px;}
+  .ac-crumb b{color:var(--ink);}
+  .ac-save{border:none;background:var(--green);color:#fff;font:700 13.5px 'Plus Jakarta Sans';padding:9px 16px;border-radius:10px;cursor:pointer;}
+  .ac-tabs{position:relative;display:flex;background:#eaeeeb;border-radius:12px;padding:4px;margin-bottom:18px;max-width:520px;}
+  .ac-tab{flex:1;border:none;background:none;padding:10px;border-radius:9px;font:700 13.5px 'Plus Jakarta Sans';color:var(--muted);cursor:pointer;}
+  .ac-tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12);}
+  .ac-card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:18px;margin-bottom:14px;}
+  .ac-label{font:600 11px 'Plus Jakarta Sans';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .ac-input,.ac-textarea{width:100%;box-sizing:border-box;border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font:500 13.5px 'Plus Jakarta Sans';color:var(--ink);margin-bottom:12px;}
+  .ac-textarea{resize:none;}
+  .ac-row{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--bd);}
+  .ac-row:first-of-type{border-top:none;}
+  .ac-icon{width:34px;height:34px;border-radius:9px;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font:800 13px 'Plus Jakarta Sans';}
+  .ac-order{display:flex;flex-direction:column;gap:2px;}
+  .ac-order button{width:22px;height:18px;border:1px solid var(--bd);background:#fafbfa;border-radius:5px;font-size:10px;cursor:pointer;color:var(--muted);}
+  .ac-toggle{width:38px;height:22px;border-radius:999px;position:relative;cursor:pointer;flex-shrink:0;}
+  .ac-toggle.on{background:var(--green);}
+  .ac-toggle.off{background:#d7ddd8;}
+  .ac-toggle span{position:absolute;top:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+  .ac-toggle.on span{right:2px;}
+  .ac-toggle.off span{left:2px;}
+  .ac-addbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);background:#fff;color:var(--ink);font:700 13px 'Plus Jakarta Sans';padding:8px 13px;border-radius:9px;cursor:pointer;}
+  .ac-cardhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .ac-chip{padding:5px 10px;border-radius:8px;background:var(--green-soft);color:var(--green-d);font:600 12px 'Plus Jakarta Sans';margin-right:6px;display:inline-block;}
+  .ac-2col{display:flex;gap:14px;}
+  .ac-2col>div{flex:1;}
+  .ac-note{font:500 11px 'Plus Jakarta Sans';color:var(--muted2);}
+</style>
+
+<div class="ac-wrap">
+  <div class="ac-topbar">
+    <div class="ac-crumb">App <span>/</span> <b>About &amp; Support</b></div>
+    <button class="ac-save">Save</button>
+  </div>
+
+  <div class="ac-tabs">
+    <button class="ac-tab active" id="tabbtn-about" onclick="acShow('about')">About us</button>
+    <button class="ac-tab" id="tabbtn-follow" onclick="acShow('follow')">Follow us</button>
+    <button class="ac-tab" id="tabbtn-help" onclick="acShow('help')">Help &amp; Support</button>
+  </div>
+
+  <!-- ABOUT -->
+  <div id="tab-about">
+    <div class="ac-card">
+      <div class="ac-label">Section heading</div>
+      <input class="ac-input" value="Our Story">
+      <div class="ac-label">Story</div>
+      <textarea class="ac-textarea" style="height:90px;">GemX began in 2019 with a simple idea: make buying and selling gemstones transparent and trustworthy.</textarea>
+    </div>
+    <div class="ac-2col">
+      <div class="ac-card">
+        <div class="ac-cardhead"><b>Terms of Service</b><span class="ac-note">Updated 12 Mar 2026</span></div>
+        <div style="display:flex;align-items:center;border:1px solid var(--bd);border-radius:9px;overflow:hidden;">
+          <span style="padding:9px 4px 9px 11px;font:500 12px 'Plus Jakarta Sans';color:var(--muted2);background:#fafbfa;">gemx.app/</span>
+          <input class="ac-input" style="border:none;margin:0;" value="terms">
+        </div>
+      </div>
+      <div class="ac-card">
+        <div class="ac-cardhead"><b>Privacy Policy</b><span class="ac-note">Updated 12 Mar 2026</span></div>
+        <div style="display:flex;align-items:center;border:1px solid var(--bd);border-radius:9px;overflow:hidden;">
+          <span style="padding:9px 4px 9px 11px;font:500 12px 'Plus Jakarta Sans';color:var(--muted2);background:#fafbfa;">gemx.app/</span>
+          <input class="ac-input" style="border:none;margin:0;" value="privacy">
+        </div>
+      </div>
+    </div>
+    <div class="ac-card">
+      <div class="ac-cardhead"><b>Company &amp; version</b></div>
+      <div class="ac-2col">
+        <div><div class="ac-label">Company name</div><input class="ac-input" value="GemX Technologies Ltd."></div>
+        <div><div class="ac-label">App version</div><div class="ac-input" style="background:#fafbfa;border-style:dashed;color:var(--muted);">v2.4.1 · auto</div></div>
+      </div>
+      <div class="ac-label">Contact address</div>
+      <textarea class="ac-textarea" style="height:44px;">No. 12, Kabar Aye Pagoda Road, Yankin Township, Yangon, Myanmar</textarea>
+    </div>
+  </div>
+
+  <!-- FOLLOW -->
+  <div id="tab-follow" style="display:none;">
+    <div class="ac-card">
+      <div class="ac-cardhead">
+        <div><b>Social platforms</b><div class="ac-note">Up/down to reorder · toggle to hide from app</div></div>
+        <button class="ac-addbtn">+ Add platform</button>
+      </div>
+      <div class="ac-row">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <span class="ac-icon" style="background:#1877f2;">f</span>
+        <div style="flex:1;"><b style="font-size:14px;">Facebook</b><div class="ac-note">facebook.com/gemx.app</div></div>
+        <div class="ac-toggle on"><span></span></div>
+      </div>
+      <div class="ac-row">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <span class="ac-icon" style="background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7);">ig</span>
+        <div style="flex:1;"><b style="font-size:14px;">Instagram</b><div class="ac-note">@gemx.app</div></div>
+        <div class="ac-toggle on"><span></span></div>
+      </div>
+      <div class="ac-row">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <span class="ac-icon" style="background:#29a9eb;">tg</span>
+        <div style="flex:1;"><b style="font-size:14px;">Telegram</b><div class="ac-note">t.me/gemxapp</div></div>
+        <div class="ac-toggle on"><span></span></div>
+      </div>
+      <div class="ac-row" style="opacity:.6;">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <span class="ac-icon" style="background:#000;">tt</span>
+        <div style="flex:1;"><b style="font-size:14px;">TikTok</b><div class="ac-note">@gemx</div></div>
+        <div class="ac-toggle off"><span></span></div>
+      </div>
+    </div>
+
+    <div class="ac-card" style="border-style:dashed;">
+      <div class="ac-cardhead"><b>Add platform (icon picker)</b></div>
+      <div class="ac-note" style="margin-bottom:10px;">Pick a built-in icon — no custom uploads:</div>
+      <div style="display:flex;gap:8px;">
+        <span class="ac-icon" style="background:#1877f2;">f</span>
+        <span class="ac-icon" style="background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7);">ig</span>
+        <span class="ac-icon" style="background:#29a9eb;">tg</span>
+        <span class="ac-icon" style="background:#000;">tt</span>
+        <span class="ac-icon" style="background:#7360f2;">vb</span>
+        <span class="ac-icon" style="background:var(--muted2);">🌐</span>
+        <span class="ac-icon" style="background:var(--muted2);">🔗</span>
+        <span class="ac-icon" style="background:var(--muted2);">✉</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP -->
+  <div id="tab-help" style="display:none;">
+    <div class="ac-card">
+      <div class="ac-cardhead">
+        <div><b>FAQs</b><div class="ac-note">Up/down to reorder · toggle to show/hide</div></div>
+        <button class="ac-addbtn">+ Add FAQ</button>
+      </div>
+      <div class="ac-row">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <div style="flex:1;"><b style="font-size:13.5px;">How do I sell an item on GemX?</b><div class="ac-note">Tap the + button, add photos and details…</div></div>
+        <div class="ac-toggle on"><span></span></div>
+      </div>
+      <div class="ac-row" style="opacity:.6;">
+        <div class="ac-order"><button>▲</button><button>▼</button></div>
+        <div style="flex:1;"><b style="font-size:13.5px;">Is my payment information secure?</b><div class="ac-note">Hidden — not shown in app.</div></div>
+        <div class="ac-toggle off"><span></span></div>
+      </div>
+    </div>
+    <div class="ac-2col">
+      <div class="ac-card">
+        <div class="ac-cardhead"><b>Contact channels</b></div>
+        <div class="ac-label">Support email</div><input class="ac-input" value="support@gemx.app">
+        <div class="ac-label">Phone</div><input class="ac-input" value="+95 9 250 000 111">
+        <div class="ac-label">Live chat (Telegram)</div><input class="ac-input" value="t.me/gemxsupport">
+      </div>
+      <div>
+        <div class="ac-card">
+          <div class="ac-cardhead"><b>Operating hours</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;"><span class="ac-note">Mon–Fri</span><b>9:00–18:00</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--bd);"><span class="ac-note">Sat</span><b>10:00–15:00</b></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--bd);"><span class="ac-note">Sun</span><span class="ac-note">Closed</span></div>
+        </div>
+        <div class="ac-card">
+          <div class="ac-cardhead"><b>Report a problem</b><div class="ac-toggle on"><span></span></div></div>
+          <div class="ac-label">Categories</div>
+          <div><span class="ac-chip">Bug ×</span><span class="ac-chip">Payment ×</span><span class="ac-chip">Fraud ×</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;"><span style="font:600 13px 'Plus Jakarta Sans';">Allow screenshots</span><div class="ac-toggle on"><span></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function acShow(tab){
+  ['about','follow','help'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display = (t===tab) ? '' : 'none';
+    document.getElementById('tabbtn-'+t).classList.toggle('active', t===tab);
+  });
+}
+</script>

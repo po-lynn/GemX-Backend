@@ -25,6 +25,10 @@ import {
 import type { PointPurchasePackagesSettings } from "@/features/points/db/points";
 import { requireActionRole } from "@/lib/action-guard";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
+import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus";
 
 /** Legacy form: only default registration points + 3 earning rates (points per 1 unit). */
 export async function savePointsSettingsAction(formData: FormData) {
@@ -384,6 +388,44 @@ export async function adminCreatePointPurchaseRequestAction(formData: FormData) 
     transferNote,
   });
   return { success: true, id: row.id };
+}
+
+/** Admin session, or internal session holding the Credit Transactions feature key. */
+async function requireCreditTransactionsSession() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
+  if (session.user.role === "admin") return session;
+  if (session.user.role === "internal") {
+    const { checkInternalAccess } = await import("@/features/rbac/db/permissions");
+    if (await checkInternalAccess(session.user.id, FEATURE_KEYS.CREDIT_TRANSACTIONS)) return session;
+  }
+  return null;
+}
+
+export async function enqueueSurpriseBonusAction(
+  campaignName: string,
+  pointsPerUser: number,
+  note?: string
+): Promise<
+  | {
+      success: true;
+      campaignId: string;
+      totalUsers: number;
+      pointsPerUser: number;
+      campaignName: string;
+      processedInline?: boolean;
+    }
+  | { error: string }
+> {
+  const session = await requireCreditTransactionsSession();
+  if (!session) return { error: "Unauthorized" };
+
+  return enqueueSurpriseBonusForAllUsers({
+    campaignName,
+    pointsPerUser,
+    note,
+    createdBy: session.user.id,
+  });
 }
 
 export async function adminActivatePremiumDealerAction(formData: FormData) {
