@@ -1,4 +1,4 @@
-ALTER TABLE "news" ADD COLUMN "content_en" text;--> statement-breakpoint
-ALTER TABLE "news" ADD COLUMN "content_my" text;--> statement-breakpoint
-ALTER TABLE "news" ADD COLUMN "content_th" text;--> statement-breakpoint
-ALTER TABLE "news" ADD COLUMN "content_ko" text;
+ALTER TABLE "news" ADD COLUMN IF NOT EXISTS "content_en" text;--> statement-breakpoint
+ALTER TABLE "news" ADD COLUMN IF NOT EXISTS "content_my" text;--> statement-breakpoint
+ALTER TABLE "news" ADD COLUMN IF NOT EXISTS "content_th" text;--> statement-breakpoint
+ALTER TABLE "news" ADD COLUMN IF NOT EXISTS "content_ko" text;

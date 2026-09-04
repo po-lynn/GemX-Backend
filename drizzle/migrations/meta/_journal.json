@@ -575,6 +575,13 @@
       "when": 1787553207541,
       "tag": "0082_cool_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1788499112754,
+      "tag": "0083_funny_hobgoblin",
+      "breakpoints": true
     }
   ]
 }
