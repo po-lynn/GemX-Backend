@@ -15,7 +15,8 @@ const bodySchema = z.object({
  * POST /api/admin/points/surprise-bonus
  * Create Surprise Bonus campaign + enqueue first DB job.
  * Local/dev: drains the queue inline (credits users in this request).
- * Production: returns immediately; Edge Cron credits users.
+ * Production: returns quickly; drains via `after()` + Vercel cron
+ * `/api/cron/process-surprise-bonus` (Supabase Edge Function optional).
  */
 export async function POST(request: NextRequest) {
   await connection()

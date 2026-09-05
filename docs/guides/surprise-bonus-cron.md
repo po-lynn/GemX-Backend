@@ -1,5 +1,10 @@
 # Surprise Bonus cron + Edge Function
 
+> **Preferred on Vercel:** use the Next.js cron  
+> [`/api/cron/process-surprise-bonus`](../api/cron-process-surprise-bonus.md)  
+> (wired in `vercel.json`) plus `after()` drain — see [surprise-bonus-vercel.md](./surprise-bonus-vercel.md).  
+> The Supabase Edge Function below is **optional** extra capacity.
+
 ## Prerequisites
 
 1. Apply migration: `npm run db:migrate` (includes `0081_surprise_bonus_queue.sql`).

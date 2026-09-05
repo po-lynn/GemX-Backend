@@ -1,9 +1,9 @@
 /**
  * Whether Top-up should drain surprise_bonus_batch jobs in-process
- * (local/dev) instead of waiting for Supabase Cron / Edge Function.
+ * (local/dev) instead of after()+Vercel cron / Edge Function.
  *
  * - SURPRISE_BONUS_SYNC_PROCESS=true  → always inline
- * - SURPRISE_BONUS_SYNC_PROCESS=false → never inline
+ * - SURPRISE_BONUS_SYNC_PROCESS=false → never inline (after + cron)
  * - unset → inline when NODE_ENV !== "production"
  */
 export function shouldSyncProcessSurpriseBonus(

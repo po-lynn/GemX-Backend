@@ -7,7 +7,8 @@ All Users top-up creates a **Surprise Bonus campaign** + **`background_jobs`** r
 | Environment | Who credits users + push |
 |-------------|--------------------------|
 | **Local/dev** (default) | Same HTTP request drains the queue via Drizzle + RPCs; FCM via `sendSurpriseBonusPushToUsers` |
-| **Production** | Supabase Cron → Edge Function → RPCs; FCM via Next.js `POST /api/cron/surprise-bonus-push` |
+| **Production (Vercel)** | `after()` drain after the response + Vercel cron `GET/POST /api/cron/process-surprise-bonus` every minute |
+| **Optional** | Supabase Edge Function `process-background-jobs` (legacy / extra capacity) |
 
 | Path | Role |
 |------|------|
@@ -42,10 +43,10 @@ Admin All Users submit
     → response { processedInline: true }
 
   Production (default):
-    → 200 { processedInline: false }
-    → pg_cron / Supabase Cron
-      → Edge Function process-background-jobs (same RPC logic)
-      → POST {APP_URL}/api/cron/surprise-bonus-push (FCM)
+    → 200 { processedInline: false, scheduledAfterResponse: true }
+    → after() → drainSurpriseBonusJobs() (same RPCs + FCM as local)
+    → Vercel cron /api/cron/process-surprise-bonus (* * * * *) continues if needed
+    → (optional) Supabase Edge Function process-background-jobs
 ```
 
 ## Notifications
@@ -77,11 +78,11 @@ Push cron: `Authorization: Bearer $CRON_SECRET`.
 | Variable | Effect |
 |----------|--------|
 | `SURPRISE_BONUS_SYNC_PROCESS=true` | Always drain inline after enqueue |
-| `SURPRISE_BONUS_SYNC_PROCESS=false` | Never drain inline (Cron only) |
-| unset | Inline when `NODE_ENV !== "production"` |
-| `FIREBASE_*` | Required for FCM (local + cron route) |
-| `CRON_SECRET` | Cron push route + Edge inbound/outbound |
-| `APP_URL` (Edge secret) | Next.js origin for FCM proxy from Edge |
+| `SURPRISE_BONUS_SYNC_PROCESS=false` | Never drain inline; use `after()` + Vercel/Edge cron |
+| unset | Inline when `NODE_ENV !== "production"`; else `after()` + Vercel cron |
+| `FIREBASE_*` | Required for FCM (local + drain path) |
+| `CRON_SECRET` | Vercel cron `/api/cron/process-surprise-bonus` + push route + Edge inbound |
+| `APP_URL` (Edge secret) | Next.js origin for FCM proxy from Edge (optional path) |
 
 ## Edge cases
 
