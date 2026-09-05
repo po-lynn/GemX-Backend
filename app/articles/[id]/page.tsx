@@ -61,7 +61,12 @@ export default async function ArticleDetailPage({ params }: Props) {
           <p className="text-sm text-muted-foreground">
             {article.author}
             {article.publishDate
-              ? ` · ${new Date(article.publishDate).toLocaleDateString()}`
+              ? ` · ${new Date(article.publishDate).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  timeZone: "UTC",
+                })}`
               : null}
           </p>
           <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight">
