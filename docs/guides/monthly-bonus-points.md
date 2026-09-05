@@ -17,14 +17,13 @@ psql "$DATABASE_URL" -f scripts/create-gemx-notifications-system-user.sql
 
 ## Configure (admin)
 
+> **UI note:** The **Monthly Bonus Points** button was removed from Point Transactions. Settings are no longer editable from that page header. Existing `point_setting` values still drive the cron; change them in the DB or restore `MonthlyBonusSettingsDialog` if needed.
+
+Previously:
+
 1. Open **Admin → Point Transactions** (`/admin/credit/transactions`).
-2. Click **Monthly Bonus Points** (header, left of **Top-up**). The settings drawer slides in from the right, same as Top-up.
-3. Set:
-   - Enable program
-   - Points per month
-   - Duration: 1 / 3 / 6 / 12 months
-   - Distribution start date
-4. Preview the schedule, then **Save Changes**.
+2. Click **Monthly Bonus Points** (header, left of **Top-up**).
+3. Set enable / amount / duration / start date, then **Save Changes**.
 
 ## Cron
 
