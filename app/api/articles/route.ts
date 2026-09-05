@@ -9,7 +9,7 @@ import { estimateReadTimeMinutes } from "@/lib/read-time";
 import {
   pickLocalizedContent,
   pickLocalizedTitle,
-} from "@/features/news/services/google-translate";
+} from "@/features/content/services/google-translate";
 
 export async function GET(request: NextRequest) {
   await connection();
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         status: query.status,
         search: query.search,
         category: query.category,
+        type: query.type,
         featured: query.featured,
         sort: "publish",
       }),

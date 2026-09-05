@@ -17,6 +17,7 @@ export type ArticleRow = {
   contentTh: string | null;
   contentKo: string | null;
   author: string;
+  type: string;
   category: string;
   coverImage: string | null;
   isFeatured: boolean;
@@ -47,12 +48,13 @@ export async function getArticlesPaginatedFromDb(options: {
   status?: "draft" | "published";
   view?: string;
   search?: string;
+  type?: string;
   category?: string;
   featured?: boolean;
   /** "publish" orders the public feed by publish date; default preserves admin updatedAt order. */
   sort?: "publish" | "updated";
 }): Promise<{ items: ArticleRow[]; total: number }> {
-  const { page, limit, status, view, search, category, featured, sort } = options;
+  const { page, limit, status, view, search, type, category, featured, sort } = options;
   let statusWhere: SQL | undefined
   if (view === "published")   statusWhere = eq(articles.status, "published")
   else if (view === "drafts") statusWhere = eq(articles.status, "draft")
@@ -61,6 +63,7 @@ export async function getArticlesPaginatedFromDb(options: {
   const filters: SQL[] = []
   if (statusWhere) filters.push(statusWhere)
   if (search?.trim()) filters.push(ilike(articles.title, `%${search.trim()}%`))
+  if (type) filters.push(eq(articles.type, type))
   if (category) filters.push(eq(articles.category, category))
   if (featured !== undefined) filters.push(eq(articles.isFeatured, featured))
   const where = filters.length > 0 ? and(...filters) : undefined
@@ -123,6 +126,7 @@ export async function createArticleInDb(input: {
   author: string;
   status: string;
   publishDate?: Date | null;
+  type?: string;
   category?: string;
   coverImage?: string | null;
   isFeatured?: boolean;
@@ -154,6 +158,7 @@ export async function createArticleInDb(input: {
       contentMy: input.contentMy ?? null,
       contentTh: input.contentTh ?? null,
       contentKo: input.contentKo ?? null,
+      ...(input.type !== undefined ? { type: input.type } : {}),
       ...(input.category !== undefined ? { category: input.category } : {}),
       coverImage: input.coverImage ?? null,
       isFeatured: input.isFeatured ?? false,
@@ -171,6 +176,7 @@ export async function updateArticleInDb(
     author?: string;
     status?: string;
     publishDate?: Date | null;
+    type?: string;
     category?: string;
     coverImage?: string | null;
     isFeatured?: boolean;

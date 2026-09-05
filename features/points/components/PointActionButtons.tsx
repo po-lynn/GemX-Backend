@@ -3,16 +3,24 @@
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Search, Minus, X, ArrowDownToLine, Users, UserPlus, Info } from "lucide-react"
+import { Search, Minus, X, ArrowDownToLine, CalendarClock, Users, UserPlus, Info } from "lucide-react"
 import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
   enqueueSurpriseBonusAction,
 } from "@/features/points/actions/points"
 import { searchUsersForPickerAction } from "@/features/users/actions/users"
+import { MonthlyBonusSettingsDialog } from "@/features/points/components/MonthlyBonusSettingsDialog"
 
 type Mode = "topup" | "deduct"
 type RecipientMode = "all" | "single"
+
+type MonthlyBonusSettings = {
+  enabled: boolean
+  amount: number
+  cycles: 1 | 3 | 6 | 12
+  startDate: string | null
+}
 
 type UserOption = {
   id: string
@@ -24,8 +32,8 @@ type UserOption = {
 }
 
 type Props = {
-  /** Active (non-banned, non-archived) users — shown in All Users top-up. */
-  activeUserCount: number
+  monthlyBonus: MonthlyBonusSettings
+  monthlyBonusEligibleCount: number
 }
 
 function getInitials(name: string) {
@@ -160,13 +168,26 @@ function PointActionDrawer({
     startTransition(async () => {
       try {
         if (mode === "topup" && recipientMode === "all") {
-          const result = await enqueueSurpriseBonusAction(
-            campaignName.trim(),
-            n,
-            note.trim() || undefined,
-          )
-          if ("error" in result) {
-            toast.error(result.error)
+          const res = await fetch("/api/admin/points/surprise-bonus", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              campaignName: campaignName.trim(),
+              pointsPerUser: n,
+              note: note.trim() || undefined,
+            }),
+          })
+          const result = (await res.json()) as
+            | {
+                success: true
+                campaignId: string
+                totalUsers: number
+                pointsPerUser: number
+                campaignName: string
+              }
+            | { error: string }
+          if (!res.ok || "error" in result) {
+            toast.error("error" in result ? result.error : "Failed to start surprise bonus")
             return
           }
           toast.success(
@@ -615,12 +636,30 @@ function UserSearchSection({
 
 // ─── Main export ───────────────────────────────────────────
 
-export function PointActionButtons({ activeUserCount }: Props) {
+export function PointActionButtons({ monthlyBonus, monthlyBonusEligibleCount }: Props) {
   const [openMode, setOpenMode] = useState<Mode | null>(null)
+  const [monthlyBonusOpen, setMonthlyBonusOpen] = useState(false)
 
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button
+          type="button"
+          onClick={() => setMonthlyBonusOpen(true)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 14px", borderRadius: 8,
+            border: "1.5px solid #ddd6fe",
+            background: "#f5f3ff", color: "#6d28d9",
+            fontWeight: 600, fontSize: 13, cursor: "pointer",
+            transition: "opacity .15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+        >
+          <CalendarClock style={{ width: 14, height: 14 }} />
+          Monthly Bonus Points
+        </button>
         {(["topup", "deduct"] as Mode[]).map((mode) => {
           const cfg = MODE_CONFIG[mode]
           return (
@@ -649,10 +688,17 @@ export function PointActionButtons({ activeUserCount }: Props) {
         <PointActionDrawer
           key={openMode}
           mode={openMode}
-          activeUserCount={activeUserCount}
+          activeUserCount={monthlyBonusEligibleCount}
           onClose={() => setOpenMode(null)}
         />
       )}
+
+      <MonthlyBonusSettingsDialog
+        open={monthlyBonusOpen}
+        onOpenChange={setMonthlyBonusOpen}
+        initial={monthlyBonus}
+        eligibleUserCount={monthlyBonusEligibleCount}
+      />
     </>
   )
 }

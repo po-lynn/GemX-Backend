@@ -16,6 +16,8 @@ export const articles = pgTable("articles", {
   contentTh: text("content_th"),
   contentKo: text("content_ko"),
   author: text("author").notNull().default(""),
+  /** Editorial kind: news | article (admin Type dropdown). */
+  type: text("type").notNull().default("article"),
   category: text("category").notNull().default("general"),
   coverImage: text("cover_image"),
   isFeatured: boolean("is_featured").notNull().default(false),

@@ -9,7 +9,10 @@ import {
 } from "@/features/points/db/points"
 import { PointTransactionsTable } from "@/features/points/components/PointTransactionsTable"
 import { PointActionButtons } from "@/features/points/components/PointActionButtons"
-import { countActiveUsers } from "@/features/points/db/surprise-bonus"
+import {
+  countEligibleMonthlyBonusUsers,
+  getMonthlyBonusSettings,
+} from "@/features/points/db/monthly-bonus"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp } from "@/components/admin/motion"
 import { withQueryTimeout } from "@/lib/query-timeout"
@@ -70,8 +73,10 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
     ADMIN_TRANSACTIONS_QUERY_TIMEOUT_MS
   )
 
-  // Active user count for All Users top-up drawer (sequential after counts).
-  const activeUserCount = await countActiveUsers()
+  // Settings for the header Monthly Bonus popup — sequential after counts so this
+  // page still holds at most one extra pooler connection of its own at a time.
+  const monthlyBonus = await getMonthlyBonusSettings()
+  const monthlyBonusEligibleCount = await countEligibleMonthlyBonusUsers()
 
   const views: ViewTab[] = [
     { id: "all",     label: "All",     count: counts.all },
@@ -100,7 +105,10 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
           </h1>
           <p className="lv-subhead">Full ledger of every point movement across all user accounts.</p>
         </div>
-        <PointActionButtons activeUserCount={activeUserCount} />
+        <PointActionButtons
+          monthlyBonus={monthlyBonus}
+          monthlyBonusEligibleCount={monthlyBonusEligibleCount}
+        />
       </div>
 
       <PointTransactionsTable

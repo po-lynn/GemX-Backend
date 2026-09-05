@@ -18,17 +18,17 @@ All Users top-up creates a **Surprise Bonus campaign** + **`background_jobs`** r
 | `features/points/services/process-surprise-bonus-jobs.ts` | Node batch processor (mirrors Edge) |
 | `features/points/services/surprise-bonus-push.ts` | FCM payload + send to user devices |
 | `features/points/services/should-sync-process-surprise-bonus.ts` | Env gate for inline drain |
-| `features/points/actions/points.ts` (`enqueueSurpriseBonusAction`) | Server action: create campaign |
-| `app/api/admin/points/surprise-bonus/[id]/route.ts` | `GET` progress (route, not an action — polled from `setInterval`, so it can't be a mutation-style server action) |
+| `app/api/admin/points/surprise-bonus/route.ts` | `POST` create |
+| `app/api/admin/points/surprise-bonus/[id]/route.ts` | `GET` progress |
 | `app/api/cron/surprise-bonus-push/route.ts` | Edge → FCM proxy (`CRON_SECRET`) |
 | `supabase/functions/process-background-jobs/index.ts` | Production batch worker |
-| `features/points/components/PointActionButtons.tsx` | All Users → server action + poll progress |
+| `features/points/components/PointActionButtons.tsx` | All Users → POST + poll progress |
 
 ## Data flow
 
 ```
 Admin All Users submit
-  → enqueueSurpriseBonusAction() [server action]
+  → POST /api/admin/points/surprise-bonus
   → INSERT surprise_bonus_campaign + background_jobs (pending)
   → mark campaign processing
 

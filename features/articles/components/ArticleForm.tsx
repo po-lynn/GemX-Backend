@@ -10,16 +10,22 @@ import { useAutoSave } from "@/features/articles/hooks/useAutoSave";
 import { estimateReadingTime } from "@/lib/reading-time";
 import type { ArticleRow } from "@/features/articles/db/articles";
 import DatePicker from "@/components/date-picker/date-picker";
-import { ContentMetaCard } from "@/features/news/components/ContentMetaCard";
+import { ContentMetaCard } from "@/features/content/components/ContentMetaCard";
 import { ShareButtons } from "@/components/share/ShareButtons";
 import { env } from "@/data/env/client";
 import {
+  CONTENT_TYPES,
+  CONTENT_TYPE_LABELS,
+} from "@/features/content/schemas/content";
+import {
   NEWS_LANGUAGES,
   type NewsLanguage,
-} from "@/features/news/services/google-translate";
+} from "@/features/content/services/google-translate";
+
+type ContentType = (typeof CONTENT_TYPES)[number];
 
 const BlockNoteEditor = dynamic(
-  () => import("@/features/news/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
+  () => import("@/features/content/components/BlockNoteEditor").then((m) => m.BlockNoteEditor),
   { ssr: false, loading: () => <div className="min-h-[280px] animate-pulse rounded-lg bg-slate-100" /> }
 );
 
@@ -140,6 +146,10 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
     isEdit ? initialTitlesByLang(article)[sourceLanguage] : (article?.title ?? ""),
   );
   const [author, setAuthor] = useState(article?.author ?? "");
+  const [contentType, setContentType] = useState<ContentType>(() => {
+    const t = article?.type;
+    return t === "news" || t === "article" ? t : "article";
+  });
   const [content, setContent] = useState(
     isEdit ? initialContentsByLang(article)[sourceLanguage] : (article?.content ?? "[]"),
   );
@@ -220,11 +230,11 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 10, height: 10, opacity: 0.5 }}>
             <path d="m6 3 5 5-5 5" />
           </svg>
-          <Link href="/admin/articles">Articles</Link>
+          <Link href="/admin/articles">News & Articles</Link>
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 10, height: 10, opacity: 0.5 }}>
             <path d="m6 3 5 5-5 5" />
           </svg>
-          <span className="lv-here">{isEdit ? `Edit · ${articleId ?? "…"}` : "New article"}</span>
+          <span className="lv-here">{isEdit ? `Edit · ${articleId ?? "…"}` : "New"}</span>
         </nav>
 
         {(prevHref != null || nextHref != null || listPosition != null) && (
@@ -329,6 +339,31 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
                   <span className="ud-head-id" style={{ fontSize: 11 }}>ART-{articleId}</span>
                 )}
                 <span style={{ flex: 1 }} />
+              </div>
+
+              <div style={{ marginBottom: 14, maxWidth: 280 }}>
+                <label className="n-label" htmlFor="article-type" style={{ display: "block", marginBottom: 8 }}>
+                  Type
+                </label>
+                <select
+                  id="article-type"
+                  className="af-input"
+                  name="type"
+                  value={contentType}
+                  onChange={(e) => {
+                    setContentType(e.target.value as ContentType);
+                    setDirty(true);
+                  }}
+                >
+                  {CONTENT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {CONTENT_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+                <span className="ud-help" style={{ display: "block", marginTop: 6 }}>
+                  Choose whether this entry is News or an Article.
+                </span>
               </div>
 
               {isEdit && (

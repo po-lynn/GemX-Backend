@@ -1,7 +1,6 @@
 import { connection, NextRequest } from "next/server"
 import { z } from "zod"
 import { jsonError, jsonUncached } from "@/lib/api"
-import { requireCronSecret } from "@/lib/api-guard"
 import { sendSurpriseBonusPushToUsers } from "@/features/points/services/surprise-bonus-push"
 
 const bodySchema = z.object({
@@ -19,8 +18,11 @@ const bodySchema = z.object({
 export async function POST(request: NextRequest) {
   await connection()
 
-  const authError = requireCronSecret(request)
-  if (authError) return authError
+  const secret = process.env.CRON_SECRET
+  if (!secret) return jsonError("Cron not configured", 500)
+
+  const auth = request.headers.get("authorization")
+  if (auth !== `Bearer ${secret}`) return jsonError("Unauthorized", 401)
 
   let body: unknown
   try {

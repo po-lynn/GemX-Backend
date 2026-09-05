@@ -74,6 +74,18 @@ describe("articleCreateSchema", () => {
     expect(parsed.category).toBe("general")
     expect(parsed.isFeatured).toBe(false)
   })
+
+  // Validates Type defaults to article and accepts news
+  it("defaults type to article and accepts news", () => {
+    expect(articleCreateSchema.parse({ title: "Guide" }).type).toBe("article")
+    expect(articleCreateSchema.parse({ title: "Flash", type: "news" }).type).toBe("news")
+  })
+
+  // Validates unknown Type values are rejected
+  it("rejects unknown type values", () => {
+    const result = articleCreateSchema.safeParse({ title: "Guide", type: "blog" })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("list query schemas", () => {
@@ -113,6 +125,12 @@ describe("list query schemas", () => {
   it("accepts lang on articleListQuerySchema", () => {
     const parsed = articleListQuerySchema.parse({ lang: "Myanmar" })
     expect(parsed.lang).toBe("Myanmar")
+  })
+
+  // Validates optional type filter on article list queries
+  it("accepts type=news on articleListQuerySchema", () => {
+    const parsed = articleListQuerySchema.parse({ type: "news" })
+    expect(parsed.type).toBe("news")
   })
 
   // Validates every design category is present in the enum

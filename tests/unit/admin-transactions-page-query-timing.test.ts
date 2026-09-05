@@ -5,7 +5,10 @@ import {
   getPointTransactionsPaginated,
   getPointTransactionCounts,
 } from "@/features/points/db/points"
-import { countActiveUsers } from "@/features/points/db/surprise-bonus"
+import {
+  getMonthlyBonusSettings,
+  countEligibleMonthlyBonusUsers,
+} from "@/features/points/db/monthly-bonus"
 import { QueryTimeoutError } from "@/lib/query-timeout"
 import AdminPointTransactionsPage from "@/app/admin/credit/transactions/page"
 
@@ -28,8 +31,9 @@ vi.mock("@/features/points/components/PointTransactionsTable", () => ({
 vi.mock("@/features/points/components/PointActionButtons", () => ({
   PointActionButtons: () => null,
 }))
-vi.mock("@/features/points/db/surprise-bonus", () => ({
-  countActiveUsers: vi.fn(),
+vi.mock("@/features/points/db/monthly-bonus", () => ({
+  getMonthlyBonusSettings: vi.fn(),
+  countEligibleMonthlyBonusUsers: vi.fn(),
 }))
 vi.mock("@/components/admin/motion", () => ({
   FadeUp: ({ children }: { children: React.ReactNode }) => children,
@@ -49,7 +53,13 @@ describe("AdminPointTransactionsPage query concurrency", () => {
     vi.mocked(requireFeatureAccess).mockResolvedValue(undefined as never)
     vi.mocked(getPointTransactionsPaginated).mockResolvedValue(emptyList)
     vi.mocked(getPointTransactionCounts).mockResolvedValue(emptyCounts)
-    vi.mocked(countActiveUsers).mockResolvedValue(0)
+    vi.mocked(getMonthlyBonusSettings).mockResolvedValue({
+      enabled: false,
+      amount: 0,
+      cycles: 6,
+      startDate: null,
+    })
+    vi.mocked(countEligibleMonthlyBonusUsers).mockResolvedValue(0)
   })
 
   afterEach(() => {

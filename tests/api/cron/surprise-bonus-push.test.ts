@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { NextRequest, connection } from "next/server"
-
-vi.mock("next/server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("next/server")>()
-  return { ...actual, connection: vi.fn() }
-})
+import { NextRequest } from "next/server"
 
 vi.mock("@/features/points/services/surprise-bonus-push", () => ({
   sendSurpriseBonusPushToUsers: vi.fn(),
@@ -18,7 +13,6 @@ describe("POST /api/cron/surprise-bonus-push", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(connection).mockResolvedValue(undefined)
     process.env.CRON_SECRET = "test-cron-secret"
   })
 

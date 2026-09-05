@@ -48,7 +48,7 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
 
   const kpis = [
     {
-      label: "All articles",
+      label: "All items",
       value: counts.all.toLocaleString(),
       delta: `${counts.published} published · ${counts.draft} drafts`,
       tone: "purple",
@@ -75,23 +75,23 @@ export default async function AdminArticlesPage({ searchParams }: Props) {
           <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
             <a href="/admin">Admin</a>
             <ChevronRight className="size-3" />
-            <span className="lv-here">Articles</span>
+            <span className="lv-here">News & Articles</span>
           </nav>
           <h1 className="lv-h1">
-            Articles
+            News & Articles
             <span className="lv-h1-count">
-              {counts.all.toLocaleString()} articles
+              {counts.all.toLocaleString()} items
             </span>
           </h1>
           <p className="lv-subhead">
-            Editorial articles with rich block content, author attribution, and publish scheduling.
+            News and editorial articles with rich block content, author attribution, and publish scheduling.
           </p>
         </div>
         <div className="lv-pagehead-actions">
           <Button asChild size="sm" className="shrink-0 shadow-sm">
             <Link href="/admin/articles/new">
               <Plus className="mr-1.5 size-4" />
-              New article
+              New
             </Link>
           </Button>
         </div>

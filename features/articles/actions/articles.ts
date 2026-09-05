@@ -18,7 +18,7 @@ import {
   buildLocalizedNews,
   localizedFieldsForLanguage,
   type NewsLanguage,
-} from "@/features/news/services/google-translate";
+} from "@/features/content/services/google-translate";
 import { sendArticlePublishedNotification } from "@/features/notifications/services/global-push";
 import { emptyToNull, zodErrorMessage } from "@/lib/form-data";
 import { requireActionRole } from "@/lib/action-guard";
@@ -38,6 +38,7 @@ export async function createArticleAction(formData: FormData) {
     title: formData.get("title"),
     content: formData.get("content") ?? "[]",
     author: formData.get("author") ?? "",
+    type: formData.get("type") || "article",
     category: formData.get("category") || "general",
     coverImage: emptyToNull(formData.get("coverImage")),
     isFeatured: formData.get("isFeatured") === "true",
@@ -71,6 +72,7 @@ export async function createArticleAction(formData: FormData) {
     slug: slugify(localized.title),
     content: localized.content,
     author: parsed.data.author.trim(),
+    type: parsed.data.type,
     category: parsed.data.category,
     coverImage: parsed.data.coverImage,
     isFeatured: parsed.data.isFeatured,
@@ -103,6 +105,7 @@ export async function updateArticleAction(formData: FormData) {
     content: emptyToNull(formData.get("content")),
     editLanguage: emptyToNull(formData.get("editLanguage")) ?? undefined,
     author: formData.get("author") ?? undefined,
+    type: emptyToNull(formData.get("type")) ?? undefined,
     category: emptyToNull(formData.get("category")) ?? undefined,
     coverImage: formData.has("coverImage")
       ? emptyToNull(formData.get("coverImage"))
