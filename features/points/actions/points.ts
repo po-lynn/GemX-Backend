@@ -1,5 +1,7 @@
 "use server";
 
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import {
   getPointManagementSettings,
   savePremiumDealersSettings,
@@ -30,6 +32,8 @@ import {
 } from "@/features/points/db/monthly-bonus";
 import { requireActionRole } from "@/lib/action-guard";
 import { canAdminManageUsers } from "@/features/users/permissions/users";
+import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
+import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus";
 
 /** Legacy form: only default registration points + 3 earning rates (points per 1 unit). */
 export async function savePointsSettingsAction(formData: FormData) {
