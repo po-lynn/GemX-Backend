@@ -41,9 +41,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# drizzle migrations (local db)
-# drizzle/migrations/
-
 # git worktrees (local scratch, never committed)
 /.worktrees
- drizzle/migrations/

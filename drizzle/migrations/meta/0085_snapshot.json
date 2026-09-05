@@ -1,6 +1,6 @@
 {
-  "id": "497ebe96-1508-4ba9-aedd-dae683b4d6b4",
-  "prevId": "ebd8002c-137d-45db-b29a-90cb6cf05865",
+  "id": "3c043b58-fa0c-4d4e-85c3-7a49189d7fb1",
+  "prevId": "497ebe96-1508-4ba9-aedd-dae683b4d6b4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -673,6 +673,30 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "title_en": {
+          "name": "title_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title_my": {
+          "name": "title_my",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title_th": {
+          "name": "title_th",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title_ko": {
+          "name": "title_ko",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "description": {
           "name": "description",
