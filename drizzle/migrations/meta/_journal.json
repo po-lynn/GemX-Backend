@@ -596,6 +596,13 @@
       "when": 1788611512826,
       "tag": "0085_green_lilith",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1788693044855,
+      "tag": "0086_stormy_giant_man",
+      "breakpoints": true
     }
   ]
 }

@@ -24,5 +24,5 @@ export const escrowServiceSetting = pgTable(
       .notNull(),
   },
   (table) => [index("escrow_service_setting_user_id_idx").on(table.userId)]
-)
+).enableRLS()
 

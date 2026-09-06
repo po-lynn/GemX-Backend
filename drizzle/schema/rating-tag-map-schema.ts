@@ -24,4 +24,4 @@ export const ratingTagMap = pgTable(
     index("rating_tag_map_rating_id_idx").on(table.ratingId),
     index("rating_tag_map_tag_id_idx").on(table.tagId),
   ]
-)
+).enableRLS()

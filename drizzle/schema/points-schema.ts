@@ -66,7 +66,7 @@ export const pointPurchaseRequest = pgTable(
     index("ppr_userId_idx").on(table.userId),
     index("ppr_status_idx").on(table.status),
   ]
-);
+).enableRLS();
 
 /**
  * Unified ledger of all point movements per user.
@@ -102,7 +102,7 @@ export const pointTransaction = pgTable(
       .on(table.userId, table.type, table.referenceId)
       .where(sql`${table.referenceId} IS NOT NULL`),
   ]
-);
+).enableRLS();
 
 export const premiumDealerPackageStatusEnum = pgEnum(
   "premium_dealer_package_status",
@@ -136,4 +136,4 @@ export const premiumDealersPackage = pgTable(
     index("pdp_status_idx").on(table.status),
     index("pdp_endDate_idx").on(table.endDate),
   ]
-);
+).enableRLS();

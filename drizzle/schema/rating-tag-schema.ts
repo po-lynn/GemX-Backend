@@ -24,4 +24,4 @@ export const ratingTag = pgTable("rating_tags", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-})
+}).enableRLS()

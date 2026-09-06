@@ -30,7 +30,7 @@ export const collectorPieceShowRequest = pgTable(
     index("collector_piece_show_request_product_id_idx").on(table.productId),
     index("collector_piece_show_request_created_at_idx").on(table.createdAt),
   ]
-);
+).enableRLS();
 
 export const collectorPieceShowRequestRelations = relations(
   collectorPieceShowRequest,

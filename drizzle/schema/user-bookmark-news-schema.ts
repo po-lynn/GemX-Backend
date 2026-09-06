@@ -24,7 +24,7 @@ export const userBookmarkNews = pgTable(
     index("user_bookmark_news_news_id_idx").on(table.newsId),
     index("user_bookmark_news_created_at_idx").on(table.createdAt),
   ]
-)
+).enableRLS()
 
 export const userBookmarkNewsRelations = relations(userBookmarkNews, ({ one }) => ({
   user: one(user, {

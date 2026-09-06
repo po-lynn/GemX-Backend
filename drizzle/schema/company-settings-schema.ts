@@ -16,4 +16,4 @@ export const companySetting = pgTable("company_setting", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-})
+}).enableRLS()

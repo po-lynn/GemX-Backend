@@ -26,4 +26,4 @@ export const appContentSection = pgTable("app_content_section", {
   publishedAt: timestamp("published_at"),
   publishedByName: text("published_by_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+}).enableRLS()

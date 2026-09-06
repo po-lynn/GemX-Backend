@@ -19,4 +19,4 @@ export const contactMessage = pgTable(
     index("contact_message_created_at_idx").on(table.createdAt),
     index("contact_message_status_idx").on(table.status),
   ]
-);
+).enableRLS();

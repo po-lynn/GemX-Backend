@@ -33,4 +33,4 @@ export const sellerRating = pgTable(
     index("seller_rating_score_idx").on(table.score),
     index("seller_rating_created_at_idx").on(table.createdAt),
   ]
-)
+).enableRLS()

@@ -27,7 +27,7 @@ export const userFavouriteProduct = pgTable(
     index("user_favourite_product_product_id_idx").on(table.productId),
     index("user_favourite_product_created_at_idx").on(table.createdAt),
   ]
-)
+).enableRLS()
 
 export const userFavouriteProductRelations = relations(
   userFavouriteProduct,

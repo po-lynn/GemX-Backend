@@ -48,7 +48,7 @@ export const surpriseBonusCampaign = pgTable(
     index("sbc_status_idx").on(table.status),
     index("sbc_createdAt_idx").on(table.createdAt),
   ],
-)
+).enableRLS()
 
 /**
  * Database-backed job queue (no Redis). Claimed with FOR UPDATE SKIP LOCKED via RPC.
@@ -76,7 +76,7 @@ export const backgroundJobs = pgTable(
     index("bj_status_available_idx").on(table.status, table.availableAt),
     index("bj_type_status_idx").on(table.type, table.status),
   ],
-)
+).enableRLS()
 
 /**
  * In-app system notifications (not chat). Used for surprise_bonus and future types.
@@ -101,7 +101,7 @@ export const appNotification = pgTable(
     index("an_userId_createdAt_idx").on(table.userId, table.createdAt),
     index("an_userId_isRead_idx").on(table.userId, table.isRead),
   ],
-)
+).enableRLS()
 
 /** Partial unique: one ledger row per (user, type, reference) when reference is set. */
 export const pointTransactionUserTypeRefUnique = sql`

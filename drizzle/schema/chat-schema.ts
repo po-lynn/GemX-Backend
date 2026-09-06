@@ -46,7 +46,7 @@ export const messages = pgTable(
       .on(table.recipientId, table.senderId)
       .where(sql`${table.isRead} = false`),
   })
-);
+).enableRLS();
 
 /**
  * Per-admin "last viewed the oversight feed" cursor. `messages.isRead` is scoped to
@@ -57,5 +57,5 @@ export const messages = pgTable(
 export const adminChatCursor = pgTable("admin_chat_cursor", {
   userId: text("user_id").primaryKey(),
   lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
-});
+}).enableRLS();
 

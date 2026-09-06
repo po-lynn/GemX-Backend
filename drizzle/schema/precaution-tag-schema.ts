@@ -29,4 +29,4 @@ export const precautionTag = pgTable("precaution_tags", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-})
+}).enableRLS()

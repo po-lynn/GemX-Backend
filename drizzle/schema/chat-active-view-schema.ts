@@ -12,4 +12,4 @@ export const userActiveChatView = pgTable("user_active_chat_view", {
   peerId: text("peer_id").notNull(),
   conversationId: text("conversation_id").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}).enableRLS();

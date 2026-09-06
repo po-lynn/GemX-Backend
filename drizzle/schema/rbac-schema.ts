@@ -6,4 +6,4 @@ export const internalPermission = pgTable("internal_permission", {
   canAccess:  boolean("can_access").notNull().default(false),
 }, (table) => [
   primaryKey({ columns: [table.userId, table.featureKey] }),
-])
+]).enableRLS()

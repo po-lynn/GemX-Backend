@@ -30,4 +30,4 @@ export const userDevice = pgTable(
     uniqueIndex("user_devices_user_fcm_token_idx").on(table.userId, table.fcmToken),
     uniqueIndex("user_devices_fcm_token_idx").on(table.fcmToken),
   ]
-);
+).enableRLS();

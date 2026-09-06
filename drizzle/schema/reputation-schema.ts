@@ -48,7 +48,7 @@ export const reputationThreshold = pgTable("reputation_threshold", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-})
+}).enableRLS()
 
 /**
  * Append-only audit trail for every reputation-case decision. Doubles as
@@ -78,7 +78,7 @@ export const sellerReputationAction = pgTable(
     index("seller_reputation_action_seller_trigger_idx").on(table.sellerUserId, table.triggerKey),
     index("seller_reputation_action_created_at_idx").on(table.createdAt),
   ]
-)
+).enableRLS()
 
 /** Current archive state — one row per seller that has ever been archived. */
 export const sellerArchive = pgTable(
@@ -105,4 +105,4 @@ export const sellerArchive = pgTable(
     uniqueIndex("seller_archive_seller_user_id_unique").on(table.sellerUserId),
     index("seller_archive_restored_at_idx").on(table.restoredAt),
   ]
-)
+).enableRLS()

@@ -213,7 +213,7 @@ export const productAdminChangeLog = pgTable(
     index("product_admin_change_log_productId_idx").on(table.productId),
     index("product_admin_change_log_createdAt_idx").on(table.createdAt),
   ]
-);
+).enableRLS();
 
 export const productJewelleryGemstone = pgTable(
   "product_jewellery_gemstone",
