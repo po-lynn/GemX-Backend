@@ -15,9 +15,9 @@ After each successful credit, the cron also sends a **GemX system chat message**
 | `features/points/constants/monthly-bonus-notify.ts` | System sender id + EN/MY/TH/KO copy |
 | `scripts/create-gemx-notifications-system-user.sql` | Seed `sys-gemx-notifications` user |
 | `features/points/actions/points.ts` | `saveMonthlyBonusSettingsAction` |
-| `features/points/components/MonthlyBonusSettingsDialog.tsx` | Admin right-side drawer (same as Top-up) |
-| `features/points/components/PointActionButtons.tsx` | Header button on Point Transactions (left of Top-up) |
-| `app/admin/credit/transactions/page.tsx` | Loads settings + eligible user count |
+| `features/points/components/MonthlyBonusSettingsDialog.tsx` | Admin right-side drawer (present in codebase; **not** linked from Point Transactions header anymore) |
+| `features/points/components/PointActionButtons.tsx` | Top-up / Deduct only on Point Transactions |
+| `app/admin/credit/transactions/page.tsx` | Loads eligible user count for Top-up → All Users (no monthly-bonus settings fetch) |
 | `app/api/cron/monthly-bonus-points/route.ts` | Cron endpoint |
 | `vercel.json` | Daily schedule `0 1 * * *` |
 

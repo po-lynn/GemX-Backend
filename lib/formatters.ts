@@ -1,3 +1,9 @@
+/** Stable locale for SSR + client so hydration never mismatches on Vercel. */
+const DISPLAY_LOCALE = "en-US"
+
+/** UTC so Node (Vercel) and the browser format the same instant identically. */
+const DISPLAY_TIME_ZONE = "UTC"
+
 export function formatPlural(
   count: number,
   { singular, plural }: { singular: string; plural: string },
@@ -9,7 +15,7 @@ export function formatPlural(
 }
 
 export function formatPrice(amount: number, { showZeroAsNumber = false } = {}) {
-  const formatter = new Intl.NumberFormat(undefined, {
+  const formatter = new Intl.NumberFormat(DISPLAY_LOCALE, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
@@ -23,7 +29,7 @@ export function formatPriceWithCurrency(
   amount: number,
   currency: "USD" | "MMK" = "USD"
 ) {
-  const formatter = new Intl.NumberFormat(undefined, {
+  const formatter = new Intl.NumberFormat(DISPLAY_LOCALE, {
     style: "currency",
     currency,
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
@@ -31,9 +37,10 @@ export function formatPriceWithCurrency(
   return formatter.format(amount)
 }
 
-const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const DATE_FORMATTER = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: DISPLAY_TIME_ZONE,
 })
 
 export function formatDate(date: Date) {
@@ -44,7 +51,7 @@ export function formatNumber(
   number: number,
   options?: Intl.NumberFormatOptions
 ) {
-  const formatter = new Intl.NumberFormat(undefined, options)
+  const formatter = new Intl.NumberFormat(DISPLAY_LOCALE, options)
   return formatter.format(number)
 }
 

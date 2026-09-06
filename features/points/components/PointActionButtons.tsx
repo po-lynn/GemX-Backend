@@ -3,23 +3,15 @@
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Search, Minus, X, ArrowDownToLine, CalendarClock, Users, UserPlus, Info } from "lucide-react"
+import { Search, Minus, X, ArrowDownToLine, Users, UserPlus, Info } from "lucide-react"
 import {
   adminTopUpUserPointsAction,
   adminDeductUserPointsAction,
 } from "@/features/points/actions/points"
 import { searchUsersForPickerAction } from "@/features/users/actions/users"
-import { MonthlyBonusSettingsDialog } from "@/features/points/components/MonthlyBonusSettingsDialog"
 
 type Mode = "topup" | "deduct"
 type RecipientMode = "all" | "single"
-
-type MonthlyBonusSettings = {
-  enabled: boolean
-  amount: number
-  cycles: 1 | 3 | 6 | 12
-  startDate: string | null
-}
 
 type UserOption = {
   id: string
@@ -31,8 +23,8 @@ type UserOption = {
 }
 
 type Props = {
-  monthlyBonus: MonthlyBonusSettings
-  monthlyBonusEligibleCount: number
+  /** Non-banned, non-archived user count for Top-up → All Users preview. */
+  activeUserCount: number
 }
 
 function getInitials(name: string) {
@@ -635,30 +627,12 @@ function UserSearchSection({
 
 // ─── Main export ───────────────────────────────────────────
 
-export function PointActionButtons({ monthlyBonus, monthlyBonusEligibleCount }: Props) {
+export function PointActionButtons({ activeUserCount }: Props) {
   const [openMode, setOpenMode] = useState<Mode | null>(null)
-  const [monthlyBonusOpen, setMonthlyBonusOpen] = useState(false)
 
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <button
-          type="button"
-          onClick={() => setMonthlyBonusOpen(true)}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", borderRadius: 8,
-            border: "1.5px solid #ddd6fe",
-            background: "#f5f3ff", color: "#6d28d9",
-            fontWeight: 600, fontSize: 13, cursor: "pointer",
-            transition: "opacity .15s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-        >
-          <CalendarClock style={{ width: 14, height: 14 }} />
-          Monthly Bonus Points
-        </button>
         {(["topup", "deduct"] as Mode[]).map((mode) => {
           const cfg = MODE_CONFIG[mode]
           return (
@@ -687,17 +661,10 @@ export function PointActionButtons({ monthlyBonus, monthlyBonusEligibleCount }: 
         <PointActionDrawer
           key={openMode}
           mode={openMode}
-          activeUserCount={monthlyBonusEligibleCount}
+          activeUserCount={activeUserCount}
           onClose={() => setOpenMode(null)}
         />
       )}
-
-      <MonthlyBonusSettingsDialog
-        open={monthlyBonusOpen}
-        onOpenChange={setMonthlyBonusOpen}
-        initial={monthlyBonus}
-        eligibleUserCount={monthlyBonusEligibleCount}
-      />
     </>
   )
 }

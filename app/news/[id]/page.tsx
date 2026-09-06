@@ -59,7 +59,14 @@ export default async function NewsDetailPage({ params }: Props) {
         </Link>
         <article className="mt-6">
           <p className="text-sm text-muted-foreground">
-            {item.publish ? new Date(item.publish).toLocaleDateString() : null}
+            {item.publish
+              ? new Date(item.publish).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  timeZone: "UTC",
+                })
+              : null}
           </p>
           <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight">{item.title}</h1>
           <p className="mt-6 leading-relaxed text-muted-foreground">

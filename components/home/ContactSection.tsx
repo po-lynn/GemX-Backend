@@ -134,7 +134,13 @@ export function ContactSection() {
             </span>
             <span>
               <span style={{ display: "block", fontSize: 11, color: "#8b86a2" }}>Email</span>
-              <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#171326" }}>hello@gemxpremium.com</span>
+              {/* suppressHydrationWarning: CDN email obfuscation can rewrite this text before hydrate */}
+              <span
+                style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#171326" }}
+                suppressHydrationWarning
+              >
+                hello@gemxpremium.com
+              </span>
             </span>
           </a>
           <div style={{

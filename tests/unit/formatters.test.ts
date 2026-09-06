@@ -54,20 +54,27 @@ describe("formatPriceWithCurrency", () => {
 })
 
 describe("formatNumber", () => {
-  it("formats number (locale may vary)", () => {
-    const s = formatNumber(1000)
-    expect(typeof s).toBe("string")
-    expect(s).toMatch(/1[\s,.]?000/)
+  // Pinning en-US keeps SSR and client identical (avoids React #418 on Vercel).
+  it("formats thousands with en-US separators", () => {
+    expect(formatNumber(1000)).toBe("1,000")
   })
   it("accepts Intl options", () => {
-    expect(formatNumber(0.5, { style: "percent" })).toMatch(/50%/)
+    expect(formatNumber(0.5, { style: "percent" })).toBe("50%")
   })
 })
 
 describe("formatDate", () => {
-  it("formats a date", () => {
+  // UTC + en-US so Node on Vercel and browsers never disagree during hydration.
+  it("formats a date in en-US UTC (hydration-stable)", () => {
     const d = new Date("2025-02-03T14:30:00Z")
-    expect(formatDate(d)).toBeTruthy()
-    expect(typeof formatDate(d)).toBe("string")
+    const formatted = formatDate(d)
+    // Normalize narrow no-break space (U+202F) some ICU builds put before AM/PM.
+    const normalized = formatted.replace(/\u202f/g, " ")
+    expect(normalized).toBe("Feb 3, 2025, 2:30 PM")
+  })
+
+  it("returns the same string on repeated calls (SSR/client parity)", () => {
+    const d = new Date("2025-02-03T14:30:00Z")
+    expect(formatDate(d)).toBe(formatDate(d))
   })
 })
