@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const afterMock = vi.fn((fn: () => void) => {
-  // Do not run the callback by default — production schedules work after the response.
+  // Do not run callbacks by default — async path schedules work after the response.
   void fn
 })
 
@@ -34,9 +34,12 @@ import { drainSurpriseBonusJobs } from "@/features/points/services/process-surpr
 import { shouldSyncProcessSurpriseBonus } from "@/features/points/services/should-sync-process-surprise-bonus"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
-describe("enqueueSurpriseBonusForAllUsers production after()", () => {
+describe("enqueueSurpriseBonusForAllUsers", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv("CRON_SECRET", "")
+    vi.stubEnv("AUTH_URL", "")
+    vi.stubEnv("VERCEL_URL", "")
     vi.mocked(countActiveUsers).mockResolvedValue(250)
     vi.mocked(createSurpriseBonusCampaign).mockResolvedValue({
       id: "camp-1",
@@ -60,8 +63,8 @@ describe("enqueueSurpriseBonusForAllUsers production after()", () => {
     vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({ batches: 3 })
   })
 
-  // Validates: production does not block the request; schedules drain via after() so status can leave processing on Vercel.
-  it("schedules after() drain when sync process is disabled (production)", async () => {
+  // Validates: SURPRISE_BONUS_SYNC_PROCESS=false schedules after() drain (no inline).
+  it("schedules after() drain when sync process is disabled", async () => {
     vi.mocked(shouldSyncProcessSurpriseBonus).mockReturnValue(false)
 
     const result = await enqueueSurpriseBonusForAllUsers({
@@ -76,16 +79,15 @@ describe("enqueueSurpriseBonusForAllUsers production after()", () => {
       scheduledAfterResponse: true,
     })
     expect(drainSurpriseBonusJobs).not.toHaveBeenCalled()
-    expect(afterMock).toHaveBeenCalledOnce()
+    expect(afterMock).toHaveBeenCalled()
 
-    // Run the scheduled callback — cron/after path credits users.
     const scheduled = afterMock.mock.calls[0]![0] as () => void | Promise<void>
     await scheduled()
     expect(drainSurpriseBonusJobs).toHaveBeenCalledWith({ maxBatches: 5 })
   })
 
-  // Validates: local/dev still drains inline and does not use after().
-  it("drains inline when sync process is enabled", async () => {
+  // Validates: default/enabled path credits users before the HTTP response returns.
+  it("drains inline when sync process is enabled (Vercel default)", async () => {
     vi.mocked(shouldSyncProcessSurpriseBonus).mockReturnValue(true)
 
     const result = await enqueueSurpriseBonusForAllUsers({
@@ -101,5 +103,21 @@ describe("enqueueSurpriseBonusForAllUsers production after()", () => {
     })
     expect(drainSurpriseBonusJobs).toHaveBeenCalledWith({ maxBatches: 5 })
     expect(afterMock).not.toHaveBeenCalled()
+  })
+
+  // Validates: RPC/drain failures surface as an error instead of a fake success stuck on processing.
+  it("returns an error when inline drain throws", async () => {
+    vi.mocked(shouldSyncProcessSurpriseBonus).mockReturnValue(true)
+    vi.mocked(drainSurpriseBonusJobs).mockRejectedValue(new Error("function claim_background_job does not exist"))
+
+    const result = await enqueueSurpriseBonusForAllUsers({
+      campaignName: "Promo",
+      pointsPerUser: 10,
+      createdBy: "admin-1",
+    })
+
+    expect(result).toMatchObject({
+      error: expect.stringContaining("crediting failed"),
+    })
   })
 })

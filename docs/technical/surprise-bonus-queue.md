@@ -6,9 +6,9 @@ All Users top-up creates a **Surprise Bonus campaign** + **`background_jobs`** r
 
 | Environment | Who credits users + push |
 |-------------|--------------------------|
-| **Local/dev** (default) | Same HTTP request drains the queue via Drizzle + RPCs; FCM via `sendSurpriseBonusPushToUsers` |
-| **Production (Vercel)** | `after()` drain after the response + Vercel cron `GET/POST /api/cron/process-surprise-bonus` every minute |
-| **Optional** | Supabase Edge Function `process-background-jobs` (legacy / extra capacity) |
+| **Default (local + Vercel)** | Same HTTP request drains the queue (`processedInline: true`) |
+| **Opt-out** `SURPRISE_BONUS_SYNC_PROCESS=false` | `after()` + Vercel cron `/api/cron/process-surprise-bonus` |
+| **Optional** | Supabase Edge Function `process-background-jobs` |
 
 | Path | Role |
 |------|------|
@@ -77,12 +77,11 @@ Push cron: `Authorization: Bearer $CRON_SECRET`.
 
 | Variable | Effect |
 |----------|--------|
-| `SURPRISE_BONUS_SYNC_PROCESS=true` | Always drain inline after enqueue |
+| `SURPRISE_BONUS_SYNC_PROCESS=true` or unset | Drain inline after enqueue (recommended) |
 | `SURPRISE_BONUS_SYNC_PROCESS=false` | Never drain inline; use `after()` + Vercel/Edge cron |
-| unset | Inline when `NODE_ENV !== "production"`; else `after()` + Vercel cron |
-| `FIREBASE_*` | Required for FCM (local + drain path) |
-| `CRON_SECRET` | Vercel cron `/api/cron/process-surprise-bonus` + push route + Edge inbound |
-| `APP_URL` (Edge secret) | Next.js origin for FCM proxy from Edge (optional path) |
+| `FIREBASE_*` | Required for FCM |
+| `CRON_SECRET` | Vercel cron `/api/cron/process-surprise-bonus` + push route |
+| `APP_URL` / `AUTH_URL` | Origin for optional cron kick when async |
 
 ## Edge cases
 

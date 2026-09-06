@@ -4,8 +4,8 @@
 
 - Admin session with credit transactions permission.
 - Migration `0081` applied (tables + `claim_background_job` / `grant_surprise_bonus_user` RPCs).
-- **Local/dev:** no Cron needed — Top-up drains the queue in-process by default.
-- **Production (Vercel):** `CRON_SECRET` set; cron `/api/cron/process-surprise-bonus` runs every minute. Submit also starts an `after()` drain. Edge Function optional — see [surprise-bonus-cron.md](./surprise-bonus-cron.md) and [cron-process-surprise-bonus.md](../api/cron-process-surprise-bonus.md).
+- **Local + Vercel (default):** Top-up drains the queue **inline** in the same request — status should reach `completed` without waiting for cron.
+- **Optional async:** set `SURPRISE_BONUS_SYNC_PROCESS=false` and use [cron-process-surprise-bonus.md](../api/cron-process-surprise-bonus.md) / [surprise-bonus-vercel.md](./surprise-bonus-vercel.md).
 
 Navigate to **Point Transactions** (`/admin/credit/transactions`).
 
@@ -14,24 +14,17 @@ Navigate to **Point Transactions** (`/admin/credit/transactions`).
 1. Click **Top-up**.
 2. Choose **All Users**.
 3. Enter **campaign name**, **points amount**, optional note.
-4. Submit.
-   - **Local/dev** (`NODE_ENV !== production`, or `SURPRISE_BONUS_SYNC_PROCESS=true`): API drains `background_jobs` inline and credits users before responding (`processedInline: true`). Campaign should reach `completed` quickly.
-   - **Production** (default): API returns with `scheduledAfterResponse: true`; `after()` + Vercel cron credit users. Poll progress in the drawer.
+4. Submit — by default users are credited before the response (`processedInline: true`); the drawer should show **completed**.
 5. Ledger rows use `type: surprise_bonus`; users also get `app_notification` rows.
-6. **FCM push** is sent to newly granted users (devices registered via `POST /api/push/register`). Requires `FIREBASE_*` env. Users without tokens still get `app_notification` only.
+6. **FCM push** requires `FIREBASE_*` env.
 
-### Force async locally (test Cron path)
+### Force async (cron-only)
 
 ```env
 SURPRISE_BONUS_SYNC_PROCESS=false
 ```
 
-Then either wait for / invoke Vercel cron, or call:
-
-```bash
-curl -X POST "http://localhost:3000/api/cron/process-surprise-bonus" \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
+Then ensure `/api/cron/process-surprise-bonus` runs (see [surprise-bonus-vercel.md](./surprise-bonus-vercel.md)).
 
 ## Top-up a single user
 

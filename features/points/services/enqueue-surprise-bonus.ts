@@ -22,18 +22,43 @@ export type EnqueueSurpriseBonusResult =
       totalUsers: number
       pointsPerUser: number
       campaignName: string
-      /** True when jobs were drained in this request (local/dev sync path). */
+      /** True when jobs were drained in this request (default path). */
       processedInline?: boolean
-      /** True when production scheduled drain after the response (Vercel `after`). */
+      /** True when SURPRISE_BONUS_SYNC_PROCESS=false scheduled drain after the response. */
       scheduledAfterResponse?: boolean
     }
   | { error: string }
 
+function appOrigin(): string | null {
+  const raw =
+    process.env.AUTH_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SERVER_URL?.trim() ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
+  if (!raw) return null
+  return raw.replace(/\/$/, "")
+}
+
+/** Kick Vercel cron in a separate invocation (backup when inline is disabled). */
+function kickProcessCronInBackground(): void {
+  const secret = process.env.CRON_SECRET?.trim()
+  const origin = appOrigin()
+  if (!secret || !origin) return
+
+  const url = `${origin}/api/cron/process-surprise-bonus`
+  after(() => {
+    fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}` },
+    }).catch((e) => {
+      console.error("[surprise-bonus] cron kick failed:", e)
+    })
+  })
+}
+
 /**
- * Create campaign + first background job.
- * - Local/dev (or SURPRISE_BONUS_SYNC_PROCESS=true): drains the queue inline.
- * - Production: returns quickly, then drains via Next.js `after()`; Vercel cron
- *   `/api/cron/process-surprise-bonus` continues if the after() work is cut short.
+ * Create campaign + first background job, then credit users.
+ * Default: drain the queue **inline** in this request (works on Vercel without Edge/cron).
+ * Set SURPRISE_BONUS_SYNC_PROCESS=false to use after()+cron only (large campaigns / dedicated worker).
  */
 export async function enqueueSurpriseBonusForAllUsers(
   input: EnqueueSurpriseBonusInput,
@@ -71,15 +96,30 @@ export async function enqueueSurpriseBonusForAllUsers(
   let scheduledAfterResponse = false
 
   if (shouldSyncProcessSurpriseBonus()) {
-    await drainSurpriseBonusJobs({ maxBatches })
-    processedInline = true
+    try {
+      const drained = await drainSurpriseBonusJobs({ maxBatches })
+      processedInline = true
+      // Also clear any older pending jobs left from previous stuck campaigns.
+      if (drained.batches === 0) {
+        console.warn(
+          "[surprise-bonus] inline drain claimed 0 batches — check claim_background_job RPC / pending jobs",
+          { campaignId: campaign.id },
+        )
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      console.error("[surprise-bonus] inline drain failed:", e)
+      return {
+        error: `Campaign created but crediting failed: ${message}. Check RPCs (claim_background_job / grant_surprise_bonus_user) and retry cron.`,
+      }
+    }
   } else {
-    // Production path: do not block the HTTP response; keep draining after it is sent.
     after(() => {
       drainSurpriseBonusJobs({ maxBatches }).catch((e) => {
         console.error("[surprise-bonus] after() drain failed:", e)
       })
     })
+    kickProcessCronInBackground()
     scheduledAfterResponse = true
   }
 

@@ -5,6 +5,9 @@ import { requireAdminOrFeature } from "@/lib/api-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
+/** Allow inline drain of All Users Top-up (40–few hundred users) on Vercel. */
+export const maxDuration = 60
+
 const bodySchema = z.object({
   campaignName: z.string().trim().min(1),
   pointsPerUser: z.coerce.number().int().positive(),
@@ -13,10 +16,8 @@ const bodySchema = z.object({
 
 /**
  * POST /api/admin/points/surprise-bonus
- * Create Surprise Bonus campaign + enqueue first DB job.
- * Local/dev: drains the queue inline (credits users in this request).
- * Production: returns quickly; drains via `after()` + Vercel cron
- * `/api/cron/process-surprise-bonus` (Supabase Edge Function optional).
+ * Create Surprise Bonus campaign + enqueue first DB job, then credit users inline
+ * by default (so status reaches completed on Vercel without Edge Function).
  */
 export async function POST(request: NextRequest) {
   await connection()
