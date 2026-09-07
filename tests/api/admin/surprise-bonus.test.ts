@@ -47,6 +47,7 @@ describe("POST /api/admin/points/surprise-bonus", () => {
       totalUsers: 100,
       pointsPerUser: 500,
       campaignName: "Sweet December",
+      processedInline: true,
     })
 
     const req = new NextRequest("http://localhost/api/admin/points/surprise-bonus", {

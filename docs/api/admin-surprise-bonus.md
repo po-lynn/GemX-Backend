@@ -2,8 +2,7 @@
 
 Create a Surprise Bonus campaign for all active users and enqueue the first database job.
 
-- **Local/dev:** drains pending jobs in this request (`processedInline: true`) unless `SURPRISE_BONUS_SYNC_PROCESS=false`.
-- **Production:** returns after enqueue (`scheduledAfterResponse: true`); `after()` drains the queue post-response (up to `maxDuration = 60`s), and `/api/cron/process-surprise-bonus` continues/finishes it. A job stuck `processing` from a killed `after()`/cron invocation is auto-reclaimed by the next claim once its lock is >3 min old — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md).
+Drains the queue **inline in this request**, in every environment — the response is only sent once all users are credited (`processedInline: true`). There is no background worker or cron for this endpoint. If a very large user base gets cut off by `maxDuration` (60s) mid-drain, the stranded job is auto-reclaimed by the *next* Top-up submission's inline drain once its lock is >3 min old (`claim_background_job`, migration `0087`) — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md).
 
 ## Auth
 
@@ -63,7 +62,7 @@ curl -X POST "http://localhost:3000/api/admin/points/surprise-bonus" \
 
 # GET /api/admin/points/surprise-bonus/[id]
 
-Campaign progress for admin polling.
+Look up a campaign's final counts (e.g. to audit an old campaign). Not used for polling — the POST response above already reflects the completed state, since draining happens inline before it returns.
 
 ## Response 200
 

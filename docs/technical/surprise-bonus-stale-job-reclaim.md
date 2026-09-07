@@ -1,5 +1,7 @@
 # Fix: Surprise Bonus queue stuck at 0 processed on production
 
+> **Update (later cleanup):** the `after()` drain and `/api/cron/process-surprise-bonus` mentioned throughout this doc have since been removed — Surprise Bonus is inline-only now (see [surprise-bonus-queue.md](./surprise-bonus-queue.md)). The reclaim fix described here (migration `0087`) is unaffected and is now the *only* recovery path: a stranded job is picked up by the next Top-up's inline drain, not by a cron tick.
+
 ## What changed and why
 
 The Surprise Bonus ("Top-up → All Users") queue drains `background_jobs` rows
@@ -48,17 +50,17 @@ WHERE j.type = p_type
 
 3 minutes is comfortably longer than a single ≤100-user batch takes, so a
 genuinely healthy in-flight batch is never reclaimed out from under itself;
-a killed one is picked back up by the next `after()` drain or cron tick
+a killed one is picked back up by the *next* Top-up submission's inline drain
 instead of staying orphaned forever. `grant_surprise_bonus_user()` is already
 idempotent per `(user_id, campaign_id)` via the unique index on
 `point_transaction`, so the rare case of a reclaim racing a still-running
 batch cannot double-credit a user — the loser's insert hits `already_granted`
 and is skipped.
 
-`app/api/admin/points/surprise-bonus/route.ts` also now sets
-`export const maxDuration = 60` (matching the cron route) so the `after()`
-drain gets the same execution budget as the cron path on plans that allow it,
-reducing how often a batch gets killed in the first place.
+`app/api/admin/points/surprise-bonus/route.ts` also sets
+`export const maxDuration = 60`, giving the inline drain more room to finish
+before the platform kills the function, reducing how often a batch gets
+killed in the first place.
 
 ### Files touched
 
@@ -73,7 +75,7 @@ reducing how often a batch gets killed in the first place.
 ## Data flow
 
 ```
-after() or cron calls claim_background_job('surprise_bonus_batch', workerId)
+Each Top-up submission's inline drain calls claim_background_job('surprise_bonus_batch', workerId)
   → claims due 'pending' rows (unchanged)
   → OR claims 'processing' rows whose locked_at is > 3 min old (new)
   → processOneSurpriseBonusBatch() grants up to 100 users, updates campaign counters
@@ -90,20 +92,14 @@ existing `claim_background_job(text, text)` RPC. Apply with `npm run db:migrate`
 
 ## Auth & permissions
 
-Unchanged — admin create still requires `CREDIT_TRANSACTIONS`; cron drain
-still requires `Authorization: Bearer $CRON_SECRET`.
+Unchanged — admin create still requires `CREDIT_TRANSACTIONS`.
 
 ## Edge cases & known limitations
 
-- A campaign interrupted right as the reclaim window fix is deployed still
-  needs one more claim cycle (next cron tick, within 1 minute) to notice the
-  stale lock — it is not instant, but it is now bounded and automatic instead
-  of infinite.
-- Vercel Hobby plans still cap Cron to once/day; `after()` plus this reclaim
-  fix reduces reliance on frequent cron ticks but does not require a plan
-  upgrade to make small/medium campaigns (a handful of batches) eventually
-  complete, since the *next* Top-up's `after()` or a later cron tick will
-  also claim any stale row for the type.
+- A campaign interrupted mid-batch stays stranded until an admin submits
+  **another** Top-up (any campaign) — there's no automatic background
+  continuation. In practice this only matters for user bases large enough to
+  exceed the 60s `maxDuration`.
 - 3 minutes is a fixed threshold; a pathological single batch that legitimately
   takes longer (e.g. FCM provider degraded) could be double-claimed. This is
   safe (idempotent grants) but would send `sendEachForMulticast` twice for any

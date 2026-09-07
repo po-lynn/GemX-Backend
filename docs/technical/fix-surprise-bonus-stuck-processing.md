@@ -1,5 +1,7 @@
 # Fix: All Users Top-up stuck on Processing (0 processed) on Vercel
 
+> **Update (later cleanup):** Surprise Bonus is admin-triggered only, with no automated monthly/recurring schedule — the admin clicks Top-up whenever they want to run a campaign. Since there was never a scheduling need, the `SURPRISE_BONUS_SYNC_PROCESS` async opt-out, the `after()` drain, and `/api/cron/process-surprise-bonus` (points 1 and 6 below, and the cron kick in point 2's file list) were removed entirely — see [surprise-bonus-queue.md](./surprise-bonus-queue.md). Everything below describes the state before that cleanup; the inline-drain mechanism it introduced (points 2-5) is unchanged and is now the *only* path.
+
 ## What changed and why
 
 Screenshot symptom: campaign **Status: processing**, **Processed: 0 / 40**, Success/Failed 0 — queue created, nothing credited.
@@ -38,21 +40,13 @@ Top-up All Users
 
 ## Unstick existing “6- Sep” campaign
 
-After deploy, either:
-
-```bash
-curl -X POST "https://YOUR_HOST/api/cron/process-surprise-bonus" \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
-
-Or run another All Users Top-up (inline drain also claims older pending jobs).
+Run another All Users Top-up — its inline drain claims older pending/stale jobs first.
 
 ## Auth
 
-Unchanged (`CREDIT_TRANSACTIONS` / `CRON_SECRET` for cron).
+`CREDIT_TRANSACTIONS` for the admin route. `CRON_SECRET` is unrelated to Surprise Bonus now (only `monthly-bonus-points` and the optional Edge Function's push proxy use it).
 
 ## Edge cases
 
 - Missing RPCs → API returns error string containing `crediting failed` (check migration `0081`).
-- `SURPRISE_BONUS_SYNC_PROCESS=false` on Vercel without working cron → stuck again; do not set false unless cron is verified.
-- Very large user bases may hit 60s `maxDuration` — then set `=false` and rely on minutely cron.
+- Very large user bases may hit 60s `maxDuration` mid-batch, stranding a job `processing`. Migration `0087` reclaims it automatically once its lock is >3 min old — submit any Top-up again to pick it back up. See [surprise-bonus-stale-job-reclaim.md](./surprise-bonus-stale-job-reclaim.md).

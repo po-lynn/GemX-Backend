@@ -1,9 +1,10 @@
 # Surprise Bonus cron + Edge Function
 
-> **Preferred on Vercel:** use the Next.js cron  
-> [`/api/cron/process-surprise-bonus`](../api/cron-process-surprise-bonus.md)  
-> (wired in `vercel.json`) plus `after()` drain — see [surprise-bonus-vercel.md](./surprise-bonus-vercel.md).  
-> The Supabase Edge Function below is **optional** extra capacity.
+> Surprise Bonus is normally **inline-only, admin-triggered** — see
+> [surprise-bonus-vercel.md](./surprise-bonus-vercel.md). There is no Vercel
+> cron for this feature. The Supabase Edge Function below is a separate,
+> fully **optional** extra worker for anyone who wants a standing drain
+> outside the app's own request/response cycle; most deployments don't need it.
 
 ## Prerequisites
 
@@ -58,11 +59,7 @@ select cron.schedule(
 ## Local admin flow
 
 1. `npm run db:migrate`
-2. **Local/dev default:** just run `npm run dev` and submit All Users Top-up — the API drains jobs inline (`SURPRISE_BONUS_SYNC_PROCESS` unset + non-production).
-3. **Or** force Cron-only locally with `SURPRISE_BONUS_SYNC_PROCESS=false`, then deploy/schedule the Edge Function (or invoke manually):
-   ```bash
-   curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/process-background-jobs" \
-     -H "Authorization: Bearer $CRON_SECRET"
-   ```
-4. Admin → Point Transactions → Top-up → All Users → campaign name + points → submit.
-5. Drawer shows progress via `GET /api/admin/points/surprise-bonus/[id]` (local sync usually already `completed`).
+2. Run `npm run dev`, then Admin → Point Transactions → Top-up → All Users → campaign name + points → submit. The API always drains jobs inline — no cron/Edge Function needed.
+3. The drawer shows `completed` immediately from the POST response.
+
+If you deploy this Edge Function anyway (e.g. as a standing safety net you want independent of the app), it can still claim and drain any job it finds — it talks to the same `background_jobs` queue directly. In practice a job is rarely still `pending`/stale by the time this runs, since the admin's own request already drained it inline.

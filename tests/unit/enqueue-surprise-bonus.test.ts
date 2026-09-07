@@ -11,10 +11,6 @@ vi.mock("@/features/points/services/process-surprise-bonus-jobs", () => ({
   drainSurpriseBonusJobs: vi.fn(),
 }))
 
-vi.mock("@/features/points/services/should-sync-process-surprise-bonus", () => ({
-  shouldSyncProcessSurpriseBonus: vi.fn(),
-}))
-
 import {
   countActiveUsers,
   createSurpriseBonusCampaign,
@@ -22,7 +18,6 @@ import {
   markSurpriseBonusCampaignProcessing,
 } from "@/features/points/db/surprise-bonus"
 import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
-import { shouldSyncProcessSurpriseBonus } from "@/features/points/services/should-sync-process-surprise-bonus"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
 describe("enqueueSurpriseBonusForAllUsers", () => {
@@ -46,7 +41,6 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
       updatedAt: new Date(),
     })
     vi.mocked(enqueueSurpriseBonusBatchJob).mockResolvedValue({ id: "job-1" })
-    vi.mocked(shouldSyncProcessSurpriseBonus).mockReturnValue(false)
     vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({ batches: 0 })
   })
 
@@ -68,44 +62,8 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
     expect(result).toEqual({ error: "Campaign name is required." })
   })
 
-  it("creates campaign and first pending batch job without draining when sync off", async () => {
-    vi.mocked(countActiveUsers).mockResolvedValue(1256)
-
-    const result = await enqueueSurpriseBonusForAllUsers({
-      campaignName: "Sweet December",
-      pointsPerUser: 500,
-      note: "Holiday",
-      createdBy: "admin-1",
-    })
-
-    expect(result).toEqual({
-      success: true,
-      campaignId: "camp-1",
-      totalUsers: 1256,
-      pointsPerUser: 500,
-      campaignName: "Sweet December",
-      processedInline: false,
-    })
-    expect(createSurpriseBonusCampaign).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Sweet December",
-        pointsPerUser: 500,
-        totalUsers: 1256,
-        createdBy: "admin-1",
-      }),
-    )
-    expect(enqueueSurpriseBonusBatchJob).toHaveBeenCalledWith({
-      campaignId: "camp-1",
-      lastUserId: null,
-    })
-    expect(markSurpriseBonusCampaignProcessing).toHaveBeenCalledWith("camp-1")
-    expect(drainSurpriseBonusJobs).not.toHaveBeenCalled()
-  })
-
-  it("drains jobs inline when sync processing is enabled", async () => {
-    // Local/dev path: credits users in the same request via Drizzle RPCs
+  it("creates campaign, enqueues the first job, and drains it inline before responding", async () => {
     vi.mocked(countActiveUsers).mockResolvedValue(250)
-    vi.mocked(shouldSyncProcessSurpriseBonus).mockReturnValue(true)
     vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({
       batches: 3,
       last: {
@@ -123,15 +81,48 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
     const result = await enqueueSurpriseBonusForAllUsers({
       campaignName: "Sweet December",
       pointsPerUser: 500,
+      note: "Holiday",
       createdBy: "admin-1",
     })
 
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       success: true,
       campaignId: "camp-1",
+      totalUsers: 250,
+      pointsPerUser: 500,
+      campaignName: "Sweet December",
       processedInline: true,
     })
+    expect(createSurpriseBonusCampaign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Sweet December",
+        pointsPerUser: 500,
+        totalUsers: 250,
+        createdBy: "admin-1",
+      }),
+    )
+    expect(enqueueSurpriseBonusBatchJob).toHaveBeenCalledWith({
+      campaignId: "camp-1",
+      lastUserId: null,
+    })
+    expect(markSurpriseBonusCampaignProcessing).toHaveBeenCalledWith("camp-1")
     expect(drainSurpriseBonusJobs).toHaveBeenCalledWith({ maxBatches: 5 })
+  })
+
+  it("returns an error and leaves the campaign row in place when the inline drain throws", async () => {
+    vi.mocked(countActiveUsers).mockResolvedValue(250)
+    vi.mocked(drainSurpriseBonusJobs).mockRejectedValue(new Error("relation missing"))
+
+    const result = await enqueueSurpriseBonusForAllUsers({
+      campaignName: "Sweet December",
+      pointsPerUser: 500,
+      createdBy: "admin-1",
+    })
+
+    expect(result).toEqual({
+      error:
+        "Campaign created but crediting failed: relation missing. Check RPCs (claim_background_job / grant_surprise_bonus_user) and retry the Top-up.",
+    })
   })
 
   it("returns error when no active users", async () => {

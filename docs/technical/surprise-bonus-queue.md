@@ -4,50 +4,43 @@
 
 All Users top-up creates a **Surprise Bonus campaign** + **`background_jobs`** row.
 
-| Environment | Who credits users + push |
-|-------------|--------------------------|
-| **Default (local + Vercel)** | Same HTTP request drains the queue (`processedInline: true`) |
-| **Opt-out** `SURPRISE_BONUS_SYNC_PROCESS=false` | `after()` + Vercel cron `/api/cron/process-surprise-bonus` |
-| **Optional** | Supabase Edge Function `process-background-jobs` |
+Surprise Bonus is **admin-triggered only, inline-only** — no schedule, no cron, no background worker. An admin clicks Top-up → All Users whenever they want to run a campaign, and that request drains the whole queue before responding.
 
 | Path | Role |
 |------|------|
 | `drizzle/schema/surprise-bonus-schema.ts` | `surprise_bonus_campaign`, `background_jobs`, `app_notification`, `SURPRISE_BONUS_JOB_TYPE` |
 | `drizzle/migrations/0081_surprise_bonus_queue.sql` | Tables, unique ledger index, RPCs |
+| `drizzle/migrations/0087_reclaim_stale_surprise_bonus_jobs.sql` | `claim_background_job` also reclaims stale `processing` jobs |
 | `features/points/db/surprise-bonus.ts` | Create campaign / enqueue job / progress |
-| `features/points/services/enqueue-surprise-bonus.ts` | Orchestration; optional inline drain |
+| `features/points/services/enqueue-surprise-bonus.ts` | Orchestration; always drains inline |
 | `features/points/services/process-surprise-bonus-jobs.ts` | Node batch processor (mirrors Edge) |
 | `features/points/services/surprise-bonus-push.ts` | FCM payload + send to user devices |
-| `features/points/services/should-sync-process-surprise-bonus.ts` | Env gate for inline drain |
-| `app/api/admin/points/surprise-bonus/route.ts` | `POST` create |
-| `app/api/admin/points/surprise-bonus/[id]/route.ts` | `GET` progress |
-| `app/api/cron/surprise-bonus-push/route.ts` | Edge → FCM proxy (`CRON_SECRET`) |
-| `supabase/functions/process-background-jobs/index.ts` | Production batch worker |
-| `features/points/components/PointActionButtons.tsx` | All Users → POST + poll progress |
+| `app/api/admin/points/surprise-bonus/route.ts` | `POST` create + drain (`maxDuration = 60`) |
+| `app/api/admin/points/surprise-bonus/[id]/route.ts` | `GET` — audit a past campaign's counts (not used for polling) |
+| `app/api/cron/surprise-bonus-push/route.ts` | FCM proxy for the optional Supabase Edge Function path (`CRON_SECRET`) |
+| `supabase/functions/process-background-jobs/index.ts` | **Optional** standalone worker — not required, most deployments don't run it |
+| `features/points/components/PointActionButtons.tsx` | All Users → POST, shows the completed result |
 
 ## Data flow
 
 ```
-Admin All Users submit
+Admin clicks Top-up → All Users → submit
   → POST /api/admin/points/surprise-bonus
   → INSERT surprise_bonus_campaign + background_jobs (pending)
   → mark campaign processing
-
-  Local/dev (or SURPRISE_BONUS_SYNC_PROCESS=true):
-    → drainSurpriseBonusJobs()
-      → claim_background_job()
+  → drainSurpriseBonusJobs() (same request, same function invocation)
+      → claim_background_job() — due 'pending' OR stale 'processing' (>3 min locked, migration 0087)
       → grant_surprise_bonus_user() per user (≤100 / batch)
          (ledger + points + app_notification)
       → sendSurpriseBonusPushToUsers(newlyGranted)
       → next job or campaign completed
-    → response { processedInline: true }
-
-  Production (default):
-    → 200 { processedInline: false, scheduledAfterResponse: true }
-    → after() → drainSurpriseBonusJobs() (same RPCs + FCM as local)
-    → Vercel cron /api/cron/process-surprise-bonus (* * * * *) continues if needed
-    → (optional) Supabase Edge Function process-background-jobs
+  → response { processedInline: true }
+  → if drain throws: campaign row still exists (uncredited); response returns { error }
+  → if a batch is cut off by maxDuration (huge campaigns): job stays 'processing';
+    the *next* Top-up submission's claim_background_job reclaims it (>3 min stale)
 ```
+
+There is no cron and nothing runs between Top-up submissions. The optional Supabase Edge Function (`process-background-jobs`) can drain the same `background_jobs` queue independently if someone deploys and schedules it, but nothing in the app relies on it.
 
 ## Notifications
 
@@ -77,11 +70,8 @@ Push cron: `Authorization: Bearer $CRON_SECRET`.
 
 | Variable | Effect |
 |----------|--------|
-| `SURPRISE_BONUS_SYNC_PROCESS=true` or unset | Drain inline after enqueue (recommended) |
-| `SURPRISE_BONUS_SYNC_PROCESS=false` | Never drain inline; use `after()` + Vercel/Edge cron |
 | `FIREBASE_*` | Required for FCM |
-| `CRON_SECRET` | Vercel cron `/api/cron/process-surprise-bonus` + push route |
-| `APP_URL` / `AUTH_URL` | Origin for optional cron kick when async |
+| `CRON_SECRET` | Only needed for the unrelated `monthly-bonus-points` cron and the `surprise-bonus-push` FCM proxy (used by the optional Supabase Edge Function path) — not required for Surprise Bonus itself |
 
 ## Edge cases
 
@@ -91,5 +81,5 @@ Push cron: `Authorization: Bearer $CRON_SECRET`.
 - Job retries with `available_at` backoff until `max_attempts`
 - FCM failure does not undo ledger / `app_notification`
 - Users without `user_devices` tokens: in-app row only
-- Large local All Users may hit Postgres `statement_timeout` (15s on direct connections) — use Cron path or raise timeout
-- No Redis / BullMQ / Next.js worker process
+- A user base large enough to exceed `maxDuration` (60s) strands its in-flight batch at `status = 'processing'`; the next Top-up submission (of any size) reclaims it via migration `0087` — there's no automatic continuation between submissions
+- No Redis / BullMQ / Next.js worker process, no cron

@@ -10,18 +10,11 @@ Top-up now **credits users in the same request** by default on Vercel. After dep
 
 ## After deploy
 
-1. Ensure Vercel does **not** set `SURPRISE_BONUS_SYNC_PROCESS=false` (unless cron is proven working).
-2. Redeploy.
-3. Clear the stuck campaign:
+**Update (later fix):** the async opt-out (`SURPRISE_BONUS_SYNC_PROCESS`), the `after()` drain, and `/api/cron/process-surprise-bonus` have since been removed entirely — Surprise Bonus is inline-only now, admin-triggered, no cron. See [surprise-bonus-vercel.md](./surprise-bonus-vercel.md).
 
-```bash
-curl -X POST "https://YOUR_VERCEL_HOST/api/cron/process-surprise-bonus" \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
-
-Or submit a small new Top-up — inline drain also processes older pending `background_jobs`.
-
-4. Confirm in SQL:
+1. Redeploy.
+2. Clear a stuck campaign by submitting any Top-up (even a small one) — its inline drain reclaims older stranded `background_jobs` rows (>3 min stale, migration `0087`) before starting the new one.
+3. Confirm in SQL:
 
 ```sql
 SELECT status, processed_users, success_count FROM surprise_bonus_campaign ORDER BY created_at DESC LIMIT 5;

@@ -82,29 +82,6 @@ function PointActionDrawer({
   const cfg = MODE_CONFIG[mode]
 
   useEffect(() => {
-    if (!campaignProgress || campaignProgress.status === "completed" || campaignProgress.status === "failed") {
-      return
-    }
-    const timer = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/admin/points/surprise-bonus/${campaignProgress.id}`)
-        if (!res.ok) return
-        const data = (await res.json()) as CampaignProgress
-        setCampaignProgress(data)
-        if (data.status === "completed") {
-          toast.success(
-            `Campaign "${data.name}" completed — ${data.successCount.toLocaleString()} credited, ${data.failedCount.toLocaleString()} failed`,
-          )
-          router.refresh()
-        }
-      } catch {
-        // ignore poll errors
-      }
-    }, 3000)
-    return () => clearInterval(timer)
-  }, [campaignProgress, router])
-
-  useEffect(() => {
     if (!showList || !query.trim()) {
       const timer = setTimeout(() => {
         setSearchResults([])
@@ -175,29 +152,24 @@ function PointActionDrawer({
                 totalUsers: number
                 pointsPerUser: number
                 campaignName: string
-                processedInline?: boolean
               }
             | { error: string }
           if (!res.ok || "error" in result) {
             toast.error("error" in result ? result.error : "Failed to start surprise bonus")
             return
           }
-          const processedInline =
-            "processedInline" in result && result.processedInline === true
           toast.success(
-            processedInline
-              ? `Surprise bonus "${result.campaignName}" credited to ${result.totalUsers.toLocaleString()} users`
-              : `Surprise bonus "${result.campaignName}" queued for ${result.totalUsers.toLocaleString()} users — processing in the background`,
+            `Surprise bonus "${result.campaignName}" credited to ${result.totalUsers.toLocaleString()} users`,
           )
           setCampaignProgress({
             id: result.campaignId,
             name: result.campaignName,
             pointsPerUser: result.pointsPerUser,
             totalUsers: result.totalUsers,
-            processedUsers: processedInline ? result.totalUsers : 0,
-            successCount: processedInline ? result.totalUsers : 0,
+            processedUsers: result.totalUsers,
+            successCount: result.totalUsers,
             failedCount: 0,
-            status: processedInline ? "completed" : "processing",
+            status: "completed",
           })
           setAmount("")
           setCampaignName("")
@@ -315,7 +287,7 @@ function PointActionDrawer({
                           Top-up for All Users
                         </div>
                         <div style={{ fontSize: 12.5, color: "#15803d", lineHeight: 1.45 }}>
-                          The points will be queued as a Surprise Bonus campaign and credited to all active users in the background. Each user receives an in-app notification.
+                          The points will be credited to all active users as a Surprise Bonus campaign before this finishes. Each user receives an in-app notification.
                         </div>
                       </div>
                     </div>
