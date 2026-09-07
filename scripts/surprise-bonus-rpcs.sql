@@ -1,6 +1,11 @@
--- Copy of RPCs from 0081_surprise_bonus_queue.sql for manual Supabase SQL editor use.
+-- Copy of RPCs from 0081_surprise_bonus_queue.sql + 0087_reclaim_stale_surprise_bonus_jobs.sql
+-- for manual Supabase SQL editor use.
 -- Prefer running: npm run db:migrate
 
+-- Reclaims jobs stuck in "processing" for >3min (e.g. a Vercel function killed
+-- mid-batch by maxDuration) alongside normal pending jobs. grant_surprise_bonus_user
+-- is idempotent per (user, campaign) so a rare reclaim of a still-in-flight job
+-- cannot double-credit a user.
 CREATE OR REPLACE FUNCTION claim_background_job(p_type text, p_locked_by text)
 RETURNS SETOF background_jobs
 LANGUAGE plpgsql
@@ -11,8 +16,10 @@ BEGIN
   SELECT j.id INTO v_id
   FROM background_jobs j
   WHERE j.type = p_type
-    AND j.status = 'pending'
-    AND j.available_at <= now()
+    AND (
+      (j.status = 'pending' AND j.available_at <= now())
+      OR (j.status = 'processing' AND j.locked_at < now() - interval '3 minutes')
+    )
   ORDER BY j.available_at ASC, j.created_at ASC
   FOR UPDATE SKIP LOCKED
   LIMIT 1;

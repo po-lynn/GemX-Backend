@@ -3,7 +3,7 @@
 Create a Surprise Bonus campaign for all active users and enqueue the first database job.
 
 - **Local/dev:** drains pending jobs in this request (`processedInline: true`) unless `SURPRISE_BONUS_SYNC_PROCESS=false`.
-- **Production:** returns after enqueue; Edge Cron credits users (`processedInline: false`).
+- **Production:** returns after enqueue (`scheduledAfterResponse: true`); `after()` drains the queue post-response (up to `maxDuration = 60`s), and `/api/cron/process-surprise-bonus` continues/finishes it. A job stuck `processing` from a killed `after()`/cron invocation is auto-reclaimed by the next claim once its lock is >3 min old — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md).
 
 ## Auth
 

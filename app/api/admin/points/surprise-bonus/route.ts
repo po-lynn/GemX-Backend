@@ -5,6 +5,9 @@ import { requireAdminOrFeature } from "@/lib/api-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
+/** Give the `after()` drain room to finish a batch before the platform kills the function. */
+export const maxDuration = 60
+
 const bodySchema = z.object({
   campaignName: z.string().trim().min(1),
   pointsPerUser: z.coerce.number().int().positive(),

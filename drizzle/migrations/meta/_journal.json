@@ -603,6 +603,13 @@
       "when": 1788693044855,
       "tag": "0086_stormy_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1788693044856,
+      "tag": "0087_reclaim_stale_surprise_bonus_jobs",
+      "breakpoints": true
     }
   ]
 }

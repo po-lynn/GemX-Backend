@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Admin session with credit transactions permission.
-- Migration `0081` applied (tables + `claim_background_job` / `grant_surprise_bonus_user` RPCs).
+- Migration `0081` applied (tables + `claim_background_job` / `grant_surprise_bonus_user` RPCs), plus `0087` (stale `processing` job reclaim — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md)).
 - **Local/dev:** no Cron needed — Top-up drains the queue in-process by default.
 - **Production (Vercel):** `CRON_SECRET` set; cron `/api/cron/process-surprise-bonus` runs every minute. Submit also starts an `after()` drain. Edge Function optional — see [surprise-bonus-cron.md](./surprise-bonus-cron.md) and [cron-process-surprise-bonus.md](../api/cron-process-surprise-bonus.md).
 
@@ -45,7 +45,7 @@ curl -X POST "http://localhost:3000/api/cron/process-surprise-bonus" \
 |-------|--------|
 | `No active users found` | All users banned/archived |
 | `Campaign name is required` | Empty campaign name |
-| Progress stuck at 0 / Processing (production) | Missing `CRON_SECRET`, cron not deployed, or RPCs missing — check Vercel cron logs + `background_jobs` |
+| Progress stuck at 0 / Processing (production) | Missing `CRON_SECRET`, cron not deployed, or RPCs missing — check Vercel cron logs + `background_jobs`. If a `background_jobs` row is stuck `status = 'processing'` with an old `locked_at` (e.g. an `after()` drain got killed by `maxDuration` mid-batch), it self-heals within ~3 min once migration `0087` is applied — the next claim (cron or another Top-up's `after()`) reclaims it automatically. |
 | Progress stuck at 0 (local) | RPCs missing — re-run `npm run db:migrate` |
 | Jobs `failed` | Check `background_jobs.last_error` |
 | Request timeout on large local All Users | Many users + `statement_timeout`; use Cron path or raise DB timeout |
