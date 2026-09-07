@@ -175,24 +175,29 @@ function PointActionDrawer({
                 totalUsers: number
                 pointsPerUser: number
                 campaignName: string
+                processedInline?: boolean
               }
             | { error: string }
           if (!res.ok || "error" in result) {
             toast.error("error" in result ? result.error : "Failed to start surprise bonus")
             return
           }
+          const processedInline =
+            "processedInline" in result && result.processedInline === true
           toast.success(
-            `Surprise bonus "${result.campaignName}" queued for ${result.totalUsers.toLocaleString()} users — processing in the background`,
+            processedInline
+              ? `Surprise bonus "${result.campaignName}" credited to ${result.totalUsers.toLocaleString()} users`
+              : `Surprise bonus "${result.campaignName}" queued for ${result.totalUsers.toLocaleString()} users — processing in the background`,
           )
           setCampaignProgress({
             id: result.campaignId,
             name: result.campaignName,
             pointsPerUser: result.pointsPerUser,
             totalUsers: result.totalUsers,
-            processedUsers: 0,
-            successCount: 0,
+            processedUsers: processedInline ? result.totalUsers : 0,
+            successCount: processedInline ? result.totalUsers : 0,
             failedCount: 0,
-            status: "processing",
+            status: processedInline ? "completed" : "processing",
           })
           setAmount("")
           setCampaignName("")

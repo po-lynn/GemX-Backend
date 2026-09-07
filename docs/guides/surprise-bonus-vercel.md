@@ -1,32 +1,37 @@
-# Guide: Surprise Bonus on Vercel (no Edge Function required)
+# Guide: Surprise Bonus on Vercel
+
+## Default (recommended)
+
+Leave `SURPRISE_BONUS_SYNC_PROCESS` **unset**. All Users Top-up credits users **in the same request**. For ~40 users this finishes in seconds; the drawer shows **completed**, not stuck **processing**.
 
 ## Prerequisites
 
-1. Migration applied (`0081` / `0082` surprise bonus tables + RPCs).
-2. Vercel env: `CRON_SECRET`, `DATABASE_URL`, optional `FIREBASE_*` for push.
-3. Deploy includes `vercel.json` cron for `/api/cron/process-surprise-bonus`.
+1. Migration applied (`0081` surprise bonus tables + RPCs).
+2. Vercel env: `DATABASE_URL`, optional `FIREBASE_*`, `CRON_SECRET` (for stuck-job recovery cron).
 
-## How it works
-
-1. Admin Top-up → All Users creates campaign + job (`status: processing`).
-2. Response returns immediately; Next.js **`after()`** starts draining the queue.
-3. Vercel Cron hits **`/api/cron/process-surprise-bonus`** every minute to finish large runs.
-4. Admin drawer polls `GET /api/admin/points/surprise-bonus/[id]` until `completed`.
-
-## Manual kick (stuck campaign)
+## Unstick a campaign already at processing 0/N
 
 ```bash
 curl -X POST "https://YOUR_VERCEL_HOST/api/cron/process-surprise-bonus" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Inspect queue in Supabase SQL — see [surprise-bonus-queue.md](../technical/surprise-bonus-queue.md).
+See [fix-stuck-surprise-bonus.md](./fix-stuck-surprise-bonus.md).
+
+## Async mode (optional)
+
+Only if you need huge campaigns outside the 60s function limit:
+
+```env
+SURPRISE_BONUS_SYNC_PROCESS=false
+```
+
+Requires working minutely cron `/api/cron/process-surprise-bonus` (Pro plan for `* * * * *`).
 
 ## Common errors
 
 | Symptom | Fix |
 |---------|-----|
-| Stays `processing` forever | Confirm cron exists in Vercel project → Cron Jobs; `CRON_SECRET` set |
-| Cron 401 | Bearer must match Vercel `CRON_SECRET` |
-| Cron 500 Cron not configured | Add `CRON_SECRET` and redeploy |
-| Jobs `failed` | Read `background_jobs.last_error`; ensure RPCs exist |
+| Stays `processing`, 0 processed | Redeploy with inline default; do not set `SURPRISE_BONUS_SYNC_PROCESS=false` |
+| Error `crediting failed` / missing function | Apply `0081_surprise_bonus_queue.sql` |
+| Cron 401 | Match `CRON_SECRET` |

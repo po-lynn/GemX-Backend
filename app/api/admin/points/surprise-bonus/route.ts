@@ -5,7 +5,7 @@ import { requireAdminOrFeature } from "@/lib/api-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
-/** Give the `after()` drain room to finish a batch before the platform kills the function. */
+/** Room for the inline drain (default) or the `after()` drain (SYNC_PROCESS=false) to finish before the platform kills the function. */
 export const maxDuration = 60
 
 const bodySchema = z.object({
@@ -16,10 +16,8 @@ const bodySchema = z.object({
 
 /**
  * POST /api/admin/points/surprise-bonus
- * Create Surprise Bonus campaign + enqueue first DB job.
- * Local/dev: drains the queue inline (credits users in this request).
- * Production: returns quickly; drains via `after()` + Vercel cron
- * `/api/cron/process-surprise-bonus` (Supabase Edge Function optional).
+ * Create Surprise Bonus campaign + enqueue first DB job, then credit users inline
+ * by default (so status reaches completed on Vercel without Edge Function).
  */
 export async function POST(request: NextRequest) {
   await connection()

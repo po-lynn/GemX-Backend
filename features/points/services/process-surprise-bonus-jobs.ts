@@ -35,6 +35,18 @@ export type ProcessBatchResult =
       pushSentTo?: number
     }
 
+/** Normalize drizzle/postgres-js execute results (array, RowList, or { rows }). */
+function asRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[]
+  if (result && typeof result === "object" && Array.isArray((result as { rows: unknown }).rows)) {
+    return (result as { rows: T[] }).rows
+  }
+  if (result && typeof result === "object" && Symbol.iterator in (result as object)) {
+    return [...(result as Iterable<T>)]
+  }
+  return []
+}
+
 /**
  * Claim one pending surprise_bonus_batch job and credit up to BATCH_SIZE users.
  * Mirrors supabase/functions/process-background-jobs (Node/Drizzle path for local/dev).
@@ -42,9 +54,11 @@ export type ProcessBatchResult =
 export async function processOneSurpriseBonusBatch(
   lockedBy = `local-${crypto.randomUUID().slice(0, 8)}`,
 ): Promise<ProcessBatchResult> {
-  const claimedRows = (await db.execute(sql`
-    SELECT * FROM claim_background_job(${SURPRISE_BONUS_JOB_TYPE}, ${lockedBy})
-  `)) as unknown as ClaimedJob[]
+  const claimedRows = asRows<ClaimedJob>(
+    await db.execute(sql`
+      SELECT * FROM claim_background_job(${SURPRISE_BONUS_JOB_TYPE}, ${lockedBy})
+    `),
+  )
 
   const job = claimedRows[0]
   if (!job?.id) return { claimed: false }
@@ -78,9 +92,11 @@ export async function processOneSurpriseBonusBatch(
     const newlyGrantedUserIds: string[] = []
 
     for (const u of batch) {
-      const grantRows = (await db.execute(sql`
-        SELECT grant_surprise_bonus_user(${campaignId}, ${u.id}) AS result
-      `)) as unknown as Array<{ result: GrantResult | string }>
+      const grantRows = asRows<{ result: GrantResult | string }>(
+        await db.execute(sql`
+          SELECT grant_surprise_bonus_user(${campaignId}, ${u.id}) AS result
+        `),
+      )
 
       let result: GrantResult | string | undefined = grantRows[0]?.result
       if (typeof result === "string") {
