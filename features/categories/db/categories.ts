@@ -1,6 +1,7 @@
 import { db } from "@/drizzle/db"
 import { category } from "@/drizzle/schema/category-schema"
-import { eq, asc } from "drizzle-orm"
+import { product } from "@/drizzle/schema/product-schema"
+import { and, asc, eq, ne, sql } from "drizzle-orm"
 
 export type CategoryRow = {
   id: string
@@ -10,27 +11,51 @@ export type CategoryRow = {
   image: string | null
   slug: string
   sortOrder: number
+  /** Active marketplace listings in this category (status=active, not rejected). */
+  productCount: number
   createdAt: Date
   updatedAt: Date
 }
+
+const categorySelect = {
+  id: category.id,
+  type: category.type,
+  name: category.name,
+  shortCode: category.shortCode,
+  image: category.image,
+  slug: category.slug,
+  sortOrder: category.sortOrder,
+  productCount: sql<number>`count(${product.id})::int`.as("product_count"),
+  createdAt: category.createdAt,
+  updatedAt: category.updatedAt,
+}
+
+/** Join condition: same filters as public GET /api/products list. */
+const activeListingJoin = and(
+  eq(product.categoryId, category.id),
+  eq(product.status, "active"),
+  ne(product.moderationStatus, "rejected"),
+)
 
 export async function getCategoriesByType(
   type: "loose_stone" | "jewellery"
 ): Promise<CategoryRow[]> {
   const rows = await db
-    .select({
-      id: category.id,
-      type: category.type,
-      name: category.name,
-      shortCode: category.shortCode,
-      image: category.image,
-      slug: category.slug,
-      sortOrder: category.sortOrder,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-    })
+    .select(categorySelect)
     .from(category)
+    .leftJoin(product, activeListingJoin)
     .where(eq(category.type, type))
+    .groupBy(
+      category.id,
+      category.type,
+      category.name,
+      category.shortCode,
+      category.image,
+      category.slug,
+      category.sortOrder,
+      category.createdAt,
+      category.updatedAt,
+    )
     .orderBy(asc(category.sortOrder), asc(category.name))
 
   return rows
@@ -38,18 +63,20 @@ export async function getCategoriesByType(
 
 export async function getAllCategories(): Promise<CategoryRow[]> {
   const rows = await db
-    .select({
-      id: category.id,
-      type: category.type,
-      name: category.name,
-      shortCode: category.shortCode,
-      image: category.image,
-      slug: category.slug,
-      sortOrder: category.sortOrder,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-    })
+    .select(categorySelect)
     .from(category)
+    .leftJoin(product, activeListingJoin)
+    .groupBy(
+      category.id,
+      category.type,
+      category.name,
+      category.shortCode,
+      category.image,
+      category.slug,
+      category.sortOrder,
+      category.createdAt,
+      category.updatedAt,
+    )
     .orderBy(asc(category.type), asc(category.sortOrder), asc(category.name))
 
   return rows
@@ -57,19 +84,21 @@ export async function getAllCategories(): Promise<CategoryRow[]> {
 
 export async function getCategoryById(id: string): Promise<CategoryRow | null> {
   const [row] = await db
-    .select({
-      id: category.id,
-      type: category.type,
-      name: category.name,
-      shortCode: category.shortCode,
-      image: category.image,
-      slug: category.slug,
-      sortOrder: category.sortOrder,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-    })
+    .select(categorySelect)
     .from(category)
+    .leftJoin(product, activeListingJoin)
     .where(eq(category.id, id))
+    .groupBy(
+      category.id,
+      category.type,
+      category.name,
+      category.shortCode,
+      category.image,
+      category.slug,
+      category.sortOrder,
+      category.createdAt,
+      category.updatedAt,
+    )
 
   return row ?? null
 }
