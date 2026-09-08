@@ -129,7 +129,7 @@
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
-| GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `type` (optional)                                                                                                                                    |
+| GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `type` (optional)                                                                                                                                    |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for saving as `category.image` (admin only). See **4.1a**.                                                     |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
 | GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See **5.4b**.                                                                                                                                       |
@@ -327,7 +327,7 @@ Used for dropdowns/filters when creating or editing products. **No auth required
 - Loose stones only: `GET /api/categories?type=loose_stone`
 - Jewellery only: `GET /api/categories?type=jewellery`
 
-**Success (200):** Array of categories.
+**Success (200):** Array of categories. Each item includes **`productCount`**: number of **active** marketplace listings in that category (`status=active`, `moderationStatus` not `rejected` — same visibility as **GET `/api/products`**).
 
 ```json
 [
@@ -337,12 +337,13 @@ Used for dropdowns/filters when creating or editing products. **No auth required
     "name": "Sapphire",
     "image": "https://…/category.jpg",
     "slug": "sapphire",
-    "sortOrder": 0
+    "sortOrder": 0,
+    "productCount": 12
   }
 ]
 ```
 
-**Use in app:** Call this once (e.g. on app start or when opening “Add product”), cache the list, and use `id` / `name` for product `categoryId` and UI.
+**Use in app:** Call this once (e.g. on app start or when opening “Add product”), cache the list, and use `id` / `name` for product `categoryId` and UI. Use `productCount` for filter chips / badges.
 
 ---
 
@@ -3840,7 +3841,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
-| GET    | `/api/categories`      | No   | List categories (includes optional `image`). Query: `?type` optional                                        |
+| GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `?type` optional                                        |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (admin only). Returns `url` for `category.image`. See 4.1a.                      |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
 | GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See 5.4b.                                             |
