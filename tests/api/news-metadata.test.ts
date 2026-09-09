@@ -15,7 +15,16 @@ const params = (id: string) => Promise.resolve({ id })
 const publishedNews = {
   id: "1a2b3c4d-5e6f-4a5b-8c9d-0e1f2a3b4c5d",
   title: "New Verification Process",
+  language: "English",
+  titleEn: null,
+  titleMy: null,
+  titleTh: null,
+  titleKo: null,
   content: JSON.stringify([{ type: "paragraph", content: [{ type: "text", text: "We've updated verification." }] }]),
+  contentEn: null,
+  contentMy: null,
+  contentTh: null,
+  contentKo: null,
   author: "Gem X Newsroom",
   category: "general",
   coverImage: "https://cdn.example.com/news-cover.jpg",
@@ -38,7 +47,7 @@ describe("generateMetadata for /news/[id]", () => {
     expect(metadata.title).toBe("New Verification Process")
     expect(metadata.description).toBe("We've updated verification.")
     expect(metadata.openGraph?.images).toEqual(["https://cdn.example.com/news-cover.jpg"])
-    expect(metadata.twitter?.card).toBe("summary_large_image")
+    expect((metadata.twitter as { card?: string } | undefined)?.card).toBe("summary_large_image")
   })
 
   // No cover image means the images fields are omitted, not a broken/empty array

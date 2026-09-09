@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -167,9 +167,11 @@ export function ArticleForm({ mode, article, prevHref, nextHref, listPosition, l
     enabled: isEdit,
   });
 
-  useEffect(() => {
+  const [prevAutoSaveState, setPrevAutoSaveState] = useState(autoSaveState);
+  if (autoSaveState !== prevAutoSaveState) {
+    setPrevAutoSaveState(autoSaveState);
     if (autoSaveState === "saved") setDirty(false);
-  }, [autoSaveState]);
+  }
 
   function switchEditLanguage(next: NewsLanguage) {
     if (next === editLanguage) return;

@@ -161,7 +161,7 @@ describe("drainSurpriseBonusJobs", () => {
     })
   })
 
-  it("stops when a batch reports no more work", async () => {
+  it("stops once the queue has no more claimable jobs", async () => {
     vi.mocked(db.execute)
       .mockResolvedValueOnce([
         {
@@ -174,6 +174,8 @@ describe("drainSurpriseBonusJobs", () => {
         },
       ] as never)
       .mockResolvedValueOnce([{ result: { granted: true, points: 10 } }] as never)
+      // Second claim attempt: nothing left pending.
+      .mockResolvedValueOnce([] as never)
 
     const userSelect = mockSelectChain([{ id: "u1" }])
     const campaignSelect = mockSelectChain([
@@ -199,5 +201,60 @@ describe("drainSurpriseBonusJobs", () => {
       campaignStatus: "completed",
       hasMore: false,
     })
+  })
+
+  it("keeps draining a different campaign's job after the first one's chain finishes", async () => {
+    // Regression test: a claimed batch reporting hasMore:false only means that
+    // one campaign's chain is done, not that the queue is empty. A backlog of
+    // several independent stuck campaigns (e.g. via the admin "Retry stuck
+    // jobs" button) must all get processed in one drain, up to maxBatches.
+    vi.mocked(db.execute)
+      .mockResolvedValueOnce([
+        {
+          id: "job-1",
+          type: "surprise_bonus_batch",
+          payload: { campaignId: "camp-1", lastUserId: null },
+          status: "pending",
+          attempts: 0,
+          max_attempts: 5,
+        },
+      ] as never)
+      .mockResolvedValueOnce([{ result: { granted: true, points: 10 } }] as never)
+      .mockResolvedValueOnce([
+        {
+          id: "job-2",
+          type: "surprise_bonus_batch",
+          payload: { campaignId: "camp-2", lastUserId: null },
+          status: "pending",
+          attempts: 0,
+          max_attempts: 5,
+        },
+      ] as never)
+      .mockResolvedValueOnce([{ result: { granted: true, points: 20 } }] as never)
+      // Third claim attempt: queue is finally empty.
+      .mockResolvedValueOnce([] as never)
+
+    const userSelect1 = mockSelectChain([{ id: "u1" }])
+    const campaignSelect1 = mockSelectChain([
+      { name: "Camp 1", pointsPerUser: 10, processedUsers: 0, successCount: 0, failedCount: 0 },
+    ])
+    const userSelect2 = mockSelectChain([{ id: "u2" }])
+    const campaignSelect2 = mockSelectChain([
+      { name: "Camp 2", pointsPerUser: 20, processedUsers: 0, successCount: 0, failedCount: 0 },
+    ])
+    vi.mocked(db.select)
+      .mockReturnValueOnce(userSelect1 as never)
+      .mockReturnValueOnce(campaignSelect1 as never)
+      .mockReturnValueOnce(userSelect2 as never)
+      .mockReturnValueOnce(campaignSelect2 as never)
+    vi.mocked(db.update)
+      .mockReturnValueOnce(mockUpdateChain() as never)
+      .mockReturnValueOnce(mockUpdateChain() as never)
+      .mockReturnValueOnce(mockUpdateChain() as never)
+      .mockReturnValueOnce(mockUpdateChain() as never)
+
+    const drained = await drainSurpriseBonusJobs({ maxBatches: 10 })
+    expect(drained.batches).toBe(2)
+    expect(drained.last).toMatchObject({ claimed: true, campaignId: "camp-2" })
   })
 })

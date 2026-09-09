@@ -52,6 +52,10 @@ const mockUser = {
   city: null,
   state: null,
   country: null,
+  nrcFrontUrl: null,
+  nrcBackUrl: null,
+  selfieUrl: null,
+  businessLicenseUrl: null,
 }
 
 describe("GET /api/profile", () => {

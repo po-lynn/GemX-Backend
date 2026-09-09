@@ -38,6 +38,8 @@ describe("GET /api/mobile/escrow-chat-user", () => {
         image: "https://example.com/a.png",
         role: "admin",
       },
+      serviceFee: "5%",
+      serviceOverview: "Secure escrow for high-value gemstone trades.",
     })
 
     const req = new Request("http://localhost/api/mobile/escrow-chat-user") as NextRequest
@@ -61,6 +63,8 @@ describe("GET /api/mobile/escrow-chat-user", () => {
     vi.mocked(escrowDb.getEscrowServiceChatUser).mockResolvedValue({
       configured: false,
       user: null,
+      serviceFee: "",
+      serviceOverview: "",
     })
 
     const req = new Request("http://localhost/api/mobile/escrow-chat-user") as NextRequest

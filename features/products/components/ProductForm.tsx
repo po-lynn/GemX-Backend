@@ -303,10 +303,11 @@ function SellerSearchModal({
   const from = total === 0 ? 0 : (page - 1) * SELLER_MODAL_PAGE_SIZE + 1
   const to = Math.min(page * SELLER_MODAL_PAGE_SIZE, total)
 
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) { setQuery(initialQuery); setPage(1) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }
 
   useEffect(() => {
     if (!open) return
@@ -522,9 +523,16 @@ function SellerPicker({
     }
   }, [syncPos])
 
+  const queryEmpty = query.trim() === ""
+  const [prevQueryEmpty, setPrevQueryEmpty] = useState(queryEmpty)
+  if (queryEmpty !== prevQueryEmpty) {
+    setPrevQueryEmpty(queryEmpty)
+    if (queryEmpty) setOpen(false)
+  }
+
   useEffect(() => {
     const q = query.trim()
-    if (!q) { setOpen(false); return }
+    if (!q) return
     const t = setTimeout(() => runSearch(q), 300)
     return () => clearTimeout(t)
   }, [query, runSearch])
@@ -800,7 +808,11 @@ export function ProductForm({
   const currentCategory = categories.find((c) => c.id === product?.categoryId)
   const gemHue = getGemHue(currentCategory?.name)
 
-  useEffect(() => {
+  // Field-level key: avoid resetting on every product object identity change.
+  const descriptionFieldsKey = [product?.id, product?.language, product?.description, product?.descriptionEn, product?.descriptionMy, product?.descriptionTh, product?.descriptionKo, mode].join("|")
+  const [prevDescriptionFieldsKey, setPrevDescriptionFieldsKey] = useState(descriptionFieldsKey)
+  if (descriptionFieldsKey !== prevDescriptionFieldsKey) {
+    setPrevDescriptionFieldsKey(descriptionFieldsKey)
     const nextTitles = initialTitlesByLang(product)
     const nextDescriptions = initialDescriptionsByLang(product)
     const source = isProductLanguage(product?.language) ? product!.language : "English"
@@ -810,49 +822,68 @@ export function ProductForm({
     setDescriptionText(
       mode === "edit" ? nextDescriptions[source] : (product?.description ?? ""),
     )
-    // Field-level deps: avoid resetting on every product object identity change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- product fields listed explicitly
-  }, [product?.id, product?.language, product?.description, product?.descriptionEn, product?.descriptionMy, product?.descriptionTh, product?.descriptionKo, mode])
+  }
 
-  useEffect(() => {
+  const [prevProductDimensions, setPrevProductDimensions] = useState(product?.dimensions)
+  if (product?.dimensions !== prevProductDimensions) {
+    setPrevProductDimensions(product?.dimensions)
     const [p1, p2, p3] = parseDimensions(product?.dimensions)
     setDimensionsPart1(p1)
     setDimensionsPart2(p2)
     setDimensionsPart3(p3)
-  }, [product?.dimensions])
+  }
 
-  useEffect(() => {
+  const moderationKey = `${product?.id}|${product?.moderationStatus}`
+  const [prevModerationKey, setPrevModerationKey] = useState(moderationKey)
+  if (moderationKey !== prevModerationKey) {
+    setPrevModerationKey(moderationKey)
     setModerationStatus(product?.moderationStatus ?? "pending")
-  }, [product?.id, product?.moderationStatus])
+  }
 
-  useEffect(() => {
+  const [prevProductImageUrls, setPrevProductImageUrls] = useState(product?.imageUrls)
+  const [prevProductVideoUrls, setPrevProductVideoUrls] = useState(product?.videoUrls)
+  if (product?.imageUrls !== prevProductImageUrls || product?.videoUrls !== prevProductVideoUrls) {
+    setPrevProductImageUrls(product?.imageUrls)
+    setPrevProductVideoUrls(product?.videoUrls)
     setImageUrlsList(product?.imageUrls ?? [])
     setVideoUrlsList(product?.videoUrls ?? [])
-  }, [product?.imageUrls, product?.videoUrls])
+  }
 
-  useEffect(() => {
+  const [prevCertReportUrl, setPrevCertReportUrl] = useState(product?.certReportUrl)
+  if (product?.certReportUrl !== prevCertReportUrl) {
+    setPrevCertReportUrl(product?.certReportUrl)
     setCertReportUrl(product?.certReportUrl ?? "")
-  }, [product?.certReportUrl])
+  }
 
-  useEffect(() => {
+  const isFeaturedKey = `${product?.id}|${product?.isFeatured}`
+  const [prevIsFeaturedKey, setPrevIsFeaturedKey] = useState(isFeaturedKey)
+  if (isFeaturedKey !== prevIsFeaturedKey) {
+    setPrevIsFeaturedKey(isFeaturedKey)
     setIsFeatured(product?.isFeatured ?? false)
-  }, [product?.id, product?.isFeatured])
+  }
 
-  useEffect(() => {
+  const isCollectorPieceKey = `${product?.id}|${product?.isCollectorPiece}`
+  const [prevIsCollectorPieceKey, setPrevIsCollectorPieceKey] = useState(isCollectorPieceKey)
+  if (isCollectorPieceKey !== prevIsCollectorPieceKey) {
+    setPrevIsCollectorPieceKey(isCollectorPieceKey)
     setIsCollectorPiece(product?.isCollectorPiece ?? false)
-  }, [product?.id, product?.isCollectorPiece])
+  }
 
-  useEffect(() => {
+  const isPrivilegeAssistKey = `${product?.id}|${product?.isPrivilegeAssist}`
+  const [prevIsPrivilegeAssistKey, setPrevIsPrivilegeAssistKey] = useState(isPrivilegeAssistKey)
+  if (isPrivilegeAssistKey !== prevIsPrivilegeAssistKey) {
+    setPrevIsPrivilegeAssistKey(isPrivilegeAssistKey)
     setIsPrivilegeAssist(product?.isPrivilegeAssist ?? false)
-  }, [product?.id, product?.isPrivilegeAssist])
+  }
 
-  useEffect(() => {
-    if (!product?.featuredExpiresAt) {
-      setFeaturedExpiresAtStr("")
-      return
-    }
-    setFeaturedExpiresAtStr(new Date(product.featuredExpiresAt).toISOString().slice(0, 10))
-  }, [product?.id, product?.featuredExpiresAt])
+  const featuredExpiresAtKey = `${product?.id}|${product?.featuredExpiresAt}`
+  const [prevFeaturedExpiresAtKey, setPrevFeaturedExpiresAtKey] = useState(featuredExpiresAtKey)
+  if (featuredExpiresAtKey !== prevFeaturedExpiresAtKey) {
+    setPrevFeaturedExpiresAtKey(featuredExpiresAtKey)
+    setFeaturedExpiresAtStr(
+      product?.featuredExpiresAt ? new Date(product.featuredExpiresAt).toISOString().slice(0, 10) : "",
+    )
+  }
 
   const tierAutoFillMounted = useRef(false)
   useEffect(() => {
@@ -864,7 +895,7 @@ export function ProductForm({
     const days = Number(selectedFeatureTier.split(":")[0])
     if (!Number.isFinite(days) || days <= 0) return
     const expiry = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
-    setFeaturedExpiresAtStr(expiry.toISOString().slice(0, 10))
+    queueMicrotask(() => setFeaturedExpiresAtStr(expiry.toISOString().slice(0, 10)))
   }, [selectedFeatureTier])
 
   // ── Gemstone dialog ──

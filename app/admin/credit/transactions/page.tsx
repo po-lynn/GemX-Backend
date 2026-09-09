@@ -9,6 +9,7 @@ import {
 } from "@/features/points/db/points"
 import { PointTransactionsTable } from "@/features/points/components/PointTransactionsTable"
 import { PointActionButtons } from "@/features/points/components/PointActionButtons"
+import { SurpriseBonusJobsPanel } from "@/features/points/components/SurpriseBonusJobsPanel"
 import { countEligibleMonthlyBonusUsers } from "@/features/points/db/monthly-bonus"
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp } from "@/components/admin/motion"
@@ -112,6 +113,8 @@ export default async function AdminPointTransactionsPage({ searchParams }: Props
         pageSize={PAGE_SIZE}
         total={total}
       />
+
+      <SurpriseBonusJobsPanel />
     </div>
     </FadeUp>
   )

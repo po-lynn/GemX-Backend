@@ -221,7 +221,11 @@ function PriceField({ label, prefix, value, onCommit }: {
   onCommit: (n: number) => void
 }) {
   const [text, setText] = useState(value.toLocaleString("en-US"))
-  useEffect(() => { setText(value.toLocaleString("en-US")) }, [value])
+  const [prevValue, setPrevValue] = useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
+    setText(value.toLocaleString("en-US"))
+  }
 
   const commit = () => {
     const n = parseInt(text.replace(/[^0-9]/g, ""), 10)

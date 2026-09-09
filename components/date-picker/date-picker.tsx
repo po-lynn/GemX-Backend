@@ -42,9 +42,11 @@ export default function DatePicker({
   const initialDate = parseDateValue(value)
   const [date, setDate] = React.useState<Date | undefined>(initialDate)
 
-  React.useEffect(() => {
+  const [prevValue, setPrevValue] = React.useState(value)
+  if (value !== prevValue) {
+    setPrevValue(value)
     setDate(parseDateValue(value))
-  }, [value])
+  }
 
   function handleSelect(selected: Date | undefined) {
     setDate(selected)

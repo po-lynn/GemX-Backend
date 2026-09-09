@@ -16,8 +16,18 @@ const publishedArticle = {
   id: "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
   title: "Gemstone Identification",
   slug: "gemstone-identification",
+  language: "English",
+  titleEn: null,
+  titleMy: null,
+  titleTh: null,
+  titleKo: null,
   content: JSON.stringify([{ type: "paragraph", content: [{ type: "text", text: "How to verify a gemstone." }] }]),
+  contentEn: null,
+  contentMy: null,
+  contentTh: null,
+  contentKo: null,
   author: "Gem X Newsroom",
+  type: "article",
   category: "gemology",
   coverImage: "https://cdn.example.com/cover.jpg",
   isFeatured: false,
@@ -39,7 +49,7 @@ describe("generateMetadata for /articles/[id]", () => {
     expect(metadata.title).toBe("Gemstone Identification")
     expect(metadata.description).toBe("How to verify a gemstone.")
     expect(metadata.openGraph?.images).toEqual(["https://cdn.example.com/cover.jpg"])
-    expect(metadata.twitter?.card).toBe("summary_large_image")
+    expect((metadata.twitter as { card?: string } | undefined)?.card).toBe("summary_large_image")
   })
 
   // No cover image means the images fields are omitted, not a broken/empty array

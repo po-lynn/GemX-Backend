@@ -45,6 +45,7 @@ describe("enqueueSurpriseBonusAction", () => {
       totalUsers: 100,
       pointsPerUser: 500,
       campaignName: "Sweet December",
+      processedInline: true,
     })
     const result = await enqueueSurpriseBonusAction("Sweet December", 500)
     expect(result).toEqual({
@@ -53,6 +54,7 @@ describe("enqueueSurpriseBonusAction", () => {
       totalUsers: 100,
       pointsPerUser: 500,
       campaignName: "Sweet December",
+      processedInline: true,
     })
   })
 
@@ -66,6 +68,7 @@ describe("enqueueSurpriseBonusAction", () => {
       totalUsers: 100,
       pointsPerUser: 500,
       campaignName: "Sweet December",
+      processedInline: true,
     })
 
     const result = await enqueueSurpriseBonusAction("Sweet December", 500, "note")

@@ -60,6 +60,7 @@ describe("updateArticleAction notification guard", () => {
       contentTh: null,
       contentKo: null,
       author: "",
+      type: "article",
       category: "general",
       coverImage: null,
       isFeatured: false,

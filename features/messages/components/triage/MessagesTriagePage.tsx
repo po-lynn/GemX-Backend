@@ -206,13 +206,15 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
     return null
   }, [activeConversation, currentUserId])
 
-  useEffect(() => {
+  const [prevEffectiveSelectedId, setPrevEffectiveSelectedId] = useState(effectiveSelectedId)
+  if (effectiveSelectedId !== prevEffectiveSelectedId) {
+    setPrevEffectiveSelectedId(effectiveSelectedId)
     setReplyValue("")
     setReplyAttachments((prev) => {
       revokeAttachmentPreviews(prev)
       return []
     })
-  }, [effectiveSelectedId])
+  }
 
   function handlePickAttachments(fileList: FileList | null) {
     const files = Array.from(fileList ?? [])
@@ -293,7 +295,7 @@ export function MessagesTriagePage({ initialConversations, initialMessages, curr
   }, [activeConversation, currentUserId])
 
   useEffect(() => {
-    fetchThread()
+    queueMicrotask(fetchThread)
   }, [fetchThread])
 
   async function uploadReplyAttachment(file: File): Promise<string> {

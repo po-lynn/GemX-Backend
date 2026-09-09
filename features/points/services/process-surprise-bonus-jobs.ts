@@ -215,8 +215,12 @@ export async function processOneSurpriseBonusBatch(
 }
 
 /**
- * Drain pending surprise_bonus_batch jobs until the queue is empty for this run.
- * Used after enqueue in local/dev so Top-up credits users without Cron.
+ * Drain pending surprise_bonus_batch jobs until the queue is empty for this run
+ * (or `maxBatches` is reached) — including jobs from *other* campaigns, not just
+ * the one that triggered this drain. `hasMore:false` on a claimed batch only means
+ * that campaign's own chain is done; it does not mean the queue is empty, so it
+ * must not stop the loop — otherwise a backlog of independent stuck campaigns
+ * only ever gets one drained per call (see docs/technical/surprise-bonus-jobs-panel.md).
  */
 export async function drainSurpriseBonusJobs(options?: {
   maxBatches?: number
@@ -230,7 +234,6 @@ export async function drainSurpriseBonusJobs(options?: {
     if (!result.claimed) break
     batches++
     last = result
-    if (!result.hasMore) break
   }
 
   return { batches, last }
