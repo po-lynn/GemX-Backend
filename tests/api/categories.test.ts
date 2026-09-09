@@ -20,18 +20,20 @@ describe("GET /api/categories", () => {
   })
 
   it("returns 200 and categories when type is loose_stone", async () => {
-    const categories = [{ id: "cat-1", name: "Ruby", type: "loose_stone" }]
+    // Validates: type filter is forwarded and productCount is passed through in the response.
+    const categories = [{ id: "cat-1", name: "Ruby", type: "loose_stone", productCount: 12 }]
     vi.mocked(getCategoriesByType).mockResolvedValue(categories as never)
     const req = new Request("http://localhost/api/categories?type=loose_stone")
     const res = await GET(req as NextRequest)
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data).toEqual(categories)
+    expect(data[0].productCount).toBe(12)
     expect(getCategoriesByType).toHaveBeenCalledWith("loose_stone")
   })
 
   it("returns 200 and categories when type is jewellery", async () => {
-    const categories = [{ id: "cat-2", name: "Ring", type: "jewellery" }]
+    const categories = [{ id: "cat-2", name: "Ring", type: "jewellery", productCount: 0 }]
     vi.mocked(getCategoriesByType).mockResolvedValue(categories as never)
     const req = new Request("http://localhost/api/categories?type=jewellery")
     const res = await GET(req as NextRequest)
@@ -42,7 +44,7 @@ describe("GET /api/categories", () => {
   })
 
   it("returns all categories when type is missing or invalid", async () => {
-    const categories = [{ id: "a", name: "All" }]
+    const categories = [{ id: "a", name: "All", productCount: 3 }]
     vi.mocked(getAllCategories).mockResolvedValue(categories as never)
     const req = new Request("http://localhost/api/categories")
     const res = await GET(req as NextRequest)
