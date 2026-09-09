@@ -59,16 +59,21 @@ features go through this module.
 ```ts
 export type QueueJobPayload = Record<string, unknown>
 
-export type ClaimedQueueJob<TPayload extends QueueJobPayload = QueueJobPayload> = {
+// Not generic over payload type: ClaimedQueueJob<TPayload> would make
+// QueueJobHandler<TPayload> contravariant, so a feature's handler (typed to
+// its own payload shape) fails to type-check when assigned into
+// QueueJobDefinition.handler (typed as the base QueueJobHandler). Every
+// payload is untyped JSONB underneath anyway, so handlers cast job.payload
+// to their own shape internally instead.
+export type ClaimedQueueJob = {
   id: string
   type: string
-  payload: TPayload
+  payload: QueueJobPayload
   attempts: number
   maxAttempts: number
 }
 
-export type QueueJobHandler<TPayload extends QueueJobPayload = QueueJobPayload> =
-  (job: ClaimedQueueJob<TPayload>) => Promise<void>
+export type QueueJobHandler = (job: ClaimedQueueJob) => Promise<void>
 
 export type QueueJobRow = {
   id: string
