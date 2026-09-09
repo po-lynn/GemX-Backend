@@ -147,3 +147,51 @@ issues. Fixed by:
 No production code changed in this follow-up — every fix is in `tests/`. Confirmed via
 `npm run build` (TypeScript pass now clean) and `npm run test` (same 1039 passing / 16
 pre-existing unrelated failures as before, so nothing shifted).
+
+## Cache Components (`instant`) opt-out sweep (follow-up)
+
+Running `next dev` surfaced a new-to-16.x diagnostic on nearly every route:
+
+```
+Error: Route "/": Next.js encountered uncached data during prerendering or a navigation.
+`fetch(...)` or `connection()` accessed outside of `<Suspense>` prevents the route from
+being prerendered or the navigation from being instant...
+```
+
+This is the "instant navigation validation" feature that ships with `cacheComponents`
+(already enabled in `next.config.ts` before this upgrade — confirmed via `git log`, not
+something this upgrade added). It's a **dev-only warning**: it doesn't fail `next build`
+or affect production behavior; `next start` doesn't run this validation at all today. Every
+route in this app reads request-time data (DB queries, `auth.api.getSession()`/`headers()`)
+without the `<Suspense>`-streaming architecture the feature expects, so essentially the
+whole app tripped it.
+
+Rather than hand-writing `<Suspense>` boundaries and `use cache`/`use cache: private`
+directives across dozens of pages and layouts — a real architectural change with
+correctness stakes, especially around session-derived data that must never be cached
+across users — this was fixed using Next's own officially-documented bulk migration path
+for exactly this situation ([Migrating to Cache Components §Adopting incrementally](https://nextjs.org/docs/app/guides/migrating-to-cache-components#adopting-incrementally)):
+
+```bash
+npx @next/codemod@canary cache-components-instant-false ./app
+```
+
+This adds `export const instant = false` (with a `TODO: Cache Components adoption` comment
+linking back to the migration guide) to every `page`/`layout`/`default` segment that didn't
+already declare `instant` — 62 files, all one-line-conceptually diffs. `instant = false`
+marks a segment as "allowed to block"; it does **not** change rendering behavior, caching,
+or correctness — these routes were already fully dynamic in practice, this just tells Next
+that's intentional and suppresses the validation warning for them. One file
+(`app/products/[id]/page.tsx`) picked up unrelated cosmetic reformatting from the codemod's
+AST reprint (extra parens around a JSX conditional, a stray semicolon) — manually reverted
+to match the file's existing no-semicolon style; the `instant = false` addition itself was
+untouched.
+
+This is explicitly an **interim, incremental opt-out**, not a fix — see the `TODO` comment
+in each file. A real adoption (wrapping request-time reads in `<Suspense>`, adding
+`use cache`/`use cache: private` where data can be cached) is future work, done one route at
+a time per Next's migration guide, not part of this pass.
+
+Verified via `npm run build` (clean), `npm run lint` (clean, same pre-existing warning),
+`npm run test` (same 1039/16 baseline), and a live `next dev` check confirming the
+diagnostic no longer appears for `/` or `/admin`.

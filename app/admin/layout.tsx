@@ -8,6 +8,10 @@ import { AdminChatNotificationProvider } from "@/features/chat/context/admin-cha
 import { auth } from "@/lib/auth"
 import { getUserPermissions } from "@/features/rbac/db/permissions"
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {

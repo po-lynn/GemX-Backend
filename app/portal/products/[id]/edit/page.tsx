@@ -7,6 +7,10 @@ import { getAllLaboratories } from "@/features/laboratory/db/laboratory"
 import { getAllOrigins } from "@/features/origin/db/origin"
 import PortalProductForm from "@/components/portal/PortalProductForm"
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 type Params = { params: Promise<{ id: string }> }
 
 export default async function EditPortalProductPage({ params }: Params) {
