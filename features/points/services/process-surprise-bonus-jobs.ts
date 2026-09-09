@@ -1,10 +1,7 @@
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import {
-  backgroundJobs,
-  surpriseBonusCampaign,
-  SURPRISE_BONUS_JOB_TYPE,
-} from "@/drizzle/schema/surprise-bonus-schema"
+import { surpriseBonusCampaign, SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import { backgroundJobs } from "@/drizzle/schema/queue-schema"
 import { sendSurpriseBonusPushToUsers } from "@/features/points/services/surprise-bonus-push"
 import { and, asc, eq, gt, sql } from "drizzle-orm"
 

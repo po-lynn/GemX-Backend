@@ -1,10 +1,7 @@
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import {
-  backgroundJobs,
-  surpriseBonusCampaign,
-  SURPRISE_BONUS_JOB_TYPE,
-} from "@/drizzle/schema/surprise-bonus-schema"
+import { surpriseBonusCampaign, SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import { backgroundJobs } from "@/drizzle/schema/queue-schema"
 import { and, desc, eq, sql } from "drizzle-orm"
 
 /** Matches the reclaim window in claim_background_job (migration 0087). */

@@ -51,34 +51,6 @@ export const surpriseBonusCampaign = pgTable(
 ).enableRLS()
 
 /**
- * Database-backed job queue (no Redis). Claimed with FOR UPDATE SKIP LOCKED via RPC.
- */
-export const backgroundJobs = pgTable(
-  "background_jobs",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    type: text("type").notNull(),
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-    /** pending | processing | completed | failed */
-    status: text("status").notNull().default("pending"),
-    attempts: integer("attempts").notNull().default(0),
-    maxAttempts: integer("max_attempts").notNull().default(5),
-    availableAt: timestamp("available_at").defaultNow().notNull(),
-    lockedAt: timestamp("locked_at"),
-    lockedBy: text("locked_by"),
-    lastError: text("last_error"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    completedAt: timestamp("completed_at"),
-  },
-  (table) => [
-    index("bj_status_available_idx").on(table.status, table.availableAt),
-    index("bj_type_status_idx").on(table.type, table.status),
-  ],
-).enableRLS()
-
-/**
  * In-app system notifications (not chat). Used for surprise_bonus and future types.
  */
 export const appNotification = pgTable(
