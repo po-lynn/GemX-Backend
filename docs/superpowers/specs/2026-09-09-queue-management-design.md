@@ -113,7 +113,7 @@ export type QueueJobDefinition = {
 - `STALE_AFTER_MS` exported constant (3 minutes), matching the reclaim window baked into `claim_background_job` (migration `0087`) — single source of truth for the "is this row stale" computation used by both `listJobs` and `getJobStatusCounts`.
 
 **`lib/queue/drain.ts`**
-- `drainJobs(type: string, handler: QueueJobHandler, opts?: { maxBatches?: number; lockedBy?: string }): Promise<{ batches: number }>` — loop: `claimJob` → `handler(job)` → `completeJob`; on throw, `failOrRetryJob` and **continue the loop** (does not abort remaining jobs). This is a deliberate behavior improvement over today's `drainSurpriseBonusJobs`, whose un-caught loop aborts entirely on the first thrown error, silently blocking unrelated pending jobs of the same type.
+- `drainJobs(type: string, handler: QueueJobHandler, opts?: { maxBatches?: number; lockedBy?: string }): Promise<{ batches: number }>` — loop: `claimJob` → `handler(job)` → `completeJob`; on throw, records the failure via `failOrRetryJob` (bookkeeping: backoff or terminal `failed`) and **rethrows**, aborting the drain — this exactly mirrors today's `drainSurpriseBonusJobs`/`processOneSurpriseBonusBatch`. (An earlier draft of this spec proposed swallowing the error and continuing to the next job instead; that was reverted because `enqueueSurpriseBonusForAllUsers` depends on the throw propagating out of the inline drain to report "crediting failed" to the admin — silently continuing would turn that into a false-positive success response. A future feature that genuinely wants continue-past-error draining can request it explicitly; not building it now per YAGNI.)
 
 **`lib/queue/registry.ts`**
 - `registerQueueJob(def: QueueJobDefinition): void` — in-code registry (a module-level `Map`), not DB-backed.
@@ -221,16 +221,22 @@ code, visible on `/admin/queue` instead of an embedded panel.
 
 - `tests/unit/queue.test.ts` — `lib/queue` core: enqueue, claim (mocked RPC
   result shapes), complete, failOrRetry backoff math and the
-  max-attempts → `failed` transition, and the drain loop's continue-past-error
-  behavior. Mocked Drizzle.
+  max-attempts → `failed` transition, `listJobs`'s stale-flag edge cases
+  (ported from the deleted `surprise-bonus-jobs-db.test.ts`), and the drain
+  loop's throw-and-abort-with-bookkeeping behavior. Mocked Drizzle.
 - `tests/api/admin/queue.test.ts` — `GET`/`POST retry` routes: mocked
   `requireAdminOrFeature` (admin, RBAC-granted internal, forbidden), mocked
   `lib/queue` calls.
-- Update `tests/api/admin/surprise-bonus.test.ts`,
-  `tests/unit/surprise-bonus-stale-job-reclaim.test.ts`, and
-  `tests/unit/enqueue-surprise-bonus-after.test.ts` for the refactored call
-  sites. Remove/replace any test targeting the deleted
-  `jobs/route.ts`, `jobs/retry/route.ts`, or `SurpriseBonusJobsPanel.tsx`.
+- Update `tests/unit/process-surprise-bonus-jobs.test.ts` and
+  `tests/unit/enqueue-surprise-bonus.test.ts` for the refactored call sites
+  (`processSurpriseBonusJob` handler, `lib/queue`'s `enqueueJob`/`drainJobs`).
+  `tests/api/admin/surprise-bonus.test.ts` and
+  `tests/unit/surprise-bonus-stale-job-reclaim.test.ts` need no changes —
+  neither touches the refactored internals directly. Delete
+  `tests/api/admin/surprise-bonus-jobs.test.ts` and
+  `tests/unit/surprise-bonus-jobs-db.test.ts` (they test the removed
+  `jobs/route.ts`, `jobs/retry/route.ts`, and
+  `listSurpriseBonusJobs`/`getSurpriseBonusJobStatusCounts` directly).
 - `npm run test` must pass in full before this is considered done.
 
 ## Documentation
@@ -262,8 +268,9 @@ code, visible on `/admin/queue` instead of an embedded panel.
   non-admin trigger (not applicable to any feature today) would only drain
   via an admin visiting `/admin/queue` and clicking retry. Acceptable per
   the Non-goals section; revisit if a future feature needs otherwise.
-- `drainJobs` continuing past a per-job failure (rather than aborting the
-  whole batch) is a behavior change from today's Surprise Bonus drain loop.
-  It only affects the case of >1 independent jobs pending at once where one
-  throws — functionally strictly better (fewer stuck queues), but called
-  out here since it's a real behavior delta, not just a refactor.
+- A queue with multiple independent pending jobs of the same type where one
+  throws still has the same limitation today's `drainSurpriseBonusJobs` has:
+  the whole drain call aborts on the first error, leaving the rest
+  unprocessed until the next drain attempt (inline retry or manual "Retry
+  stuck jobs"). Preserved intentionally for functional parity — see the
+  `drainJobs` note above.
