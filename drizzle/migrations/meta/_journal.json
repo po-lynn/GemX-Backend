@@ -610,6 +610,20 @@
       "when": 1788693044856,
       "tag": "0087_reclaim_stale_surprise_bonus_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1788934919870,
+      "tag": "0088_zippy_scalphunter",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1788934928582,
+      "tag": "0089_product_search_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -285,21 +285,30 @@ export async function grantDueMonthlyBonusPoints(
       const batch = pending.slice(i, i + GRANT_BATCH_SIZE)
       for (const userId of batch) {
         try {
-          const credited = await creditUserPoints(userId, settings.amount)
+          // Credit + ledger row must commit atomically: usersAlreadyGranted() below
+          // treats a completed ledger row as the sole proof this user was already
+          // paid for this cycle, so a crash between the two calls would leave the
+          // balance bumped with no record of it — and double-credit this user the
+          // next time the cron runs and finds them still "pending".
+          const credited = await db.transaction(async (tx) => {
+            const result = await creditUserPoints(userId, settings.amount, tx)
+            if (!result.success) return result
+            await logPointTransaction({
+              userId,
+              type: "monthly_bonus",
+              direction: "credit",
+              amount: settings.amount,
+              status: "completed",
+              referenceId,
+              referenceType: "monthly_bonus",
+              description: `Monthly bonus (month ${cycle}/${settings.cycles})`,
+            }, tx)
+            return result
+          })
           if (!credited.success) {
             errors++
             continue
           }
-          await logPointTransaction({
-            userId,
-            type: "monthly_bonus",
-            direction: "credit",
-            amount: settings.amount,
-            status: "completed",
-            referenceId,
-            referenceType: "monthly_bonus",
-            description: `Monthly bonus (month ${cycle}/${settings.cycles})`,
-          })
           // Best-effort chat + push; never fail the grant on notify errors.
           await notifyMonthlyBonusGranted({
             userId,

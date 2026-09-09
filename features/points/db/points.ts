@@ -9,6 +9,10 @@ import {
 import { sellerRating } from "@/drizzle/schema/seller-rating-schema";
 import { and, count, desc, eq, gt, gte, inArray, lte, ne, or, sql } from "drizzle-orm";
 
+/** Accepts either the top-level `db` or a `tx` from `db.transaction(...)`, so balance
+ *  updates and their ledger row can be written atomically when the caller needs that. */
+type PgClient = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 const DEFAULT_REGISTRATION_POINTS_KEY = "default_registration_points";
 const REGISTRATION_BONUS_ENABLED_KEY = "registration_bonus_enabled";
 const REGISTRATION_BONUS_DESCRIPTION_KEY = "registration_bonus_description";
@@ -747,10 +751,11 @@ export async function setUserPoints(userId: string, points: number): Promise<voi
 /** Add points to user balance and return latest balance. Also increments pointsLifetime. */
 export async function creditUserPoints(
   userId: string,
-  pointsToAdd: number
+  pointsToAdd: number,
+  dbOrTx: PgClient = db
 ): Promise<{ success: boolean; updatedPoints: number | null }> {
   const safe = Math.max(0, Math.floor(Number(pointsToAdd)) || 0);
-  const [updated] = await db
+  const [updated] = await dbOrTx
     .update(user)
     .set({
       points: sql`${user.points} + ${safe}`,
@@ -807,15 +812,18 @@ export async function applyDefaultPointsToNewUser(email: string): Promise<void> 
   if (enabledRow === 0 || defaultPoints <= 0) return;
   const u = await getUserByEmail(email);
   if (!u) return;
-  await setUserPoints(u.id, defaultPoints);
-  await logPointTransaction({
-    userId: u.id,
-    type: "registration_bonus",
-    direction: "credit",
-    amount: defaultPoints,
-    status: "completed",
-    referenceType: "registration",
-    description: "Registration bonus",
+  await db.transaction(async (tx) => {
+    const safe = Math.max(0, Math.floor(Number(defaultPoints)) || 0);
+    await tx.update(user).set({ points: safe }).where(eq(user.id, u.id));
+    await logPointTransaction({
+      userId: u.id,
+      type: "registration_bonus",
+      direction: "credit",
+      amount: defaultPoints,
+      status: "completed",
+      referenceType: "registration",
+      description: "Registration bonus",
+    }, tx);
   });
 }
 
@@ -829,15 +837,17 @@ export async function creditDefaultRegistrationPointsToUser(
   const defaultPoints = await getInt(DEFAULT_REGISTRATION_POINTS_KEY)
   const pointsAdded = Math.max(0, Math.floor(Number(defaultPoints)) || 0)
   if (pointsAdded <= 0) return { pointsAdded: 0 }
-  await creditUserPoints(userId, pointsAdded)
-  await logPointTransaction({
-    userId,
-    type: "registration_bonus",
-    direction: "credit",
-    amount: pointsAdded,
-    status: "completed",
-    referenceType: "registration",
-    description: "Registration bonus",
+  await db.transaction(async (tx) => {
+    await creditUserPoints(userId, pointsAdded, tx)
+    await logPointTransaction({
+      userId,
+      type: "registration_bonus",
+      direction: "credit",
+      amount: pointsAdded,
+      status: "completed",
+      referenceType: "registration",
+      description: "Registration bonus",
+    }, tx)
   })
   return { pointsAdded }
 }
@@ -1426,9 +1436,10 @@ type LogPointTransactionInput = {
 };
 
 export async function logPointTransaction(
-  input: LogPointTransactionInput
+  input: LogPointTransactionInput,
+  dbOrTx: PgClient = db
 ): Promise<{ id: string }> {
-  const [row] = await db
+  const [row] = await dbOrTx
     .insert(pointTransaction)
     .values(input)
     .returning({ id: pointTransaction.id });

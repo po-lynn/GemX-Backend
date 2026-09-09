@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache"
+import { cacheTag, cacheLife, updateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import { getAllRatingTags, getRatingTagById } from "../rating-tags"
 import type { RatingTagForEdit, RatingTagRow } from "../rating-tags"
@@ -14,6 +14,8 @@ function getRatingTagIdTag(id: string) {
 export async function getCachedRatingTags(): Promise<RatingTagRow[]> {
   "use cache"
   cacheTag(getRatingTagGlobalTag())
+  // Admin-managed reference data, only changes via revalidateRatingTagCache.
+  cacheLife("max")
   return getAllRatingTags()
 }
 
@@ -22,6 +24,7 @@ export async function getCachedRatingTagById(
 ): Promise<RatingTagForEdit | null> {
   "use cache"
   cacheTag(getRatingTagGlobalTag(), getRatingTagIdTag(id))
+  cacheLife("max")
   return getRatingTagById(id)
 }
 

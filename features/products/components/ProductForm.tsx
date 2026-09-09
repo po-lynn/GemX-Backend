@@ -1688,79 +1688,78 @@ export function ProductForm({
                 </p>
               )}
 
-              {/* Feature duration */}
+              {/* Feature duration + expire date */}
               {isFeatured && (
-                <div className="pd-field" style={{ maxWidth: 380 }}>
-                  <label className="pd-label">
-                    Feature duration{" "}
-                    <span className="pd-label-hint">points cost shown</span>
-                  </label>
-                  {pricingTiers.length > 0 ? (
-                    <>
-                      <select
-                        className="pd-select"
-                        value={selectedFeatureTier}
-                        onChange={(e) => setSelectedFeatureTier(e.target.value)}
-                      >
-                        <option value="">Select duration and points</option>
-                        {pricingTiers.map((tier, i) => (
-                          <option
-                            key={`${tier.durationDays}-${tier.points}-${i}`}
-                            value={`${tier.durationDays}:${tier.points}`}
-                          >
-                            {tier.durationDays} day{tier.durationDays > 1 ? "s" : ""} —{" "}
-                            {tier.points} points
-                            {tier.badge ? ` (${tier.badge})` : ""}
-                          </option>
-                        ))}
-                      </select>
+                <div style={{ display: "flex", gap: 12, maxWidth: 480 }}>
+                  <div className="pd-field" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="pd-label">
+                      Feature duration{" "}
+                      <span className="pd-label-hint">points cost shown</span>
+                    </label>
+                    {pricingTiers.length > 0 ? (
+                      <>
+                        <select
+                          className="pd-select"
+                          value={selectedFeatureTier}
+                          onChange={(e) => setSelectedFeatureTier(e.target.value)}
+                        >
+                          <option value="">Select duration and points</option>
+                          {pricingTiers.map((tier, i) => (
+                            <option
+                              key={`${tier.durationDays}-${tier.points}-${i}`}
+                              value={`${tier.durationDays}:${tier.points}`}
+                            >
+                              {tier.durationDays} day{tier.durationDays > 1 ? "s" : ""} —{" "}
+                              {tier.points} points
+                              {tier.badge ? ` (${tier.badge})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="hidden"
+                          name="featureDurationDays"
+                          value={
+                            selectedFeatureTier
+                              ? Number(selectedFeatureTier.split(":")[0])
+                              : 0
+                          }
+                        />
+                        <input
+                          type="hidden"
+                          name="featured"
+                          value={
+                            selectedFeatureTier
+                              ? Number(selectedFeatureTier.split(":")[1])
+                              : featuredPointsDefault
+                          }
+                        />
+                      </>
+                    ) : (
                       <input
-                        type="hidden"
-                        name="featureDurationDays"
-                        value={
-                          selectedFeatureTier
-                            ? Number(selectedFeatureTier.split(":")[0])
-                            : 0
-                        }
-                      />
-                      <input
-                        type="hidden"
+                        className="pd-input mono"
+                        type="number"
+                        min={0}
+                        step={1}
                         name="featured"
-                        value={
-                          selectedFeatureTier
-                            ? Number(selectedFeatureTier.split(":")[1])
-                            : featuredPointsDefault
-                        }
+                        defaultValue={featuredPointsDefault}
+                        placeholder="e.g. 100"
                       />
-                    </>
-                  ) : (
-                    <input
-                      className="pd-input mono"
-                      type="number"
-                      min={0}
-                      step={1}
-                      name="featured"
-                      defaultValue={featuredPointsDefault}
-                      placeholder="e.g. 100"
-                    />
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
 
-              {/* Feature expire date */}
-              {isFeatured && (
-                <div className="pd-field" style={{ maxWidth: 380 }}>
-                  <label className="pd-label">
-                    Expires on{" "}
-                    <span className="pd-label-hint">leave blank for indefinite</span>
-                  </label>
-                  <input
-                    className="pd-input"
-                    type="date"
-                    name="featuredExpiresAt"
-                    value={featuredExpiresAtStr}
-                    onChange={(e) => setFeaturedExpiresAtStr(e.target.value)}
-                  />
+                  <div className="pd-field" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="pd-label">
+                      Expires on{" "}
+                      <span className="pd-label-hint">leave blank for indefinite</span>
+                    </label>
+                    <input
+                      className="pd-input"
+                      type="date"
+                      name="featuredExpiresAt"
+                      value={featuredExpiresAtStr}
+                      onChange={(e) => setFeaturedExpiresAtStr(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 

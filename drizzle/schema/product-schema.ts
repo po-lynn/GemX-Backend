@@ -162,6 +162,9 @@ export const product = pgTable(
     index("product_isCollectorPiece_idx").on(table.isCollectorPiece),
     index("product_isPrivilegeAssist_idx").on(table.isPrivilegeAssist),
     index("product_laboratoryId_idx").on(table.laboratoryId),
+    // Every listing query defaults to `orderBy(desc(createdAt))`; without this,
+    // that sort requires a full sort at table scale instead of an index scan.
+    index("product_createdAt_idx").on(table.createdAt),
   ]
 );
 

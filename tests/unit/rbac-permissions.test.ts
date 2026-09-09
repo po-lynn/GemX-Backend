@@ -5,12 +5,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 // saved permission changes never actually took effect. Mock next/cache the
 // same way tests/unit/products-cache-revalidate.test.ts does for the
 // converted "use cache" cache module.
-const { cacheTag, revalidateTag } = vi.hoisted(() => ({
+const { cacheTag, cacheLife, revalidateTag } = vi.hoisted(() => ({
   cacheTag: vi.fn(),
+  cacheLife: vi.fn(),
   revalidateTag: vi.fn(),
 }))
 
-vi.mock("next/cache", () => ({ cacheTag, revalidateTag }))
+vi.mock("next/cache", () => ({ cacheTag, cacheLife, revalidateTag }))
 
 vi.mock("@/drizzle/db", () => ({
   db: {

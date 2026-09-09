@@ -20,6 +20,8 @@ function getProductIdTag(id: string) {
 export async function getCachedProduct(id: string): Promise<ProductForEdit | null> {
   "use cache"
   cacheTag(getProductIdTag(id))
+  // Only changes via revalidateProductsCache, called on every product mutation.
+  cacheLife("max")
   return getProductById(id)
 }
 
@@ -55,6 +57,8 @@ export async function getAdminProducts(opts: {
 }) {
   "use cache"
   cacheTag(getProductsGlobalTag())
+  // Only changes via revalidateProductsCache, called on every product mutation.
+  cacheLife("max")
 
   return getAdminProductsFromDb(opts)
 }
@@ -120,12 +124,14 @@ export async function getCachedProductsBySellerId(
 ) {
   "use cache"
   cacheTag(getProductsGlobalTag())
+  cacheLife("max")
   return getProductsBySellerId(sellerId, opts)
 }
 
 export async function getAdminProductCounts() {
   "use cache"
   cacheTag(getProductsGlobalTag())
+  cacheLife("max")
   return getAdminProductCountsFromDb()
 }
 
@@ -139,6 +145,7 @@ export async function getPortalProductCounts(sellerId: string): Promise<{
 }> {
   "use cache"
   cacheTag(getProductsGlobalTag())
+  cacheLife("max")
   return getPortalProductCountsFromDb(sellerId)
 }
 

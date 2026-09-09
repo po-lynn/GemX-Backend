@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache"
+import { cacheTag, cacheLife, updateTag } from "next/cache"
 import { getGlobalTag, getIdTag } from "@/lib/dataCache"
 import { getAllPrecautionTags, getPrecautionTagById, getPublicPrecautionTags } from "../precaution-tags"
 import type { PrecautionTagForEdit, PrecautionTagPublic, PrecautionTagRow } from "../precaution-tags"
@@ -14,6 +14,8 @@ function getPrecautionTagIdTag(id: string) {
 export async function getCachedPrecautionTags(): Promise<PrecautionTagRow[]> {
   "use cache"
   cacheTag(getPrecautionTagGlobalTag())
+  // Admin-managed reference data, only changes via revalidatePrecautionTagCache.
+  cacheLife("max")
   return getAllPrecautionTags()
 }
 
@@ -22,6 +24,7 @@ export async function getCachedPrecautionTagById(
 ): Promise<PrecautionTagForEdit | null> {
   "use cache"
   cacheTag(getPrecautionTagGlobalTag(), getPrecautionTagIdTag(id))
+  cacheLife("max")
   return getPrecautionTagById(id)
 }
 
@@ -29,6 +32,7 @@ export async function getCachedPrecautionTagById(
 export async function getCachedPublicPrecautionTags(): Promise<PrecautionTagPublic[]> {
   "use cache"
   cacheTag(getPrecautionTagGlobalTag())
+  cacheLife("max")
   return getPublicPrecautionTags()
 }
 

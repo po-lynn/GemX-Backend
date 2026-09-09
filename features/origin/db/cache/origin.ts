@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache";
+import { cacheTag, cacheLife, updateTag } from "next/cache";
 import { getGlobalTag, getIdTag } from "@/lib/dataCache";
 import { getAllOrigins, getOriginById } from "../origin";
 import type { OriginOption, OriginForEdit } from "../origin";
@@ -14,6 +14,8 @@ function getOriginIdTag(id: string) {
 export async function getCachedOrigins(): Promise<OriginOption[]> {
   "use cache";
   cacheTag(getOriginGlobalTag());
+  // Admin-managed reference data, only changes via revalidateOriginCache.
+  cacheLife("max");
   return getAllOrigins();
 }
 
@@ -22,6 +24,7 @@ export async function getCachedOriginById(
 ): Promise<OriginForEdit | null> {
   "use cache";
   cacheTag(getOriginGlobalTag(), getOriginIdTag(id));
+  cacheLife("max");
   return getOriginById(id);
 }
 
