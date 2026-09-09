@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **News & Articles unified API** – **GET `/api/news-articles`** and **GET `/api/news-articles/:id`** list/read the admin **News & Articles** content from the **`articles`** table (same data as `/api/articles`). Query includes optional **`type`** (`news` \| `article`), plus `page`, `limit`, `status`, `search`, `category`, `featured`, `lang`. Prefer this path for the combined mobile feed. See **7.3** and [docs/api/news-articles.md](./api/news-articles.md).
 - **Product search + `productType` filter** – **GET `/api/products`** supports **`search`** together with **`productType`** (`loose_stone` \| `jewellery`) and other list filters. Search matches title, description, and seller; `productType` narrows results (AND). Use when the user searches from a type tab (e.g. Loose Stones only). Autocomplete (**GET `/api/products/suggestions`**) is still global (all types); pass `productType` on the list call after submit. See **5.1**, **5.1.2**, and **Search and filter** examples.
 - **Surprise Bonus (admin All Users top-up)** – Admin can credit **all active users** via a queued campaign (`surprise_bonus_batch`). Each successful grant writes a `point_transaction` with **`type: surprise_bonus`**, **`direction: credit`**, **`referenceType: surprise_bonus_campaign`**, **`referenceId`** = campaign UUID (visible on **GET `/api/mobile/points/history`** with `filter=all`). The same grant creates an in-app **`app_notification`** row and sends an **FCM push** to registered devices (title `{campaignName} 🎁`, body `You received {N} surprise bonus points!`). Push `data`: `type=surprise_bonus`, `screen=home`, `campaignId`, `points`. Requires **POST `/api/push/register`** after login. See **5.4.2b** and **9**. Guides: [admin-top-up.md](./guides/admin-top-up.md), [surprise-bonus-cron.md](./guides/surprise-bonus-cron.md), [cron-surprise-bonus-push.md](./api/cron-surprise-bonus-push.md).
 - **Monthly bonus points** – Admin **Point Packages** can enable a recurring program (amount, 1/3/6/12 cycles, distribution start date). Daily cron **`POST /api/cron/monthly-bonus-points`** grants **+points every 30 days** to all non-banned/non-archived users and writes `point_transaction` (`type: monthly_bonus`). See [docs/guides/monthly-bonus-points.md](./guides/monthly-bonus-points.md) and [docs/api/cron-monthly-bonus-points.md](./api/cron-monthly-bonus-points.md).
@@ -151,8 +152,10 @@
 | DELETE | `/api/products/:id`    | Yes  | Delete product (owner or admin)                                                                                                                                                                          |
 | GET    | `/api/news`            | No   | List news. Query: `page`, `limit`, `status`, `search`, `category`, `featured` (all optional). Returns `readTime` per item + `categoryCounts`                                                             |
 | GET    | `/api/news/:id`        | No   | Get single news by ID (published only). Includes `readTime`                                                                                                                                              |
-| GET    | `/api/articles`        | No   | List articles. Query: `page`, `limit`, `status`, `search`, `category`, `featured`, `lang` (all optional). Returns `readTime` per item + `categoryCounts`                                                  |
+| GET    | `/api/articles`        | No   | List articles (`articles` table). Query: `page`, `limit`, `status`, `search`, `category`, `featured`, `type`, `lang`. Returns `readTime` + `categoryCounts`                                                  |
 | GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`. Optional `lang`                                                                                                                          |
+| GET    | `/api/news-articles`   | No   | **Preferred** unified News & Articles list from **`articles`** table. Same query as `/api/articles` including **`type`** (`news` \| `article`). See **7.3**.                                              |
+| GET    | `/api/news-articles/:id` | No | Get one published News & Articles item by ID (same as `/api/articles/:id`). Optional `lang`                                                                                                              |
 | GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
 | GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
@@ -160,7 +163,7 @@
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout. See **9**. |
 
 
-List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate (including `?isCollectorPiece=true`, which returns only masked public data). **GET /api/products/:id** for collector pieces without approval returns `no-store` (user-specific `requestStatus`). **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
+List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/products/mine`, `GET /api/news`, `GET /api/articles`, `GET /api/news-articles`) may be cached. **GET /api/products** and **GET /api/products/mine**: 60s s-maxage, 300s stale-while-revalidate (including `?isCollectorPiece=true`, which returns only masked public data). **GET /api/products/:id** for collector pieces without approval returns `no-store` (user-specific `requestStatus`). **GET /api/products/suggestions**: 30s s-maxage, 60s stale-while-revalidate. Filter and search query params are part of the cache key so each combination returns the correct result.
 
 ---
 
@@ -3534,9 +3537,12 @@ Returns a single published news item by ID. Draft items return **404**.
 
 ---
 
-## 7. Articles (read-only)
+## 7. Articles / News & Articles (read-only)
 
-Articles are managed in the admin; the mobile app can list and read **published** articles. No auth required.
+Editorial content for the admin **News & Articles** menu is stored in the **`articles`** table (`type`: `news` \| `article`). The mobile app can list and read **published** items. No auth required.
+
+**Preferred routes:** **GET `/api/news-articles`** and **GET `/api/news-articles/:id`** (see **7.3**).  
+**Alias:** **GET `/api/articles`** / **GET `/api/articles/:id`** (same table and query shape).
 
 ### 7.1 List articles (public)
 
@@ -3553,6 +3559,7 @@ Articles are managed in the admin; the mobile app can list and read **published*
 | `limit`    | number | 20          | Items per page (max 100).                                                                       |
 | `status`   | string | `published` | Filter by status: `published` or `draft`. Default returns only published.                       |
 | `search`   | string | —           | Case-insensitive match on title (search bar).                                                   |
+| `type`     | string | —           | Editorial type: `news` or `article` (admin **Type** on News & Articles).                        |
 | `category` | string | —           | Filter chip: `general`, `market`, `gemology`, `guides`, or `product`. Invalid values = no filter. |
 | `featured` | string | —           | `true` returns only featured items (hero card); `false` returns only non-featured.              |
 | `lang`     | string | —           | Optional: `English` \| `Myanmar` \| `Thai` \| `Korean`. Remaps `title` and `content` from localized columns. |
@@ -3564,6 +3571,7 @@ Invalid query values never return an error — they fall back to the defaults ab
 - First page (published only): `GET /api/articles`
 - With pagination: `GET /api/articles?page=2&limit=10`
 - Featured hero card: `GET /api/articles?featured=true&limit=1`
+- News-type only: `GET /api/articles?type=news`
 - Search within a category: `GET /api/articles?search=gemstone&category=gemology`
 - Localized Thai: `GET /api/articles?lang=Thai`
 
@@ -3587,6 +3595,7 @@ Invalid query values never return an error — they fall back to the defaults ab
       "contentTh": null,
       "contentKo": null,
       "author": "Author name",
+      "type": "article",
       "category": "gemology",
       "coverImage": "https://.../cover.jpg",
       "isFeatured": false,
@@ -3605,6 +3614,7 @@ Invalid query values never return an error — they fall back to the defaults ab
 - **articles:** Array of articles (ordered by publishDate, newest first; falls back to createdAt when publishDate is null).
 - **total:** Total number of items matching the filter (for pagination).
 - **categoryCounts:** Published-article count per category plus `all`, for the filter chips. Not affected by `search`/`featured`. Categories with zero items are omitted.
+- **type:** `news` or `article` (admin News & Articles **Type**).
 - **language / title\* / content\*:** Source locale and localized title/body columns (same pattern as news).
 - **category:** One of `general`, `market`, `gemology`, `guides`, `product` (category badge).
 - **coverImage:** Cover image URL or `null` (16:9 cover / thumbnail).
@@ -3625,7 +3635,7 @@ Invalid query values never return an error — they fall back to the defaults ab
 
 Returns a single published article by ID. Draft items return **404**.
 
-**Success (200):** Single article object (same shape as list items, including `readTime` and localized fields).
+**Success (200):** Single article object (same shape as list items, including `readTime`, `type`, and localized fields).
 
 ```json
 {
@@ -3643,6 +3653,7 @@ Returns a single published article by ID. Draft items return **404**.
   "contentTh": null,
   "contentKo": null,
   "author": "Author name",
+  "type": "article",
   "category": "gemology",
   "coverImage": "https://.../cover.jpg",
   "isFeatured": false,
@@ -3657,6 +3668,30 @@ Returns a single published article by ID. Draft items return **404**.
 **Errors:**
 
 - **404** – `{ "error": "Article not found" }` (invalid id or item is draft).
+
+---
+
+### 7.3 News & Articles unified API (preferred)
+
+Content from the admin **News & Articles** menu is stored in the **`articles`** table (`type`: `news` \| `article`). Use these routes for the combined mobile feed:
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/news-articles` | List (same query params as **7.1**, including **`type`**) |
+| GET | `/api/news-articles/:id` | Detail (same as **7.2**, optional `lang`) |
+
+**Data source:** `articles` table only (not the legacy `news` table).  
+**Response shape:** Identical to `/api/articles` — `{ articles, total, categoryCounts }` on list; item includes `type`, `readTime`, etc.
+
+**Examples:**
+
+- All published: `GET /api/news-articles`
+- News tab: `GET /api/news-articles?type=news`
+- Articles tab: `GET /api/news-articles?type=article`
+- Hero + Thai: `GET /api/news-articles?featured=true&limit=1&lang=Thai`
+- Detail: `GET /api/news-articles/:id`
+
+Full reference: [docs/api/news-articles.md](./api/news-articles.md). `/api/articles` remains available as an alias of the same table.
 
 ---
 
@@ -3785,12 +3820,13 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
   - Create: `POST /api/products` with JSON body including `imageUrls` / `videoUrls` / `certReportUrl` if you uploaded files (with Bearer token).
   - Edit: `PATCH /api/products/:id` (with Bearer token).
   - Delete: `DELETE /api/products/:id` (with Bearer token).
-7. **News**
+7. **News** (legacy `news` table)
   - List: `GET /api/news?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
   - Detail: `GET /api/news/:id` (returns 404 for drafts).
-8. **Articles**
-  - List: `GET /api/articles?page=1&limit=20` (optional: `?status=published` or `?status=draft`).
-  - Detail: `GET /api/articles/:id` (returns 404 for drafts).
+8. **News & Articles** (preferred — `articles` table, admin **News & Articles** menu)
+  - List: `GET /api/news-articles?page=1&limit=20` (optional: `?type=news` \| `?type=article`, `?status=`, `?lang=`).
+  - Detail: `GET /api/news-articles/:id` (returns 404 for drafts).
+  - Alias: `GET /api/articles` / `GET /api/articles/:id` (same table).
 
 ---
 
@@ -3859,10 +3895,12 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | POST   | `/api/products`        | Yes  | Create product                                                                                              |
 | PATCH  | `/api/products/:id`    | Yes  | Update (owner/admin)                                                                                        |
 | DELETE | `/api/products/:id`    | Yes  | Delete (owner/admin)                                                                                        |
-| GET    | `/api/news`            | No   | List news (`?page`, `?limit`, `?status`)                                                                    |
-| GET    | `/api/news/:id`        | No   | Get one news (published only)                                                                               |
-| GET    | `/api/articles`        | No   | List articles (`?page`, `?limit`, `?status`)                                                                |
-| GET    | `/api/articles/:id`    | No   | Get one article (published only)                                                                            |
+| GET    | `/api/news`            | No   | List news (`?page`, `?limit`, `?status`) — legacy `news` table                              |
+| GET    | `/api/news/:id`        | No   | Get one news (published only) — legacy `news` table                                         |
+| GET    | `/api/articles`        | No   | List articles (`articles` table; optional `?type=news\|article`)                            |
+| GET    | `/api/articles/:id`    | No   | Get one article (published only)                                                            |
+| GET    | `/api/news-articles`   | No   | Unified News & Articles list (`articles` table; optional `?type=`). See **7.3**.            |
+| GET    | `/api/news-articles/:id` | No | Get one News & Articles item (published only). See **7.3**.                                 |
 | GET    | `/api/mobile/about-us` | No   | Published About Us content (story, terms/privacy metadata, company info, app version). See 8.1.             |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms, active only, sorted by `sortOrder`. See 8.2.                                 |
 | GET    | `/api/mobile/help-support` | No | Published Help & Support content (`faqs`, `contact`, `hours`, `reportForm`). See 8.3.                    |
