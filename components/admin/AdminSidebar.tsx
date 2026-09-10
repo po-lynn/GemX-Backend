@@ -29,6 +29,7 @@ import {
   ChevronDown,
   FileStack,
   ShieldCheck,
+  ListChecks,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 import { useReviewsBadgeCounts } from "@/features/reviews/hooks/use-reviews-badge-counts";
@@ -174,6 +175,19 @@ const navGroups: (NavItem | NavGroup)[] = [
         color: "#0ea5e9",
         featureKey: FEATURE_KEYS.SETTINGS_APP_CONTENT,
         isActive: (p) => p.startsWith("/admin/app-content"),
+      },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      {
+        href: "/admin/queue",
+        label: "Queue",
+        icon: ListChecks,
+        color: "#0891b2",
+        featureKey: FEATURE_KEYS.QUEUE_MANAGEMENT,
+        isActive: (p) => p.startsWith("/admin/queue"),
       },
     ],
   },
