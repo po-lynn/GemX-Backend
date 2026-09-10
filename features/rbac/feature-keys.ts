@@ -22,6 +22,7 @@ export const FEATURE_KEYS = {
   SETTINGS_ESCROW:           "settings.escrow",
   SETTINGS_APP_CONTENT:      "settings.app_content",
   REVIEWS:                   "reviews",
+  QUEUE_MANAGEMENT:          "queue_management",
 } as const
 
 export type FeatureKey = (typeof FEATURE_KEYS)[keyof typeof FEATURE_KEYS]
@@ -99,6 +100,12 @@ export const FEATURE_GROUPS: Array<{
     label: "Trust & Reputation",
     features: [
       { key: FEATURE_KEYS.REVIEWS, label: "Reviews & Seller Reputation" },
+    ],
+  },
+  {
+    label: "System",
+    features: [
+      { key: FEATURE_KEYS.QUEUE_MANAGEMENT, label: "Queue Management" },
     ],
   },
 ]
