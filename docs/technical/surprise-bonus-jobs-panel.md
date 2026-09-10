@@ -1,5 +1,14 @@
 # Surprise Bonus — Background Jobs admin panel
 
+> **Update (later cleanup):** this dedicated panel and its two routes
+> (`app/api/admin/points/surprise-bonus/jobs/route.ts`,
+> `.../jobs/retry/route.ts`) have been removed. Queue visibility for
+> Surprise Bonus — and every other queue-backed feature — now lives on the
+> unified `/admin/queue` page; see
+> [queue-management.md](./queue-management.md). The mechanics described
+> below (status counts, `isStale` computation, "Retry stuck jobs" running a
+> real drain pass) are unchanged, just generalized and moved.
+
 ## What changed and why
 
 Surprise Bonus is admin-triggered and inline-only, with no cron (see
