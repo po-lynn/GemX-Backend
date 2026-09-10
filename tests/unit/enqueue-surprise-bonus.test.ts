@@ -3,21 +3,30 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("@/features/points/db/surprise-bonus", () => ({
   countActiveUsers: vi.fn(),
   createSurpriseBonusCampaign: vi.fn(),
-  enqueueSurpriseBonusBatchJob: vi.fn(),
   markSurpriseBonusCampaignProcessing: vi.fn(),
 }))
 
+vi.mock("@/lib/queue/queue", () => ({
+  enqueueJob: vi.fn(),
+}))
+
+vi.mock("@/lib/queue/drain", () => ({
+  drainJobs: vi.fn(),
+}))
+
 vi.mock("@/features/points/services/process-surprise-bonus-jobs", () => ({
-  drainSurpriseBonusJobs: vi.fn(),
+  processSurpriseBonusJob: vi.fn(),
 }))
 
 import {
   countActiveUsers,
   createSurpriseBonusCampaign,
-  enqueueSurpriseBonusBatchJob,
   markSurpriseBonusCampaignProcessing,
 } from "@/features/points/db/surprise-bonus"
-import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
+import { enqueueJob } from "@/lib/queue/queue"
+import { drainJobs } from "@/lib/queue/drain"
+import { processSurpriseBonusJob } from "@/features/points/services/process-surprise-bonus-jobs"
+import { SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
 describe("enqueueSurpriseBonusForAllUsers", () => {
@@ -40,8 +49,8 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    vi.mocked(enqueueSurpriseBonusBatchJob).mockResolvedValue({ id: "job-1" })
-    vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({ batches: 0 })
+    vi.mocked(enqueueJob).mockResolvedValue({ id: "job-1" })
+    vi.mocked(drainJobs).mockResolvedValue({ batches: 0 })
   })
 
   it("rejects non-positive points", async () => {
@@ -64,19 +73,7 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
 
   it("creates campaign, enqueues the first job, and drains it inline before responding", async () => {
     vi.mocked(countActiveUsers).mockResolvedValue(250)
-    vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({
-      batches: 3,
-      last: {
-        claimed: true,
-        jobId: "job-3",
-        campaignId: "camp-1",
-        batchSize: 50,
-        successDelta: 50,
-        failedDelta: 0,
-        hasMore: false,
-        campaignStatus: "completed",
-      },
-    })
+    vi.mocked(drainJobs).mockResolvedValue({ batches: 3 })
 
     const result = await enqueueSurpriseBonusForAllUsers({
       campaignName: "Sweet December",
@@ -94,24 +91,16 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
       processedInline: true,
     })
     expect(createSurpriseBonusCampaign).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Sweet December",
-        pointsPerUser: 500,
-        totalUsers: 250,
-        createdBy: "admin-1",
-      }),
+      expect.objectContaining({ name: "Sweet December", pointsPerUser: 500, totalUsers: 250, createdBy: "admin-1" }),
     )
-    expect(enqueueSurpriseBonusBatchJob).toHaveBeenCalledWith({
-      campaignId: "camp-1",
-      lastUserId: null,
-    })
+    expect(enqueueJob).toHaveBeenCalledWith(SURPRISE_BONUS_JOB_TYPE, { campaignId: "camp-1", lastUserId: null })
     expect(markSurpriseBonusCampaignProcessing).toHaveBeenCalledWith("camp-1")
-    expect(drainSurpriseBonusJobs).toHaveBeenCalledWith({ maxBatches: 5 })
+    expect(drainJobs).toHaveBeenCalledWith(SURPRISE_BONUS_JOB_TYPE, processSurpriseBonusJob, { maxBatches: 5 })
   })
 
   it("returns an error and leaves the campaign row in place when the inline drain throws", async () => {
     vi.mocked(countActiveUsers).mockResolvedValue(250)
-    vi.mocked(drainSurpriseBonusJobs).mockRejectedValue(new Error("relation missing"))
+    vi.mocked(drainJobs).mockRejectedValue(new Error("relation missing"))
 
     const result = await enqueueSurpriseBonusForAllUsers({
       campaignName: "Sweet December",

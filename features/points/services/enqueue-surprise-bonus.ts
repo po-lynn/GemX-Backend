@@ -1,10 +1,12 @@
+import { SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
 import {
   countActiveUsers,
   createSurpriseBonusCampaign,
-  enqueueSurpriseBonusBatchJob,
   markSurpriseBonusCampaignProcessing,
 } from "@/features/points/db/surprise-bonus"
-import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
+import { processSurpriseBonusJob } from "@/features/points/services/process-surprise-bonus-jobs"
+import { drainJobs } from "@/lib/queue/drain"
+import { enqueueJob } from "@/lib/queue/queue"
 
 export type EnqueueSurpriseBonusInput = {
   campaignName: string
@@ -53,10 +55,7 @@ export async function enqueueSurpriseBonusForAllUsers(
     createdBy: input.createdBy,
   })
 
-  await enqueueSurpriseBonusBatchJob({
-    campaignId: campaign.id,
-    lastUserId: null,
-  })
+  await enqueueJob(SURPRISE_BONUS_JOB_TYPE, { campaignId: campaign.id, lastUserId: null })
 
   await markSurpriseBonusCampaignProcessing(campaign.id)
 
@@ -64,7 +63,7 @@ export async function enqueueSurpriseBonusForAllUsers(
   const maxBatches = Math.max(1, Math.ceil(totalUsers / 100) + 2)
 
   try {
-    const drained = await drainSurpriseBonusJobs({ maxBatches })
+    const drained = await drainJobs(SURPRISE_BONUS_JOB_TYPE, processSurpriseBonusJob, { maxBatches })
     if (drained.batches === 0) {
       console.warn(
         "[surprise-bonus] inline drain claimed 0 batches — check claim_background_job RPC / pending jobs",
