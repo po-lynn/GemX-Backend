@@ -145,6 +145,15 @@ describe("POST /api/admin/points/surprise-bonus/jobs/retry", () => {
     )
   })
 
+  it("returns 500 when the queue job definition is not registered", async () => {
+    vi.mocked(getQueueJobDefinition).mockReturnValue(undefined)
+
+    const res = await POST(req("POST", "/api/admin/points/surprise-bonus/jobs/retry"))
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toBe("Surprise Bonus job handler not registered")
+  })
+
   it("returns 500 with a descriptive message when the drain throws", async () => {
     vi.mocked(getQueueJobDefinition).mockReturnValue({
       type: "surprise_bonus_batch",
