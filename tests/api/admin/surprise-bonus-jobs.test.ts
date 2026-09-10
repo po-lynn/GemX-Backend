@@ -13,16 +13,23 @@ vi.mock("@/features/points/db/surprise-bonus", () => ({
   listSurpriseBonusJobs: vi.fn(),
 }))
 
-vi.mock("@/features/points/services/process-surprise-bonus-jobs", () => ({
-  drainSurpriseBonusJobs: vi.fn(),
+vi.mock("@/lib/queue/drain", () => ({
+  drainJobs: vi.fn(),
 }))
+
+vi.mock("@/lib/queue/registry", () => ({
+  getQueueJobDefinition: vi.fn(),
+}))
+
+vi.mock("@/lib/queue/registrations", () => ({}))
 
 import { requireAdminOrFeature } from "@/lib/api-guard"
 import {
   getSurpriseBonusJobStatusCounts,
   listSurpriseBonusJobs,
 } from "@/features/points/db/surprise-bonus"
-import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
+import { drainJobs } from "@/lib/queue/drain"
+import { getQueueJobDefinition } from "@/lib/queue/registry"
 import { GET } from "@/app/api/admin/points/surprise-bonus/jobs/route"
 import { POST } from "@/app/api/admin/points/surprise-bonus/jobs/retry/route"
 
@@ -60,6 +67,8 @@ describe("GET /api/admin/points/surprise-bonus/jobs", () => {
     vi.mocked(listSurpriseBonusJobs).mockResolvedValue([
       {
         id: "job-1",
+        type: "surprise_bonus_batch",
+        payload: { campaignId: "camp-1" },
         status: "processing",
         attempts: 1,
         maxAttempts: 5,
@@ -73,7 +82,7 @@ describe("GET /api/admin/points/surprise-bonus/jobs", () => {
         campaignName: "Sweet December",
         isStale: true,
       },
-    ])
+    ] as never)
 
     const res = await GET(req("GET", "/api/admin/points/surprise-bonus/jobs"))
     expect(res.status).toBe(200)
@@ -118,17 +127,31 @@ describe("POST /api/admin/points/surprise-bonus/jobs/retry", () => {
   })
 
   it("runs a drain pass and reports how many batches it processed", async () => {
-    vi.mocked(drainSurpriseBonusJobs).mockResolvedValue({ batches: 2 })
+    vi.mocked(getQueueJobDefinition).mockReturnValue({
+      type: "surprise_bonus_batch",
+      label: "Surprise Bonus",
+      handler: vi.fn(),
+    } as never)
+    vi.mocked(drainJobs).mockResolvedValue({ batches: 2 })
 
     const res = await POST(req("POST", "/api/admin/points/surprise-bonus/jobs/retry"))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ success: true, batches: 2, last: null })
-    expect(drainSurpriseBonusJobs).toHaveBeenCalledWith({ maxBatches: 50 })
+    expect(body).toEqual({ success: true, batches: 2 })
+    expect(drainJobs).toHaveBeenCalledWith(
+      "surprise_bonus_batch",
+      expect.any(Function),
+      { maxBatches: 50 },
+    )
   })
 
   it("returns 500 with a descriptive message when the drain throws", async () => {
-    vi.mocked(drainSurpriseBonusJobs).mockRejectedValue(new Error("relation missing"))
+    vi.mocked(getQueueJobDefinition).mockReturnValue({
+      type: "surprise_bonus_batch",
+      label: "Surprise Bonus",
+      handler: vi.fn(),
+    } as never)
+    vi.mocked(drainJobs).mockRejectedValue(new Error("relation missing"))
 
     const res = await POST(req("POST", "/api/admin/points/surprise-bonus/jobs/retry"))
     expect(res.status).toBe(500)

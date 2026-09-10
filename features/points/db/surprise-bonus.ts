@@ -1,11 +1,9 @@
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { surpriseBonusCampaign, SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
-import { backgroundJobs } from "@/drizzle/schema/queue-schema"
-import { and, desc, eq, sql } from "drizzle-orm"
-
-/** Matches the reclaim window in claim_background_job (migration 0087). */
-const STALE_AFTER_MS = 3 * 60 * 1000
+import type { QueueJobRow, QueueJobStatusCounts } from "@/lib/queue/types"
+import { getJobStatusCounts, listJobs } from "@/lib/queue/queue"
+import { and, eq, inArray, sql } from "drizzle-orm"
 
 export type SurpriseBonusCampaignRow = typeof surpriseBonusCampaign.$inferSelect
 
@@ -60,37 +58,10 @@ export async function createSurpriseBonusCampaign(input: {
   return row
 }
 
-export async function enqueueSurpriseBonusBatchJob(input: {
-  campaignId: string
-  lastUserId: string | null
-}): Promise<{ id: string }> {
-  const [row] = await db
-    .insert(backgroundJobs)
-    .values({
-      type: SURPRISE_BONUS_JOB_TYPE,
-      payload: {
-        campaignId: input.campaignId,
-        lastUserId: input.lastUserId,
-      },
-      status: "pending",
-      attempts: 0,
-      maxAttempts: 5,
-      availableAt: new Date(),
-    })
-    .returning({ id: backgroundJobs.id })
-  return row
-}
-
-export async function markSurpriseBonusCampaignProcessing(
-  campaignId: string,
-): Promise<void> {
+export async function markSurpriseBonusCampaignProcessing(campaignId: string): Promise<void> {
   await db
     .update(surpriseBonusCampaign)
-    .set({
-      status: "processing",
-      startedAt: new Date(),
-      updatedAt: new Date(),
-    })
+    .set({ status: "processing", startedAt: new Date(), updatedAt: new Date() })
     .where(eq(surpriseBonusCampaign.id, campaignId))
 }
 
@@ -105,79 +76,57 @@ export async function getSurpriseBonusCampaignById(
   return row ?? null
 }
 
-export type SurpriseBonusJobRow = {
-  id: string
-  status: string
-  attempts: number
-  maxAttempts: number
-  availableAt: Date
-  lockedAt: Date | null
-  lockedBy: string | null
-  lastError: string | null
-  createdAt: Date
-  completedAt: Date | null
-  campaignId: string | null
-  campaignName: string | null
-  /** `processing` and locked longer than claim_background_job's reclaim window (0087). */
-  isStale: boolean
-}
+/**
+ * Batch-enrich queue admin rows with their campaign name (one query for the
+ * whole page, not per row) — the describeJobs hook for the surprise_bonus_batch
+ * queue job type.
+ */
+export async function describeSurpriseBonusJobs(jobs: QueueJobRow[]): Promise<Map<string, string>> {
+  const campaignIds = [
+    ...new Set(
+      jobs
+        .map((j) => (j.payload as { campaignId?: string }).campaignId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
+  if (campaignIds.length === 0) return new Map()
 
-export type SurpriseBonusJobStatusCounts = {
-  pending: number
-  processing: number
-  completed: number
-  failed: number
-  stale: number
-}
+  const campaigns = await db
+    .select({ id: surpriseBonusCampaign.id, name: surpriseBonusCampaign.name })
+    .from(surpriseBonusCampaign)
+    .where(inArray(surpriseBonusCampaign.id, campaignIds))
 
-const jobCampaignId = sql<string | null>`${backgroundJobs.payload}->>'campaignId'`
-
-/** Most recent surprise-bonus background jobs, newest first, with their campaign name. */
-export async function listSurpriseBonusJobs(limit = 100): Promise<SurpriseBonusJobRow[]> {
-  const rows = await db
-    .select({
-      id: backgroundJobs.id,
-      status: backgroundJobs.status,
-      attempts: backgroundJobs.attempts,
-      maxAttempts: backgroundJobs.maxAttempts,
-      availableAt: backgroundJobs.availableAt,
-      lockedAt: backgroundJobs.lockedAt,
-      lockedBy: backgroundJobs.lockedBy,
-      lastError: backgroundJobs.lastError,
-      createdAt: backgroundJobs.createdAt,
-      completedAt: backgroundJobs.completedAt,
-      campaignId: jobCampaignId,
-      campaignName: surpriseBonusCampaign.name,
-    })
-    .from(backgroundJobs)
-    .leftJoin(surpriseBonusCampaign, eq(jobCampaignId, surpriseBonusCampaign.id))
-    .where(eq(backgroundJobs.type, SURPRISE_BONUS_JOB_TYPE))
-    .orderBy(desc(backgroundJobs.createdAt))
-    .limit(limit)
-
-  const now = Date.now()
-  return rows.map((r) => ({
-    ...r,
-    isStale:
-      r.status === "processing" &&
-      r.lockedAt !== null &&
-      now - r.lockedAt.getTime() > STALE_AFTER_MS,
-  }))
+  const nameById = new Map(campaigns.map((c) => [c.id, c.name]))
+  const result = new Map<string, string>()
+  for (const job of jobs) {
+    const campaignId = (job.payload as { campaignId?: string }).campaignId
+    if (campaignId && nameById.has(campaignId)) {
+      result.set(job.id, nameById.get(campaignId)!)
+    }
+  }
+  return result
 }
 
 /** Status breakdown across all surprise-bonus jobs (not just the listed page). */
-export async function getSurpriseBonusJobStatusCounts(): Promise<SurpriseBonusJobStatusCounts> {
-  const [row] = await db
-    .select({
-      pending: sql<number>`count(*) filter (where status = 'pending')::int`,
-      processing: sql<number>`count(*) filter (where status = 'processing')::int`,
-      completed: sql<number>`count(*) filter (where status = 'completed')::int`,
-      failed: sql<number>`count(*) filter (where status = 'failed')::int`,
-      stale: sql<number>`count(*) filter (
-        where status = 'processing' and locked_at < now() - interval '3 minutes'
-      )::int`,
-    })
-    .from(backgroundJobs)
-    .where(eq(backgroundJobs.type, SURPRISE_BONUS_JOB_TYPE))
-  return row ?? { pending: 0, processing: 0, completed: 0, failed: 0, stale: 0 }
+export async function getSurpriseBonusJobStatusCounts(): Promise<QueueJobStatusCounts> {
+  return getJobStatusCounts(SURPRISE_BONUS_JOB_TYPE)
+}
+
+export type SurpriseBonusJobRow = QueueJobRow & {
+  campaignId: string | null
+  campaignName: string | null
+}
+
+/** Most recent surprise-bonus background jobs, newest first, with their campaign name. */
+export async function listSurpriseBonusJobs(limit = 100): Promise<SurpriseBonusJobRow[]> {
+  const rows = await listJobs(SURPRISE_BONUS_JOB_TYPE, limit)
+
+  // Enrich with campaign names
+  const nameMap = await describeSurpriseBonusJobs(rows)
+
+  return rows.map((r) => ({
+    ...r,
+    campaignId: (r.payload as { campaignId?: string }).campaignId ?? null,
+    campaignName: nameMap.get(r.id) ?? null,
+  })) as SurpriseBonusJobRow[]
 }

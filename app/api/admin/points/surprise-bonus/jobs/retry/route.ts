@@ -2,7 +2,10 @@ import { connection, NextRequest } from "next/server"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { requireAdminOrFeature } from "@/lib/api-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
-import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
+import { SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import { drainJobs } from "@/lib/queue/drain"
+import { getQueueJobDefinition } from "@/lib/queue/registry"
+import "@/lib/queue/registrations"
 
 /** Room for several 100-user batches in one manual retry. */
 export const maxDuration = 60
@@ -22,11 +25,17 @@ export async function POST(request: NextRequest) {
   if ("error" in gate) return gate.error
 
   try {
-    const result = await drainSurpriseBonusJobs({ maxBatches: MAX_BATCHES_PER_RUN })
+    const definition = getQueueJobDefinition(SURPRISE_BONUS_JOB_TYPE)
+    if (!definition) {
+      return jsonError("Surprise Bonus job handler not registered", 500)
+    }
+
+    const result = await drainJobs(SURPRISE_BONUS_JOB_TYPE, definition.handler, {
+      maxBatches: MAX_BATCHES_PER_RUN,
+    })
     return jsonUncached({
       success: true,
       batches: result.batches,
-      last: result.last ?? null,
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
