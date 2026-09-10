@@ -8,18 +8,26 @@ Surprise Bonus is **admin-triggered only, inline-only** — no schedule, no cron
 
 | Path | Role |
 |------|------|
-| `drizzle/schema/surprise-bonus-schema.ts` | `surprise_bonus_campaign`, `background_jobs`, `app_notification`, `SURPRISE_BONUS_JOB_TYPE` |
+| `drizzle/schema/surprise-bonus-schema.ts` | `surprise_bonus_campaign`, `app_notification`, `SURPRISE_BONUS_JOB_TYPE` |
+| `drizzle/schema/queue-schema.ts` | `background_jobs` — generic queue table, shared with any other lib/queue consumer |
 | `drizzle/migrations/0081_surprise_bonus_queue.sql` | Tables, unique ledger index, RPCs |
 | `drizzle/migrations/0087_reclaim_stale_surprise_bonus_jobs.sql` | `claim_background_job` also reclaims stale `processing` jobs |
-| `features/points/db/surprise-bonus.ts` | Create campaign / enqueue job / progress |
-| `features/points/services/enqueue-surprise-bonus.ts` | Orchestration; always drains inline |
-| `features/points/services/process-surprise-bonus-jobs.ts` | Node batch processor (mirrors Edge) |
+| `lib/queue/` | Generic claim/retry/drain/admin-listing core — see [queue-management.md](./queue-management.md) |
+| `features/points/db/surprise-bonus.ts` | Create campaign / progress / `describeSurpriseBonusJobs` (admin panel enrichment) |
+| `features/points/services/enqueue-surprise-bonus.ts` | Orchestration; always drains inline via `lib/queue` |
+| `features/points/services/process-surprise-bonus-jobs.ts` | `processSurpriseBonusJob` — the registered `lib/queue` handler for `SURPRISE_BONUS_JOB_TYPE` |
 | `features/points/services/surprise-bonus-push.ts` | FCM payload + send to user devices |
 | `app/api/admin/points/surprise-bonus/route.ts` | `POST` create + drain (`maxDuration = 60`) |
 | `app/api/admin/points/surprise-bonus/[id]/route.ts` | `GET` — audit a past campaign's counts (not used for polling) |
 | `app/api/cron/surprise-bonus-push/route.ts` | FCM proxy for the optional Supabase Edge Function path (`CRON_SECRET`) |
 | `supabase/functions/process-background-jobs/index.ts` | **Optional** standalone worker — not required, most deployments don't run it |
 | `features/points/components/PointActionButtons.tsx` | All Users → POST, shows the completed result |
+
+Queue visibility (status counts, recent jobs, "Retry stuck jobs") moved
+from a dedicated embedded panel to the unified
+[`/admin/queue`](../guides/queue-management.md) page — see
+[surprise-bonus-jobs-panel.md](./surprise-bonus-jobs-panel.md) for the
+superseded version.
 
 ## Data flow
 
