@@ -148,7 +148,7 @@ export async function getJobStatusCounts(type: string): Promise<QueueJobStatusCo
       completed: sql<number>`count(*) filter (where status = 'completed')::int`,
       failed: sql<number>`count(*) filter (where status = 'failed')::int`,
       stale: sql<number>`count(*) filter (
-        where status = 'processing' and locked_at < now() - interval '3 minutes'
+        where status = 'processing' and locked_at < now() - (${STALE_AFTER_MS} * interval '1 millisecond')
       )::int`,
     })
     .from(backgroundJobs)

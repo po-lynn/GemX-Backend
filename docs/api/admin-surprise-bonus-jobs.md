@@ -1,5 +1,14 @@
 # GET /api/admin/points/surprise-bonus/jobs
 
+> **Update (later cleanup):** both routes documented on this page
+> (`GET /api/admin/points/surprise-bonus/jobs`,
+> `POST /api/admin/points/surprise-bonus/jobs/retry`) have been removed.
+> Queue visibility for Surprise Bonus — and every other queue-backed
+> feature — now lives on the unified `/admin/queue` page; see
+> [admin-queue.md](./admin-queue.md). The mechanics described below
+> (status counts, `isStale` computation, "Retry stuck jobs" running a real
+> drain pass) are unchanged, just generalized and moved.
+
 Background job queue status for the admin Surprise Bonus panel.
 
 ## Auth

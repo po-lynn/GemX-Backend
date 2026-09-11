@@ -74,3 +74,15 @@ granted via the RBAC permissions UI.
   whose registration module has actually been imported in the current
   request's module graph — see `docs/guides/queue-management.md` for how
   to wire a new type into `lib/queue/registrations.ts`.
+- **Completion-ordering parity nuance:** the old hand-rolled Surprise Bonus
+  queue marked a job `completed` in the DB *before* sending the FCM push;
+  the new `lib/queue`-based flow (via `drainJobs`) completes the job
+  *after* the handler returns, i.e. after the push attempt. On a normal
+  thrown error this doesn't matter — both eventually converge via retry
+  semantics. But on a hard process kill *during* the push (not a catchable
+  JS exception), the old code left the job `completed` with no push ever
+  sent; the new code leaves it `processing`, which the 3-minute
+  stale-reclaim then picks up and reprocesses — meaning the push is
+  retried (good), but campaign progress counters can double-increment on
+  that reprocessing pass (a pre-existing characteristic of the counter
+  logic, not introduced by this refactor).

@@ -52,8 +52,12 @@ handler function, register it, and reuse the same admin visibility page.
 
 ### `lib/queue/` (new)
 
-The only code allowed to touch the `background_jobs` table directly. All
-features go through this module.
+The only Node/Drizzle code path that touches the `background_jobs` table
+directly — all Next.js features go through this module. It is not the only
+implementation against that table: `supabase/functions/process-background-jobs/index.ts`
+is a second, independent one (its own claim/complete/fail/self-chain logic,
+with its own copies of the backoff and max-attempts constants) that must be
+kept in lockstep manually if either implementation changes.
 
 **`lib/queue/types.ts`**
 ```ts

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { RefreshCw, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { StatusPill } from "@/components/admin/list-view/StatusPill"
@@ -30,32 +30,55 @@ function fmt(d: string | null): string {
 
 export function QueueDashboard() {
   const [types, setTypes] = useState<JobType[]>([])
+  const [typesLoading, setTypesLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [counts, setCounts] = useState<JobCounts | null>(null)
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loading, setLoading] = useState(true)
   const [retrying, setRetrying] = useState(false)
 
+  // Monotonic token guarding against an in-flight loadSelected response
+  // (for a since-superseded type or an earlier refresh click) overwriting
+  // state after a newer request has already started.
+  const requestSeqRef = useRef(0)
+
   const loadTypes = useCallback(async () => {
-    const res = await fetch("/api/admin/queue")
-    if (!res.ok) return
-    const data = (await res.json()) as { types: JobType[] }
-    setTypes(data.types)
-    setSelectedType((current) => current ?? data.types[0]?.type ?? null)
+    try {
+      const res = await fetch("/api/admin/queue")
+      if (!res.ok) {
+        setError("Couldn't load queue types — try refreshing.")
+        return
+      }
+      const data = (await res.json()) as { types: JobType[] }
+      setTypes(data.types)
+      setSelectedType((current) => current ?? data.types[0]?.type ?? null)
+      setError(null)
+    } catch {
+      setError("Couldn't load queue types — try refreshing.")
+    } finally {
+      setTypesLoading(false)
+    }
   }, [])
 
   const loadSelected = useCallback(async (type: string) => {
+    const seq = ++requestSeqRef.current
     setLoading(true)
+    // Reset stale data from a previous type immediately, so the table/chips
+    // never keep showing a since-superseded type's counts and jobs.
+    setCounts(null)
+    setJobs([])
     try {
       const res = await fetch(`/api/admin/queue?type=${encodeURIComponent(type)}`)
       if (!res.ok) return
       const data = (await res.json()) as { counts: JobCounts; jobs: JobRow[] }
+      if (seq !== requestSeqRef.current) return // superseded by a newer request
       setCounts(data.counts)
       setJobs(data.jobs)
     } catch {
       // keep last known state on transient fetch errors
     } finally {
-      setLoading(false)
+      if (seq === requestSeqRef.current) setLoading(false)
     }
   }, [])
 
@@ -97,6 +120,27 @@ export function QueueDashboard() {
 
   const staleCount = counts?.stale ?? 0
 
+  if (error) {
+    return (
+      <div className="lv-card" style={{ marginTop: 20, padding: 18, border: "1px solid #FCA5A5", background: "#FEF2F2" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AlertTriangle style={{ width: 15, height: 15, color: "#B91C1C", flexShrink: 0 }} />
+          <p style={{ fontSize: 12.5, color: "#B91C1C", margin: 0, fontWeight: 600 }}>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (typesLoading) {
+    // Distinguishes "haven't loaded yet" from "loaded and genuinely empty" —
+    // avoids flashing the empty state before the first fetch resolves.
+    return (
+      <div className="lv-card" style={{ marginTop: 20, padding: 18 }}>
+        <p style={{ fontSize: 12.5, color: "var(--lv-text-3)", margin: 0 }}>Loading…</p>
+      </div>
+    )
+  }
+
   if (types.length === 0) {
     return (
       <div className="lv-card" style={{ marginTop: 20, padding: 18 }}>
@@ -109,6 +153,7 @@ export function QueueDashboard() {
     <div className="lv-card" style={{ marginTop: 20, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
         <select
+          aria-label="Job type"
           value={selectedType ?? ""}
           onChange={(e) => setSelectedType(e.target.value)}
           style={{ padding: "7px 10px", borderRadius: 8, border: "1px solid var(--lv-border)", fontSize: 13, fontWeight: 600 }}

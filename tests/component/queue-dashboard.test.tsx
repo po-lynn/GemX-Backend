@@ -25,12 +25,40 @@ function mockFetchSequence(responses: Array<{ ok?: boolean; json: unknown }>) {
 }
 
 describe("QueueDashboard", () => {
-  it("shows an empty state when no job types are registered", async () => {
+  it("shows an empty state only once the fetch genuinely resolves with zero types — not before, and not from the pre-fetch initial render", async () => {
     mockFetchSequence([{ json: { types: [] } }])
 
     render(<QueueDashboard />)
 
+    // loadTypes runs inside queueMicrotask(...), which cannot have flushed yet at
+    // this point (we're still in the same synchronous tick as render()). So the
+    // empty-state text must not be showing yet — a broken implementation that
+    // renders it unconditionally on the pre-fetch initial state would fail here.
+    expect(screen.queryByText("No job types registered yet.")).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
+
+    // Now let the mocked fetch actually resolve, and confirm the empty state
+    // reflects that real resolution (not a coincidence of initial state).
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1))
     expect(await screen.findByText("No job types registered yet.")).toBeInTheDocument()
+  })
+
+  it("shows a distinct error state (not the empty state) when loading types fails with a non-ok response", async () => {
+    mockFetchSequence([{ ok: false, json: {} }])
+
+    render(<QueueDashboard />)
+
+    expect(await screen.findByText("Couldn't load queue types — try refreshing.")).toBeInTheDocument()
+    expect(screen.queryByText("No job types registered yet.")).not.toBeInTheDocument()
+  })
+
+  it("shows a distinct error state (not the empty state) when loading types throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")))
+
+    render(<QueueDashboard />)
+
+    expect(await screen.findByText("Couldn't load queue types — try refreshing.")).toBeInTheDocument()
+    expect(screen.queryByText("No job types registered yet.")).not.toBeInTheDocument()
   })
 
   it("loads types then the selected type's counts and jobs", async () => {

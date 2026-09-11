@@ -1,8 +1,7 @@
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import { surpriseBonusCampaign, SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
-import type { QueueJobRow, QueueJobStatusCounts } from "@/lib/queue/types"
-import { getJobStatusCounts, listJobs } from "@/lib/queue/queue"
+import { surpriseBonusCampaign } from "@/drizzle/schema/surprise-bonus-schema"
+import type { QueueJobRow } from "@/lib/queue/types"
 import { and, eq, inArray, sql } from "drizzle-orm"
 
 export type SurpriseBonusCampaignRow = typeof surpriseBonusCampaign.$inferSelect
@@ -105,28 +104,4 @@ export async function describeSurpriseBonusJobs(jobs: QueueJobRow[]): Promise<Ma
     }
   }
   return result
-}
-
-/** Status breakdown across all surprise-bonus jobs (not just the listed page). */
-export async function getSurpriseBonusJobStatusCounts(): Promise<QueueJobStatusCounts> {
-  return getJobStatusCounts(SURPRISE_BONUS_JOB_TYPE)
-}
-
-export type SurpriseBonusJobRow = QueueJobRow & {
-  campaignId: string | null
-  campaignName: string | null
-}
-
-/** Most recent surprise-bonus background jobs, newest first, with their campaign name. */
-export async function listSurpriseBonusJobs(limit = 100): Promise<SurpriseBonusJobRow[]> {
-  const rows = await listJobs(SURPRISE_BONUS_JOB_TYPE, limit)
-
-  // Enrich with campaign names
-  const nameMap = await describeSurpriseBonusJobs(rows)
-
-  return rows.map((r) => ({
-    ...r,
-    campaignId: (r.payload as { campaignId?: string }).campaignId ?? null,
-    campaignName: nameMap.get(r.id) ?? null,
-  })) as SurpriseBonusJobRow[]
 }
