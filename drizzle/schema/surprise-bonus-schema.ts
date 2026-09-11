@@ -14,6 +14,14 @@ import { user } from "./auth-schema"
 export const SURPRISE_BONUS_JOB_TYPE = "surprise_bonus_batch" as const
 
 /**
+ * Job type for FCM push after a credit batch. Kept separate from
+ * SURPRISE_BONUS_JOB_TYPE so a push failure surfaces as its own row on
+ * /admin/queue (retryable, deletable) without ever blocking or retrying the
+ * credit batches, which have already committed ledger + app_notification rows.
+ */
+export const SURPRISE_BONUS_PUSH_JOB_TYPE = "surprise_bonus_push_batch" as const
+
+/**
  * One-time admin Surprise Bonus campaign (All Users).
  * Processed asynchronously via background_jobs + Edge Function batches.
  */
@@ -47,34 +55,6 @@ export const surpriseBonusCampaign = pgTable(
   (table) => [
     index("sbc_status_idx").on(table.status),
     index("sbc_createdAt_idx").on(table.createdAt),
-  ],
-).enableRLS()
-
-/**
- * Database-backed job queue (no Redis). Claimed with FOR UPDATE SKIP LOCKED via RPC.
- */
-export const backgroundJobs = pgTable(
-  "background_jobs",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    type: text("type").notNull(),
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-    /** pending | processing | completed | failed */
-    status: text("status").notNull().default("pending"),
-    attempts: integer("attempts").notNull().default(0),
-    maxAttempts: integer("max_attempts").notNull().default(5),
-    availableAt: timestamp("available_at").defaultNow().notNull(),
-    lockedAt: timestamp("locked_at"),
-    lockedBy: text("locked_by"),
-    lastError: text("last_error"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    completedAt: timestamp("completed_at"),
-  },
-  (table) => [
-    index("bj_status_available_idx").on(table.status, table.availableAt),
-    index("bj_type_status_idx").on(table.type, table.status),
   ],
 ).enableRLS()
 

@@ -9,20 +9,24 @@ vi.mock("@/drizzle/db", () => ({
   },
 }))
 
-vi.mock("@/features/points/services/surprise-bonus-push", () => ({
-  sendSurpriseBonusPushToUsers: vi.fn().mockResolvedValue({
-    sent: 2,
-    failed: 0,
-    invalidTokensRemoved: 0,
-  }),
+vi.mock("@/lib/queue/queue", () => ({
+  enqueueJob: vi.fn(),
+  normalizeRows: (result: unknown) => (Array.isArray(result) ? result : []),
+}))
+
+vi.mock("@/lib/queue/registry", () => ({
+  registerQueueJob: vi.fn(),
+}))
+
+vi.mock("@/features/points/db/surprise-bonus", () => ({
+  describeSurpriseBonusJobs: vi.fn(),
 }))
 
 import { db } from "@/drizzle/db"
-import { sendSurpriseBonusPushToUsers } from "@/features/points/services/surprise-bonus-push"
-import {
-  drainSurpriseBonusJobs,
-  processOneSurpriseBonusBatch,
-} from "@/features/points/services/process-surprise-bonus-jobs"
+import { enqueueJob } from "@/lib/queue/queue"
+import { registerQueueJob } from "@/lib/queue/registry"
+import { SURPRISE_BONUS_JOB_TYPE, SURPRISE_BONUS_PUSH_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import { processSurpriseBonusJob } from "@/features/points/services/process-surprise-bonus-jobs"
 
 function mockSelectChain(rows: unknown[]) {
   const chain: Record<string, unknown> = {}
@@ -40,164 +44,85 @@ function mockUpdateChain() {
   return chain
 }
 
-describe("processOneSurpriseBonusBatch", () => {
+function claimedJob(payload: { campaignId?: string; lastUserId?: string | null }) {
+  return { id: "job-1", type: SURPRISE_BONUS_JOB_TYPE, payload, attempts: 1, maxAttempts: 5 }
+}
+
+it("registers itself as the surprise_bonus_batch queue job handler on import", () => {
+  expect(registerQueueJob).toHaveBeenCalledWith(
+    expect.objectContaining({
+      type: SURPRISE_BONUS_JOB_TYPE,
+      label: "Surprise Bonus",
+      handler: processSurpriseBonusJob,
+    }),
+  )
+})
+
+describe("processSurpriseBonusJob", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(sendSurpriseBonusPushToUsers).mockResolvedValue({
-      sent: 2,
-      failed: 0,
-      invalidTokensRemoved: 0,
-    })
   })
 
-  it("returns claimed:false when queue is empty", async () => {
-    vi.mocked(db.execute).mockResolvedValue([] as never)
-    const result = await processOneSurpriseBonusBatch("local-test")
-    expect(result).toEqual({ claimed: false })
+  it("throws when the job payload has no campaignId", async () => {
+    await expect(processSurpriseBonusJob(claimedJob({}))).rejects.toThrow("Missing campaignId in payload")
   })
 
-  it("grants a batch, sends FCM for newly granted users, completes campaign", async () => {
+  it("grants a batch, enqueues a push job for newly granted users, completes the campaign", async () => {
     vi.mocked(db.execute)
-      .mockResolvedValueOnce([
-        {
-          id: "job-1",
-          type: "surprise_bonus_batch",
-          payload: { campaignId: "camp-1", lastUserId: null },
-          status: "processing",
-          attempts: 1,
-          max_attempts: 5,
-        },
-      ] as never)
       .mockResolvedValueOnce([{ result: { granted: true, points: 500 } }] as never)
       .mockResolvedValueOnce([{ result: { granted: true, points: 500 } }] as never)
 
     const userSelect = mockSelectChain([{ id: "u1" }, { id: "u2" }])
     const campaignSelect = mockSelectChain([
-      {
-        name: "Sweet December",
-        pointsPerUser: 500,
-        processedUsers: 0,
-        successCount: 0,
-        failedCount: 0,
-      },
+      { name: "Sweet December", pointsPerUser: 500, processedUsers: 0, successCount: 0, failedCount: 0 },
     ])
-    vi.mocked(db.select)
-      .mockReturnValueOnce(userSelect as never)
-      .mockReturnValueOnce(campaignSelect as never)
+    vi.mocked(db.select).mockReturnValueOnce(userSelect as never).mockReturnValueOnce(campaignSelect as never)
+    vi.mocked(db.update).mockReturnValue(mockUpdateChain() as never)
 
-    const campaignUpdate = mockUpdateChain()
-    const jobUpdate = mockUpdateChain()
-    vi.mocked(db.update)
-      .mockReturnValueOnce(campaignUpdate as never)
-      .mockReturnValueOnce(jobUpdate as never)
+    const result = await processSurpriseBonusJob(claimedJob({ campaignId: "camp-1", lastUserId: null }))
 
-    const result = await processOneSurpriseBonusBatch("local-test")
-
-    expect(result).toEqual({
-      claimed: true,
-      jobId: "job-1",
-      campaignId: "camp-1",
-      batchSize: 2,
-      successDelta: 2,
-      failedDelta: 0,
-      hasMore: false,
-      campaignStatus: "completed",
-      pushSentTo: 2,
-    })
-    expect(sendSurpriseBonusPushToUsers).toHaveBeenCalledWith({
-      userIds: ["u1", "u2"],
+    expect(enqueueJob).toHaveBeenCalledWith(SURPRISE_BONUS_PUSH_JOB_TYPE, {
       campaignId: "camp-1",
       campaignName: "Sweet December",
       pointsPerUser: 500,
+      userIds: ["u1", "u2"],
     })
-    expect(db.insert).not.toHaveBeenCalled()
+    expect(enqueueJob).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ batchUsers: 2, newlyGranted: 2, alreadyGranted: 0, failed: 0, pushJobEnqueued: true })
   })
 
-  it("does not push for already_granted users", async () => {
-    vi.mocked(db.execute)
-      .mockResolvedValueOnce([
-        {
-          id: "job-1",
-          type: "surprise_bonus_batch",
-          payload: { campaignId: "camp-1", lastUserId: null },
-          status: "processing",
-          attempts: 1,
-          max_attempts: 5,
-        },
-      ] as never)
-      .mockResolvedValueOnce([
-        { result: { granted: false, reason: "already_granted" } },
-      ] as never)
+  it("does not enqueue a push job for already_granted users", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce([{ result: { granted: false, reason: "already_granted" } }] as never)
 
     const userSelect = mockSelectChain([{ id: "u1" }])
     const campaignSelect = mockSelectChain([
-      {
-        name: "Sweet December",
-        pointsPerUser: 500,
-        processedUsers: 0,
-        successCount: 0,
-        failedCount: 0,
-      },
+      { name: "Sweet December", pointsPerUser: 500, processedUsers: 0, successCount: 0, failedCount: 0 },
     ])
-    vi.mocked(db.select)
-      .mockReturnValueOnce(userSelect as never)
-      .mockReturnValueOnce(campaignSelect as never)
-    vi.mocked(db.update)
-      .mockReturnValueOnce(mockUpdateChain() as never)
-      .mockReturnValueOnce(mockUpdateChain() as never)
+    vi.mocked(db.select).mockReturnValueOnce(userSelect as never).mockReturnValueOnce(campaignSelect as never)
+    vi.mocked(db.update).mockReturnValue(mockUpdateChain() as never)
 
-    await processOneSurpriseBonusBatch("local-test")
-    expect(sendSurpriseBonusPushToUsers).not.toHaveBeenCalled()
-  })
-})
-
-describe("drainSurpriseBonusJobs", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(sendSurpriseBonusPushToUsers).mockResolvedValue({
-      sent: 1,
-      failed: 0,
-      invalidTokensRemoved: 0,
-    })
+    const result = await processSurpriseBonusJob(claimedJob({ campaignId: "camp-1", lastUserId: null }))
+    expect(enqueueJob).not.toHaveBeenCalled()
+    expect(result).toEqual({ batchUsers: 1, newlyGranted: 0, alreadyGranted: 1, failed: 0, pushJobEnqueued: false })
   })
 
-  it("stops when a batch reports no more work", async () => {
-    vi.mocked(db.execute)
-      .mockResolvedValueOnce([
-        {
-          id: "job-1",
-          type: "surprise_bonus_batch",
-          payload: { campaignId: "camp-1", lastUserId: null },
-          status: "processing",
-          attempts: 1,
-          max_attempts: 5,
-        },
-      ] as never)
-      .mockResolvedValueOnce([{ result: { granted: true, points: 10 } }] as never)
+  it("chains the next batch via enqueueJob when a full batch (more users remain) is processed", async () => {
+    const fullBatch = Array.from({ length: 100 }, (_, i) => ({ id: `u${i}` }))
+    vi.mocked(db.execute).mockResolvedValue([{ result: { granted: true, points: 10 } }] as never)
 
-    const userSelect = mockSelectChain([{ id: "u1" }])
+    const userSelect = mockSelectChain(fullBatch)
     const campaignSelect = mockSelectChain([
-      {
-        name: "X",
-        pointsPerUser: 10,
-        processedUsers: 0,
-        successCount: 0,
-        failedCount: 0,
-      },
+      { name: "X", pointsPerUser: 10, processedUsers: 0, successCount: 0, failedCount: 0 },
     ])
-    vi.mocked(db.select)
-      .mockReturnValueOnce(userSelect as never)
-      .mockReturnValueOnce(campaignSelect as never)
-    vi.mocked(db.update)
-      .mockReturnValueOnce(mockUpdateChain() as never)
-      .mockReturnValueOnce(mockUpdateChain() as never)
+    vi.mocked(db.select).mockReturnValueOnce(userSelect as never).mockReturnValueOnce(campaignSelect as never)
+    vi.mocked(db.update).mockReturnValue(mockUpdateChain() as never)
 
-    const drained = await drainSurpriseBonusJobs({ maxBatches: 10 })
-    expect(drained.batches).toBe(1)
-    expect(drained.last).toMatchObject({
-      claimed: true,
-      campaignStatus: "completed",
-      hasMore: false,
-    })
+    await processSurpriseBonusJob(claimedJob({ campaignId: "camp-1", lastUserId: null }))
+
+    expect(enqueueJob).toHaveBeenCalledWith(SURPRISE_BONUS_JOB_TYPE, { campaignId: "camp-1", lastUserId: "u99" })
+    expect(enqueueJob).toHaveBeenCalledWith(
+      SURPRISE_BONUS_PUSH_JOB_TYPE,
+      expect.objectContaining({ campaignId: "camp-1", userIds: fullBatch.map((u) => u.id) }),
+    )
   })
 })

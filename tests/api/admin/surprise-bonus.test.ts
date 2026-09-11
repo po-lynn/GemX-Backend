@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { NextRequest } from "next/server"
+import { NextRequest, connection } from "next/server"
+
+vi.mock("next/server", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
+  return { ...actual, connection: vi.fn() }
+})
 
 vi.mock("@/lib/api-guard", () => ({
   requireAdminOrFeature: vi.fn(),
@@ -22,6 +27,7 @@ import { GET } from "@/app/api/admin/points/surprise-bonus/[id]/route"
 describe("POST /api/admin/points/surprise-bonus", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(requireAdminOrFeature).mockResolvedValue({
       session: { user: { id: "admin-1", role: "admin" } },
     } as never)
@@ -73,6 +79,7 @@ describe("POST /api/admin/points/surprise-bonus", () => {
 describe("GET /api/admin/points/surprise-bonus/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(connection).mockResolvedValue(undefined)
     vi.mocked(requireAdminOrFeature).mockResolvedValue({
       session: { user: { id: "admin-1", role: "admin" } },
     } as never)

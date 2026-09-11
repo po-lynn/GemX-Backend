@@ -8,6 +8,10 @@ import { RatingTagsListView } from "@/features/rating-tags/components/RatingTags
 import type { ViewTab } from "@/components/admin/list-view"
 import { FadeUp, PressButton } from "@/components/admin/motion"
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 const VIEWS = ["all", "positive", "neutral", "negative"] as const
 type View = (typeof VIEWS)[number]
 

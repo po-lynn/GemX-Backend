@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -194,8 +194,16 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
   const [archived,  setArchived]  = useState(user.archived);
   const points = user.points;
 
-  useEffect(() => { setVerified(user.verified); }, [user.verified]);
-  useEffect(() => { setArchived(user.archived); }, [user.archived]);
+  const [prevUserVerified, setPrevUserVerified] = useState(user.verified);
+  if (user.verified !== prevUserVerified) {
+    setPrevUserVerified(user.verified);
+    setVerified(user.verified);
+  }
+  const [prevUserArchived, setPrevUserArchived] = useState(user.archived);
+  if (user.archived !== prevUserArchived) {
+    setPrevUserArchived(user.archived);
+    setArchived(user.archived);
+  }
 
   // Myanmar NRC
   const parsedNrc  = parseMyanmarNrc(user.nrc);

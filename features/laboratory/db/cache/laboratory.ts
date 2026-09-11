@@ -1,4 +1,4 @@
-import { cacheTag, updateTag } from "next/cache";
+import { cacheTag, cacheLife, updateTag } from "next/cache";
 import { getGlobalTag, getIdTag } from "@/lib/dataCache";
 import {
   getAllLaboratories,
@@ -17,6 +17,8 @@ function getLaboratoryIdTag(id: string) {
 export async function getCachedLaboratories(): Promise<LaboratoryOption[]> {
   "use cache";
   cacheTag(getLaboratoryGlobalTag());
+  // Admin-managed reference data, only changes via revalidateLaboratoryCache.
+  cacheLife("max");
   return getAllLaboratories();
 }
 
@@ -25,6 +27,7 @@ export async function getCachedLaboratoryById(
 ): Promise<LaboratoryForEdit | null> {
   "use cache";
   cacheTag(getLaboratoryGlobalTag(), getLaboratoryIdTag(id));
+  cacheLife("max");
   return getLaboratoryById(id);
 }
 

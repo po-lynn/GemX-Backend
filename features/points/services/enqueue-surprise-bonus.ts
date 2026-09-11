@@ -1,10 +1,13 @@
+import { SURPRISE_BONUS_JOB_TYPE, SURPRISE_BONUS_PUSH_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
 import {
   countActiveUsers,
   createSurpriseBonusCampaign,
-  enqueueSurpriseBonusBatchJob,
   markSurpriseBonusCampaignProcessing,
 } from "@/features/points/db/surprise-bonus"
-import { drainSurpriseBonusJobs } from "@/features/points/services/process-surprise-bonus-jobs"
+import { processSurpriseBonusJob } from "@/features/points/services/process-surprise-bonus-jobs"
+import { processSurpriseBonusPushJob } from "@/features/points/services/process-surprise-bonus-push-jobs"
+import { drainJobs } from "@/lib/queue/drain"
+import { enqueueJob } from "@/lib/queue/queue"
 
 export type EnqueueSurpriseBonusInput = {
   campaignName: string
@@ -26,10 +29,13 @@ export type EnqueueSurpriseBonusResult =
   | { error: string }
 
 /**
- * Create campaign + first background job, then credit users inline in this
- * request (no cron / background worker involved). If a very large campaign's
- * drain gets cut off by `maxDuration`, the next Top-up submission reclaims
- * the stranded job automatically (`claim_background_job`, migration 0087).
+ * Create campaign + first background job, then credit users and send their
+ * push notifications inline in this request (no cron / background worker
+ * involved). If a very large campaign's credit drain gets cut off by
+ * `maxDuration`, the next Top-up submission reclaims the stranded job
+ * automatically (`claim_background_job`, migration 0087). A push-drain
+ * failure is logged but never turns a successful credit run into an error —
+ * it's recoverable from /admin/queue.
  */
 export async function enqueueSurpriseBonusForAllUsers(
   input: EnqueueSurpriseBonusInput,
@@ -53,10 +59,7 @@ export async function enqueueSurpriseBonusForAllUsers(
     createdBy: input.createdBy,
   })
 
-  await enqueueSurpriseBonusBatchJob({
-    campaignId: campaign.id,
-    lastUserId: null,
-  })
+  await enqueueJob(SURPRISE_BONUS_JOB_TYPE, { campaignId: campaign.id, lastUserId: null })
 
   await markSurpriseBonusCampaignProcessing(campaign.id)
 
@@ -64,7 +67,7 @@ export async function enqueueSurpriseBonusForAllUsers(
   const maxBatches = Math.max(1, Math.ceil(totalUsers / 100) + 2)
 
   try {
-    const drained = await drainSurpriseBonusJobs({ maxBatches })
+    const drained = await drainJobs(SURPRISE_BONUS_JOB_TYPE, processSurpriseBonusJob, { maxBatches })
     if (drained.batches === 0) {
       console.warn(
         "[surprise-bonus] inline drain claimed 0 batches — check claim_background_job RPC / pending jobs",
@@ -77,6 +80,15 @@ export async function enqueueSurpriseBonusForAllUsers(
     return {
       error: `Campaign created but crediting failed: ${message}. Check RPCs (claim_background_job / grant_surprise_bonus_user) and retry the Top-up.`,
     }
+  }
+
+  try {
+    await drainJobs(SURPRISE_BONUS_PUSH_JOB_TYPE, processSurpriseBonusPushJob, { maxBatches })
+  } catch (e) {
+    // Credits already committed — a push failure only affects notification
+    // delivery, which is recoverable from /admin/queue (retry or delete), so
+    // it must not turn an otherwise-successful campaign into an error response.
+    console.error("[surprise-bonus] push drain failed (recoverable from /admin/queue):", e)
   }
 
   return {

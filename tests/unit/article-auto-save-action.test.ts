@@ -56,6 +56,7 @@ describe("autoSaveArticleAction", () => {
       contentTh: null,
       contentKo: null,
       author: "Gem X",
+      type: "article",
       category: "general",
       coverImage: null,
       isFeatured: false,

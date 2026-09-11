@@ -17,6 +17,10 @@ const baseProduct: ProductForEdit = {
   id: "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
   sku: "SAPP-0001",
   title: "Ceylon Blue Sapphire",
+  titleEn: null,
+  titleMy: null,
+  titleTh: null,
+  titleKo: null,
   description: "A vivid, eye-clean 3.2ct Ceylon sapphire.",
   language: "English",
   descriptionEn: "A vivid, eye-clean 3.2ct Ceylon sapphire.",
@@ -76,7 +80,7 @@ describe("generateMetadata for /products/[id]", () => {
     expect(metadata.title).toBe("Ceylon Blue Sapphire")
     expect(metadata.description).toBe("A vivid, eye-clean 3.2ct Ceylon sapphire.")
     expect(metadata.openGraph?.images).toEqual(["https://cdn.example.com/sapphire.jpg"])
-    expect(metadata.twitter?.card).toBe("summary_large_image")
+    expect((metadata.twitter as { card?: string } | undefined)?.card).toBe("summary_large_image")
   })
 
   // Collector pieces are gated behind an approved show-request; an anonymous share-link

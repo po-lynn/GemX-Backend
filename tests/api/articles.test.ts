@@ -45,6 +45,7 @@ const articleRow = {
   contentTh: "[]",
   contentKo: "[]",
   author: "Gem X Newsroom",
+  type: "article",
   category: "gemology",
   coverImage: null,
   isFeatured: false,

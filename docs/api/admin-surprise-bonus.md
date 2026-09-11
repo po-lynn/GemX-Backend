@@ -2,7 +2,9 @@
 
 Create a Surprise Bonus campaign for all active users and enqueue the first database job.
 
-Drains the queue **inline in this request**, in every environment — the response is only sent once all users are credited (`processedInline: true`). There is no background worker or cron for this endpoint. If a very large user base gets cut off by `maxDuration` (60s) mid-drain, the stranded job is auto-reclaimed by the *next* Top-up submission's inline drain once its lock is >3 min old (`claim_background_job`, migration `0087`) — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md).
+Drains the queue **inline in this request**, in every environment — the response is only sent once all users are credited and their push notifications have been attempted (`processedInline: true`). Crediting and push delivery are two separate queue job types (`surprise_bonus_batch`, `surprise_bonus_push_batch`); both are visible/retryable/deletable independently on [`/admin/queue`](../technical/queue-management.md). There is no background worker or cron for this endpoint. If a very large user base gets cut off by `maxDuration` (60s) mid-drain, the stranded job is auto-reclaimed by the *next* Top-up submission's inline drain once its lock is >3 min old (`claim_background_job`, migration `0087`) — see [surprise-bonus-stale-job-reclaim.md](../technical/surprise-bonus-stale-job-reclaim.md).
+
+A push-drain failure (e.g. FCM misconfigured) is logged and surfaces on `/admin/queue` as a failed `surprise_bonus_push_batch` job, but it never turns this response into a **500** — crediting has already committed by that point.
 
 ## Auth
 

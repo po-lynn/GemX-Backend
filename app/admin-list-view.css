@@ -601,8 +601,10 @@
 .lv-status.active    { color: #047857; background: #ECFDF5; }
 .lv-status.expired   { color: #B45309; background: #FFF7ED; }
 .lv-status.cancelled { color: #4B5468; background: #F1F2F6; }
-.lv-status.pending   { color: #1D4ED8; background: #EFF4FF; }
-.lv-status.failed    { color: #B91C1C; background: #FEF2F2; }
+.lv-status.pending    { color: #1D4ED8; background: #EFF4FF; }
+.lv-status.processing { color: #B45309; background: #FFFBEB; }
+.lv-status.completed  { color: #047857; background: #ECFDF5; }
+.lv-status.failed     { color: #B91C1C; background: #FEF2F2; }
 /* Product-specific status variants */
 .lv-status.sold      { color: #1F2937; background: #E2E8F0; }
 .lv-status.archive   { color: #64748B; background: #F1F5F9; }

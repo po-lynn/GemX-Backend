@@ -5,8 +5,12 @@ import { getAppContentSections } from "@/features/app-content/db/app-content"
 import { AppContentClient } from "@/features/app-content/components/AppContentClient"
 import "./app-content.css"
 
-type TabId = "about" | "follow" | "help" | "terms" | "buying" | "selling"
-const TABS: TabId[] = ["about", "follow", "help", "terms", "buying", "selling"]
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
+type TabId = "about" | "follow" | "help"
+const TABS: TabId[] = ["about", "follow", "help"]
 
 type Props = {
   searchParams: Promise<{ tab?: string }>

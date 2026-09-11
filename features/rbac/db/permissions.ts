@@ -1,4 +1,4 @@
-import { cacheTag, revalidateTag } from "next/cache"
+import { cacheTag, cacheLife, revalidateTag } from "next/cache"
 import { sql, eq } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { internalPermission } from "@/drizzle/schema/rbac-schema"
@@ -16,6 +16,8 @@ function permCacheTag(userId: string) {
 export async function getUserPermissions(userId: string): Promise<Record<string, boolean>> {
   "use cache"
   cacheTag(permCacheTag(userId))
+  // Only changes via setUserPermissions below, which always revalidates this tag.
+  cacheLife("max")
   const rows = await db.select().from(internalPermission)
     .where(eq(internalPermission.userId, userId))
   return Object.fromEntries(rows.map((r) => [r.featureKey, r.canAccess]))

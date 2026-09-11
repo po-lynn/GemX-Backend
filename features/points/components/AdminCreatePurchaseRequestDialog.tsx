@@ -77,11 +77,13 @@ export function AdminCreatePurchaseRequestDialog({
 
   useEffect(() => {
     if (!showList || !query.trim()) {
-      setSearchResults([])
-      setSearching(false)
-      return
+      const timer = setTimeout(() => {
+        setSearchResults([])
+        setSearching(false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
-    setSearching(true)
+    queueMicrotask(() => setSearching(true))
     const timer = setTimeout(async () => {
       const result = await searchUsersForPickerAction(query)
       if (result.users) setSearchResults(result.users)

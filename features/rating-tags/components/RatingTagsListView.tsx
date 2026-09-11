@@ -1,22 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { ListViewCard } from "@/components/admin/list-view"
+import { ListViewCard, fmtDate, fmtRelative, buildListViewHrefs } from "@/components/admin/list-view"
 import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
 import type { RatingTagRow } from "@/features/rating-tags/db/rating-tags"
-
-function fmtDate(d: Date): string {
-  return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-}
-
-function fmtRelative(d: Date): string {
-  const diff = (Date.now() - new Date(d).getTime()) / 1000
-  if (diff < 60)     return "just now"
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-  return fmtDate(d)
-}
 
 function TypePill({ type }: { type: "positive" | "neutral" | "negative" }) {
   return (
@@ -61,20 +48,7 @@ type Props = {
   activeView: string
 }
 
-const BASE = "/admin/settings/rating-tags"
-
-function buildViewHref(view: string): string {
-  const p = new URLSearchParams()
-  if (view !== "all") p.set("view", view)
-  return p.toString() ? `${BASE}?${p}` : BASE
-}
-
-function buildPageHref(pg: number, view: string): string {
-  const p = new URLSearchParams()
-  if (view !== "all") p.set("view", view)
-  p.set("page", String(pg))
-  return `${BASE}?${p}`
-}
+const { buildViewHref, buildPageHref } = buildListViewHrefs("/admin/settings/rating-tags")
 
 export function RatingTagsListView({ tags, allTags, views, activeView }: Props) {
   const router = useRouter()

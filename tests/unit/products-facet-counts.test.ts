@@ -55,7 +55,7 @@ describe("getAdminProductFacetCounts", () => {
       void sel
       call++
       const chain = makeSelectChain(call === 1 ? [countsRow] : categoryRows)
-      return chain as ReturnType<typeof db.select>
+      return chain as unknown as ReturnType<typeof db.select>
     })
 
     const { getAdminProductFacetCounts } = await import("@/features/products/db/products")
@@ -93,7 +93,7 @@ describe("getAdminProductFacetCounts", () => {
     // omit the active stoneCut filter — the other 9 must still apply it. The consolidated
     // query then separately matches each stoneCut option value (Faceted, Cabochon) directly
     // in its own FILTER clause, regardless of the active filter.
-    vi.mocked(db.select).mockImplementation(() => makeSelectChain([{}]) as ReturnType<typeof db.select>)
+    vi.mocked(db.select).mockImplementation(() => makeSelectChain([{}]) as unknown as ReturnType<typeof db.select>)
 
     const { getAdminProductFacetCounts } = await import("@/features/products/db/products")
     await getAdminProductFacetCounts({ stoneCut: "Faceted" })

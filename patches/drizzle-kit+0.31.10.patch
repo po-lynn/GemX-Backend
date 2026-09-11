@@ -1,7 +1,8 @@
 diff --git a/node_modules/drizzle-kit/api.js b/node_modules/drizzle-kit/api.js
+index f4ecb91..dadd88e 100644
 --- a/node_modules/drizzle-kit/api.js
 +++ b/node_modules/drizzle-kit/api.js
-@@ -23268,6 +23268,7 @@
+@@ -23299,6 +23299,7 @@ WHERE
              }
              for (const checks of tableChecks) {
                let checkValue = checks.constraint_definition;
@@ -10,9 +11,10 @@ diff --git a/node_modules/drizzle-kit/api.js b/node_modules/drizzle-kit/api.js
                checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
                checkConstraints[constraintName] = {
 diff --git a/node_modules/drizzle-kit/api.mjs b/node_modules/drizzle-kit/api.mjs
+index a940272..8ff3e43 100644
 --- a/node_modules/drizzle-kit/api.mjs
 +++ b/node_modules/drizzle-kit/api.mjs
-@@ -23285,6 +23285,7 @@
+@@ -23315,6 +23315,7 @@ WHERE
              }
              for (const checks of tableChecks) {
                let checkValue = checks.constraint_definition;
@@ -21,9 +23,10 @@ diff --git a/node_modules/drizzle-kit/api.mjs b/node_modules/drizzle-kit/api.mjs
                checkValue = checkValue.replace(/^CHECK\s*\(\(/, "").replace(/\)\)\s*$/, "");
                checkConstraints[constraintName] = {
 diff --git a/node_modules/drizzle-kit/bin.cjs b/node_modules/drizzle-kit/bin.cjs
+index 07274ea..3b19b9c 100755
 --- a/node_modules/drizzle-kit/bin.cjs
 +++ b/node_modules/drizzle-kit/bin.cjs
-@@ -19574,6 +19574,7 @@
+@@ -17857,6 +17857,7 @@ WHERE
              }
              for (const checks of tableChecks) {
                let checkValue = checks.constraint_definition;

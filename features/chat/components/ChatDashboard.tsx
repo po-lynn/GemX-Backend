@@ -408,7 +408,7 @@ export function ChatDashboard({
   }, [selectedUserId, refreshGlobalUnread])
 
   useEffect(() => {
-    void refreshUnreadCounts()
+    queueMicrotask(() => void refreshUnreadCounts())
   }, [refreshUnreadCounts])
 
   /**
@@ -435,13 +435,12 @@ export function ChatDashboard({
     }
   }, [refreshUnreadCounts])
 
-  useEffect(() => {
+  const [prevUsersForSidebar, setPrevUsersForSidebar] = useState(users)
+  if (users !== prevUsersForSidebar) {
+    setPrevUsersForSidebar(users)
     setConversations((prev) =>
       sortConversationsForSidebar(buildConversationsFromUsers(users, prev))
     )
-  }, [users])
-
-  useEffect(() => {
     setSessionActivityByUserId((prev) => {
       const next = { ...prev }
       for (const u of users) {
@@ -449,7 +448,7 @@ export function ChatDashboard({
       }
       return next
     })
-  }, [users])
+  }
 
   /**
    * Bootstrap presence once per peer list; live updates come from Supabase `session`
@@ -479,9 +478,11 @@ export function ChatDashboard({
     }
   }, [users])
 
-  useEffect(() => {
+  const [prevSelectedUserIdForDivider, setPrevSelectedUserIdForDivider] = useState(selectedUserId)
+  if (selectedUserId !== prevSelectedUserIdForDivider) {
+    setPrevSelectedUserIdForDivider(selectedUserId)
     setUnreadDividerIndex(null)
-  }, [selectedUserId])
+  }
 
   /** Tell global notification layer + mobile push which thread is open. */
   useEffect(() => {
@@ -511,13 +512,24 @@ export function ChatDashboard({
     }
   }, [selectedUserId, setActiveConversationPeerId])
 
-  useEffect(() => {
-    if (!initialPeerId) return
-    const known =
-      users.some((u) => u.id === initialPeerId) ||
-      (contactPickerUsers?.some((u) => u.id === initialPeerId) ?? false)
-    if (known) setSelectedUserId(initialPeerId)
-  }, [initialPeerId, users, contactPickerUsers])
+  const [prevInitialPeerId, setPrevInitialPeerId] = useState(initialPeerId)
+  const [prevUsersForInitialPeer, setPrevUsersForInitialPeer] = useState(users)
+  const [prevContactPickerUsersForInitialPeer, setPrevContactPickerUsersForInitialPeer] = useState(contactPickerUsers)
+  if (
+    initialPeerId !== prevInitialPeerId ||
+    users !== prevUsersForInitialPeer ||
+    contactPickerUsers !== prevContactPickerUsersForInitialPeer
+  ) {
+    setPrevInitialPeerId(initialPeerId)
+    setPrevUsersForInitialPeer(users)
+    setPrevContactPickerUsersForInitialPeer(contactPickerUsers)
+    if (initialPeerId) {
+      const known =
+        users.some((u) => u.id === initialPeerId) ||
+        (contactPickerUsers?.some((u) => u.id === initialPeerId) ?? false)
+      if (known) setSelectedUserId(initialPeerId)
+    }
+  }
 
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -667,7 +679,7 @@ export function ChatDashboard({
   }, [selectedUserId, currentUserId, refreshUnreadCounts, resolvePeerProfile])
 
   useEffect(() => {
-    loadHistory()
+    queueMicrotask(loadHistory)
   }, [loadHistory])
 
   useEffect(() => {

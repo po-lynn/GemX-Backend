@@ -28,3 +28,11 @@ describe("featureSaveKeys", () => {
     ).toEqual([FEATURE_KEYS.MESSAGES, FEATURE_KEYS.CHAT_DASHBOARD])
   })
 })
+
+describe("System feature group", () => {
+  it("exposes a Queue Management toggle", () => {
+    const system = FEATURE_GROUPS.find((g) => g.label === "System")
+    expect(system?.features).toHaveLength(1)
+    expect(system?.features[0].key).toBe(FEATURE_KEYS.QUEUE_MANAGEMENT)
+  })
+})

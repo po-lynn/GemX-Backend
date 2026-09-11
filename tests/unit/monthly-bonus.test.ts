@@ -5,6 +5,10 @@ vi.mock("@/drizzle/db", () => ({
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
+    // Credit + ledger write now run inside db.transaction(); creditUserPoints and
+    // logPointTransaction are mocked below and never touch the tx they're given,
+    // so any placeholder value is fine here.
+    transaction: vi.fn((fn: (tx: unknown) => unknown) => fn({})),
   },
 }))
 
@@ -126,6 +130,8 @@ describe("grantDueMonthlyBonusPoints", () => {
         referenceId: "mb:2023-10-01:c1",
         referenceType: "monthly_bonus",
       }),
+      // The tx from db.transaction(), so the credit and ledger write commit atomically.
+      expect.anything(),
     )
     expect(notifyMonthlyBonusGranted).toHaveBeenCalledTimes(2)
     expect(notifyMonthlyBonusGranted).toHaveBeenCalledWith({

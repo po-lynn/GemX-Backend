@@ -42,9 +42,13 @@ describe("normalizeMyanmarPhone — extended for E.164 input", () => {
   })
 })
 
+type MockedPhoneLoginDb = {
+  db: { select: ReturnType<typeof vi.fn>; from: ReturnType<typeof vi.fn>; where: ReturnType<typeof vi.fn>; limit: ReturnType<typeof vi.fn> }
+}
+
 describe("getUserEmailByPhone", () => {
   it("returns email when phone matches a user", async () => {
-    const { db } = await import("@/drizzle/db")
+    const { db } = (await import("@/drizzle/db")) as unknown as MockedPhoneLoginDb
     vi.mocked(db.limit).mockResolvedValueOnce([{ email: "portal@example.com" }])
     const { getUserEmailByPhone } = await import("@/features/users/db/users")
     const result = await getUserEmailByPhone("+959123456789")

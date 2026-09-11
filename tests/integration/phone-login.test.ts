@@ -13,9 +13,13 @@ vi.mock("@/drizzle/db", () => ({
   },
 }))
 
+type MockedPhoneLoginDb = {
+  db: { select: ReturnType<typeof vi.fn>; from: ReturnType<typeof vi.fn>; where: ReturnType<typeof vi.fn>; limit: ReturnType<typeof vi.fn> }
+}
+
 describe("getEmailForPhoneLoginAction", () => {
   it("resolves valid 09... phone to email", async () => {
-    const { db } = await import("@/drizzle/db")
+    const { db } = (await import("@/drizzle/db")) as unknown as MockedPhoneLoginDb
     vi.mocked(db.limit).mockResolvedValueOnce([{ email: "dealer@example.com" }])
     const { getEmailForPhoneLoginAction } = await import("@/features/users/actions/phone-login")
     const result = await getEmailForPhoneLoginAction("09123456789")
@@ -23,7 +27,7 @@ describe("getEmailForPhoneLoginAction", () => {
   })
 
   it("resolves valid +959... phone to email", async () => {
-    const { db } = await import("@/drizzle/db")
+    const { db } = (await import("@/drizzle/db")) as unknown as MockedPhoneLoginDb
     vi.mocked(db.limit).mockResolvedValueOnce([{ email: "dealer@example.com" }])
     const { getEmailForPhoneLoginAction } = await import("@/features/users/actions/phone-login")
     const result = await getEmailForPhoneLoginAction("+959123456789")

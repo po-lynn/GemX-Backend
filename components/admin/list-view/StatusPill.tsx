@@ -1,9 +1,11 @@
 const STATUS_LABELS: Record<string, string> = {
-  active:    "Active",
-  expired:   "Expired",
-  cancelled: "Cancelled",
-  pending:   "Pending",
-  failed:    "Failed",
+  active:     "Active",
+  expired:    "Expired",
+  cancelled:  "Cancelled",
+  pending:    "Pending",
+  processing: "Processing",
+  completed:  "Completed",
+  failed:     "Failed",
 }
 
 export function StatusPill({ status }: { status: string }) {

@@ -9,7 +9,7 @@ Surprise Bonus is **admin-triggered only** — there is no schedule, no cron, an
 
 ## Unstick a campaign already at processing 0/N
 
-There's no separate recovery cron to call — just submit **any** Top-up again (even a small one, or the same campaign amount). Its inline drain claims the queue in `available_at`/`created_at` order, so it reclaims the stranded job (once its lock is >3 min old, migration `0087`) before starting the new one. See [fix-stuck-surprise-bonus.md](./fix-stuck-surprise-bonus.md).
+Open **Point Transactions**, scroll to the **Background Jobs** panel below the table, and click **Retry stuck jobs** — it runs one drain pass that reclaims anything stranded (once its lock is >3 min old, migration `0087`) without creating a new campaign. Submitting any new Top-up also reclaims it as a side effect, if you'd rather do that. See [surprise-bonus-jobs-panel.md](../technical/surprise-bonus-jobs-panel.md) and [fix-stuck-surprise-bonus.md](./fix-stuck-surprise-bonus.md).
 
 ## Very large campaigns (thousands of users)
 

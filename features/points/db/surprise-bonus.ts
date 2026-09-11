@@ -1,11 +1,8 @@
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import {
-  backgroundJobs,
-  surpriseBonusCampaign,
-  SURPRISE_BONUS_JOB_TYPE,
-} from "@/drizzle/schema/surprise-bonus-schema"
-import { and, eq, sql } from "drizzle-orm"
+import { surpriseBonusCampaign } from "@/drizzle/schema/surprise-bonus-schema"
+import type { QueueJobRow } from "@/lib/queue/types"
+import { and, eq, inArray, sql } from "drizzle-orm"
 
 export type SurpriseBonusCampaignRow = typeof surpriseBonusCampaign.$inferSelect
 
@@ -60,37 +57,10 @@ export async function createSurpriseBonusCampaign(input: {
   return row
 }
 
-export async function enqueueSurpriseBonusBatchJob(input: {
-  campaignId: string
-  lastUserId: string | null
-}): Promise<{ id: string }> {
-  const [row] = await db
-    .insert(backgroundJobs)
-    .values({
-      type: SURPRISE_BONUS_JOB_TYPE,
-      payload: {
-        campaignId: input.campaignId,
-        lastUserId: input.lastUserId,
-      },
-      status: "pending",
-      attempts: 0,
-      maxAttempts: 5,
-      availableAt: new Date(),
-    })
-    .returning({ id: backgroundJobs.id })
-  return row
-}
-
-export async function markSurpriseBonusCampaignProcessing(
-  campaignId: string,
-): Promise<void> {
+export async function markSurpriseBonusCampaignProcessing(campaignId: string): Promise<void> {
   await db
     .update(surpriseBonusCampaign)
-    .set({
-      status: "processing",
-      startedAt: new Date(),
-      updatedAt: new Date(),
-    })
+    .set({ status: "processing", startedAt: new Date(), updatedAt: new Date() })
     .where(eq(surpriseBonusCampaign.id, campaignId))
 }
 
@@ -103,4 +73,35 @@ export async function getSurpriseBonusCampaignById(
     .where(eq(surpriseBonusCampaign.id, campaignId))
     .limit(1)
   return row ?? null
+}
+
+/**
+ * Batch-enrich queue admin rows with their campaign name (one query for the
+ * whole page, not per row) — the describeJobs hook for the surprise_bonus_batch
+ * queue job type.
+ */
+export async function describeSurpriseBonusJobs(jobs: QueueJobRow[]): Promise<Map<string, string>> {
+  const campaignIds = [
+    ...new Set(
+      jobs
+        .map((j) => (j.payload as { campaignId?: string }).campaignId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
+  if (campaignIds.length === 0) return new Map()
+
+  const campaigns = await db
+    .select({ id: surpriseBonusCampaign.id, name: surpriseBonusCampaign.name })
+    .from(surpriseBonusCampaign)
+    .where(inArray(surpriseBonusCampaign.id, campaignIds))
+
+  const nameById = new Map(campaigns.map((c) => [c.id, c.name]))
+  const result = new Map<string, string>()
+  for (const job of jobs) {
+    const campaignId = (job.payload as { campaignId?: string }).campaignId
+    if (campaignId && nameById.has(campaignId)) {
+      result.set(job.id, nameById.get(campaignId)!)
+    }
+  }
+  return result
 }

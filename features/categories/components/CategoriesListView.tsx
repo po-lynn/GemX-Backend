@@ -2,24 +2,11 @@
 
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ListViewCard } from "@/components/admin/list-view"
+import { ListViewCard, fmtDate, fmtRelative, buildListViewHrefs } from "@/components/admin/list-view"
 import type { ColumnDef, ViewTab, FilterDef, GroupOption } from "@/components/admin/list-view"
 import type { CategoryRow } from "@/features/categories/db/categories"
 
 // ─── Helpers ──────────────────────────────────────────────
-
-function fmtDate(d: Date): string {
-  return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-}
-
-function fmtRelative(d: Date): string {
-  const diff = (Date.now() - new Date(d).getTime()) / 1000
-  if (diff < 60)     return "just now"
-  if (diff < 3600)   return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
-  return fmtDate(d)
-}
 
 function gemHue(s: string): number {
   let h = 0
@@ -67,20 +54,7 @@ type Props = {
   activeView: string
 }
 
-const BASE = "/admin/categories"
-
-function buildViewHref(view: string): string {
-  const p = new URLSearchParams()
-  if (view !== "all") p.set("view", view)
-  return p.toString() ? `${BASE}?${p}` : BASE
-}
-
-function buildPageHref(pg: number, view: string): string {
-  const p = new URLSearchParams()
-  if (view !== "all") p.set("view", view)
-  p.set("page", String(pg))
-  return `${BASE}?${p}`
-}
+const { buildViewHref, buildPageHref } = buildListViewHrefs("/admin/categories")
 
 // ─── Main component ────────────────────────────────────────
 
