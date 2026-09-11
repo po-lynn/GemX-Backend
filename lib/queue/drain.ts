@@ -25,8 +25,8 @@ export async function drainJobs(
     batches++
 
     try {
-      await handler(job)
-      await completeJob(job.id)
+      const result = await handler(job)
+      await completeJob(job.id, result ?? undefined)
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       await failOrRetryJob(job, message)

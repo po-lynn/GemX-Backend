@@ -18,6 +18,10 @@ vi.mock("@/features/points/services/process-surprise-bonus-jobs", () => ({
   processSurpriseBonusJob: vi.fn(),
 }))
 
+vi.mock("@/features/points/services/process-surprise-bonus-push-jobs", () => ({
+  processSurpriseBonusPushJob: vi.fn(),
+}))
+
 import {
   countActiveUsers,
   createSurpriseBonusCampaign,
@@ -26,7 +30,8 @@ import {
 import { enqueueJob } from "@/lib/queue/queue"
 import { drainJobs } from "@/lib/queue/drain"
 import { processSurpriseBonusJob } from "@/features/points/services/process-surprise-bonus-jobs"
-import { SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import { processSurpriseBonusPushJob } from "@/features/points/services/process-surprise-bonus-push-jobs"
+import { SURPRISE_BONUS_JOB_TYPE, SURPRISE_BONUS_PUSH_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
 import { enqueueSurpriseBonusForAllUsers } from "@/features/points/services/enqueue-surprise-bonus"
 
 describe("enqueueSurpriseBonusForAllUsers", () => {
@@ -95,10 +100,15 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
     )
     expect(enqueueJob).toHaveBeenCalledWith(SURPRISE_BONUS_JOB_TYPE, { campaignId: "camp-1", lastUserId: null })
     expect(markSurpriseBonusCampaignProcessing).toHaveBeenCalledWith("camp-1")
-    expect(drainJobs).toHaveBeenCalledWith(SURPRISE_BONUS_JOB_TYPE, processSurpriseBonusJob, { maxBatches: 5 })
+    expect(drainJobs).toHaveBeenNthCalledWith(1, SURPRISE_BONUS_JOB_TYPE, processSurpriseBonusJob, {
+      maxBatches: 5,
+    })
+    expect(drainJobs).toHaveBeenNthCalledWith(2, SURPRISE_BONUS_PUSH_JOB_TYPE, processSurpriseBonusPushJob, {
+      maxBatches: 5,
+    })
   })
 
-  it("returns an error and leaves the campaign row in place when the inline drain throws", async () => {
+  it("returns an error and leaves the campaign row in place when the credit drain throws", async () => {
     vi.mocked(countActiveUsers).mockResolvedValue(250)
     vi.mocked(drainJobs).mockRejectedValue(new Error("relation missing"))
 
@@ -112,6 +122,30 @@ describe("enqueueSurpriseBonusForAllUsers", () => {
       error:
         "Campaign created but crediting failed: relation missing. Check RPCs (claim_background_job / grant_surprise_bonus_user) and retry the Top-up.",
     })
+    expect(drainJobs).toHaveBeenCalledTimes(1)
+  })
+
+  it("still returns success when only the push drain fails — credits already committed", async () => {
+    vi.mocked(countActiveUsers).mockResolvedValue(250)
+    vi.mocked(drainJobs)
+      .mockResolvedValueOnce({ batches: 3 })
+      .mockRejectedValueOnce(new Error("FCM not configured"))
+
+    const result = await enqueueSurpriseBonusForAllUsers({
+      campaignName: "Sweet December",
+      pointsPerUser: 500,
+      createdBy: "admin-1",
+    })
+
+    expect(result).toEqual({
+      success: true,
+      campaignId: "camp-1",
+      totalUsers: 250,
+      pointsPerUser: 500,
+      campaignName: "Sweet December",
+      processedInline: true,
+    })
+    expect(drainJobs).toHaveBeenCalledTimes(2)
   })
 
   it("returns error when no active users", async () => {

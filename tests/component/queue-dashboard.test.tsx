@@ -198,3 +198,63 @@ describe("QueueDashboard delete", () => {
     expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore)
   })
 })
+
+describe("QueueDashboard job detail", () => {
+  it("expands a row to show its recorded result, then collapses it again", async () => {
+    mockFetchSequence([
+      { json: { types: [{ type: "surprise_bonus_batch", label: "Surprise Bonus" }] } },
+      {
+        json: {
+          counts: { pending: 0, processing: 0, completed: 1, failed: 0, stale: 0 },
+          jobs: [
+            {
+              id: "job-done", status: "completed", isStale: false, attempts: 1, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              result: { batchUsers: 50, newlyGranted: 48, alreadyGranted: 2, failed: 0, pushJobEnqueued: true },
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "All done",
+            },
+          ],
+        },
+      },
+    ])
+
+    render(<QueueDashboard />)
+    await screen.findByText("All done")
+
+    expect(screen.queryByText(/Newly Granted/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /show job detail/i }))
+    expect(await screen.findByText(/Newly Granted:/)).toBeInTheDocument()
+    expect(screen.getByText("48")).toBeInTheDocument()
+    expect(screen.getByText(/Push Job Enqueued:/)).toBeInTheDocument()
+    expect(screen.getByText("Yes")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /hide job detail/i }))
+    expect(screen.queryByText(/Newly Granted/)).not.toBeInTheDocument()
+  })
+
+  it("shows a fallback message when a job has no recorded result", async () => {
+    mockFetchSequence([
+      { json: { types: [{ type: "surprise_bonus_batch", label: "Surprise Bonus" }] } },
+      {
+        json: {
+          counts: { pending: 0, processing: 0, completed: 1, failed: 0, stale: 0 },
+          jobs: [
+            {
+              id: "job-old", status: "completed", isStale: false, attempts: 1, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              result: null,
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "Old job",
+            },
+          ],
+        },
+      },
+    ])
+
+    render(<QueueDashboard />)
+    await screen.findByText("Old job")
+
+    fireEvent.click(screen.getByRole("button", { name: /show job detail/i }))
+    expect(await screen.findByText("No details recorded for this job.")).toBeInTheDocument()
+  })
+})

@@ -98,7 +98,7 @@ describe("GET /api/admin/queue", () => {
       {
         id: "job-1", type: "surprise_bonus_batch", payload: {}, status: "processing",
         attempts: 1, maxAttempts: 5, availableAt: new Date("2026-09-08T09:59:00Z"),
-        lockedAt, lockedBy: "local-abc123", lastError: null,
+        lockedAt, lockedBy: "local-abc123", lastError: null, result: { batchUsers: 50, newlyGranted: 48 },
         createdAt: new Date("2026-09-08T09:58:00Z"), completedAt: null, isStale: true,
       },
     ])
@@ -112,7 +112,7 @@ describe("GET /api/admin/queue", () => {
       {
         id: "job-1", status: "processing", isStale: true, attempts: 1, maxAttempts: 5,
         availableAt: "2026-09-08T09:59:00.000Z", lockedAt: "2026-09-08T10:00:00.000Z",
-        lockedBy: "local-abc123", lastError: null,
+        lockedBy: "local-abc123", lastError: null, result: { batchUsers: 50, newlyGranted: 48 },
         createdAt: "2026-09-08T09:58:00.000Z", completedAt: null, description: "Sweet December",
       },
     ])

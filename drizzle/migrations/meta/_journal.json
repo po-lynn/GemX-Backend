@@ -624,6 +624,13 @@
       "when": 1788934928582,
       "tag": "0089_product_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1789144043374,
+      "tag": "0090_perpetual_blink",
+      "breakpoints": true
     }
   ]
 }

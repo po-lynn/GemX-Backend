@@ -11,11 +11,14 @@ dependencies.
 1. **Write a handler.** A handler receives one claimed job and does the
    work; return normally on success, throw on failure (the queue records
    the failure and retries with backoff, or marks the job `failed` once
-   `maxAttempts` is reached).
+   `maxAttempts` is reached). Optionally return a plain object summarizing
+   what happened — it's stored on the job row and rendered in an expandable
+   detail row under that job on `/admin/queue`, so an admin can see e.g. how
+   many records a batch touched without reading logs.
 
    ```ts
    // features/my-feature/services/process-my-jobs.ts
-   import type { ClaimedQueueJob } from "@/lib/queue/types"
+   import type { ClaimedQueueJob, QueueJobResult } from "@/lib/queue/types"
    import { registerQueueJob } from "@/lib/queue/registry"
 
    export const MY_JOB_TYPE = "my_feature_batch" as const
@@ -24,9 +27,10 @@ dependencies.
 
    // ClaimedQueueJob is intentionally not generic (see lib/queue/types.ts) —
    // cast payload to your feature's shape inside the handler.
-   export async function processMyJob(job: ClaimedQueueJob): Promise<void> {
+   export async function processMyJob(job: ClaimedQueueJob): Promise<QueueJobResult> {
      const payload = job.payload as MyJobPayload
      // ... do the work for payload.someId ...
+     return { processed: 1 } // optional — shown as "Processed: 1" on /admin/queue
    }
 
    registerQueueJob({
@@ -35,6 +39,11 @@ dependencies.
      handler: processMyJob,
    })
    ```
+
+   The dashboard prettifies keys (`newlyGranted` → "Newly Granted") and
+   formats booleans as Yes/No — keep the object flat and JSON-serializable.
+   Returning nothing (`Promise<void>`) is fine too; the row's detail then
+   shows "No details recorded for this job."
 
 2. **Wire the registration into the shared registry** by adding an import
    to `lib/queue/registrations.ts`:

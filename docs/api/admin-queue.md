@@ -32,6 +32,7 @@
       "lockedAt": "2026-09-08T10:00:00.000Z",
       "lockedBy": "local-abc123",
       "lastError": null,
+      "result": null,
       "createdAt": "2026-09-08T09:58:00.000Z",
       "completedAt": null,
       "description": "Sweet December"
@@ -39,6 +40,11 @@
   ]
 }
 ```
+
+`result` is whatever plain object the job's handler returned on success
+(e.g. `{ "batchUsers": 50, "newlyGranted": 48 }`), or `null` for a job that
+hasn't completed, that failed, or that predates this field. The admin panel
+renders it as an expandable detail row under the job.
 
 **Errors:** `401` unauthorized, `403` forbidden, `404` unknown `type`.
 

@@ -14,6 +14,14 @@ import { user } from "./auth-schema"
 export const SURPRISE_BONUS_JOB_TYPE = "surprise_bonus_batch" as const
 
 /**
+ * Job type for FCM push after a credit batch. Kept separate from
+ * SURPRISE_BONUS_JOB_TYPE so a push failure surfaces as its own row on
+ * /admin/queue (retryable, deletable) without ever blocking or retrying the
+ * credit batches, which have already committed ledger + app_notification rows.
+ */
+export const SURPRISE_BONUS_PUSH_JOB_TYPE = "surprise_bonus_push_batch" as const
+
+/**
  * One-time admin Surprise Bonus campaign (All Users).
  * Processed asynchronously via background_jobs + Edge Function batches.
  */

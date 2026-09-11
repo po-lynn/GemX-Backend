@@ -21,6 +21,8 @@ export const backgroundJobs = pgTable(
     lockedAt: timestamp("locked_at"),
     lockedBy: text("locked_by"),
     lastError: text("last_error"),
+    /** Structured outcome a handler returns on success (e.g. { credited: 48, failed: 2 }) — surfaced in the admin panel's expandable row detail. */
+    result: jsonb("result").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
   },

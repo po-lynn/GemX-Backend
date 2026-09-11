@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       lockedAt: j.lockedAt?.toISOString() ?? null,
       lockedBy: j.lockedBy,
       lastError: j.lastError,
+      result: j.result,
       createdAt: j.createdAt.toISOString(),
       completedAt: j.completedAt?.toISOString() ?? null,
       description: descriptions.get(j.id) ?? null,

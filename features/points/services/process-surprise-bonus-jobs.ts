@@ -1,12 +1,15 @@
 import { and, asc, eq, gt, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import { surpriseBonusCampaign, SURPRISE_BONUS_JOB_TYPE } from "@/drizzle/schema/surprise-bonus-schema"
+import {
+  surpriseBonusCampaign,
+  SURPRISE_BONUS_JOB_TYPE,
+  SURPRISE_BONUS_PUSH_JOB_TYPE,
+} from "@/drizzle/schema/surprise-bonus-schema"
 import { describeSurpriseBonusJobs } from "@/features/points/db/surprise-bonus"
-import { sendSurpriseBonusPushToUsers } from "@/features/points/services/surprise-bonus-push"
 import { enqueueJob, normalizeRows } from "@/lib/queue/queue"
 import { registerQueueJob } from "@/lib/queue/registry"
-import type { ClaimedQueueJob } from "@/lib/queue/types"
+import type { ClaimedQueueJob, QueueJobResult } from "@/lib/queue/types"
 
 const BATCH_SIZE = 100
 
@@ -17,10 +20,14 @@ type GrantResult = { granted?: boolean; reason?: string; points?: number }
  * The registered lib/queue handler for SURPRISE_BONUS_JOB_TYPE. Claiming,
  * completing, and retry/backoff are all handled by lib/queue/drain.ts's
  * drainJobs — this function only implements the surprise-bonus-specific
- * batch: grant up to BATCH_SIZE users, update campaign progress, push FCM
- * to newly granted users, and chain the next batch if more users remain.
+ * batch: grant up to BATCH_SIZE users, update campaign progress, enqueue a
+ * push job for newly granted users (SURPRISE_BONUS_PUSH_JOB_TYPE — kept
+ * separate so a push failure never blocks or retries credit batches), and
+ * chain the next batch if more users remain. Returns a per-batch summary
+ * that lib/queue records on the job row, surfaced as expandable detail on
+ * /admin/queue.
  */
-export async function processSurpriseBonusJob(job: ClaimedQueueJob): Promise<void> {
+export async function processSurpriseBonusJob(job: ClaimedQueueJob): Promise<QueueJobResult> {
   const payload = job.payload as SurpriseBonusPayload
   const campaignId = payload.campaignId
   if (!campaignId) throw new Error("Missing campaignId in payload")
@@ -39,6 +46,7 @@ export async function processSurpriseBonusJob(job: ClaimedQueueJob): Promise<voi
 
   let successDelta = 0
   let failedDelta = 0
+  let alreadyGrantedDelta = 0
   const newlyGrantedUserIds: string[] = []
 
   for (const u of batch) {
@@ -60,6 +68,7 @@ export async function processSurpriseBonusJob(job: ClaimedQueueJob): Promise<voi
       newlyGrantedUserIds.push(u.id)
     } else if (result?.reason === "already_granted") {
       successDelta++
+      alreadyGrantedDelta++
     } else if (result?.reason === "user_not_found" || result?.reason === "campaign_not_found") {
       failedDelta++
     } else {
@@ -109,12 +118,20 @@ export async function processSurpriseBonusJob(job: ClaimedQueueJob): Promise<voi
   }
 
   if (newlyGrantedUserIds.length > 0 && campaign) {
-    await sendSurpriseBonusPushToUsers({
-      userIds: newlyGrantedUserIds,
+    await enqueueJob(SURPRISE_BONUS_PUSH_JOB_TYPE, {
       campaignId,
       campaignName: campaign.name,
       pointsPerUser: campaign.pointsPerUser,
+      userIds: newlyGrantedUserIds,
     })
+  }
+
+  return {
+    batchUsers: batch.length,
+    newlyGranted: newlyGrantedUserIds.length,
+    alreadyGranted: alreadyGrantedDelta,
+    failed: failedDelta,
+    pushJobEnqueued: newlyGrantedUserIds.length > 0,
   }
 }
 

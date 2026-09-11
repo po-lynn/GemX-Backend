@@ -2,3 +2,4 @@
 // handler (each registration module calls registerQueueJob at module load).
 // Add one import per feature that wants to show up on /admin/queue.
 import "@/features/points/services/process-surprise-bonus-jobs"
+import "@/features/points/services/process-surprise-bonus-push-jobs"

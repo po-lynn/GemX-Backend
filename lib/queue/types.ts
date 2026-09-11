@@ -16,7 +16,10 @@ export type ClaimedQueueJob = {
   maxAttempts: number
 }
 
-export type QueueJobHandler = (job: ClaimedQueueJob) => Promise<void>
+/** Structured outcome a handler may return on success — recorded on the job row for admin-panel display (see QueueJobRow.result). */
+export type QueueJobResult = Record<string, unknown>
+
+export type QueueJobHandler = (job: ClaimedQueueJob) => Promise<QueueJobResult | void>
 
 export type QueueJobRow = {
   id: string
@@ -29,6 +32,7 @@ export type QueueJobRow = {
   lockedAt: Date | null
   lockedBy: string | null
   lastError: string | null
+  result: QueueJobResult | null
   createdAt: Date
   completedAt: Date | null
   isStale: boolean

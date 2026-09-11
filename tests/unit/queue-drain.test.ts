@@ -22,7 +22,18 @@ describe("drainJobs", () => {
 
     expect(result).toEqual({ batches: 1 })
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(completeJob).toHaveBeenCalledWith("job-1")
+    expect(completeJob).toHaveBeenCalledWith("job-1", undefined)
+  })
+
+  it("records a handler's returned result on the completed job", async () => {
+    vi.mocked(claimJob)
+      .mockResolvedValueOnce({ id: "job-1", type: "t", payload: {}, attempts: 1, maxAttempts: 5 })
+      .mockResolvedValueOnce(null)
+
+    const handler = vi.fn().mockResolvedValue({ credited: 48 })
+    await drainJobs("t", handler)
+
+    expect(completeJob).toHaveBeenCalledWith("job-1", { credited: 48 })
   })
 
   it("stops after maxBatches even if more jobs are claimable", async () => {

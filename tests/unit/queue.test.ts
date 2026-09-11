@@ -127,15 +127,24 @@ describe("claimJob", () => {
 })
 
 describe("completeJob", () => {
-  it("marks the job completed and clears the lock", async () => {
+  it("marks the job completed, clears the lock, and defaults result to null", async () => {
     const chain = mockUpdateChain()
     vi.mocked(db.update).mockReturnValue(chain as never)
 
     await completeJob("job-1")
 
     expect(chain.set).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "completed", lockedAt: null, lockedBy: null }),
+      expect.objectContaining({ status: "completed", lockedAt: null, lockedBy: null, result: null }),
     )
+  })
+
+  it("persists a handler's returned result object", async () => {
+    const chain = mockUpdateChain()
+    vi.mocked(db.update).mockReturnValue(chain as never)
+
+    await completeJob("job-1", { credited: 48, failed: 2 })
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ result: { credited: 48, failed: 2 } }))
   })
 })
 
@@ -247,6 +256,21 @@ describe("listJobs", () => {
 
     const rows = await listJobs("t")
     expect(rows[0]).toMatchObject({ id: "job-4", isStale: false })
+  })
+
+  it("passes through a stored result object unchanged", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      mockSelectChain([
+        {
+          id: "job-5", type: "t", payload: {}, status: "completed", attempts: 1, maxAttempts: 5,
+          availableAt: new Date(), lockedAt: null, lockedBy: null, lastError: null,
+          result: { credited: 48, failed: 2 }, createdAt: new Date(), completedAt: new Date(),
+        },
+      ]) as never,
+    )
+
+    const rows = await listJobs("t")
+    expect(rows[0]?.result).toEqual({ credited: 48, failed: 2 })
   })
 })
 

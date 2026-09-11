@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { RefreshCw, AlertTriangle, Trash2 } from "lucide-react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react"
+import { RefreshCw, AlertTriangle, Trash2, ChevronRight, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { StatusPill } from "@/components/admin/list-view/StatusPill"
 
@@ -18,6 +18,7 @@ type JobRow = {
   lockedAt: string | null
   lockedBy: string | null
   lastError: string | null
+  result: Record<string, unknown> | null
   createdAt: string
   completedAt: string | null
   description: string | null
@@ -26,6 +27,19 @@ type JobRow = {
 function fmt(d: string | null): string {
   if (!d) return "—"
   return new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+}
+
+/** "newlyGranted" -> "Newly Granted" */
+function formatResultLabel(key: string): string {
+  const spaced = key.replace(/([A-Z])/g, " $1")
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+function formatResultValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "Yes" : "No"
+  if (typeof value === "number") return value.toLocaleString()
+  if (value === null || value === undefined) return "—"
+  return String(value)
 }
 
 export function QueueDashboard() {
@@ -38,6 +52,16 @@ export function QueueDashboard() {
   const [loading, setLoading] = useState(true)
   const [retrying, setRetrying] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Monotonic token guarding against an in-flight loadSelected response
   // (for a since-superseded type or an earlier refresh click) overwriting
@@ -69,6 +93,7 @@ export function QueueDashboard() {
     // never keep showing a since-superseded type's counts and jobs.
     setCounts(null)
     setJobs([])
+    setExpandedIds(new Set())
     try {
       const res = await fetch(`/api/admin/queue?type=${encodeURIComponent(type)}`)
       if (!res.ok) return
@@ -226,40 +251,80 @@ export function QueueDashboard() {
                 <td colSpan={8} style={{ padding: "18px 8px", textAlign: "center", color: "var(--lv-text-3)" }}>No jobs yet.</td>
               </tr>
             )}
-            {jobs.map((j) => (
-              <tr key={j.id} style={{ borderTop: "1px solid var(--lv-border)" }}>
-                <td style={tdStyle}>{j.description ?? j.id}</td>
-                <td style={tdStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <StatusPill status={j.status} />
-                    {j.isStale && <span style={staleTagStyle}>STALE</span>}
-                  </div>
-                </td>
-                <td style={tdStyle}>{j.attempts} / {j.maxAttempts}</td>
-                <td style={tdStyle}>{fmt(j.lockedAt)}</td>
-                <td style={tdStyle}>{fmt(j.createdAt)}</td>
-                <td style={tdStyle}>{fmt(j.completedAt)}</td>
-                <td
-                  style={{ ...tdStyle, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: j.lastError ? "var(--lv-danger)" : undefined }}
-                  title={j.lastError ?? undefined}
-                >
-                  {j.lastError ?? "—"}
-                </td>
-                <td style={tdStyle}>
-                  {(j.status === "completed" || j.status === "failed") && (
-                    <button
-                      type="button"
-                      aria-label="Delete job"
-                      onClick={() => deleteJobRow(j.id)}
-                      disabled={deletingId === j.id}
-                      style={deleteButtonStyle}
+            {jobs.map((j) => {
+              const isExpanded = expandedIds.has(j.id)
+              return (
+                <Fragment key={j.id}>
+                  <tr style={{ borderTop: "1px solid var(--lv-border)" }}>
+                    <td style={tdStyle}>
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(j.id)}
+                        aria-expanded={isExpanded}
+                        aria-label={isExpanded ? "Hide job detail" : "Show job detail"}
+                        style={jobToggleStyle}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown style={{ width: 13, height: 13, flexShrink: 0 }} />
+                        ) : (
+                          <ChevronRight style={{ width: 13, height: 13, flexShrink: 0 }} />
+                        )}
+                        {j.description ?? j.id}
+                      </button>
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <StatusPill status={j.status} />
+                        {j.isStale && <span style={staleTagStyle}>STALE</span>}
+                      </div>
+                    </td>
+                    <td style={tdStyle}>{j.attempts} / {j.maxAttempts}</td>
+                    <td style={tdStyle}>{fmt(j.lockedAt)}</td>
+                    <td style={tdStyle}>{fmt(j.createdAt)}</td>
+                    <td style={tdStyle}>{fmt(j.completedAt)}</td>
+                    <td
+                      style={{ ...tdStyle, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: j.lastError ? "var(--lv-danger)" : undefined }}
+                      title={j.lastError ?? undefined}
                     >
-                      <Trash2 style={{ width: 13, height: 13 }} />
-                    </button>
+                      {j.lastError ?? "—"}
+                    </td>
+                    <td style={tdStyle}>
+                      {(j.status === "completed" || j.status === "failed") && (
+                        <button
+                          type="button"
+                          aria-label="Delete job"
+                          onClick={() => deleteJobRow(j.id)}
+                          disabled={deletingId === j.id}
+                          style={deleteButtonStyle}
+                        >
+                          <Trash2 style={{ width: 13, height: 13 }} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan={8} style={detailCellStyle}>
+                        {j.result ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 22px" }}>
+                            {Object.entries(j.result).map(([key, value]) => (
+                              <div key={key} style={{ fontSize: 12 }}>
+                                <span style={{ color: "var(--lv-text-3)" }}>{formatResultLabel(key)}: </span>
+                                <span style={{ fontWeight: 600 }}>{formatResultValue(value)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ margin: 0, fontSize: 12, color: "var(--lv-text-3)" }}>
+                            No details recorded for this job.
+                          </p>
+                        )}
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -280,6 +345,13 @@ function StatChip({ label, value, tone }: { label: string; value: number; tone?:
 
 const thStyle: React.CSSProperties = { padding: "6px 8px" }
 const tdStyle: React.CSSProperties = { padding: "8px 8px", color: "var(--lv-text)" }
+const jobToggleStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0,
+  cursor: "pointer", color: "inherit", font: "inherit", textAlign: "left",
+}
+const detailCellStyle: React.CSSProperties = {
+  padding: "8px 8px 14px 30px", background: "var(--lv-panel-2)", borderTop: "1px solid var(--lv-border)",
+}
 const staleTagStyle: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, letterSpacing: "0.04em", color: "#B91C1C",
   background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 999, padding: "2px 6px",

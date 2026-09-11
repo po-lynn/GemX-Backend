@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { backgroundJobs } from "@/drizzle/schema/queue-schema"
-import type { ClaimedQueueJob, QueueJobPayload, QueueJobRow, QueueJobStatusCounts } from "@/lib/queue/types"
+import type { ClaimedQueueJob, QueueJobPayload, QueueJobResult, QueueJobRow, QueueJobStatusCounts } from "@/lib/queue/types"
 
 /** Matches the reclaim window baked into claim_background_job (migration 0087). */
 export const STALE_AFTER_MS = 3 * 60 * 1000
@@ -66,7 +66,7 @@ export async function claimJob(type: string, lockedBy: string): Promise<ClaimedQ
   }
 }
 
-export async function completeJob(jobId: string): Promise<void> {
+export async function completeJob(jobId: string, result?: QueueJobResult): Promise<void> {
   await db
     .update(backgroundJobs)
     .set({
@@ -74,6 +74,7 @@ export async function completeJob(jobId: string): Promise<void> {
       completedAt: new Date(),
       lockedAt: null,
       lockedBy: null,
+      result: result ?? null,
     })
     .where(eq(backgroundJobs.id, jobId))
 }
@@ -124,6 +125,7 @@ export async function listJobs(type: string, limit = 100): Promise<QueueJobRow[]
       lockedAt: backgroundJobs.lockedAt,
       lockedBy: backgroundJobs.lockedBy,
       lastError: backgroundJobs.lastError,
+      result: backgroundJobs.result,
       createdAt: backgroundJobs.createdAt,
       completedAt: backgroundJobs.completedAt,
     })

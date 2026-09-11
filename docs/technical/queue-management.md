@@ -12,7 +12,7 @@ functional parity (see `docs/technical/surprise-bonus-queue.md`).
 | Path | Role |
 |------|------|
 | `drizzle/schema/queue-schema.ts` | `backgroundJobs` table (moved from `surprise-bonus-schema.ts`, same underlying `background_jobs` table, no migration) |
-| `lib/queue/types.ts` | `QueueJobPayload`, `ClaimedQueueJob`, `QueueJobHandler`, `QueueJobRow`, `QueueJobStatusCounts`, `QueueJobDefinition` |
+| `lib/queue/types.ts` | `QueueJobPayload`, `QueueJobResult`, `ClaimedQueueJob`, `QueueJobHandler`, `QueueJobRow`, `QueueJobStatusCounts`, `QueueJobDefinition` |
 | `lib/queue/queue.ts` | `enqueueJob`, `claimJob`, `completeJob`, `failOrRetryJob`, `listJobs`, `getJobStatusCounts`, `deleteJob`, `normalizeRows`, `STALE_AFTER_MS` |
 | `lib/queue/drain.ts` | `drainJobs` — claim/handle/complete loop |
 | `lib/queue/registry.ts` | `registerQueueJob`, `getQueueJobDefinition`, `listRegisteredJobTypes` — in-code registry, not DB-backed |
@@ -30,11 +30,14 @@ Feature code
   → enqueueJob(type, payload)              // INSERT background_jobs, status=pending
   → drainJobs(type, handler, { maxBatches })
       → claimJob(type, lockedBy)           // claim_background_job RPC, FOR UPDATE SKIP LOCKED
-      → handler(job)                       // feature-specific business logic
-      → completeJob(job.id)                // on success
+      → handler(job)                       // feature-specific business logic; may return a
+                                            //   QueueJobResult object summarizing what happened
+      → completeJob(job.id, result)        // on success — result (or null) is stored on the row
       → on throw: failOrRetryJob(job, message); rethrow — aborts the drain
   → caller decides what a thrown drain error means for its own response
 ```
+
+A handler's returned `QueueJobResult` (`Record<string, unknown>`, e.g. `{ batchUsers: 50, newlyGranted: 48 }`) is optional — return nothing and `result` stays `null`, same as any job that predates this column. It's persisted purely for admin visibility; nothing in `lib/queue` itself reads it back.
 
 **Admin visibility:**
 ```
@@ -42,14 +45,19 @@ Feature code
   → listRegisteredJobTypes() + getJobStatusCounts(type) per type
 Admin selects a type → GET /api/admin/queue?type=<type>
   → getJobStatusCounts(type) + listJobs(type) (+ that type's describeJobs, if any)
+  → each job's `result` rides along in the response; the dashboard renders it
+    in an expandable detail row (click the chevron next to the Job cell)
 Admin clicks "Retry stuck jobs" → POST /api/admin/queue/retry { type }
   → drainJobs(type, definition.handler, { maxBatches: 50 })
 ```
 
 ## Schema impact
 
-None beyond the code move — `background_jobs` (table name, columns, indexes)
-is unchanged; `claim_background_job` RPC is unchanged. No new migration.
+`background_jobs` gained one nullable column: `result jsonb` (migration
+`0090_perpetual_blink.sql`) — a handler's returned summary object, or `null`
+for jobs that never returned one (including every job that completed before
+this migration). Table name, other columns, indexes, and `claim_background_job`
+RPC are otherwise unchanged from the original code move.
 
 ## Auth & permissions
 
@@ -82,6 +90,11 @@ granted via the RBAC permissions UI.
   `completed` or `failed`, checked atomically inside the delete query itself
   (not a separate read-then-delete), so a pending/processing job can never
   be deleted out from under an in-flight drain.
+- A job's `result` is written only in the success path (`completeJob`) — a
+  job that fails or is still pending/processing has `result: null` until (if
+  ever) it completes; the admin panel's detail row falls back to "No details
+  recorded for this job." in that case, and for any job predating the
+  `result` column.
 - **Completion-ordering parity nuance:** the old hand-rolled Surprise Bonus
   queue marked a job `completed` in the DB *before* sending the FCM push;
   the new `lib/queue`-based flow (via `drainJobs`) completes the job

@@ -9,7 +9,7 @@ npx @better-auth/cli generate
 npm run seed:admin
 
 admin@gemx.com
-gemx@2026
+gemxTest2026!
 
 ---
 # GemX
