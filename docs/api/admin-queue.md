@@ -1,4 +1,4 @@
-# GET/POST /api/admin/queue
+# GET/POST/DELETE /api/admin/queue
 
 ## GET /api/admin/queue
 
@@ -46,6 +46,33 @@
 ```bash
 curl -H "Cookie: better-auth.session_token=..." \
   "https://<host>/api/admin/queue?type=surprise_bonus_batch"
+```
+
+**Mobile flag:** not used by the mobile app — admin-only.
+
+## DELETE /api/admin/queue/[id]
+
+**Auth:** same as `GET`.
+
+Removes one job's queue-tracking row. Only permitted when the job is already
+`completed` or `failed` — a pending/processing job is never deletable (it may
+be actively locked by a drain pass). This only tidies up the queue view;
+whatever the job produced (a campaign record, ledger entries, etc.) is
+untouched.
+
+**Response (200):**
+```json
+{ "success": true, "id": "job-1" }
+```
+
+**Errors:** `401` unauthorized, `403` forbidden, `404` when the job doesn't
+exist or isn't `completed`/`failed` (`{ "error": "Job not found, or not
+completed/failed" }`).
+
+**Example:**
+```bash
+curl -X DELETE -H "Cookie: better-auth.session_token=..." \
+  "https://<host>/api/admin/queue/job-1"
 ```
 
 **Mobile flag:** not used by the mobile app — admin-only.

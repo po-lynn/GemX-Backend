@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { RefreshCw, AlertTriangle } from "lucide-react"
+import { RefreshCw, AlertTriangle, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { StatusPill } from "@/components/admin/list-view/StatusPill"
 
@@ -37,6 +37,7 @@ export function QueueDashboard() {
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loading, setLoading] = useState(true)
   const [retrying, setRetrying] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Monotonic token guarding against an in-flight loadSelected response
   // (for a since-superseded type or an earlier refresh click) overwriting
@@ -118,6 +119,27 @@ export function QueueDashboard() {
     }
   }
 
+  async function deleteJobRow(id: string) {
+    if (!window.confirm("Delete this job record? This only removes it from the queue view and can't be undone.")) {
+      return
+    }
+    setDeletingId(id)
+    try {
+      const res = await fetch(`/api/admin/queue/${encodeURIComponent(id)}`, { method: "DELETE" })
+      const data = (await res.json()) as { success: true; id: string } | { error: string }
+      if (!res.ok || "error" in data) {
+        toast.error("error" in data ? data.error : "Delete failed")
+        return
+      }
+      toast.success("Job deleted")
+      if (selectedType) loadSelected(selectedType)
+    } catch {
+      toast.error("Delete failed unexpectedly")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const staleCount = counts?.stale ?? 0
 
   if (error) {
@@ -195,12 +217,13 @@ export function QueueDashboard() {
               <th style={thStyle}>Created</th>
               <th style={thStyle}>Completed</th>
               <th style={thStyle}>Last error</th>
+              <th style={thStyle}></th>
             </tr>
           </thead>
           <tbody>
             {jobs.length === 0 && !loading && (
               <tr>
-                <td colSpan={7} style={{ padding: "18px 8px", textAlign: "center", color: "var(--lv-text-3)" }}>No jobs yet.</td>
+                <td colSpan={8} style={{ padding: "18px 8px", textAlign: "center", color: "var(--lv-text-3)" }}>No jobs yet.</td>
               </tr>
             )}
             {jobs.map((j) => (
@@ -221,6 +244,19 @@ export function QueueDashboard() {
                   title={j.lastError ?? undefined}
                 >
                   {j.lastError ?? "—"}
+                </td>
+                <td style={tdStyle}>
+                  {(j.status === "completed" || j.status === "failed") && (
+                    <button
+                      type="button"
+                      aria-label="Delete job"
+                      onClick={() => deleteJobRow(j.id)}
+                      disabled={deletingId === j.id}
+                      style={deleteButtonStyle}
+                    >
+                      <Trash2 style={{ width: 13, height: 13 }} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -252,6 +288,10 @@ const secondaryButtonStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8,
   border: "1px solid var(--lv-border)", background: "#fff", color: "var(--lv-text-2)",
   fontWeight: 600, fontSize: 12.5, cursor: "pointer",
+}
+const deleteButtonStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "center", padding: 6, borderRadius: 6,
+  border: "1px solid var(--lv-border)", background: "#fff", color: "var(--lv-text-3)", cursor: "pointer",
 }
 function retryButtonStyle(hasStale: boolean): React.CSSProperties {
   return {

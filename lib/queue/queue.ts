@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { backgroundJobs } from "@/drizzle/schema/queue-schema"
 import type { ClaimedQueueJob, QueueJobPayload, QueueJobRow, QueueJobStatusCounts } from "@/lib/queue/types"
@@ -138,6 +138,23 @@ export async function listJobs(type: string, limit = 100): Promise<QueueJobRow[]
     status: r.status as QueueJobRow["status"],
     isStale: r.status === "processing" && r.lockedAt !== null && now - r.lockedAt.getTime() > STALE_AFTER_MS,
   }))
+}
+
+/**
+ * Deletes one job's tracking row — only if it's in a terminal state
+ * (`completed` or `failed`). A pending/processing job is never deletable
+ * (it may be actively locked by a drain pass), so the status check happens
+ * inside the same query as the delete rather than as a separate read, to
+ * avoid a race between checking and deleting. This only removes the queue
+ * row itself; whatever the job produced (a campaign record, ledger entries,
+ * etc.) is untouched.
+ */
+export async function deleteJob(id: string): Promise<boolean> {
+  const deleted = await db
+    .delete(backgroundJobs)
+    .where(and(eq(backgroundJobs.id, id), inArray(backgroundJobs.status, ["completed", "failed"])))
+    .returning({ id: backgroundJobs.id })
+  return deleted.length > 0
 }
 
 export async function getJobStatusCounts(type: string): Promise<QueueJobStatusCounts> {

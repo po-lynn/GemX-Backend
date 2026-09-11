@@ -11,6 +11,7 @@ vi.mock("@/lib/api-guard", () => ({
 vi.mock("@/lib/queue/queue", () => ({
   getJobStatusCounts: vi.fn(),
   listJobs: vi.fn(),
+  deleteJob: vi.fn(),
 }))
 
 vi.mock("@/lib/queue/drain", () => ({
@@ -25,11 +26,12 @@ vi.mock("@/lib/queue/registry", () => ({
 vi.mock("@/lib/queue/registrations", () => ({}))
 
 import { requireAdminOrFeature } from "@/lib/api-guard"
-import { getJobStatusCounts, listJobs } from "@/lib/queue/queue"
+import { deleteJob, getJobStatusCounts, listJobs } from "@/lib/queue/queue"
 import { drainJobs } from "@/lib/queue/drain"
 import { getQueueJobDefinition, listRegisteredJobTypes } from "@/lib/queue/registry"
 import { GET } from "@/app/api/admin/queue/route"
 import { POST } from "@/app/api/admin/queue/retry/route"
+import { DELETE } from "@/app/api/admin/queue/[id]/route"
 
 function req(method: string, path: string, body?: unknown) {
   return new Request(`http://localhost${path}`, {
@@ -166,5 +168,43 @@ describe("POST /api/admin/queue/retry", () => {
     expect(res.status).toBe(500)
     const body = await res.json()
     expect(body.error).toBe("Retry failed: relation missing")
+  })
+})
+
+describe("DELETE /api/admin/queue/[id]", () => {
+  const params = (id: string) => ({ params: Promise.resolve({ id }) })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(connection).mockResolvedValue(undefined)
+    vi.mocked(requireAdminOrFeature).mockResolvedValue({
+      session: { user: { id: "admin-1", role: "admin" } },
+    } as never)
+  })
+
+  it("returns 401 when unauthorized", async () => {
+    vi.mocked(requireAdminOrFeature).mockResolvedValueOnce({
+      error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+    } as never)
+
+    const res = await DELETE(req("DELETE", "/api/admin/queue/job-1"), params("job-1"))
+    expect(res.status).toBe(401)
+  })
+
+  it("deletes a completed/failed job and returns success", async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true)
+
+    const res = await DELETE(req("DELETE", "/api/admin/queue/job-1"), params("job-1"))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual({ success: true, id: "job-1" })
+    expect(deleteJob).toHaveBeenCalledWith("job-1")
+  })
+
+  it("returns 404 when the job doesn't exist or isn't completed/failed", async () => {
+    vi.mocked(deleteJob).mockResolvedValue(false)
+
+    const res = await DELETE(req("DELETE", "/api/admin/queue/job-2"), params("job-2"))
+    expect(res.status).toBe(404)
   })
 })

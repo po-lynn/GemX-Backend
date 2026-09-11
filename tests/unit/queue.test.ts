@@ -6,6 +6,7 @@ vi.mock("@/drizzle/db", () => ({
     select: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
 }))
 
@@ -13,6 +14,7 @@ import { db } from "@/drizzle/db"
 import {
   claimJob,
   completeJob,
+  deleteJob,
   enqueueJob,
   failOrRetryJob,
   getJobStatusCounts,
@@ -269,5 +271,28 @@ describe("getJobStatusCounts", () => {
 
     const counts = await getJobStatusCounts("t")
     expect(counts).toEqual({ pending: 0, processing: 0, completed: 0, failed: 0, stale: 0 })
+  })
+})
+
+function mockDeleteChain(returned: unknown[]) {
+  const chain: Record<string, unknown> = {}
+  chain.where = vi.fn().mockReturnValue(chain)
+  chain.returning = vi.fn().mockResolvedValue(returned)
+  return chain
+}
+
+describe("deleteJob", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("returns true when a completed/failed job row is deleted", async () => {
+    vi.mocked(db.delete).mockReturnValue(mockDeleteChain([{ id: "job-1" }]) as never)
+
+    expect(await deleteJob("job-1")).toBe(true)
+  })
+
+  it("returns false when nothing matched (wrong id, or job is pending/processing)", async () => {
+    vi.mocked(db.delete).mockReturnValue(mockDeleteChain([]) as never)
+
+    expect(await deleteJob("job-2")).toBe(false)
   })
 })

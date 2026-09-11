@@ -13,12 +13,13 @@ functional parity (see `docs/technical/surprise-bonus-queue.md`).
 |------|------|
 | `drizzle/schema/queue-schema.ts` | `backgroundJobs` table (moved from `surprise-bonus-schema.ts`, same underlying `background_jobs` table, no migration) |
 | `lib/queue/types.ts` | `QueueJobPayload`, `ClaimedQueueJob`, `QueueJobHandler`, `QueueJobRow`, `QueueJobStatusCounts`, `QueueJobDefinition` |
-| `lib/queue/queue.ts` | `enqueueJob`, `claimJob`, `completeJob`, `failOrRetryJob`, `listJobs`, `getJobStatusCounts`, `normalizeRows`, `STALE_AFTER_MS` |
+| `lib/queue/queue.ts` | `enqueueJob`, `claimJob`, `completeJob`, `failOrRetryJob`, `listJobs`, `getJobStatusCounts`, `deleteJob`, `normalizeRows`, `STALE_AFTER_MS` |
 | `lib/queue/drain.ts` | `drainJobs` — claim/handle/complete loop |
 | `lib/queue/registry.ts` | `registerQueueJob`, `getQueueJobDefinition`, `listRegisteredJobTypes` — in-code registry, not DB-backed |
 | `lib/queue/registrations.ts` | Side-effect-only module importing every feature's registration file |
 | `app/api/admin/queue/route.ts` | `GET` — status counts (all types, or one type + its job list) |
 | `app/api/admin/queue/retry/route.ts` | `POST { type }` — one drain pass for that type |
+| `app/api/admin/queue/[id]/route.ts` | `DELETE` — removes one `completed`/`failed` job's queue row |
 | `app/admin/queue/page.tsx`, `components/admin/queue/QueueDashboard.tsx` | Unified admin queue-health page |
 
 ## Data flow
@@ -74,6 +75,13 @@ granted via the RBAC permissions UI.
   whose registration module has actually been imported in the current
   request's module graph — see `docs/guides/queue-management.md` for how
   to wire a new type into `lib/queue/registrations.ts`.
+- Deleting a job row (`/admin/queue`'s per-row delete button, or `DELETE
+  /api/admin/queue/[id]`) only removes the `background_jobs` tracking row —
+  it never touches whatever the job produced (a campaign record, ledger
+  entries, notifications, etc.). It's also only permitted for a job already
+  `completed` or `failed`, checked atomically inside the delete query itself
+  (not a separate read-then-delete), so a pending/processing job can never
+  be deleted out from under an in-flight drain.
 - **Completion-ordering parity nuance:** the old hand-rolled Surprise Bonus
   queue marked a job `completed` in the DB *before* sending the FCM push;
   the new `lib/queue`-based flow (via `drainJobs`) completes the job

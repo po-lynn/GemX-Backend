@@ -107,3 +107,94 @@ describe("QueueDashboard", () => {
     })
   })
 })
+
+describe("QueueDashboard delete", () => {
+  it("shows a delete button only for completed/failed jobs, not pending/processing", async () => {
+    mockFetchSequence([
+      { json: { types: [{ type: "surprise_bonus_batch", label: "Surprise Bonus" }] } },
+      {
+        json: {
+          counts: { pending: 1, processing: 0, completed: 1, failed: 0, stale: 0 },
+          jobs: [
+            {
+              id: "job-pending", status: "pending", isStale: false, attempts: 0, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: null, description: "Still going",
+            },
+            {
+              id: "job-done", status: "completed", isStale: false, attempts: 1, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "All done",
+            },
+          ],
+        },
+      },
+    ])
+
+    render(<QueueDashboard />)
+
+    await screen.findByText("All done")
+    expect(screen.getByText("Still going")).toBeInTheDocument()
+    expect(screen.getAllByLabelText("Delete job")).toHaveLength(1)
+  })
+
+  it("clicking delete, after confirming, calls the DELETE endpoint and refreshes the list", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => true))
+    mockFetchSequence([
+      { json: { types: [{ type: "surprise_bonus_batch", label: "Surprise Bonus" }] } },
+      {
+        json: {
+          counts: { pending: 0, processing: 0, completed: 1, failed: 0, stale: 0 },
+          jobs: [
+            {
+              id: "job-done", status: "completed", isStale: false, attempts: 1, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "All done",
+            },
+          ],
+        },
+      },
+      { json: { success: true, id: "job-done" } },
+      { json: { counts: { pending: 0, processing: 0, completed: 0, failed: 0, stale: 0 }, jobs: [] } },
+    ])
+
+    render(<QueueDashboard />)
+    await screen.findByText("All done")
+
+    fireEvent.click(screen.getByLabelText("Delete job"))
+
+    await waitFor(() => {
+      const fetchMock = vi.mocked(fetch)
+      const deleteCall = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "DELETE")
+      expect(deleteCall).toBeDefined()
+      expect(String(deleteCall![0])).toContain("/api/admin/queue/job-done")
+    })
+  })
+
+  it("does not call the DELETE endpoint when the confirmation is dismissed", async () => {
+    vi.stubGlobal("confirm", vi.fn(() => false))
+    mockFetchSequence([
+      { json: { types: [{ type: "surprise_bonus_batch", label: "Surprise Bonus" }] } },
+      {
+        json: {
+          counts: { pending: 0, processing: 0, completed: 1, failed: 0, stale: 0 },
+          jobs: [
+            {
+              id: "job-done", status: "completed", isStale: false, attempts: 1, maxAttempts: 5,
+              availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null, lastError: null,
+              createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "All done",
+            },
+          ],
+        },
+      },
+    ])
+
+    render(<QueueDashboard />)
+    await screen.findByText("All done")
+    const callsBefore = vi.mocked(fetch).mock.calls.length
+
+    fireEvent.click(screen.getByLabelText("Delete job"))
+
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore)
+  })
+})
