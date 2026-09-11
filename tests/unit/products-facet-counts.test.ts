@@ -40,7 +40,7 @@ describe("getAdminProductFacetCounts", () => {
     const countsRow = {
       stoneCutFaceted: 3, stoneCutCabochon: 5,
       metalGold: 2, metalSilver: 0, metalOther: 0,
-      shapeOval: 1, shapeCushion: 0, shapeRound: 4, shapePear: 0, shapeHeart: 0,
+      shapeOval: 1, shapeCushion: 0, shapeMixedCushion: 0, shapeStarUnderCushion: 0, shapeRound: 4, shapePear: 0, shapeHeart: 0,
       identificationNatural: 6, identificationHeatTreated: 0, identificationTreatments: 0, identificationOthers: 0,
       productTypeLooseStone: 7, productTypeJewellery: 5,
       moderationPending: 2, moderationApproved: 9, moderationRejected: 0,
@@ -63,7 +63,15 @@ describe("getAdminProductFacetCounts", () => {
 
     expect(counts.stoneCut).toEqual({ Faceted: 3, Cabochon: 5 })
     expect(counts.metal).toEqual({ Gold: 2, Silver: 0, Other: 0 })
-    expect(counts.shape).toEqual({ Oval: 1, Cushion: 0, Round: 4, Pear: 0, Heart: 0 })
+    expect(counts.shape).toEqual({
+      Oval: 1,
+      Cushion: 0,
+      "Mixed Cushion": 0,
+      Star: 0,
+      Round: 4,
+      Pear: 0,
+      Heart: 0,
+    })
     expect(counts.identification).toEqual({ Natural: 6, "Heat Treated": 0, Treatments: 0, Others: 0 })
     expect(counts.productType).toEqual({ loose_stone: 7, jewellery: 5 })
     expect(counts.moderationStatus).toEqual({ pending: 2, approved: 9, rejected: 0 })

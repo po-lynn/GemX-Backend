@@ -8,6 +8,9 @@ import {
   DEFAULT_ABOUT_US_CONTENT,
   DEFAULT_FOLLOW_US_CONTENT,
   DEFAULT_HELP_SUPPORT_CONTENT,
+  DEFAULT_TERMS_CONDITIONS_CONTENT,
+  DEFAULT_BUYING_GUIDE_CONTENT,
+  DEFAULT_SELLING_GUIDE_CONTENT,
 } from "@/features/app-content/db/app-content"
 
 vi.mock("drizzle-orm", () => ({
@@ -53,6 +56,9 @@ describe("getAppContentSections", () => {
     expect(result.aboutUs.draftContent).toEqual(DEFAULT_ABOUT_US_CONTENT)
     expect(result.followUs.draftContent).toEqual(DEFAULT_FOLLOW_US_CONTENT)
     expect(result.helpSupport.draftContent).toEqual(DEFAULT_HELP_SUPPORT_CONTENT)
+    expect(result.termsConditions.draftContent).toEqual(DEFAULT_TERMS_CONDITIONS_CONTENT)
+    expect(result.buyingGuide.draftContent).toEqual(DEFAULT_BUYING_GUIDE_CONTENT)
+    expect(result.sellingGuide.draftContent).toEqual(DEFAULT_SELLING_GUIDE_CONTENT)
     expect(result.aboutUs.hasUnpublishedChanges).toBe(false)
     expect(result.aboutUs.publishedContent).toBeNull()
   })
@@ -101,8 +107,10 @@ describe("saveAppContentDraft", () => {
       expect.objectContaining({
         section: "about_us",
         draftContent: DEFAULT_ABOUT_US_CONTENT,
-        hasUnpublishedChanges: true,
+        publishedContent: DEFAULT_ABOUT_US_CONTENT,
+        hasUnpublishedChanges: false,
         updatedByName: "Elena M.",
+        publishedByName: "Elena M.",
       })
     )
   })

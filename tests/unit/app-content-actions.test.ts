@@ -26,7 +26,7 @@ beforeEach(() => {
 })
 
 describe("saveAppContentAction", () => {
-  it("saves the provided section and returns success", async () => {
+  it("saves the provided section, revalidates cache, and returns success", async () => {
     vi.mocked(saveAppContentDraft).mockResolvedValue(undefined)
     const result = await saveAppContentAction({ aboutUs: DEFAULT_ABOUT_US_CONTENT })
     expect(result).toEqual({ success: true })
@@ -34,8 +34,12 @@ describe("saveAppContentAction", () => {
       aboutUs: DEFAULT_ABOUT_US_CONTENT,
       followUs: undefined,
       helpSupport: undefined,
+      termsConditions: undefined,
+      buyingGuide: undefined,
+      sellingGuide: undefined,
       updatedByName: "Elena M.",
     })
+    expect(revalidateAppContentCache).toHaveBeenCalled()
   })
 
   it("returns an error when no section is provided", async () => {

@@ -3,27 +3,34 @@
 import { useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import {
-  saveAppContentAction,
-  publishAppContentAction,
-} from "@/features/app-content/actions/app-content"
+import { saveAppContentAction } from "@/features/app-content/actions/app-content"
 import type {
   AboutUsContent,
+  BuyingGuideContent,
   FollowUsContent,
   HelpSupportContent,
+  MultilangBlockNoteContent,
+  SellingGuideContent,
+  TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
+import type { ContentLanguage } from "@/features/content/services/google-translate"
 import { AboutUsTab } from "@/features/app-content/components/AboutUsTab"
 import { FollowUsTab } from "@/features/app-content/components/FollowUsTab"
 import { HelpSupportTab } from "@/features/app-content/components/HelpSupportTab"
+import { TermsConditionsTab } from "@/features/app-content/components/TermsConditionsTab"
+import { BuyingGuideTab } from "@/features/app-content/components/BuyingGuideTab"
+import { SellingGuideTab } from "@/features/app-content/components/SellingGuideTab"
 
-type TabId = "about" | "follow" | "help"
+type TabId = "about" | "follow" | "help" | "terms" | "buying" | "selling"
 
 export type AppContentClientProps = {
   initialTab: TabId
   aboutUs: AboutUsContent
   followUs: FollowUsContent
   helpSupport: HelpSupportContent
-  pendingPublish: { aboutUs: boolean; followUs: boolean; helpSupport: boolean }
+  termsConditions: TermsConditionsContent
+  buyingGuide: BuyingGuideContent
+  sellingGuide: SellingGuideContent
   lastEditedAt: string | null
   lastEditedBy: string | null
   currentUserName: string
@@ -47,25 +54,61 @@ export function AppContentClient(props: AppContentClientProps) {
   const [aboutUs, setAboutUs] = useState(props.aboutUs)
   const [followUs, setFollowUs] = useState(props.followUs)
   const [helpSupport, setHelpSupport] = useState(props.helpSupport)
+  const [termsConditions, setTermsConditions] = useState(props.termsConditions)
+  const [buyingGuide, setBuyingGuide] = useState(props.buyingGuide)
+  const [sellingGuide, setSellingGuide] = useState(props.sellingGuide)
   const [savedAboutUs, setSavedAboutUs] = useState(props.aboutUs)
   const [savedFollowUs, setSavedFollowUs] = useState(props.followUs)
   const [savedHelpSupport, setSavedHelpSupport] = useState(props.helpSupport)
-  const [pendingPublish, setPendingPublish] = useState(props.pendingPublish)
+  const [savedTermsConditions, setSavedTermsConditions] = useState(props.termsConditions)
+  const [savedBuyingGuide, setSavedBuyingGuide] = useState(props.buyingGuide)
+  const [savedSellingGuide, setSavedSellingGuide] = useState(props.sellingGuide)
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [publishing, setPublishing] = useState(false)
+  const [termsEditLanguage, setTermsEditLanguage] = useState<ContentLanguage>("English")
+  const [buyingEditLanguage, setBuyingEditLanguage] = useState<ContentLanguage>("English")
+  const [sellingEditLanguage, setSellingEditLanguage] = useState<ContentLanguage>("English")
 
   const dirty = useMemo(
     () => ({
       aboutUs: JSON.stringify(aboutUs) !== JSON.stringify(savedAboutUs),
       followUs: JSON.stringify(followUs) !== JSON.stringify(savedFollowUs),
       helpSupport: JSON.stringify(helpSupport) !== JSON.stringify(savedHelpSupport),
+      termsConditions:
+        JSON.stringify(termsConditions) !== JSON.stringify(savedTermsConditions),
+      buyingGuide: JSON.stringify(buyingGuide) !== JSON.stringify(savedBuyingGuide),
+      sellingGuide: JSON.stringify(sellingGuide) !== JSON.stringify(savedSellingGuide),
     }),
-    [aboutUs, followUs, helpSupport, savedAboutUs, savedFollowUs, savedHelpSupport]
+    [
+      aboutUs,
+      followUs,
+      helpSupport,
+      termsConditions,
+      buyingGuide,
+      sellingGuide,
+      savedAboutUs,
+      savedFollowUs,
+      savedHelpSupport,
+      savedTermsConditions,
+      savedBuyingGuide,
+      savedSellingGuide,
+    ]
   )
-  const isDirty = dirty.aboutUs || dirty.followUs || dirty.helpSupport
-  const canPublish = pendingPublish.aboutUs || pendingPublish.followUs || pendingPublish.helpSupport
+  const isDirty =
+    dirty.aboutUs ||
+    dirty.followUs ||
+    dirty.helpSupport ||
+    dirty.termsConditions ||
+    dirty.buyingGuide ||
+    dirty.sellingGuide
+  const currentTabDirty =
+    (tab === "about" && dirty.aboutUs) ||
+    (tab === "follow" && dirty.followUs) ||
+    (tab === "help" && dirty.helpSupport) ||
+    (tab === "terms" && dirty.termsConditions) ||
+    (tab === "buying" && dirty.buyingGuide) ||
+    (tab === "selling" && dirty.sellingGuide)
 
   function switchTab(next: TabId) {
     setTab(next)
@@ -74,47 +117,96 @@ export function AppContentClient(props: AppContentClientProps) {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
+  function applySavedMultilang(
+    next: MultilangBlockNoteContent,
+    setValue: (v: MultilangBlockNoteContent) => void,
+    setSaved: (v: MultilangBlockNoteContent) => void,
+    label: string,
+    editLanguage: ContentLanguage,
+    translated: boolean,
+  ) {
+    setValue(next)
+    setSaved(next)
+    toast.success(
+      translated && editLanguage === "English"
+        ? `${label} saved · translated to Myanmar, Thai, Korean`
+        : `${label} saved`,
+    )
+  }
+
   async function handleSave() {
-    if (!isDirty || saving) return
+    if (!currentTabDirty || saving) return
     setSaving(true)
-    const result = await saveAppContentAction({
-      aboutUs: dirty.aboutUs ? aboutUs : undefined,
-      followUs: dirty.followUs ? followUs : undefined,
-      helpSupport: dirty.helpSupport ? helpSupport : undefined,
-    })
+
+    const payload =
+      tab === "about"
+        ? { aboutUs }
+        : tab === "follow"
+          ? { followUs }
+          : tab === "help"
+            ? { helpSupport }
+            : tab === "terms"
+              ? {
+                  termsConditions,
+                  translateFromEnglish: termsEditLanguage === "English" ? true : undefined,
+                }
+              : tab === "buying"
+                ? {
+                    buyingGuide,
+                    translateFromEnglish: buyingEditLanguage === "English" ? true : undefined,
+                  }
+                : {
+                    sellingGuide,
+                    translateFromEnglish: sellingEditLanguage === "English" ? true : undefined,
+                  }
+
+    const result = await saveAppContentAction(payload)
     setSaving(false)
     if ("error" in result) {
       toast.error(result.error)
       return
     }
-    if (dirty.aboutUs) {
+
+    if (tab === "about") {
       setSavedAboutUs(aboutUs)
-      setPendingPublish((p) => ({ ...p, aboutUs: true }))
-    }
-    if (dirty.followUs) {
+      toast.success("About us saved")
+    } else if (tab === "follow") {
       setSavedFollowUs(followUs)
-      setPendingPublish((p) => ({ ...p, followUs: true }))
-    }
-    if (dirty.helpSupport) {
+      toast.success("Follow us saved")
+    } else if (tab === "help") {
       setSavedHelpSupport(helpSupport)
-      setPendingPublish((p) => ({ ...p, helpSupport: true }))
+      toast.success("Help & Support saved")
+    } else if (tab === "terms") {
+      applySavedMultilang(
+        result.termsConditions ?? termsConditions,
+        setTermsConditions,
+        setSavedTermsConditions,
+        "Terms & Conditions",
+        termsEditLanguage,
+        Boolean(result.termsConditions),
+      )
+    } else if (tab === "buying") {
+      applySavedMultilang(
+        result.buyingGuide ?? buyingGuide,
+        setBuyingGuide,
+        setSavedBuyingGuide,
+        "Buying Guide",
+        buyingEditLanguage,
+        Boolean(result.buyingGuide),
+      )
+    } else {
+      applySavedMultilang(
+        result.sellingGuide ?? sellingGuide,
+        setSellingGuide,
+        setSavedSellingGuide,
+        "Selling Guide",
+        sellingEditLanguage,
+        Boolean(result.sellingGuide),
+      )
     }
+
     setLastEditedAt(new Date().toISOString())
     setLastEditedBy(props.currentUserName)
-    toast.success("Draft saved")
-  }
-
-  async function handlePublish() {
-    if (!canPublish || publishing || isDirty) return
-    setPublishing(true)
-    const result = await publishAppContentAction()
-    setPublishing(false)
-    if ("error" in result) {
-      toast.error(result.error)
-      return
-    }
-    setPendingPublish({ aboutUs: false, followUs: false, helpSupport: false })
-    toast.success("Published to app")
   }
 
   return (
@@ -135,15 +227,12 @@ export function AppContentClient(props: AppContentClientProps) {
               ? `Edited ${fmtRelative(lastEditedAt)}${lastEditedBy ? ` · ${lastEditedBy}` : ""}`
               : "No edits yet"}
           </span>
-          <button className="ac-btn" onClick={handleSave} disabled={!isDirty || saving}>
-            {saving ? "Saving…" : "Save draft"}
-          </button>
           <button
             className="ac-btn ac-btn-primary"
-            onClick={handlePublish}
-            disabled={!canPublish || publishing || isDirty}
+            onClick={handleSave}
+            disabled={!currentTabDirty || saving}
           >
-            {publishing ? "Publishing…" : "Publish to app"}
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -158,11 +247,44 @@ export function AppContentClient(props: AppContentClientProps) {
         <button className={`ac-tab${tab === "help" ? " active" : ""}`} onClick={() => switchTab("help")}>
           Help &amp; Support
         </button>
+        <button className={`ac-tab${tab === "terms" ? " active" : ""}`} onClick={() => switchTab("terms")}>
+          Terms &amp; Conditions
+        </button>
+        <button className={`ac-tab${tab === "buying" ? " active" : ""}`} onClick={() => switchTab("buying")}>
+          Buying Guide
+        </button>
+        <button className={`ac-tab${tab === "selling" ? " active" : ""}`} onClick={() => switchTab("selling")}>
+          Selling Guide
+        </button>
       </div>
 
       {tab === "about" && <AboutUsTab value={aboutUs} onChange={setAboutUs} />}
       {tab === "follow" && <FollowUsTab value={followUs} onChange={setFollowUs} />}
       {tab === "help" && <HelpSupportTab value={helpSupport} onChange={setHelpSupport} />}
+      {tab === "terms" && (
+        <TermsConditionsTab
+          value={termsConditions}
+          onChange={setTermsConditions}
+          editLanguage={termsEditLanguage}
+          onEditLanguageChange={setTermsEditLanguage}
+        />
+      )}
+      {tab === "buying" && (
+        <BuyingGuideTab
+          value={buyingGuide}
+          onChange={setBuyingGuide}
+          editLanguage={buyingEditLanguage}
+          onEditLanguageChange={setBuyingEditLanguage}
+        />
+      )}
+      {tab === "selling" && (
+        <SellingGuideTab
+          value={sellingGuide}
+          onChange={setSellingGuide}
+          editLanguage={sellingEditLanguage}
+          onEditLanguageChange={setSellingEditLanguage}
+        />
+      )}
     </div>
   )
 }

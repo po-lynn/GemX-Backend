@@ -24,7 +24,7 @@ type View = (typeof VIEWS)[number]
 
 const STONE_CUTS = ["Faceted", "Cabochon"] as const
 const METALS = ["Gold", "Silver", "Other"] as const
-const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+const SHAPES = ["Oval", "Cushion", "Mixed Cushion", "Star", "Round", "Pear", "Heart"] as const
 const IDENTIFICATIONS = ["Natural", "Heat Treated", "Treatments", "Others"] as const
 const PRODUCT_TYPES = ["loose_stone", "jewellery"] as const
 const MODERATION_STATUSES = ["pending", "approved", "rejected"] as const

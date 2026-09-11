@@ -3,11 +3,20 @@ import { appContentSection } from "@/drizzle/schema/app-content-schema"
 import { eq } from "drizzle-orm"
 import type {
   AboutUsContent,
+  BuyingGuideContent,
   FollowUsContent,
   HelpSupportContent,
+  SellingGuideContent,
+  TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
 
-export type AppContentSectionName = "about_us" | "follow_us" | "help_support"
+export type AppContentSectionName =
+  | "about_us"
+  | "follow_us"
+  | "help_support"
+  | "terms_conditions"
+  | "buying_guide"
+  | "selling_guide"
 
 export type AppContentSectionRow<T> = {
   draftContent: T
@@ -23,6 +32,9 @@ export type AppContentSections = {
   aboutUs: AppContentSectionRow<AboutUsContent>
   followUs: AppContentSectionRow<FollowUsContent>
   helpSupport: AppContentSectionRow<HelpSupportContent>
+  termsConditions: AppContentSectionRow<TermsConditionsContent>
+  buyingGuide: AppContentSectionRow<BuyingGuideContent>
+  sellingGuide: AppContentSectionRow<SellingGuideContent>
 }
 
 export const DEFAULT_ABOUT_US_CONTENT: AboutUsContent = {
@@ -53,16 +65,38 @@ export const DEFAULT_HELP_SUPPORT_CONTENT: HelpSupportContent = {
   allowScreenshotAttachments: false,
 }
 
+export const DEFAULT_MULTILANG_BLOCKNOTE_CONTENT: TermsConditionsContent = {
+  contentEn: "[]",
+  contentMy: "[]",
+  contentTh: "[]",
+  contentKo: "[]",
+  sourceLanguage: "English",
+}
+
+export const DEFAULT_TERMS_CONDITIONS_CONTENT = DEFAULT_MULTILANG_BLOCKNOTE_CONTENT
+export const DEFAULT_BUYING_GUIDE_CONTENT: BuyingGuideContent = {
+  ...DEFAULT_MULTILANG_BLOCKNOTE_CONTENT,
+}
+export const DEFAULT_SELLING_GUIDE_CONTENT: SellingGuideContent = {
+  ...DEFAULT_MULTILANG_BLOCKNOTE_CONTENT,
+}
+
 type SectionContentMap = {
   about_us: AboutUsContent
   follow_us: FollowUsContent
   help_support: HelpSupportContent
+  terms_conditions: TermsConditionsContent
+  buying_guide: BuyingGuideContent
+  selling_guide: SellingGuideContent
 }
 
 const SECTION_DEFAULTS: SectionContentMap = {
   about_us: DEFAULT_ABOUT_US_CONTENT,
   follow_us: DEFAULT_FOLLOW_US_CONTENT,
   help_support: DEFAULT_HELP_SUPPORT_CONTENT,
+  terms_conditions: DEFAULT_TERMS_CONDITIONS_CONTENT,
+  buying_guide: DEFAULT_BUYING_GUIDE_CONTENT,
+  selling_guide: DEFAULT_SELLING_GUIDE_CONTENT,
 }
 
 type RawSectionRow = {
@@ -92,8 +126,16 @@ function toRow<K extends AppContentSectionName>(
     }
   }
   return {
-    draftContent: raw.draftContent as SectionContentMap[K],
-    publishedContent: (raw.publishedContent as SectionContentMap[K] | null) ?? null,
+    draftContent: {
+      ...SECTION_DEFAULTS[section],
+      ...(raw.draftContent as object),
+    } as SectionContentMap[K],
+    publishedContent: raw.publishedContent
+      ? ({
+          ...SECTION_DEFAULTS[section],
+          ...(raw.publishedContent as object),
+        } as SectionContentMap[K])
+      : null,
     hasUnpublishedChanges: raw.hasUnpublishedChanges,
     updatedAt: raw.updatedAt,
     updatedByName: raw.updatedByName,
@@ -109,6 +151,9 @@ export async function getAppContentSections(): Promise<AppContentSections> {
     aboutUs: toRow("about_us", bySection.get("about_us")),
     followUs: toRow("follow_us", bySection.get("follow_us")),
     helpSupport: toRow("help_support", bySection.get("help_support")),
+    termsConditions: toRow("terms_conditions", bySection.get("terms_conditions")),
+    buyingGuide: toRow("buying_guide", bySection.get("buying_guide")),
+    sellingGuide: toRow("selling_guide", bySection.get("selling_guide")),
   }
 }
 
@@ -116,31 +161,44 @@ export async function saveAppContentDraft(input: {
   aboutUs?: AboutUsContent
   followUs?: FollowUsContent
   helpSupport?: HelpSupportContent
+  termsConditions?: TermsConditionsContent
+  buyingGuide?: BuyingGuideContent
+  sellingGuide?: SellingGuideContent
   updatedByName: string
 }): Promise<void> {
   const entries: Array<[AppContentSectionName, unknown]> = []
   if (input.aboutUs) entries.push(["about_us", input.aboutUs])
   if (input.followUs) entries.push(["follow_us", input.followUs])
   if (input.helpSupport) entries.push(["help_support", input.helpSupport])
+  if (input.termsConditions) entries.push(["terms_conditions", input.termsConditions])
+  if (input.buyingGuide) entries.push(["buying_guide", input.buyingGuide])
+  if (input.sellingGuide) entries.push(["selling_guide", input.sellingGuide])
   if (entries.length === 0) return
 
   await db.transaction(async (tx) => {
+    const now = new Date()
     for (const [section, content] of entries) {
       await tx
         .insert(appContentSection)
         .values({
           section,
           draftContent: content,
-          hasUnpublishedChanges: true,
+          publishedContent: content,
+          hasUnpublishedChanges: false,
           updatedByName: input.updatedByName,
+          publishedAt: now,
+          publishedByName: input.updatedByName,
         })
         .onConflictDoUpdate({
           target: appContentSection.section,
           set: {
             draftContent: content,
-            hasUnpublishedChanges: true,
+            publishedContent: content,
+            hasUnpublishedChanges: false,
             updatedByName: input.updatedByName,
-            updatedAt: new Date(),
+            updatedAt: now,
+            publishedAt: now,
+            publishedByName: input.updatedByName,
           },
         })
     }
@@ -195,4 +253,16 @@ export function getPublishedFollowUs(): Promise<FollowUsContent> {
 
 export function getPublishedHelpSupport(): Promise<HelpSupportContent> {
   return getPublishedContent("help_support")
+}
+
+export function getPublishedTermsConditions(): Promise<TermsConditionsContent> {
+  return getPublishedContent("terms_conditions")
+}
+
+export function getPublishedBuyingGuide(): Promise<BuyingGuideContent> {
+  return getPublishedContent("buying_guide")
+}
+
+export function getPublishedSellingGuide(): Promise<SellingGuideContent> {
+  return getPublishedContent("selling_guide")
 }

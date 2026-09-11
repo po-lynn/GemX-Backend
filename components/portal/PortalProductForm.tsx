@@ -45,7 +45,7 @@ import type { OriginOption } from "@/features/origin/db/origin"
 const MAX_PRODUCT_IMAGES = 10
 const MAX_PRODUCT_VIDEOS = 5
 
-const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+const SHAPES = ["Oval", "Cushion", "Mixed Cushion", "Star", "Round", "Pear", "Heart"] as const
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
