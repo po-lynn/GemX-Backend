@@ -54,7 +54,7 @@ Run the full suite: `npm run test` (required to pass before commit).
 ## What’s covered
 
 - **Unit:** `lib/formatters`, `lib/pagination` (getPageNumbers), product search schema, `normalizeProductBody` (incl. dimensions → ` × ` join), `features/news/services/google-translate` (detect, pickLocalized*, mocked buildLocalizedNews), article autosave with `editLanguage`
-- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine`; uploads: POST `/api/upload/product-media`, POST `/api/upload/certificate`; mobile: POST/GET `/api/mobile/escrow-service-requests` (all with mocked auth, DB, and cache/Supabase); GET `/api/news` (`?lang=` localization) and GET `/api/news/[id]`; GET `/api/articles` / `[id]` (`?lang=` localization)
+- **API:** GET `/api/categories`; products: GET/POST `/api/products`, GET/PATCH/DELETE `/api/products/[id]`, GET `/api/products/mine`; uploads: POST `/api/upload/product-media`, POST `/api/upload/certificate`; mobile: POST/GET `/api/mobile/escrow-service-requests` (all with mocked auth, DB, and cache/Supabase); GET `/api/news` (`?lang=` localization) and GET `/api/news/[id]`; GET `/api/articles` / `[id]` (`?lang=` localization); GET `/api/news-articles` / `[id]` (unified News & Articles from `articles` table, optional `?type=`)
 
 ## Adding tests
 
