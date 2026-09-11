@@ -5,6 +5,7 @@ import { canManageAppContent } from "@/features/app-content/permissions/app-cont
 import { saveAppContentSchema, type SaveAppContentInput } from "@/features/app-content/schemas/app-content"
 import { saveAppContentDraft, publishAppContentSections } from "@/features/app-content/db/app-content"
 import { revalidateAppContentCache } from "@/features/app-content/db/cache/app-content"
+import { localizeMultilangBlockNoteIfEnglish } from "@/features/app-content/lib/localize-terms"
 import { zodErrorMessage } from "@/lib/form-data"
 
 export async function saveAppContentAction(input: SaveAppContentInput) {
@@ -12,7 +13,14 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
   if (!parsed.success) {
     return { error: zodErrorMessage(parsed.error) }
   }
-  if (!parsed.data.aboutUs && !parsed.data.followUs && !parsed.data.helpSupport) {
+  if (
+    !parsed.data.aboutUs &&
+    !parsed.data.followUs &&
+    !parsed.data.helpSupport &&
+    !parsed.data.termsConditions &&
+    !parsed.data.buyingGuide &&
+    !parsed.data.sellingGuide
+  ) {
     return { error: "Nothing to save" }
   }
   const session = await requireActionRole(canManageAppContent)
@@ -20,15 +28,55 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
     return { error: "Unauthorized" }
   }
   try {
+    const translateFromEnglish =
+      parsed.data.translateFromEnglish === true ||
+      parsed.data.translateTermsFromEnglish === true
+
+    let termsConditions = parsed.data.termsConditions
+    let buyingGuide = parsed.data.buyingGuide
+    let sellingGuide = parsed.data.sellingGuide
+
+    if (termsConditions) {
+      termsConditions = await localizeMultilangBlockNoteIfEnglish(
+        termsConditions,
+        translateFromEnglish,
+        "Terms & Conditions",
+      )
+    }
+    if (buyingGuide) {
+      buyingGuide = await localizeMultilangBlockNoteIfEnglish(
+        buyingGuide,
+        translateFromEnglish,
+        "Buying Guide",
+      )
+    }
+    if (sellingGuide) {
+      sellingGuide = await localizeMultilangBlockNoteIfEnglish(
+        sellingGuide,
+        translateFromEnglish,
+        "Selling Guide",
+      )
+    }
+
     await saveAppContentDraft({
       aboutUs: parsed.data.aboutUs,
       followUs: parsed.data.followUs,
       helpSupport: parsed.data.helpSupport,
+      termsConditions,
+      buyingGuide,
+      sellingGuide,
       updatedByName: session.user.name ?? session.user.email ?? "Admin",
     })
-    return { success: true as const }
-  } catch {
-    return { error: "Failed to save app content" }
+    revalidateAppContentCache()
+    return {
+      success: true as const,
+      termsConditions: termsConditions ?? undefined,
+      buyingGuide: buyingGuide ?? undefined,
+      sellingGuide: sellingGuide ?? undefined,
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to save app content"
+    return { error: message }
   }
 }
 

@@ -17,7 +17,7 @@ type Category = { id: string; name: string; type: string }
 type Origin = { id: string; name: string; country: string }
 type Laboratory = { id: string; name: string }
 
-const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+const SHAPES = ["Oval", "Cushion", "Mixed Cushion", "Star", "Round", "Pear", "Heart"] as const
 const CUTS = ["Faceted", "Cabochon"] as const
 
 type FilterKey =

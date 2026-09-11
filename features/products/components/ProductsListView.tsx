@@ -485,7 +485,7 @@ export function ProductsListView({
       id: "shape",
       label: "Shape",
       type: "multi",
-      options: (["Oval", "Cushion", "Round", "Pear", "Heart"] as const).map((s) => ({
+      options: (["Oval", "Cushion", "Mixed Cushion", "Star", "Round", "Pear", "Heart"] as const).map((s) => ({
         value: s,
         label: s,
         count: facetCounts.shape[s] ?? 0,

@@ -5,12 +5,15 @@ export const appContentSectionEnum = pgEnum("app_content_section_name", [
   "about_us",
   "follow_us",
   "help_support",
+  "terms_conditions",
+  "buying_guide",
+  "selling_guide",
 ])
 
 /**
- * Draft/published content versioning for the About Us / Follow Us / Help & Support
- * admin page. `draftContent` is what the admin edits; `publishedContent` is what
- * the mobile app reads. Publish copies draft -> published and clears the dirty flag.
+ * Draft/published content for About Us / Follow Us / Help & Support /
+ * Terms & Conditions / Buying Guide / Selling Guide.
+ * Save writes both draft and published; mobile reads published.
  */
 export const appContentSection = pgTable("app_content_section", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -58,10 +58,32 @@ export const helpSupportContentSchema = z.object({
   allowScreenshotAttachments: z.boolean(),
 })
 
+/**
+ * Shared BlockNote JSON strings per locale.
+ * Used by Terms & Conditions, Buying Guide, and Selling Guide.
+ */
+export const multilangBlockNoteContentSchema = z.object({
+  contentEn: z.string(),
+  contentMy: z.string(),
+  contentTh: z.string(),
+  contentKo: z.string(),
+  sourceLanguage: z.enum(["English", "Myanmar", "Thai", "Korean"]).default("English"),
+})
+
+/** @deprecated Prefer multilangBlockNoteContentSchema — same shape. */
+export const termsConditionsContentSchema = multilangBlockNoteContentSchema
+
 export const saveAppContentSchema = z.object({
   aboutUs: aboutUsContentSchema.optional(),
   followUs: followUsContentSchema.optional(),
   helpSupport: helpSupportContentSchema.optional(),
+  termsConditions: multilangBlockNoteContentSchema.optional(),
+  buyingGuide: multilangBlockNoteContentSchema.optional(),
+  sellingGuide: multilangBlockNoteContentSchema.optional(),
+  /** When true and English body is detected, fill MY/TH/KO from contentEn via Google Translate. */
+  translateFromEnglish: z.boolean().optional(),
+  /** @deprecated Use translateFromEnglish */
+  translateTermsFromEnglish: z.boolean().optional(),
 })
 
 export type SocialPlatform = z.infer<typeof socialPlatformSchema>
@@ -69,4 +91,8 @@ export type FaqItem = z.infer<typeof faqItemSchema>
 export type AboutUsContent = z.infer<typeof aboutUsContentSchema>
 export type FollowUsContent = z.infer<typeof followUsContentSchema>
 export type HelpSupportContent = z.infer<typeof helpSupportContentSchema>
+export type MultilangBlockNoteContent = z.infer<typeof multilangBlockNoteContentSchema>
+export type TermsConditionsContent = MultilangBlockNoteContent
+export type BuyingGuideContent = MultilangBlockNoteContent
+export type SellingGuideContent = MultilangBlockNoteContent
 export type SaveAppContentInput = z.infer<typeof saveAppContentSchema>

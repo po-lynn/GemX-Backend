@@ -5,8 +5,8 @@ import { getAppContentSections } from "@/features/app-content/db/app-content"
 import { AppContentClient } from "@/features/app-content/components/AppContentClient"
 import "./app-content.css"
 
-type TabId = "about" | "follow" | "help"
-const TABS: TabId[] = ["about", "follow", "help"]
+type TabId = "about" | "follow" | "help" | "terms" | "buying" | "selling"
+const TABS: TabId[] = ["about", "follow", "help", "terms", "buying", "selling"]
 
 type Props = {
   searchParams: Promise<{ tab?: string }>
@@ -26,6 +26,9 @@ export default async function AppContentAdminPage({ searchParams }: Props) {
     { at: sections.aboutUs.updatedAt, by: sections.aboutUs.updatedByName },
     { at: sections.followUs.updatedAt, by: sections.followUs.updatedByName },
     { at: sections.helpSupport.updatedAt, by: sections.helpSupport.updatedByName },
+    { at: sections.termsConditions.updatedAt, by: sections.termsConditions.updatedByName },
+    { at: sections.buyingGuide.updatedAt, by: sections.buyingGuide.updatedByName },
+    { at: sections.sellingGuide.updatedAt, by: sections.sellingGuide.updatedByName },
   ]
   const latest = candidates
     .filter((c): c is { at: Date; by: string | null } => c.at !== null)
@@ -37,11 +40,9 @@ export default async function AppContentAdminPage({ searchParams }: Props) {
       aboutUs={sections.aboutUs.draftContent}
       followUs={sections.followUs.draftContent}
       helpSupport={sections.helpSupport.draftContent}
-      pendingPublish={{
-        aboutUs: sections.aboutUs.hasUnpublishedChanges,
-        followUs: sections.followUs.hasUnpublishedChanges,
-        helpSupport: sections.helpSupport.hasUnpublishedChanges,
-      }}
+      termsConditions={sections.termsConditions.draftContent}
+      buyingGuide={sections.buyingGuide.draftContent}
+      sellingGuide={sections.sellingGuide.draftContent}
       lastEditedAt={latest ? latest.at.toISOString() : null}
       lastEditedBy={latest?.by ?? null}
       currentUserName={session?.user.name ?? session?.user.email ?? "Admin"}

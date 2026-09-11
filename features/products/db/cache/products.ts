@@ -36,7 +36,7 @@ export async function getAdminProducts(opts: {
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
-  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
   createdFrom?: string
@@ -78,7 +78,7 @@ export async function getPrivilegeAssistBrowse(opts: {
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
-  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
   createdFrom?: string
@@ -105,7 +105,7 @@ export async function getCachedProductsBySellerId(
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
     identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
-    shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+    shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
     createdFrom?: string

@@ -103,7 +103,7 @@ function initialTitlesByLang(
   }
 }
 
-const SHAPES = ["Oval", "Cushion", "Round", "Pear", "Heart"] as const
+const SHAPES = ["Oval", "Cushion", "Mixed Cushion", "Star", "Round", "Pear", "Heart"] as const
 
 const MODERATION_STATUS_OPTIONS = [
   { value: "pending" as const, label: "Pending" },

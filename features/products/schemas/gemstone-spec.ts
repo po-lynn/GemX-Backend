@@ -8,13 +8,19 @@ import { z } from "zod"
  * Single source of truth for validation, types, and search/filter field names.
  */
 
-export const productShapeSchema = z.enum([
+export const PRODUCT_SHAPES = [
   "Oval",
   "Cushion",
+  "Mixed Cushion",
+  "Star",
   "Round",
   "Pear",
   "Heart",
-])
+] as const
+
+export type ProductShape = (typeof PRODUCT_SHAPES)[number]
+
+export const productShapeSchema = z.enum(PRODUCT_SHAPES)
 /** Weight (carat) - optional in schema; required in context (e.g. jewellery row) */
 const weightCaratSchema = z
   .string()

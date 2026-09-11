@@ -19,7 +19,7 @@ Defined in `drizzle/schema/product-schema.ts`:
 | `product_status` | `active`, `archive`, `sold`, `hidden` | Listing visibility and seller workflow (Active / Reserved / Sold / Archived). |
 | `product_moderation` | `pending`, `approved`, `rejected` | Admin moderation state. |
 | `currency` | `USD`, `MMK` | Price currency. |
-| `product_shape` | `Oval`, `Cushion`, `Round`, `Pear`, `Heart` | Stone shape. |
+| `product_shape` | `Oval`, `Cushion`, `Mixed Cushion`, `Star`, `Round`, `Pear`, `Heart` | Stone shape. |
 | `stone_cut` | `Faceted`, `Cabochon` | Loose stone cut style. |
 | `metal` | `Gold`, `Silver`, `Other` | Jewellery metal. |
 | `product_identification` | `Natural`, `Heat Treated`, `Treatments`, `Others` | Treatment/identification type. |

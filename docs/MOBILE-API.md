@@ -15,7 +15,7 @@
 - **News auto-translate (Google)** – On create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean** via **Google Cloud Translation API**. Stored on **`news`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/news`** and **GET `/api/news/:id`** accept optional **`lang`**. See **6** and [docs/api/news.md](./api/news.md).
 - **Premium dealer auto-renew toggle** – Added **PATCH `/api/mobile/premium-dealers/auto-renew`** (auth): toggles `autoRenew` on the current user's active premium dealer subscription. Body: `autoRenew`. Previously the "Turn off"/"Turn on" auto-renew pill on the "Become Premium" screen (already-premium state) was client-side only and never persisted — the daily renewal cron (`POST /api/cron/renew-premium-dealers`) would still renew using the value set at activation time regardless of what the pill showed. This endpoint makes the toggle actually persist. Returns **400** `{ "error": "No active premium dealer subscription" }` if the user has no active, non-expired subscription. See **5.4.3d**.
 - **Social login (mobile)** – **POST `/api/mobile/google-login`** has been replaced by **POST `/api/mobile/social-login`** (no auth — issues a session): mobile app sends `provider` + the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. Generic by `provider`, but only `"google"` is wired/verified today (unsupported providers return **400**). First-time sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). **New:** first-time sign-ins can also submit the Screen-1 profile fields (`name`, `country`, `state`, `city`, `address`, `gender`, `dateOfBirth`, `nrc`, KYC URLs) in the same call — written only on signup, never on a returning login; `nrc` is validated as a Myanmar NRC only when `country` is Myanmar or unset, otherwise stored as a plain passport/national ID. See **3.3**.
-- **App Content admin (About Us / Follow Us / Help & Support)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, and **GET `/api/mobile/help-support`** (no auth): serve admin-managed, publish-gated content for the mobile app's About, Follow Us, and Help & Support screens. Content is edited as a draft in **Admin → Settings → App Content** and is only served here after "Publish to app" is clicked; unpublished sections return empty defaults with **200**. See **8**.
+- **App Content admin (About Us / Follow Us / Help & Support / Terms & Conditions / Buying Guide / Selling Guide)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, **GET `/api/mobile/help-support`**, **GET `/api/mobile/terms-conditions`**, **GET `/api/mobile/buying-guide`**, and **GET `/api/mobile/selling-guide`** (no auth): serve admin-managed content for the mobile app. Content is edited in **Admin → Settings → App Content**; **Save** goes live immediately. See **8**.
 - **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
 - **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update profile/KYC fields — `name`, `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (Latin transliteration e.g. `12/ABC(N)123456`, or the Myanmar script equivalent) only when `country` is Myanmar or unset — any other country stores `nrc` as a plain passport/national ID with no format check; returns **400** on an invalid Myanmar NRC. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
@@ -159,6 +159,9 @@
 | GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
 | GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
+| GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (`contentEn`/`contentMy`/`contentTh`/`contentKo`; optional `?lang=`). See **8.4**.                                                                  |
+| GET    | `/api/mobile/buying-guide` | No | Published Buying Guide BlockNote JSON (optional `?lang=`). See **8.5**.                                                                                                                          |
+| GET    | `/api/mobile/selling-guide` | No | Published Selling Guide BlockNote JSON (optional `?lang=`). See **8.6**.                                                                                                                         |
 | POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login. Required to receive Surprise Bonus and other pushes. See **9**. |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout. See **9**. |
 
@@ -678,7 +681,7 @@ The API does **not** return a numeric `featured` field—only **`isFeatured`** (
 | `categoryId`        | string  | -        | Filter by category UUID (from GET /api/categories)                                       |
 | `status`            | string  | `active` | Filter by status: `active`, `archive`, `sold`, `hidden`. Public list defaults to active. |
 | `stoneCut`          | string  | -        | Filter by cut: `Faceted` or `Cabochon` (loose stones)                                    |
-| `shape`             | string  | -        | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`                             |
+| `shape`             | string  | -        | Filter by shape: `Oval`, `Cushion`, `Mixed Cushion`, `Star`, `Round`, `Pear`, `Heart`                             |
 | `origin`            | string  | -        | Filter by origin name (e.g. from GET /api/origins or your origins list)                  |
 | `laboratoryId`      | string  | -        | Filter by laboratory UUID (from GET /api/laboratories)                                   |
 | `isCollectorPiece`  | boolean | -        | When `true`, returns all active collector pieces with masked data (image + `maskedPrice`). No auth required. Full details per product require an approved show-request (see **5.4.4** and **5.2**). |
@@ -769,7 +772,7 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `stoneCut`          | string  | -       | Filter by cut: `Faceted` or `Cabochon`.                                                                                           |
 | `metal`             | string  | -       | Filter by metal: `Gold`, `Silver`, `Other` (typically jewellery only).                                                             |
 | `identification`    | string  | -       | Filter by identification: `Natural`, `Heat Treated`, `Treatments`, `Others`.                                                       |
-| `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Round`, `Pear`, `Heart`.                                                                     |
+| `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Mixed Cushion`, `Star`, `Round`, `Pear`, `Heart`.                                                                     |
 | `origin`            | string  | -       | Filter by origin name.                                                                                                            |
 | `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
 | `isCollectorPiece`  | boolean | -       | When `true` on **GET /api/products**, public — returns all active collector pieces with masked data only (image + `maskedPrice`). On **GET /api/products/mine**, returns seller’s own collector-tagged listings as owner data (no public masking). |
@@ -3145,7 +3148,7 @@ This endpoint has been removed. Use the package + purchase-request flow instead:
 - `color` (string, max 100) – required for loose stones; free text, e.g.
   "Pigeon Blood Red". `jewelleryGemstones[]` items keep their own free-text
   `color` field.
-- `shape` – `"Oval"` | `"Cushion"` | `"Round"` | `"Pear"` | `"Heart"`
+- `shape` – `"Oval"` | `"Cushion"` | `"Mixed Cushion"` | `"Star"` | `"Round"` | `"Pear"` | `"Heart"`
 - `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` (get URL by uploading via **POST /api/upload/certificate**; no manual URL field in admin form; certificate is shown in a viewer)
 
 **Dimensions** (optional, loose stone **product** `dimensions` and each **jewellery** `jewelleryGemstones[].dimensions`):
@@ -3227,7 +3230,7 @@ Get valid category IDs from **GET /api/categories** (use `?type=jewellery` or `?
 | `pieceCount`   | No       | number or string | Number of stones of this type (e.g. 37 for “Ruby: 37 pcs”).       |
 | `dimensions`   | No       | string, string[], or object | Same rules as product-level **Dimensions** above (stored as one string, e.g. `”5 × 3mm”`). |
 | `color`        | No       | string           | e.g. `”Red”`, `”White”`.                                          |
-| `shape`        | No       | string           | `”Oval”` | `”Cushion”` | `”Round”` | `”Pear”` | `”Heart”`.        |
+| `shape`        | No       | string           | `"Oval"` \| `"Cushion"` \| `"Mixed Cushion"` \| `"Star"` \| `"Round"` \| `"Pear"` \| `"Heart"`.        |
 | `origin`       | No       | string           | e.g. `”Myanmar”`.                                                 |
 | `cut`          | No       | string           | Cut style (e.g. `”Brilliant”`, `”Step”`).                         |
 | `transparency` | No       | string           | e.g. `”Transparent”`.                                             |
@@ -3695,9 +3698,9 @@ Full reference: [docs/api/news-articles.md](./api/news-articles.md). `/api/artic
 
 ---
 
-## 8. App Content (About Us / Follow Us / Help & Support)
+## 8. App Content (About Us / Follow Us / Help & Support / Terms & Conditions)
 
-Content for the mobile app's About, Follow Us, and Help & Support screens is managed in the admin (**Admin → Settings → App Content**) with a draft/publish workflow. All three routes are public and return only **published** content. For full response shapes and error cases see `docs/api/mobile-about-us.md`, `docs/api/mobile-follow-us.md`, and `docs/api/mobile-help-support.md`.
+Content for the mobile app's About, Follow Us, Help & Support, and Terms & Conditions screens is managed in the admin (**Admin → Settings → App Content**) with a draft/publish workflow. All routes are public and return only **published** content. For full response shapes and error cases see `docs/api/mobile-about-us.md`, `docs/api/mobile-follow-us.md`, `docs/api/mobile-help-support.md`, and `docs/api/mobile-terms-conditions.md`.
 
 ### 8.1 About us (public)
 
@@ -3726,6 +3729,24 @@ Returns **`platforms`**: an array of `{ iconKey, customIconUrl, label, value, ur
 **Auth:** Not required.
 
 Returns **`faqs`** (active only, sorted by `sortOrder`), **`contact`** (`email`, `phone`, `telegram`), **`hours`** (`weekday`, `saturday`, `sunday`, `timezone`), and **`reportForm`** (`enabled`, `categories`, `allowScreenshots`). Report-a-problem is config-only — there is no submission endpoint or admin inbox. See `docs/api/mobile-help-support.md`.
+
+### 8.4 Terms & Conditions
+
+**GET** `/api/mobile/terms-conditions`
+
+Returns BlockNote JSON for Terms & Conditions: **`content`** (locale-remapped when `?lang=` is set), plus **`contentEn`**, **`contentMy`**, **`contentTh`**, **`contentKo`**, and **`sourceLanguage`**. Admin edits with BlockNote; saving English auto-translates to Myanmar, Thai, and Korean. See `docs/api/mobile-terms-conditions.md`.
+
+### 8.5 Buying Guide
+
+**GET** `/api/mobile/buying-guide`
+
+Same shape as Terms & Conditions. See `docs/api/mobile-buying-guide.md`.
+
+### 8.6 Selling Guide
+
+**GET** `/api/mobile/selling-guide`
+
+Same shape as Terms & Conditions. See `docs/api/mobile-selling-guide.md`.
 
 ---
 
@@ -3904,6 +3925,9 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | GET    | `/api/mobile/about-us` | No   | Published About Us content (story, terms/privacy metadata, company info, app version). See 8.1.             |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms, active only, sorted by `sortOrder`. See 8.2.                                 |
 | GET    | `/api/mobile/help-support` | No | Published Help & Support content (`faqs`, `contact`, `hours`, `reportForm`). See 8.3.                    |
+| GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (optional `?lang=`). See 8.4.                              |
+| GET    | `/api/mobile/buying-guide` | No | Published Buying Guide BlockNote JSON (optional `?lang=`). See 8.5.                                    |
+| GET    | `/api/mobile/selling-guide` | No | Published Selling Guide BlockNote JSON (optional `?lang=`). See 8.6.                                   |
 | POST   | `/api/push/register`   | Yes  | Register FCM token (required for Surprise Bonus and other pushes). See **9**.                              |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM token. See **9**.                                                                            |
 

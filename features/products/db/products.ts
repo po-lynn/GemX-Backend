@@ -116,7 +116,7 @@ export type AdminProductRow = {
   categoryName: string | null
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
-  shape: "Oval" | "Cushion" | "Round" | "Pear" | "Heart" | null
+  shape: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart" | null
   weightCarat: string | null
   status: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus: "pending" | "approved" | "rejected"
@@ -155,7 +155,7 @@ export async function getAdminProductsFromDb(opts: {
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: ProductIdentification
-  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
   /** Filter by created date (YYYY-MM-DD), inclusive range */
@@ -396,7 +396,7 @@ type ProductFacetOpts = {
   stoneCut?: "Faceted" | "Cabochon"
   metal?: "Gold" | "Silver" | "Other"
   identification?: ProductIdentification
-  shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+  shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
   laboratoryId?: string | null
   createdFrom?: string
@@ -566,6 +566,8 @@ export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promis
         metalOther: sql<number>`count(*) FILTER (WHERE ${and(metalWhere, eq(product.metal, "Other"))})::int`,
         shapeOval: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Oval"))})::int`,
         shapeCushion: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Cushion"))})::int`,
+        shapeMixedCushion: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Mixed Cushion"))})::int`,
+        shapeStar: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Star"))})::int`,
         shapeRound: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Round"))})::int`,
         shapePear: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Pear"))})::int`,
         shapeHeart: sql<number>`count(*) FILTER (WHERE ${and(shapeWhere, eq(product.shape, "Heart"))})::int`,
@@ -593,6 +595,8 @@ export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promis
     shape: {
       Oval: counts.shapeOval,
       Cushion: counts.shapeCushion,
+      "Mixed Cushion": counts.shapeMixedCushion,
+      Star: counts.shapeStar,
       Round: counts.shapeRound,
       Pear: counts.shapePear,
       Heart: counts.shapeHeart,
@@ -674,7 +678,7 @@ export async function getProductsBySellerId(
     stoneCut?: "Faceted" | "Cabochon"
     metal?: "Gold" | "Silver" | "Other"
     identification?: ProductIdentification
-    shape?: "Oval" | "Cushion" | "Round" | "Pear" | "Heart"
+    shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
     origin?: string
     laboratoryId?: string | null
     /** Filter by created date (YYYY-MM-DD), inclusive range */

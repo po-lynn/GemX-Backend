@@ -610,6 +610,55 @@
       "when": 1788693044856,
       "tag": "0087_reclaim_stale_surprise_bonus_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1789000000000,
+      "tag": "0088_product_shape_mixed_cushion_star",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1789139461903,
+      "tag": "0089_bright_toro",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1789140012006,
+      "tag": "0090_calm_the_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1789141000000,
+      "tag": "0091_terms_conditions_section",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1789141381000,
+      "tag": "0092_early_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1789142000000,
+      "tag": "0093_buying_selling_guide_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1789143883019,
+      "tag": "0094_windy_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

@@ -89,22 +89,25 @@
 
 .ac-tabs {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   background: #eaeeeb;
   border-radius: 12px;
   padding: 4px;
   margin-bottom: 22px;
-  max-width: 520px;
+  max-width: 100%;
 }
 
 .ac-tab {
-  flex: 1;
+  flex: 1 1 auto;
   border: none;
   background: none;
-  padding: 10px;
+  padding: 10px 12px;
   border-radius: 9px;
-  font: 700 13.5px "Plus Jakarta Sans", system-ui, sans-serif;
+  font: 700 13px "Plus Jakarta Sans", system-ui, sans-serif;
   color: var(--ac-muted);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .ac-tab.active {

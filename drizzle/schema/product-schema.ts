@@ -33,6 +33,8 @@ export const currencyEnum = pgEnum("currency", ["USD", "MMK"]);
 export const productShapeEnum = pgEnum("product_shape", [
   "Oval",
   "Cushion",
+  "Mixed Cushion",
+  "Star",
   "Round",
   "Pear",
   "Heart",

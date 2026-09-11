@@ -5,6 +5,7 @@ import {
   aboutUsContentSchema,
   followUsContentSchema,
   helpSupportContentSchema,
+  termsConditionsContentSchema,
   saveAppContentSchema,
 } from "@/features/app-content/schemas/app-content"
 
@@ -127,6 +128,28 @@ describe("helpSupportContentSchema", () => {
   })
 })
 
+const TERMS = {
+  contentEn: '[{"type":"paragraph","content":[{"type":"text","text":"Hello"}]}]',
+  contentMy: "[]",
+  contentTh: "[]",
+  contentKo: "[]",
+  sourceLanguage: "English" as const,
+}
+
+describe("termsConditionsContentSchema", () => {
+  // Validates BlockNote multilang payload used by the Terms & Conditions tab.
+  it("accepts valid terms content with all locale fields", () => {
+    expect(termsConditionsContentSchema.safeParse(TERMS).success).toBe(true)
+  })
+
+  it("defaults sourceLanguage to English when omitted", () => {
+    const { sourceLanguage: _drop, ...rest } = TERMS
+    const parsed = termsConditionsContentSchema.safeParse(rest)
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data.sourceLanguage).toBe("English")
+  })
+})
+
 describe("saveAppContentSchema", () => {
   it("accepts all three sections omitted (nothing to save)", () => {
     expect(saveAppContentSchema.safeParse({}).success).toBe(true)
@@ -134,6 +157,24 @@ describe("saveAppContentSchema", () => {
 
   it("accepts a payload with only one section present", () => {
     expect(saveAppContentSchema.safeParse({ aboutUs: ABOUT_US }).success).toBe(true)
+  })
+
+  it("accepts termsConditions with translateFromEnglish flag", () => {
+    expect(
+      saveAppContentSchema.safeParse({
+        termsConditions: TERMS,
+        translateFromEnglish: true,
+      }).success
+    ).toBe(true)
+  })
+
+  it("accepts buyingGuide and sellingGuide sections", () => {
+    expect(
+      saveAppContentSchema.safeParse({
+        buyingGuide: TERMS,
+        sellingGuide: TERMS,
+      }).success
+    ).toBe(true)
   })
 
   it("rejects a payload with an invalid nested section", () => {
