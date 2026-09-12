@@ -13,10 +13,6 @@ import { DashboardActivityChart } from "@/components/admin/DashboardActivityChar
 import { DashboardRangePicker } from "@/components/admin/DashboardRangePicker"
 import { withTimeout, safeAll } from "@/lib/db-timeout"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 async function getStats(since: Date) {
   const z = [{ total: 0 }]
   const [

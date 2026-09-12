@@ -94,7 +94,8 @@
 | Method | Path                   | Auth | Description                                                                                                                                                                                              |
 | ------ | ---------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/mobile/register` | No   | Register (phone, password, name; optional nrc with format validation, address, city, state, country, gender, dateOfBirth, **nrcFrontUrl**, **nrcBackUrl**, **selfieUrl**, **businessLicenseUrl**). NRC must be unique. See **3.1**. |
-| POST   | `/api/mobile/login`    | No   | Login (phone, password)                                                                                                                                                                                  |
+| POST   | `/api/mobile/check-phone` | No | Signup helper: check if a Myanmar phone is already registered. See **3.0**. |
+| POST   | `/api/mobile/login`    | No   | Login (phone, password). See **3.2**.                                                                                                                                                                                  |
 | POST   | `/api/mobile/social-login` | No | Sign in / sign up with a social provider (native ID token; only `google` wired today), optionally filling profile fields on first signup. See **3.3**.                                                                                                                                        |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tiers for mobile selection (`durationDays`, `points`, optional `badge`).                                                                                               |
 | GET    | `/api/mobile/feature-settings` | No   | Get full feature settings: `homeFeaturedLimit` (admin cap on homepage featured slots) and `pricingTiers` (same tiers as `feature-pricing-tiers` with optional `enabled` per tier). See **5.4.1b**. |
@@ -181,6 +182,14 @@ List responses (`GET /api/products`, `GET /api/products/suggestions`, `GET /api/
 ---
 
 ## 3. Authentication
+
+### 3.0 Check phone (signup)
+
+**POST** `/api/mobile/check-phone`
+
+Public helper for the signup screen. Body: `{ "phone": "09123456789" }` (also accepts `+959…`).
+
+**Success (200):** `{ "exists": true|false, "available": true|false, "phone": "+959…" }` — `exists` means already registered; `available` is `!exists`. Invalid format → **400**. Rate limit → **429**. Full details: `docs/api/mobile-check-phone.md`.
 
 ### 3.1 Register (create account)
 
@@ -3865,6 +3874,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | Method | Path                   | Auth | Description                                                                                                 |
 | ------ | ---------------------- | ---- | ----------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/mobile/register` | No   | Register (phone, password; optional nrc with format/uniqueness validation, nrcFrontUrl, nrcBackUrl, selfieUrl, businessLicenseUrl). See 3.1. |
+| POST   | `/api/mobile/check-phone` | No | Check if phone is already registered (signup). See 3.0. |
 | POST   | `/api/mobile/login`    | No   | Login                                                                                                       |
 | GET    | `/api/mobile/feature-pricing-tiers` | No   | Get feature duration/points tier options for mobile select UI.                                              |
 | GET    | `/api/mobile/feature-settings` | No   | Full feature settings: `homeFeaturedLimit` + `pricingTiers` (with optional `enabled`). See 5.4.1b.         |

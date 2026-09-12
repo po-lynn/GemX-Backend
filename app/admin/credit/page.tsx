@@ -10,10 +10,6 @@ import {
 import { CreditSettingsForm } from "@/features/points/components/CreditSettingsForm";
 import { FadeUp } from "@/components/admin/motion";
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export default async function AdminCreditPage() {
   await connection();
   await requireFeatureAccess(FEATURE_KEYS.CREDIT_PACKAGES);

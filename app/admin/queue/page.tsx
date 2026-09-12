@@ -6,10 +6,6 @@ import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { FadeUp } from "@/components/admin/motion"
 import { QueueDashboard } from "@/components/admin/queue/QueueDashboard"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false
-
 export default async function AdminQueuePage() {
   await connection()
   await requireFeatureAccess(FEATURE_KEYS.QUEUE_MANAGEMENT)

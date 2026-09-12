@@ -9,6 +9,10 @@
 export const NEWS_LANGUAGES = ["English", "Myanmar", "Thai", "Korean"] as const
 export type NewsLanguage = (typeof NEWS_LANGUAGES)[number]
 
+/** Preferred alias — same values as NEWS_LANGUAGES. */
+export const CONTENT_LANGUAGES = NEWS_LANGUAGES
+export type ContentLanguage = NewsLanguage
+
 export const GOOGLE_LANG_BY_NEWS: Record<NewsLanguage, string> = {
   English: "en",
   Myanmar: "my",
