@@ -13,7 +13,7 @@ import type {
   SellingGuideContent,
   TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
-import type { ContentLanguage } from "@/features/content/services/google-translate"
+import type { NewsLanguage } from "@/features/content/services/google-translate"
 import { AboutUsTab } from "@/features/app-content/components/AboutUsTab"
 import { FollowUsTab } from "@/features/app-content/components/FollowUsTab"
 import { HelpSupportTab } from "@/features/app-content/components/HelpSupportTab"
@@ -66,9 +66,9 @@ export function AppContentClient(props: AppContentClientProps) {
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [termsEditLanguage, setTermsEditLanguage] = useState<ContentLanguage>("English")
-  const [buyingEditLanguage, setBuyingEditLanguage] = useState<ContentLanguage>("English")
-  const [sellingEditLanguage, setSellingEditLanguage] = useState<ContentLanguage>("English")
+  const [termsEditLanguage, setTermsEditLanguage] = useState<NewsLanguage>("English")
+  const [buyingEditLanguage, setBuyingEditLanguage] = useState<NewsLanguage>("English")
+  const [sellingEditLanguage, setSellingEditLanguage] = useState<NewsLanguage>("English")
 
   const dirty = useMemo(
     () => ({
@@ -122,7 +122,7 @@ export function AppContentClient(props: AppContentClientProps) {
     setValue: (v: MultilangBlockNoteContent) => void,
     setSaved: (v: MultilangBlockNoteContent) => void,
     label: string,
-    editLanguage: ContentLanguage,
+    editLanguage: NewsLanguage,
     translated: boolean,
   ) {
     setValue(next)
