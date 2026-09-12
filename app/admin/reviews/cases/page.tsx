@@ -7,10 +7,6 @@ import { ReputationCasesTable } from "@/features/reviews/components/ReputationCa
 import type { ViewTab } from "@/components/admin/list-view"
 import { withQueryTimeout } from "@/lib/query-timeout"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export const maxDuration = 10
 
 const QUERY_TIMEOUT_MS = 6000
