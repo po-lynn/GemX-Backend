@@ -19,7 +19,8 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
     !parsed.data.helpSupport &&
     !parsed.data.termsConditions &&
     !parsed.data.buyingGuide &&
-    !parsed.data.sellingGuide
+    !parsed.data.sellingGuide &&
+    !parsed.data.privacyPolicy
   ) {
     return { error: "Nothing to save" }
   }
@@ -35,6 +36,7 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
     let termsConditions = parsed.data.termsConditions
     let buyingGuide = parsed.data.buyingGuide
     let sellingGuide = parsed.data.sellingGuide
+    let privacyPolicy = parsed.data.privacyPolicy
 
     if (termsConditions) {
       termsConditions = await localizeMultilangBlockNoteIfEnglish(
@@ -57,6 +59,13 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
         "Selling Guide",
       )
     }
+    if (privacyPolicy) {
+      privacyPolicy = await localizeMultilangBlockNoteIfEnglish(
+        privacyPolicy,
+        translateFromEnglish,
+        "Privacy Policy",
+      )
+    }
 
     await saveAppContentDraft({
       aboutUs: parsed.data.aboutUs,
@@ -65,6 +74,7 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
       termsConditions,
       buyingGuide,
       sellingGuide,
+      privacyPolicy,
       updatedByName: session.user.name ?? session.user.email ?? "Admin",
     })
     revalidateAppContentCache()
@@ -73,6 +83,7 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
       termsConditions: termsConditions ?? undefined,
       buyingGuide: buyingGuide ?? undefined,
       sellingGuide: sellingGuide ?? undefined,
+      privacyPolicy: privacyPolicy ?? undefined,
     }
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to save app content"

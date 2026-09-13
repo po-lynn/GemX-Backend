@@ -5,6 +5,7 @@ import {
   getPublishedBuyingGuide,
   getPublishedFollowUs,
   getPublishedHelpSupport,
+  getPublishedPrivacyPolicy,
   getPublishedSellingGuide,
   getPublishedTermsConditions,
 } from "@/features/app-content/db/app-content"
@@ -13,6 +14,7 @@ import type {
   BuyingGuideContent,
   FollowUsContent,
   HelpSupportContent,
+  PrivacyPolicyContent,
   SellingGuideContent,
   TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
@@ -46,19 +48,29 @@ export async function getCachedPublishedHelpSupport(): Promise<HelpSupportConten
 export async function getCachedPublishedTermsConditions(): Promise<TermsConditionsContent> {
   "use cache"
   cacheTag(getAppContentGlobalTag())
+  cacheLife("max")
   return getPublishedTermsConditions()
 }
 
 export async function getCachedPublishedBuyingGuide(): Promise<BuyingGuideContent> {
   "use cache"
   cacheTag(getAppContentGlobalTag())
+  cacheLife("max")
   return getPublishedBuyingGuide()
 }
 
 export async function getCachedPublishedSellingGuide(): Promise<SellingGuideContent> {
   "use cache"
   cacheTag(getAppContentGlobalTag())
+  cacheLife("max")
   return getPublishedSellingGuide()
+}
+
+export async function getCachedPublishedPrivacyPolicy(): Promise<PrivacyPolicyContent> {
+  "use cache"
+  cacheTag(getAppContentGlobalTag())
+  cacheLife("max")
+  return getPublishedPrivacyPolicy()
 }
 
 export function revalidateAppContentCache(): void {

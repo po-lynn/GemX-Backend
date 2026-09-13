@@ -60,7 +60,7 @@ export const helpSupportContentSchema = z.object({
 
 /**
  * Shared BlockNote JSON strings per locale.
- * Used by Terms & Conditions, Buying Guide, and Selling Guide.
+ * Used by Legal & Guides: Terms, Buying Guide, Selling Guide, Privacy Policy.
  */
 export const multilangBlockNoteContentSchema = z.object({
   contentEn: z.string(),
@@ -80,6 +80,7 @@ export const saveAppContentSchema = z.object({
   termsConditions: multilangBlockNoteContentSchema.optional(),
   buyingGuide: multilangBlockNoteContentSchema.optional(),
   sellingGuide: multilangBlockNoteContentSchema.optional(),
+  privacyPolicy: multilangBlockNoteContentSchema.optional(),
   /** When true and English body is detected, fill MY/TH/KO from contentEn via Google Translate. */
   translateFromEnglish: z.boolean().optional(),
   /** @deprecated Use translateFromEnglish */
@@ -95,4 +96,5 @@ export type MultilangBlockNoteContent = z.infer<typeof multilangBlockNoteContent
 export type TermsConditionsContent = MultilangBlockNoteContent
 export type BuyingGuideContent = MultilangBlockNoteContent
 export type SellingGuideContent = MultilangBlockNoteContent
+export type PrivacyPolicyContent = MultilangBlockNoteContent
 export type SaveAppContentInput = z.infer<typeof saveAppContentSchema>

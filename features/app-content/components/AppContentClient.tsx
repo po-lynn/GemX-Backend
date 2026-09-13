@@ -10,6 +10,7 @@ import type {
   FollowUsContent,
   HelpSupportContent,
   MultilangBlockNoteContent,
+  PrivacyPolicyContent,
   SellingGuideContent,
   TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
@@ -17,20 +18,23 @@ import type { ContentLanguage } from "@/features/content/services/google-transla
 import { AboutUsTab } from "@/features/app-content/components/AboutUsTab"
 import { FollowUsTab } from "@/features/app-content/components/FollowUsTab"
 import { HelpSupportTab } from "@/features/app-content/components/HelpSupportTab"
-import { TermsConditionsTab } from "@/features/app-content/components/TermsConditionsTab"
-import { BuyingGuideTab } from "@/features/app-content/components/BuyingGuideTab"
-import { SellingGuideTab } from "@/features/app-content/components/SellingGuideTab"
+import {
+  LegalGuidesTab,
+} from "@/features/app-content/components/LegalGuidesTab"
+import { type LegalDocId } from "@/features/app-content/lib/legal-docs"
 
-type TabId = "about" | "follow" | "help" | "terms" | "buying" | "selling"
+type TabId = "about" | "follow" | "help" | "legal"
 
 export type AppContentClientProps = {
   initialTab: TabId
+  initialLegalDoc: LegalDocId
   aboutUs: AboutUsContent
   followUs: FollowUsContent
   helpSupport: HelpSupportContent
   termsConditions: TermsConditionsContent
   buyingGuide: BuyingGuideContent
   sellingGuide: SellingGuideContent
+  privacyPolicy: PrivacyPolicyContent
   lastEditedAt: string | null
   lastEditedBy: string | null
   currentUserName: string
@@ -51,24 +55,25 @@ export function AppContentClient(props: AppContentClientProps) {
   const searchParams = useSearchParams()
 
   const [tab, setTab] = useState<TabId>(props.initialTab)
+  const [legalDoc, setLegalDoc] = useState<LegalDocId>(props.initialLegalDoc)
   const [aboutUs, setAboutUs] = useState(props.aboutUs)
   const [followUs, setFollowUs] = useState(props.followUs)
   const [helpSupport, setHelpSupport] = useState(props.helpSupport)
   const [termsConditions, setTermsConditions] = useState(props.termsConditions)
   const [buyingGuide, setBuyingGuide] = useState(props.buyingGuide)
   const [sellingGuide, setSellingGuide] = useState(props.sellingGuide)
+  const [privacyPolicy, setPrivacyPolicy] = useState(props.privacyPolicy)
   const [savedAboutUs, setSavedAboutUs] = useState(props.aboutUs)
   const [savedFollowUs, setSavedFollowUs] = useState(props.followUs)
   const [savedHelpSupport, setSavedHelpSupport] = useState(props.helpSupport)
   const [savedTermsConditions, setSavedTermsConditions] = useState(props.termsConditions)
   const [savedBuyingGuide, setSavedBuyingGuide] = useState(props.buyingGuide)
   const [savedSellingGuide, setSavedSellingGuide] = useState(props.sellingGuide)
+  const [savedPrivacyPolicy, setSavedPrivacyPolicy] = useState(props.privacyPolicy)
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [termsEditLanguage, setTermsEditLanguage] = useState<ContentLanguage>("English")
-  const [buyingEditLanguage, setBuyingEditLanguage] = useState<ContentLanguage>("English")
-  const [sellingEditLanguage, setSellingEditLanguage] = useState<ContentLanguage>("English")
+  const [legalEditLanguage, setLegalEditLanguage] = useState<ContentLanguage>("English")
 
   const dirty = useMemo(
     () => ({
@@ -79,6 +84,7 @@ export function AppContentClient(props: AppContentClientProps) {
         JSON.stringify(termsConditions) !== JSON.stringify(savedTermsConditions),
       buyingGuide: JSON.stringify(buyingGuide) !== JSON.stringify(savedBuyingGuide),
       sellingGuide: JSON.stringify(sellingGuide) !== JSON.stringify(savedSellingGuide),
+      privacyPolicy: JSON.stringify(privacyPolicy) !== JSON.stringify(savedPrivacyPolicy),
     }),
     [
       aboutUs,
@@ -87,12 +93,14 @@ export function AppContentClient(props: AppContentClientProps) {
       termsConditions,
       buyingGuide,
       sellingGuide,
+      privacyPolicy,
       savedAboutUs,
       savedFollowUs,
       savedHelpSupport,
       savedTermsConditions,
       savedBuyingGuide,
       savedSellingGuide,
+      savedPrivacyPolicy,
     ]
   )
   const isDirty =
@@ -101,20 +109,52 @@ export function AppContentClient(props: AppContentClientProps) {
     dirty.helpSupport ||
     dirty.termsConditions ||
     dirty.buyingGuide ||
-    dirty.sellingGuide
+    dirty.sellingGuide ||
+    dirty.privacyPolicy
+
+  const legalDirty =
+    (legalDoc === "terms" && dirty.termsConditions) ||
+    (legalDoc === "buying" && dirty.buyingGuide) ||
+    (legalDoc === "selling" && dirty.sellingGuide) ||
+    (legalDoc === "privacy" && dirty.privacyPolicy)
+
   const currentTabDirty =
     (tab === "about" && dirty.aboutUs) ||
     (tab === "follow" && dirty.followUs) ||
     (tab === "help" && dirty.helpSupport) ||
-    (tab === "terms" && dirty.termsConditions) ||
-    (tab === "buying" && dirty.buyingGuide) ||
-    (tab === "selling" && dirty.sellingGuide)
+    (tab === "legal" && legalDirty)
+
+  function syncUrl(nextTab: TabId, nextDoc: LegalDocId) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", nextTab)
+    if (nextTab === "legal") params.set("doc", nextDoc)
+    else params.delete("doc")
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   function switchTab(next: TabId) {
     setTab(next)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("tab", next)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    syncUrl(next, legalDoc)
+  }
+
+  function switchLegalDoc(next: LegalDocId) {
+    setLegalDoc(next)
+    setLegalEditLanguage("English")
+    syncUrl("legal", next)
+  }
+
+  function legalValue(): MultilangBlockNoteContent {
+    if (legalDoc === "terms") return termsConditions
+    if (legalDoc === "buying") return buyingGuide
+    if (legalDoc === "selling") return sellingGuide
+    return privacyPolicy
+  }
+
+  function setLegalValue(next: MultilangBlockNoteContent) {
+    if (legalDoc === "terms") setTermsConditions(next)
+    else if (legalDoc === "buying") setBuyingGuide(next)
+    else if (legalDoc === "selling") setSellingGuide(next)
+    else setPrivacyPolicy(next)
   }
 
   function applySavedMultilang(
@@ -122,13 +162,12 @@ export function AppContentClient(props: AppContentClientProps) {
     setValue: (v: MultilangBlockNoteContent) => void,
     setSaved: (v: MultilangBlockNoteContent) => void,
     label: string,
-    editLanguage: ContentLanguage,
     translated: boolean,
   ) {
     setValue(next)
     setSaved(next)
     toast.success(
-      translated && editLanguage === "English"
+      translated && legalEditLanguage === "English"
         ? `${label} saved · translated to Myanmar, Thai, Korean`
         : `${label} saved`,
     )
@@ -138,6 +177,7 @@ export function AppContentClient(props: AppContentClientProps) {
     if (!currentTabDirty || saving) return
     setSaving(true)
 
+    const translate = legalEditLanguage === "English" ? true : undefined
     const payload =
       tab === "about"
         ? { aboutUs }
@@ -145,20 +185,13 @@ export function AppContentClient(props: AppContentClientProps) {
           ? { followUs }
           : tab === "help"
             ? { helpSupport }
-            : tab === "terms"
-              ? {
-                  termsConditions,
-                  translateFromEnglish: termsEditLanguage === "English" ? true : undefined,
-                }
-              : tab === "buying"
-                ? {
-                    buyingGuide,
-                    translateFromEnglish: buyingEditLanguage === "English" ? true : undefined,
-                  }
-                : {
-                    sellingGuide,
-                    translateFromEnglish: sellingEditLanguage === "English" ? true : undefined,
-                  }
+            : legalDoc === "terms"
+              ? { termsConditions, translateFromEnglish: translate }
+              : legalDoc === "buying"
+                ? { buyingGuide, translateFromEnglish: translate }
+                : legalDoc === "selling"
+                  ? { sellingGuide, translateFromEnglish: translate }
+                  : { privacyPolicy, translateFromEnglish: translate }
 
     const result = await saveAppContentAction(payload)
     setSaving(false)
@@ -176,32 +209,37 @@ export function AppContentClient(props: AppContentClientProps) {
     } else if (tab === "help") {
       setSavedHelpSupport(helpSupport)
       toast.success("Help & Support saved")
-    } else if (tab === "terms") {
+    } else if (legalDoc === "terms") {
       applySavedMultilang(
         result.termsConditions ?? termsConditions,
         setTermsConditions,
         setSavedTermsConditions,
         "Terms & Conditions",
-        termsEditLanguage,
         Boolean(result.termsConditions),
       )
-    } else if (tab === "buying") {
+    } else if (legalDoc === "buying") {
       applySavedMultilang(
         result.buyingGuide ?? buyingGuide,
         setBuyingGuide,
         setSavedBuyingGuide,
         "Buying Guide",
-        buyingEditLanguage,
         Boolean(result.buyingGuide),
       )
-    } else {
+    } else if (legalDoc === "selling") {
       applySavedMultilang(
         result.sellingGuide ?? sellingGuide,
         setSellingGuide,
         setSavedSellingGuide,
         "Selling Guide",
-        sellingEditLanguage,
         Boolean(result.sellingGuide),
+      )
+    } else {
+      applySavedMultilang(
+        result.privacyPolicy ?? privacyPolicy,
+        setPrivacyPolicy,
+        setSavedPrivacyPolicy,
+        "Privacy Policy",
+        Boolean(result.privacyPolicy),
       )
     }
 
@@ -247,42 +285,22 @@ export function AppContentClient(props: AppContentClientProps) {
         <button className={`ac-tab${tab === "help" ? " active" : ""}`} onClick={() => switchTab("help")}>
           Help &amp; Support
         </button>
-        <button className={`ac-tab${tab === "terms" ? " active" : ""}`} onClick={() => switchTab("terms")}>
-          Terms &amp; Conditions
-        </button>
-        <button className={`ac-tab${tab === "buying" ? " active" : ""}`} onClick={() => switchTab("buying")}>
-          Buying Guide
-        </button>
-        <button className={`ac-tab${tab === "selling" ? " active" : ""}`} onClick={() => switchTab("selling")}>
-          Selling Guide
+        <button className={`ac-tab${tab === "legal" ? " active" : ""}`} onClick={() => switchTab("legal")}>
+          Legal &amp; Guides
         </button>
       </div>
 
       {tab === "about" && <AboutUsTab value={aboutUs} onChange={setAboutUs} />}
       {tab === "follow" && <FollowUsTab value={followUs} onChange={setFollowUs} />}
       {tab === "help" && <HelpSupportTab value={helpSupport} onChange={setHelpSupport} />}
-      {tab === "terms" && (
-        <TermsConditionsTab
-          value={termsConditions}
-          onChange={setTermsConditions}
-          editLanguage={termsEditLanguage}
-          onEditLanguageChange={setTermsEditLanguage}
-        />
-      )}
-      {tab === "buying" && (
-        <BuyingGuideTab
-          value={buyingGuide}
-          onChange={setBuyingGuide}
-          editLanguage={buyingEditLanguage}
-          onEditLanguageChange={setBuyingEditLanguage}
-        />
-      )}
-      {tab === "selling" && (
-        <SellingGuideTab
-          value={sellingGuide}
-          onChange={setSellingGuide}
-          editLanguage={sellingEditLanguage}
-          onEditLanguageChange={setSellingEditLanguage}
+      {tab === "legal" && (
+        <LegalGuidesTab
+          doc={legalDoc}
+          onDocChange={switchLegalDoc}
+          value={legalValue()}
+          onChange={setLegalValue}
+          editLanguage={legalEditLanguage}
+          onEditLanguageChange={setLegalEditLanguage}
         />
       )}
     </div>

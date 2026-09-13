@@ -37,6 +37,7 @@ describe("saveAppContentAction", () => {
       termsConditions: undefined,
       buyingGuide: undefined,
       sellingGuide: undefined,
+      privacyPolicy: undefined,
       updatedByName: "Elena M.",
     })
     expect(revalidateAppContentCache).toHaveBeenCalled()

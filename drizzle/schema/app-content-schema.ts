@@ -8,12 +8,14 @@ export const appContentSectionEnum = pgEnum("app_content_section_name", [
   "terms_conditions",
   "buying_guide",
   "selling_guide",
+  "privacy_policy",
 ])
 
 /**
  * Draft/published content for About Us / Follow Us / Help & Support /
- * Terms & Conditions / Buying Guide / Selling Guide.
+ * and Legal & Guides documents (terms, buying, selling, privacy).
  * Save writes both draft and published; mobile reads published.
+ * Table columns are unchanged when adding a section — only the enum gains a value.
  */
 export const appContentSection = pgTable("app_content_section", {
   id: uuid("id").primaryKey().defaultRandom(),

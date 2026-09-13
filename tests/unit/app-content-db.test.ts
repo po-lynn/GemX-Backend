@@ -11,6 +11,7 @@ import {
   DEFAULT_TERMS_CONDITIONS_CONTENT,
   DEFAULT_BUYING_GUIDE_CONTENT,
   DEFAULT_SELLING_GUIDE_CONTENT,
+  DEFAULT_PRIVACY_POLICY_CONTENT,
 } from "@/features/app-content/db/app-content"
 
 vi.mock("drizzle-orm", () => ({
@@ -59,6 +60,7 @@ describe("getAppContentSections", () => {
     expect(result.termsConditions.draftContent).toEqual(DEFAULT_TERMS_CONDITIONS_CONTENT)
     expect(result.buyingGuide.draftContent).toEqual(DEFAULT_BUYING_GUIDE_CONTENT)
     expect(result.sellingGuide.draftContent).toEqual(DEFAULT_SELLING_GUIDE_CONTENT)
+    expect(result.privacyPolicy.draftContent).toEqual(DEFAULT_PRIVACY_POLICY_CONTENT)
     expect(result.aboutUs.hasUnpublishedChanges).toBe(false)
     expect(result.aboutUs.publishedContent).toBeNull()
   })
