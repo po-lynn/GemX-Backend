@@ -12,14 +12,35 @@ const NRC_LATIN_SOURCE = String.raw`\d{1,2}\/[A-Z]{3}\([NPTE]\)\d{6}`;
 const NRC_MYANMAR_SOURCE = "[\\u1040-\\u1049]{1,2}\\/[\\u1000-\\u109F]{1,10}\\((?:[\\u1000-\\u109F]{1,10}|[NPTE])\\)[\\u1040-\\u1049]{6}";
 export const NRC_REGEX = new RegExp(`^(?:${NRC_LATIN_SOURCE}|${NRC_MYANMAR_SOURCE})$`);
 
+// Glosses and Myanmar spellings verified against the community-maintained mm-nrc dataset
+// (github.com/wai-lin/mm-nrc) — P is the naturalized-citizen category, not T.
 export const NRC_CITIZEN_TYPES = {
-  N: "Naing (National)",
-  P: "Pyu (Associate)",
-  T: "Thit (Naturalized)",
-  E: "Ein (Honorary)",
+  N: "Naing (Citizen)",
+  E: "Ein (Associate)",
+  P: "Pyu (Naturalized)",
+  T: "Thathana (Religious / Sasana)",
 } as const;
 
 export type NrcCitizenType = keyof typeof NRC_CITIZEN_TYPES;
+
+export const NRC_CITIZEN_TYPES_MM = {
+  N: "နိုင်",
+  E: "ဧည့်",
+  P: "ပြု",
+  T: "သာသနာ",
+} as const;
+
+const MYANMAR_DIGITS = "၀၁၂၃၄၅၆၇၈၉";
+
+/** Convert ASCII 0-9 digits within a string to their Myanmar Unicode equivalents. */
+export function toMyanmarDigits(latin: string): string {
+  return latin.replace(/[0-9]/g, (d) => MYANMAR_DIGITS[Number(d)]);
+}
+
+/** Convert Myanmar Unicode digits within a string back to ASCII 0-9. */
+export function fromMyanmarDigits(input: string): string {
+  return input.replace(/[၀-၉]/g, (d) => String(d.charCodeAt(0) - 0x1040));
+}
 
 export const nrcSchema = z
   .string()
@@ -69,6 +90,31 @@ export function parseNrc(value: string) {
   }
 
   return null;
+}
+
+export const NRC_STATE_NAMES: Record<string, string> = {
+  "1": "Kachin", "2": "Kayah", "3": "Kayin", "4": "Chin", "5": "Sagaing",
+  "6": "Tanintharyi", "7": "Bago", "8": "Magway", "9": "Mandalay",
+  "10": "Mon", "11": "Rakhine", "12": "Yangon", "13": "Shan", "14": "Ayeyarwady",
+};
+
+/**
+ * Assemble a genuine Myanmar-script NRC string from its four parts — the same logic the admin
+ * NRC picker (`NrcField`) uses for its live preview and the actual submitted value, so the two
+ * never drift apart. `state`/`number` are given as plain decimal digits; `township` and `type`
+ * are already in Myanmar script (or a citizen-type code, looked up via `NRC_CITIZEN_TYPES_MM`).
+ * Returns "" if all parts are empty (nothing entered yet).
+ */
+export function buildMyanmarNrc(parts: {
+  state: string;
+  township: string;
+  type: string;
+  number: string;
+}): string {
+  const { state, township, type, number } = parts;
+  if (!state && !township && !number) return "";
+  const typeMm = NRC_CITIZEN_TYPES_MM[type as NrcCitizenType] ?? type;
+  return `${toMyanmarDigits(state)}/${township}(${typeMm})${toMyanmarDigits(number)}`;
 }
 
 const SAMPLE_TOWNSHIPS = [

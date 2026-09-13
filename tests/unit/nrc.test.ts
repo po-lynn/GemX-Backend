@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { validateNrc, parseNrc, nrcSchema, generateNrc } from "@/lib/nrc"
+import { validateNrc, parseNrc, nrcSchema, generateNrc, toMyanmarDigits, fromMyanmarDigits } from "@/lib/nrc"
 
 describe("validateNrc", () => {
   it("accepts the Latin transliteration format", () => {
@@ -85,5 +85,25 @@ describe("nrcSchema", () => {
 describe("generateNrc", () => {
   it("generates an NRC that passes validateNrc", () => {
     expect(validateNrc(generateNrc())).toBe(true)
+  })
+})
+
+describe("toMyanmarDigits / fromMyanmarDigits", () => {
+  it("converts ASCII digits to Myanmar numerals", () => {
+    expect(toMyanmarDigits("9")).toBe("၉")
+    expect(toMyanmarDigits("123456")).toBe("၁၂၃၄၅၆")
+  })
+
+  it("leaves non-digit characters untouched", () => {
+    expect(toMyanmarDigits("12/ABC(N)123456")).toBe("၁၂/ABC(N)၁၂၃၄၅၆")
+  })
+
+  it("round-trips through toMyanmarDigits and back", () => {
+    expect(fromMyanmarDigits(toMyanmarDigits("123456"))).toBe("123456")
+  })
+
+  it("converts Myanmar numerals back to ASCII digits", () => {
+    expect(fromMyanmarDigits("၉")).toBe("9")
+    expect(fromMyanmarDigits("၁၂၈၂၃၃")).toBe("128233")
   })
 })

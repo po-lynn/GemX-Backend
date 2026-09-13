@@ -8,6 +8,11 @@ import { AdminChatNotificationProvider } from "@/features/chat/context/admin-cha
 import { auth } from "@/lib/auth"
 import { getUserPermissions } from "@/features/rbac/db/permissions"
 
+// Every admin route needs the signed-in session/role/permissions to render the sidebar and
+// navbar, so this layout can never be part of a static shell — opt out of Instant Navigation
+// validation rather than restructuring an internal tool's auth-gated layout around Suspense.
+export const instant = false
+
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {

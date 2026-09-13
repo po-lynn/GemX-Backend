@@ -9,11 +9,13 @@ import {
   userCreateSchema,
   userUpdateSchema,
   userDeleteSchema,
+  userBulkDeleteSchema,
   userChangePasswordSchema,
 } from "@/features/users/schemas/users";
 import {
   updateUserInDb,
   deleteUserInDb,
+  deleteUsersInDb,
   getUserByEmail,
   searchUsersForPicker,
 } from "@/features/users/db/users";
@@ -251,7 +253,23 @@ export async function deleteUserAction(formData: FormData) {
   }
   const deleted = await deleteUserInDb(parsed.data.userId);
   if (!deleted) return { error: "User not found" };
+  revalidatePath("/admin/users");
   return { success: true };
+}
+
+export async function bulkDeleteUsersAction(userIds: string[]) {
+  const parsed = userBulkDeleteSchema.safeParse({ userIds });
+  if (!parsed.success) return { error: zodErrorMessage(parsed.error) };
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
+    return { error: "Unauthorized" };
+  }
+  if (parsed.data.userIds.includes(session.user.id)) {
+    return { error: "You cannot delete your own account." };
+  }
+  const count = await deleteUsersInDb(parsed.data.userIds);
+  revalidatePath("/admin/users");
+  return { success: true, count };
 }
 
 export async function searchUsersForPickerAction(query: string) {

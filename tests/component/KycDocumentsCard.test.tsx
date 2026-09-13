@@ -94,4 +94,23 @@ describe("KycDocumentsCard", () => {
     render(<KycDocumentsCard userId="user-1" user={{ ...BASE_USER, nrc: "12/ABC(N)123456", verified: true }} />)
     expect(screen.getByTestId("kyc-verified-status")).toHaveTextContent(/verified/i)
   })
+
+  // Regression: this card used to run its own stale NRC regex (Latin-only, N/NAING-only)
+  // instead of lib/nrc.ts's validator, so it wrongly flagged genuine Myanmar-script NRCs
+  // (and Latin NRCs with the P/T/E citizen types) as "Number format invalid".
+  it("shows 'Number format valid' for a genuine Myanmar-script NRC", () => {
+    render(<KycDocumentsCard userId="user-1" user={{ ...BASE_USER, nrc: "၁၂/အမတ(နိုင်)၁၃၃၄၄၄" }} />)
+    expect(screen.getByText("Number format valid")).toBeInTheDocument()
+    expect(screen.getByText(/Yangon.*အမတ township.*type နိုင်/)).toBeInTheDocument()
+  })
+
+  it("shows 'Number format valid' for a Latin NRC using the P (naturalized) citizen type", () => {
+    render(<KycDocumentsCard userId="user-1" user={{ ...BASE_USER, nrc: "12/ABC(P)123456" }} />)
+    expect(screen.getByText("Number format valid")).toBeInTheDocument()
+  })
+
+  it("shows 'Number format invalid' for a malformed NRC", () => {
+    render(<KycDocumentsCard userId="user-1" user={{ ...BASE_USER, nrc: "not-an-nrc" }} />)
+    expect(screen.getByText("Number format invalid")).toBeInTheDocument()
+  })
 })

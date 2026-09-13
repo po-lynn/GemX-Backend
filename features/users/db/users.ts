@@ -1,6 +1,6 @@
 import { db } from "@/drizzle/db";
 import { user } from "@/drizzle/schema/auth-schema";
-import { and, eq, ne, asc, desc, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ne, asc, desc, ilike, inArray, or, sql } from "drizzle-orm";
 
 export type UserRow = {
   id: string;
@@ -325,4 +325,13 @@ export async function deleteUserInDb(id: string): Promise<boolean> {
     .where(eq(user.id, id))
     .returning({ id: user.id });
   return deleted.length > 0;
+}
+
+export async function deleteUsersInDb(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const deleted = await db
+    .delete(user)
+    .where(inArray(user.id, ids))
+    .returning({ id: user.id });
+  return deleted.length;
 }

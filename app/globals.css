@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-plus-jakarta);
+  --font-sans: var(--font-plus-jakarta), var(--font-noto-myanmar);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-cormorant), var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);

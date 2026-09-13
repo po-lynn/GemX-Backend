@@ -1,0 +1,2558 @@
+[
+  {
+    "state_code": "၁",
+    "township_code_mm": "ကပတ",
+    "township_mm": "ကန်ပိုက်တီ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ကမတ",
+    "township_mm": "ကာမိုင်း",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ကမန",
+    "township_mm": "ဖားကန့်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ခဖန",
+    "township_mm": "ချီဖွေ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ခဘဒ",
+    "township_mm": "ခေါ်ဘူဒဲ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ခလဖ",
+    "township_mm": "ခေါင်လန်ဖူး",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဆဒန",
+    "township_mm": "ဆဒုံး",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဆပဘ",
+    "township_mm": "ဆွမ်ပရာဘွမ်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဆဘန",
+    "township_mm": "ဆင်ဘို",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဆလန",
+    "township_mm": "ဆော့လော်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "တနန",
+    "township_mm": "တနိုင်း",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဒဖယ",
+    "township_mm": "ဒေါ့ဖုန်းယန်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "နမန",
+    "township_mm": "နောင်မွန်း",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ပတအ",
+    "township_mm": "ပူတာအို",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ပနဒ",
+    "township_mm": "ပန်နန်းဒင်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ပ၀န",
+    "township_mm": "ပန်ဝါ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဖကန",
+    "township_mm": "ဖားကန့်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဗမန",
+    "township_mm": "ဗန်းမော်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မကတ",
+    "township_mm": "မိုးကောင်း",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မကန",
+    "township_mm": "မြစ်ကြီးနား",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မခဘ",
+    "township_mm": "မချမ်းဘော",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မစန",
+    "township_mm": "မံစီ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မညန",
+    "township_mm": "မိုးညှင်း",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မမန",
+    "township_mm": "မိုးမောက်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "မလန",
+    "township_mm": "မြို့လှ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ရကန",
+    "township_mm": "ရွှေကူ",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ရဘယ",
+    "township_mm": "ရှင်ဗွေယန်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "လဂန",
+    "township_mm": "လွယ်ဂျယ်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "ဟပန",
+    "township_mm": "ဟိုပင်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "အဂယ",
+    "township_mm": "အင်ဂျန်းယန်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁",
+    "township_code_mm": "၀မန",
+    "township_mm": "ဝိုင်းမော်",
+    "state_mm": "ကချင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ကခမ",
+    "township_mm": "ကျိုက္ခမီ",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ကထန",
+    "township_mm": "ကျိုက်ထို",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ကမရ",
+    "township_mm": "ကျိုက်မရော",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ခဆန",
+    "township_mm": "ချောင်းဆုံ",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ခဇန",
+    "township_mm": "ခေါဇာ",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ပမန",
+    "township_mm": "ပေါင်",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ဘလန",
+    "township_mm": "ဘီးလင်း",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "မဒန",
+    "township_mm": "မုဒုံ",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "မလမ",
+    "township_mm": "မော်လမြိုင်",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "ရမန",
+    "township_mm": "ရေး",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "လမန",
+    "township_mm": "လမိုင်း",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "သထန",
+    "township_mm": "သထုံ",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၀",
+    "township_code_mm": "သဖရ",
+    "township_mm": "သံဖြူဇရပ်",
+    "state_mm": "မွန်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ကတန",
+    "township_mm": "ကျောက်တော်",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ကတလ",
+    "township_mm": "ကျိန္တလီ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ကဖန",
+    "township_mm": "ကျောက်ဖြူ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ဂမန",
+    "township_mm": "ဂွ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "စတန",
+    "township_mm": "စစ်တွေ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "တကန",
+    "township_mm": "တောင်ကုတ်",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "တပ၀",
+    "township_mm": "တောင်ပြိုလက်ဝဲ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ပဏက",
+    "township_mm": "ပုဏ္ဏားကျွန်း",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ပတန",
+    "township_mm": "ပေါက်တော",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ဘသတ",
+    "township_mm": "ဘူးသီးတောင်",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "မပတ",
+    "township_mm": "မြေပုံ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "မပန",
+    "township_mm": "မင်းပြား",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "မအတ",
+    "township_mm": "မအီ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "မအန",
+    "township_mm": "မာန်အောင်",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "မဥန",
+    "township_mm": "မြောက်ဦး",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ရဗန",
+    "township_mm": "ရမ်းဗြဲ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "ရသတ",
+    "township_mm": "ရသေ့တောင်",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "သတန",
+    "township_mm": "သံတွဲ",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၁",
+    "township_code_mm": "အမန",
+    "township_mm": "အမ်း",
+    "state_mm": "ရခိုင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကကက",
+    "township_mm": "ကိုကိုးကျွန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကခက",
+    "township_mm": "ကွမ်းခြံကုန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကတတ",
+    "township_mm": "ကျောက်တံတား",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကတန",
+    "township_mm": "ကျောက်တန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကမတ",
+    "township_mm": "ကြည့်မြင်တိုင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကမန",
+    "township_mm": "ကော့မှူး",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ကမရ",
+    "township_mm": "ကမာရွတ်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ခရန",
+    "township_mm": "ခရမ်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "စခန",
+    "township_mm": "စမ်းချောင်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဆကန",
+    "township_mm": "ဆိပ်ကမ်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "တကန",
+    "township_mm": "တိုက်ကြီး",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "တတထ",
+    "township_mm": "တံတား",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "တတန",
+    "township_mm": "တွံတေး",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "တမန",
+    "township_mm": "တာမွေ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ထတပ",
+    "township_mm": "ထန်းတပင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒဂဆ",
+    "township_mm": "ဒဂုံမြို့သစ် (ဆိပ်ကမ်း)",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒဂတ",
+    "township_mm": "ဒဂုံမြို့သစ်(တောင်ပိုင်း)",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒဂန",
+    "township_mm": "ဒဂုံ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒဂမ",
+    "township_mm": "ဒဂုံမြို့သစ်(မြောက်ပိုင်း)",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒဂရ",
+    "township_mm": "ဒဂုံမြို့သစ် (အရှေ့ပိုင်း)",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒပန",
+    "township_mm": "ဒေါပုံ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဒလန",
+    "township_mm": "ဒလ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ပဇတ",
+    "township_mm": "ပုဇွန်တောင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ပဘတ",
+    "township_mm": "ပန်းဘဲတန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဗတထ",
+    "township_mm": "ဗိုလ်တထောင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဗဟန",
+    "township_mm": "ဗဟန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "မဂတ",
+    "township_mm": "မင်္ဂလာတောင်ညွန့်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "မဂဒ",
+    "township_mm": "မင်္ဂလာဒုံ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "မဘန",
+    "township_mm": "မှော်ဘီ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "မရက",
+    "township_mm": "မရမ်းကုန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ရကန",
+    "township_mm": "ရန်ကင်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ရပသ",
+    "township_mm": "ရွှေပြည်သာ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "လကန",
+    "township_mm": "လှည်းကူး",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "လမတ",
+    "township_mm": "လမ်းမတော်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "လမန",
+    "township_mm": "လှိုင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "လသန",
+    "township_mm": "လသာ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "လသယ",
+    "township_mm": "လှိုင်သာယာ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "သကတ",
+    "township_mm": "သာကေတ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "သခန",
+    "township_mm": "သုံးခွ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "သဃက",
+    "township_mm": "သင်္ဃန်းကျွန်း",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "သလန",
+    "township_mm": "သန်လျင်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "အစန",
+    "township_mm": "အင်းစိန်",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "အလန",
+    "township_mm": "အလုံ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဥကတ",
+    "township_mm": "တောင်ဥက္ကလာပ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၂",
+    "township_code_mm": "ဥကမ",
+    "township_mm": "မြောက်ဥက္ကလာပ",
+    "state_mm": "ရန်ကုန်တိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကကန",
+    "township_mm": "ကုန်းကြမ်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကခန",
+    "township_mm": "ကွတ်ခိုင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကတတ",
+    "township_mm": "ကျိုင်းတောင်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကတန",
+    "township_mm": "ကျိုင်းတုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကတလ",
+    "township_mm": "ကျောက်တလုံးကြီး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကမန",
+    "township_mm": "ကျောက်မဲ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကလတ",
+    "township_mm": "ကွမ်းလုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကလထ",
+    "township_mm": "ကျိုင်းလပ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကလဒ",
+    "township_mm": "ကာလိ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကလန",
+    "township_mm": "ကလော",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကသန",
+    "township_mm": "ကျေးသီး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ကဟန",
+    "township_mm": "ကွန်ဟိန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ခရဟ",
+    "township_mm": "ချင်းရွှေဟော်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ခလန",
+    "township_mm": "ခိုလမ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဆဆန",
+    "township_mm": "ဆီဆိုင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ညရန",
+    "township_mm": "ညောင်ရွှေ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တကန",
+    "township_mm": "တောင်ကြီး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တခလ",
+    "township_mm": "တာချီလိတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တတန",
+    "township_mm": "တုံတာ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တမည",
+    "township_mm": "တာမိုးညဲ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တယန",
+    "township_mm": "တန့်ယန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "တလန",
+    "township_mm": "တာလေ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နခတ",
+    "township_mm": "နောင်ချို",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နခန",
+    "township_mm": "နမ့်ခမ်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နဆန",
+    "township_mm": "နမ့်ဆန်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နတရ",
+    "township_mm": "နောင်တရား",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နဖန",
+    "township_mm": "နားဖန်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "နမတ",
+    "township_mm": "နမ္မတူ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပဆတ",
+    "township_mm": "ပန်ဆိုင်း (ကြူကုတ်)",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပဆန",
+    "township_mm": "ပန်ဆန်း (ပန်ခမ်း)",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပတယ",
+    "township_mm": "ပင်းတယ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပယန",
+    "township_mm": "ပန်ယန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပလတ",
+    "township_mm": "ပန်လုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပလထ",
+    "township_mm": "ပန်လုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပလန",
+    "township_mm": "ပင်လုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပလန",
+    "township_mm": "ပင်လောင်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ပဝန",
+    "township_mm": "ပန်ဝိုင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဖခန",
+    "township_mm": "ဖယ်ခုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မကတ",
+    "township_mm": "မုန်းကိုး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မကထ",
+    "township_mm": "မန်ကန်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မကန",
+    "township_mm": "မိုင်းကာ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မခတ",
+    "township_mm": "မိုင်းခုတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မခန",
+    "township_mm": "မိုင်းခတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မငန",
+    "township_mm": "မိုင်းငေါ့",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မစတ",
+    "township_mm": "မိုင်းစံ (မုန်းဆန်း)",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဆတ",
+    "township_mm": "မူဆယ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဆန",
+    "township_mm": "မိုင်းဆတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မတတ",
+    "township_mm": "မန်တုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မတန",
+    "township_mm": "မိုင်းတုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မထတ",
+    "township_mm": "မော်ထိုက်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မထန",
+    "township_mm": "မုံးထ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မနန",
+    "township_mm": "မိုးနဲ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မနန",
+    "township_mm": "မိုင်းနောင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မပတ",
+    "township_mm": "မိုင်းပျဉ်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မပထ",
+    "township_mm": "မိုင်းပေါက်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မပန",
+    "township_mm": "မိုင်းပန်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဖတ",
+    "township_mm": "မန်ဖန့်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဖန",
+    "township_mm": "မိုင်းဖြတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဘန",
+    "township_mm": "မဘိမ်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မမတ",
+    "township_mm": "မိုးမိတ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မမထ",
+    "township_mm": "မိုင်းမော",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မမန",
+    "township_mm": "မက်မန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မယတ",
+    "township_mm": "မိုင်းယောင်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မယထ",
+    "township_mm": "မိုင်းယောင်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မယန",
+    "township_mm": "မိုင်းယန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မရတ",
+    "township_mm": "မိုင်းရယ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မရန",
+    "township_mm": "မိုင်းရယ်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မလတ",
+    "township_mm": "မိုင်းလုံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မလန",
+    "township_mm": "မိုင်းလား",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "မဟရ",
+    "township_mm": "မန်ဟျိုး (မန်ဟီးရိုး)",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ရငန",
+    "township_mm": "ရွာငံ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ရစန",
+    "township_mm": "ရပ်စောက်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ရညန",
+    "township_mm": "ရွှေညောင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "လကန",
+    "township_mm": "လောက်ကိုင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "လခတ",
+    "township_mm": "လင်းခေး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "လခန",
+    "township_mm": "လဲချား",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "လရန",
+    "township_mm": "လားရှိုး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "လလန",
+    "township_mm": "လွိုင်လင်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "သနန",
+    "township_mm": "သိန္နီ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "သပန",
+    "township_mm": "သီပေါ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဟပတ",
+    "township_mm": "ဟိုပန်",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဟပန",
+    "township_mm": "ဟိုပုံး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဟမန",
+    "township_mm": "ဟိုမိန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "ဟဟန",
+    "township_mm": "ဟဲဟိုး",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "အတန",
+    "township_mm": "အင်တော",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "အပန",
+    "township_mm": "အောင်ပန်း",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၃",
+    "township_code_mm": "အသယ",
+    "township_mm": "အေးသာယာ",
+    "state_mm": "ရှမ်းပြည်နယ်"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ကကထ",
+    "township_mm": "ကန်ကြီးထောင့်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ကကန",
+    "township_mm": "ကျောင်းကုန်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ကခန",
+    "township_mm": "ကြံခင်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ကပန",
+    "township_mm": "ကျုံပျော်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ကလန",
+    "township_mm": "ကျိုက်လတ်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ငဆန",
+    "township_mm": "ငွေဆောင်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ငပတ",
+    "township_mm": "ငပုတော",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ငရက",
+    "township_mm": "ငရုတ်ကောင်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ငသခ",
+    "township_mm": "ငသိုင်းချောင်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဇလန",
+    "township_mm": "ဇလွန်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ညတန",
+    "township_mm": "ညောင်တုန်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဒဒရ",
+    "township_mm": "ဒေးဒရဲ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဓနဖ",
+    "township_mm": "ဓနုဖြူ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ပစလ",
+    "township_mm": "ပြင်စလူ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ပတန",
+    "township_mm": "ပန်းတနော်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဖပန",
+    "township_mm": "ဖျာပုံ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဘကလ",
+    "township_mm": "ဘိုကလေး",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "မမက",
+    "township_mm": "မော်လမြိုင်ကျွန်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "မမန",
+    "township_mm": "မြောင်းမြ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "မအန",
+    "township_mm": "မြန်အောင်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "မအပ",
+    "township_mm": "မအူပင်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ယသရ",
+    "township_mm": "ရွှေသောင်ယံ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ရကန",
+    "township_mm": "ရေကြည်",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "လပတ",
+    "township_mm": "လပွတ္တာ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "လမန",
+    "township_mm": "လေးမျက်နှာ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဝခမ",
+    "township_mm": "ဝါးခယ်မ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "သပန",
+    "township_mm": "သာပေါင်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဟကက",
+    "township_mm": "ဟိုင်းကြီးကျွန်း",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "ဟသတ",
+    "township_mm": "ဟင်္သာတ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "အဂပ",
+    "township_mm": "အင်္ဂပူ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "အမတ",
+    "township_mm": "အမာ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၁၄",
+    "township_code_mm": "အမန",
+    "township_mm": "အိမ်မဲ",
+    "state_mm": "ဧရာဝတီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ဒမဆ",
+    "township_mm": "ဒီးမော့ဆို",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ဖဆန",
+    "township_mm": "ဖားဆောင်း",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ဖရဆ",
+    "township_mm": "ဖရူဆို",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ဘလခ",
+    "township_mm": "ဘောလခဲ",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "မစန",
+    "township_mm": "မယ်စဲ",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ရတန",
+    "township_mm": "ရှားတော",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "ရသန",
+    "township_mm": "ရွာသစ်",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၂",
+    "township_code_mm": "လကန",
+    "township_mm": "လွိုင်ကော်",
+    "state_mm": "ကယားပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ကကရ",
+    "township_mm": "ကော့ကရိတ်",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ကဆက",
+    "township_mm": "ကြာအင်းဆိပ်ကြီး",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ကဒန",
+    "township_mm": "ကျုံဒိုး",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ကမမ",
+    "township_mm": "ကမမောင်း",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "စကလ",
+    "township_mm": "စုကလိ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ပကန",
+    "township_mm": "ပိုင်ကျုံ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ဖပန",
+    "township_mm": "ဖာပွန်",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ဘဂလ",
+    "township_mm": "ဘောဂလိ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ဘသဆ",
+    "township_mm": "ဘုရားသုံးဆူ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ဘအန",
+    "township_mm": "ဘားအံ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "မဝတ",
+    "township_mm": "မြဝတီ",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "ရရသ",
+    "township_mm": "ရှမ်းရွာသစ်",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "လဘန",
+    "township_mm": "လှိုင်းဘွဲ့",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "လသန",
+    "township_mm": "လိပ်သို",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "သတက",
+    "township_mm": "သံတောင်ကြီး",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "သတန",
+    "township_mm": "သံတောင်",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၃",
+    "township_code_mm": "၀လမ",
+    "township_mm": "ဝေါလေမြိုင် (ဝေါလေ)",
+    "state_mm": "ကရင်ပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ကခန",
+    "township_mm": "ကျီခါး",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ကပလ",
+    "township_mm": "ကန်ပက်လက်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ဆမန",
+    "township_mm": "ဆမီး",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "တဇန",
+    "township_mm": "တွန်းဇန်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "တတန",
+    "township_mm": "တီးတိန်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ထတလ",
+    "township_mm": "ထန်တလန်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ပလဝ",
+    "township_mm": "ပလက်ဝ",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ဖလန",
+    "township_mm": "ဖလမ်း",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "မတန",
+    "township_mm": "မင်းတပ်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "မတပ",
+    "township_mm": "မတူပီ",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ရခဒ",
+    "township_mm": "ရိခေါ်ဒါရ်",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ရဇန",
+    "township_mm": "ရေဇွာ",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၄",
+    "township_code_mm": "ဟခန",
+    "township_mm": "ဟားခါး",
+    "state_mm": "ချင်းပြည်နယ်"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကနန",
+    "township_mm": "ကနီ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကဘလ",
+    "township_mm": "ကန့်ဘလူ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကမန",
+    "township_mm": "ကျောက်မြောင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကလတ",
+    "township_mm": "ကောလင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကလထ",
+    "township_mm": "ကလေး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကလန",
+    "township_mm": "ကျွန်းလှ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကလ၀",
+    "township_mm": "ကလေးဝ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ကသန",
+    "township_mm": "ကသာ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ခတန",
+    "township_mm": "ခန္တီး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ခပန",
+    "township_mm": "ခါမ်းပါတ်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ခဥတ",
+    "township_mm": "ချောင်းဦး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ခဥန",
+    "township_mm": "ခင်ဦး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "စကန",
+    "township_mm": "စစ်ကိုင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဆမရ",
+    "township_mm": "ဆွမ္မရာ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဆလက",
+    "township_mm": "ဆားလင်းကြီး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "တဆန",
+    "township_mm": "တန့်ဆည်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "တမန",
+    "township_mm": "တမူး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ထခန",
+    "township_mm": "ထီးချိုင့်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ထပခ",
+    "township_mm": "ထန်ပါခွေ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဒပယ",
+    "township_mm": "ဒီပဲယင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဒဟန",
+    "township_mm": "ဒုံဟီး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "နယန",
+    "township_mm": "နန်းယွန်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ပဆန",
+    "township_mm": "ပန်ဆောင်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ပလန",
+    "township_mm": "ပုလဲ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ပလဘ",
+    "township_mm": "ပင်လည်ဘူး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဖပန",
+    "township_mm": "ဖောင်းပြင်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဗမန",
+    "township_mm": "ဗန်းမောက်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဘတလ",
+    "township_mm": "ဘုတလင်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မကန",
+    "township_mm": "မင်းကင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မပလ",
+    "township_mm": "မိုပိုင်းလွတ်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မမတ",
+    "township_mm": "မြင်းမူ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မမန",
+    "township_mm": "မြောင်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မရန",
+    "township_mm": "မုံရွာ",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မလန",
+    "township_mm": "မော်လိုက်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "မသန",
+    "township_mm": "မြို့သစ်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ယမပ",
+    "township_mm": "ယင်းမာပင်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ရဘန",
+    "township_mm": "ရွှေဘို",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ရဥန",
+    "township_mm": "ရေဦး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "လရန",
+    "township_mm": "လေရှီး",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "လဟန",
+    "township_mm": "လဟယ်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဝလန",
+    "township_mm": "ဝက်လက်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဝသန",
+    "township_mm": "ဝန်းသို",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "ဟမလ",
+    "township_mm": "ဟုမ္မလင်း",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "အတန",
+    "township_mm": "အင်းတော်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၅",
+    "township_code_mm": "အရတ",
+    "township_mm": "အရာတော်",
+    "state_mm": "စစ်ကိုင်းတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ကစန",
+    "township_mm": "ကျွန်းစု",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ကရရ",
+    "township_mm": "ကရသူရိ",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ကလအ",
+    "township_mm": "ကလိန်အောင်",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ကသန",
+    "township_mm": "ကော့သောင်း",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ခမက",
+    "township_mm": "ခမောက်ကြီး",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "တနသ",
+    "township_mm": "တနင်္သာရီ",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "တသရ",
+    "township_mm": "တနင်္သာရီ",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ထဝန",
+    "township_mm": "ထားဝယ်",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ပကမ",
+    "township_mm": "ပြည်ကြီးမဏ္ဍိုင်",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ပလတ",
+    "township_mm": "ပလောက်",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ပလန",
+    "township_mm": "ပုလော",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ဘပန",
+    "township_mm": "ဘုတ်ပြင်း",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "မတန",
+    "township_mm": "မေတ္တာ",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "မမန",
+    "township_mm": "မြိတ်",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "ရဖန",
+    "township_mm": "ရေဖြူ",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "လလန",
+    "township_mm": "လောင်းလုံး",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၆",
+    "township_code_mm": "သရခ",
+    "township_mm": "သရက်ချောင်း",
+    "state_mm": "တနင်္သာရီတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ကကန",
+    "township_mm": "ကျောက်ကြီး",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ကတခ",
+    "township_mm": "ကျောက်တံခါး",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ကတတ",
+    "township_mm": "ကေတုမတီ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ကပက",
+    "township_mm": "ကြို့ပင်ကောက်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ကဝန",
+    "township_mm": "ကဝ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ဇကန",
+    "township_mm": "ဇီးကုန်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ညလပ",
+    "township_mm": "ညောင်လေးပင်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "တငန",
+    "township_mm": "တောင်ငူ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ထတပ",
+    "township_mm": "ထန်းတပင်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ဒဥန",
+    "township_mm": "ဒိုက်ဦး",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "နတလ",
+    "township_mm": "နတ်တလင်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပခတ",
+    "township_mm": "ပေါက်ခေါင်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပခန",
+    "township_mm": "ပဲခူး",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပတဆ",
+    "township_mm": "ပြွန်တန်ဆာ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပတတ",
+    "township_mm": "ပေါင်းတည်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပတန",
+    "township_mm": "ပန်းတောင်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပတလ",
+    "township_mm": "ပေါင်းတလည်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပနက",
+    "township_mm": "ပဲနွယ်ကုန်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ပမန",
+    "township_mm": "ပြည်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ဖမန",
+    "township_mm": "ဖြူး",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "မညန",
+    "township_mm": "မိုးညို",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "မဒန",
+    "township_mm": "မဒေါက်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "မလန",
+    "township_mm": "မင်းလှ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ရကန",
+    "township_mm": "ရွှေကျင်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ရတန",
+    "township_mm": "ရွှေတောင်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ရတရ",
+    "township_mm": "ရေတာရှည်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "လပတ",
+    "township_mm": "လက်ပံတန်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "ဝမန",
+    "township_mm": "ဝေါ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "သကန",
+    "township_mm": "သဲကုန်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "သဆန",
+    "township_mm": "သုံးဆယ်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "သနပ",
+    "township_mm": "သနပ်ပင်",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "သဝတ",
+    "township_mm": "သာယာဝတီ",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "အတန",
+    "township_mm": "အုတ်တွင်း",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၇",
+    "township_code_mm": "အဖန",
+    "township_mm": "အုတ်ဖို",
+    "state_mm": "ပဲခူးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ကထန",
+    "township_mm": "ကျောက်ထု",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ကမန",
+    "township_mm": "ကံမ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ခမန",
+    "township_mm": "ချောက်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ဂဂန",
+    "township_mm": "ဂန့်ဂေါ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ငဖန",
+    "township_mm": "ငဖဲ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "စကန",
+    "township_mm": "စကု",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "စတရ",
+    "township_mm": "စေတုတ္တရာ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "စလန",
+    "township_mm": "စလင်း",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ဆပ၀",
+    "township_mm": "ဆင်ပေါင်ဝဲ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ဆဖန",
+    "township_mm": "ဆိပ်ဖြူ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ဆမန",
+    "township_mm": "ဆော",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "တတက",
+    "township_mm": "တောင်တွင်းကြီး",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ထလန",
+    "township_mm": "ထီးလင်း",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "နမန",
+    "township_mm": "နတ်မောက်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ပခက",
+    "township_mm": "ပခုက္ကူ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ပဖန",
+    "township_mm": "ပွင့်ဖြူ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ပမန",
+    "township_mm": "ပေါက်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မကန",
+    "township_mm": "မကွေး",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မတန",
+    "township_mm": "မင်းတုန်း",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မဘန",
+    "township_mm": "မင်းဘူး",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မမန",
+    "township_mm": "မြိုင်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မလန",
+    "township_mm": "မင်းလှ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "မသန",
+    "township_mm": "မြို့သစ်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ရစက",
+    "township_mm": "ရေစကြို",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "ရနခ",
+    "township_mm": "ရေနံချောင်း",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "သရန",
+    "township_mm": "သရက်",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၈",
+    "township_code_mm": "အလန",
+    "township_mm": "အောင်လံ",
+    "state_mm": "မကွေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ကဆန",
+    "township_mm": "ကျောက်ဆည်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ကပတ",
+    "township_mm": "ကျောက်ပန်းတောင်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ကမန",
+    "township_mm": "ကူမဲ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ခမစ",
+    "township_mm": "ချမ်းမြသာစည်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ခအဇ",
+    "township_mm": "ချမ်းအေးသာဇံ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ငဇန",
+    "township_mm": "ငါန်းဇွန်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ငသရ",
+    "township_mm": "ငါ့သရောက်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "စကတ",
+    "township_mm": "စဉ့်ကိုင်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "စကန",
+    "township_mm": "စဉ့်ကူး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ဇဗသ",
+    "township_mm": "ဇမ္ဗူသီရိ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ဇယသ",
+    "township_mm": "ဇေယျာသီရိ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ညဥန",
+    "township_mm": "ညောင်ဦး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "တကတ",
+    "township_mm": "တကောင်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "တကန",
+    "township_mm": "တပ်ကုန်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "တတဥ",
+    "township_mm": "တံတားဦး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "တသန",
+    "township_mm": "တောင်သာ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ဒခသ",
+    "township_mm": "ဒက္ခိဏသီရိ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "နထက",
+    "township_mm": "နွားထိုးကြီး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ပကခ",
+    "township_mm": "ပြည်ကြီးတံခွန်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ပဗသ",
+    "township_mm": "ပုဗ္ဗသီရိ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ပဘန",
+    "township_mm": "ပျော်ဘွယ်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ပမန",
+    "township_mm": "ပျဉ်းမနား",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ပသက",
+    "township_mm": "ပုသိမ်ကြီး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မကန",
+    "township_mm": "မိုးကုတ်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မခန",
+    "township_mm": "မြင်းခြံ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မတရ",
+    "township_mm": "မတ္တရာ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မထလ",
+    "township_mm": "မိတ္ထီလာ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မလန",
+    "township_mm": "မလှိုင်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မသန",
+    "township_mm": "မြစ်သား",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "မဟမ",
+    "township_mm": "မဟာအောင်မြေ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ရမသ",
+    "township_mm": "ရမည်းသင်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "လဝန",
+    "township_mm": "လယ်ဝေး",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ဝတန",
+    "township_mm": "ဝမ်းတွင်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "သစန",
+    "township_mm": "သာစည်",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "သပက",
+    "township_mm": "သပိတ်ကျင်း",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "အမဇ",
+    "township_mm": "အောင်မြေသာဇံ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "အမရ",
+    "township_mm": "အမရပူရ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  },
+  {
+    "state_code": "၉",
+    "township_code_mm": "ဥတသ",
+    "township_mm": "ဥတ္တရသီရိ",
+    "state_mm": "မန္တလေးတိုင်းဒေသကြီး"
+  }
+]
