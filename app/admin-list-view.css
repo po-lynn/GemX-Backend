@@ -4508,3 +4508,130 @@
 .pct-head-icon[data-severity="critical"] { background: #FEF2F2; color: #B91C1C; }
 .pct-head-icon[data-severity="warning"]  { background: #FFFBEB; color: #B45309; }
 .pct-head-icon[data-severity="info"]     { background: #EFF6FF; color: #2563EB; }
+
+/* ─── NRC identification card (design_handoff_nrc_field) ─────────────── */
+.nrc-card {
+  background: #fff; border: 1px solid #E4E6EE; border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(26,28,35,.04); overflow: visible;
+}
+.nrc-card-head {
+  display: flex; align-items: center; gap: 11px;
+  padding: 16px 20px; border-bottom: 1px solid #EEF0F5;
+}
+.nrc-icon-tile {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  background: #F1ECFF; color: #6D3BEB;
+  display: flex; align-items: center; justify-content: center;
+}
+.nrc-card-title { font-size: 14px; font-weight: 700; color: #1A1C23; }
+.nrc-card-sub   { font-size: 11.5px; color: #8A90A2; margin-top: 1px; }
+.nrc-pill {
+  flex: none; display: inline-flex; align-items: center;
+  background: #F5F6FA; border: 1px solid #E4E6EE; border-radius: 999px;
+  padding: 5px 11px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: #6B7280;
+}
+
+.nrc-grid {
+  padding: 20px 20px 8px; display: grid;
+  grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);
+  gap: 14px; align-items: start;
+}
+@media (max-width: 900px) { .nrc-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .nrc-grid { grid-template-columns: 1fr; } }
+
+.nrc-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nrc-label-row { display: flex; align-items: baseline; gap: 5px; }
+.nrc-label { font-size: 11.5px; font-weight: 700; color: #1A1C23; }
+.nrc-req   { font-size: 11.5px; color: #C0392B; }
+.nrc-meta  { margin-left: auto; font-size: 10.5px; color: #8A90A2; white-space: nowrap; }
+.nrc-helper { font-size: 11px; color: #8A90A2; }
+.nrc-helper.warn { color: #B23A2C; }
+
+.nrc-select-wrap { position: relative; }
+.nrc-select {
+  appearance: none; width: 100%; height: 44px; padding: 0 32px 0 12px;
+  border: 1px solid #D7DAE4; border-radius: 10px; background: #fff;
+  font: inherit; font-size: 13.5px; font-weight: 500; color: #1A1C23; cursor: pointer;
+}
+.nrc-select:focus { outline: none; border-color: #6D3BEB; box-shadow: 0 0 0 3px #F1ECFF; }
+.nrc-select-chevron { position: absolute; right: 11px; top: 15px; color: #8A90A2; pointer-events: none; }
+
+.nrc-township-trigger {
+  height: 44px; border: 1px solid #D7DAE4; border-radius: 10px; background: #fff;
+  display: flex; align-items: center; gap: 9px; padding: 0 11px 0 12px;
+  cursor: pointer; width: 100%; text-align: left; font: inherit;
+}
+.nrc-township-trigger:hover:not(:disabled) { border-color: #C3C8D4; }
+.nrc-township-trigger:disabled { cursor: not-allowed; background: #FAFAFC; color: #A6ABBA; }
+.nrc-township-badge {
+  font: inherit; font-size: 14px; font-weight: 600; color: #4B25B5; background: #F1ECFF;
+  border-radius: 6px; padding: 3px 8px; letter-spacing: .02em; flex: none;
+}
+.nrc-township-name {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13.5px; color: #3A3F4E;
+}
+
+.nrc-popover {
+  position: absolute; top: 74px; left: 0; right: 0; z-index: 20;
+  background: #fff; border: 1px solid #D7DAE4; border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(26,28,35,.16); overflow: hidden;
+}
+.nrc-search-row {
+  padding: 10px; border-bottom: 1px solid #EEF0F5;
+  display: flex; align-items: center; gap: 8px;
+}
+.nrc-search-input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 13.5px; color: #1A1C23;
+}
+.nrc-list { max-height: 264px; overflow: auto; }
+.nrc-option {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-bottom: 1px solid #F5F6FA; cursor: pointer;
+}
+.nrc-option:last-child { border-bottom: 0; }
+.nrc-option:hover, .nrc-option.highlight { background: #F8F6FF; }
+.nrc-option-code { font-size: 13.5px; font-weight: 600; color: #4B25B5; flex: none; }
+.nrc-option-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #3A3F4E; }
+.nrc-option-mark { font-size: 11px; color: #A6ABBA; flex: none; }
+.nrc-empty { padding: 16px 12px; font-size: 12.5px; color: #8A90A2; }
+
+.nrc-segmented {
+  display: flex; gap: 6px; height: 44px;
+  background: #F5F6FA; border: 1px solid #E4E6EE; border-radius: 10px; padding: 4px;
+}
+.nrc-segment {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 600;
+  background: transparent; border: 1px solid transparent; color: #6B7280; padding: 0 4px;
+}
+.nrc-segment.on {
+  background: #fff; color: #6D3BEB; border: 1px solid #DFD6FB;
+  box-shadow: 0 1px 2px rgba(26,28,35,.12);
+}
+
+.nrc-number-input {
+  width: 100%; height: 44px; box-sizing: border-box; padding: 0 12px;
+  border-radius: 10px; background: #fff; outline: none; font: inherit;
+  font-size: 14px; letter-spacing: .06em; color: #1A1C23; border: 1px solid #D7DAE4;
+}
+.nrc-number-input:focus { border-color: #6D3BEB; box-shadow: 0 0 0 3px #F1ECFF; }
+.nrc-number-input.warn { border-color: #E0A6A0; }
+
+.nrc-preview {
+  margin: 4px 20px 20px; background: #FAFAFC; border: 1px solid #EDEFF4; border-radius: 12px;
+  padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+}
+.nrc-preview-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.nrc-preview-label { font-size: 10.5px; font-weight: 700; letter-spacing: .09em; color: #8A90A2; }
+.nrc-preview-mm    { font-size: 22px; font-weight: 600; letter-spacing: .01em; color: #1A1C23; }
+.nrc-preview-latin { font-size: 18px; font-weight: 500; color: #5D6376; }
+.nrc-preview-divider { width: 1px; align-self: stretch; background: #E7E9F0; }
+.nrc-status-pill {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid #E4E6EE; border-radius: 999px; padding: 6px 12px;
+  font-size: 11.5px; font-weight: 600; color: #3A3F4E; white-space: nowrap;
+}
+.nrc-status-dot { width: 7px; height: 7px; border-radius: 999px; background: #C9A24D; }
+.nrc-status-dot.ready { background: #2F6B4F; }

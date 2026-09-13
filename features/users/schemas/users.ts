@@ -72,6 +72,10 @@ export const userDeleteSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
 });
 
+export const userBulkDeleteSchema = z.object({
+  userIds: z.array(z.string().min(1)).min(1, "Select at least one user"),
+});
+
 export const userChangePasswordSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   newPassword: z.string().min(6, "Password must be at least 6 characters").max(100),

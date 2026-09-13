@@ -1,1 +1,0 @@
-ALTER TYPE "public"."app_content_section_name" ADD VALUE 'terms_conditions';

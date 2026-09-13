@@ -4,8 +4,8 @@ import dynamic from "next/dynamic"
 import { useState } from "react"
 import type { MultilangBlockNoteContent } from "@/features/app-content/schemas/app-content"
 import {
-  CONTENT_LANGUAGES,
-  type ContentLanguage,
+  NEWS_LANGUAGES,
+  type NewsLanguage,
 } from "@/features/content/services/google-translate"
 
 const BlockNoteEditor = dynamic(
@@ -26,11 +26,11 @@ type Props = {
   editorName: string
   value: MultilangBlockNoteContent
   onChange: (value: MultilangBlockNoteContent) => void
-  editLanguage: ContentLanguage
-  onEditLanguageChange: (lang: ContentLanguage) => void
+  editLanguage: NewsLanguage
+  onEditLanguageChange: (lang: NewsLanguage) => void
 }
 
-function contentKey(lang: ContentLanguage): keyof MultilangBlockNoteContent {
+function contentKey(lang: NewsLanguage): keyof MultilangBlockNoteContent {
   if (lang === "English") return "contentEn"
   if (lang === "Myanmar") return "contentMy"
   if (lang === "Thai") return "contentTh"
@@ -49,7 +49,7 @@ export function MultilangBlockNoteTab({
   const activeKey = contentKey(editLanguage)
   const initialContent = value[activeKey] || "[]"
 
-  function switchLanguage(next: ContentLanguage) {
+  function switchLanguage(next: NewsLanguage) {
     if (next === editLanguage) return
     onEditLanguageChange(next)
     setLangSwitchKey((k) => k + 1)
@@ -76,9 +76,9 @@ export function MultilangBlockNoteTab({
               className="ac-input"
               style={{ width: "auto", minWidth: 140 }}
               value={editLanguage}
-              onChange={(e) => switchLanguage(e.target.value as ContentLanguage)}
+              onChange={(e) => switchLanguage(e.target.value as NewsLanguage)}
             >
-              {CONTENT_LANGUAGES.map((lang) => (
+              {NEWS_LANGUAGES.map((lang) => (
                 <option key={lang} value={lang}>
                   {lang}
                 </option>

@@ -9,11 +9,13 @@ import {
   userCreateSchema,
   userUpdateSchema,
   userDeleteSchema,
+  userBulkDeleteSchema,
   userChangePasswordSchema,
 } from "@/features/users/schemas/users";
 import {
   updateUserInDb,
   deleteUserInDb,
+  deleteUsersInDb,
   getUserByEmail,
   searchUsersForPicker,
 } from "@/features/users/db/users";
@@ -75,36 +77,38 @@ export async function createUserAction(formData: FormData) {
   }
 
   const phone = rawPhone ? (normalizeMyanmarPhone(rawPhone) ?? rawPhone) : undefined;
-  // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
-  const result = await auth.api.signUpEmail({
-    body: {
-      email,
-      password: parsed.data.password,
-      name: parsed.data.name,
-      image: imageUrl,
-      phone,
-      gender: (parsed.data.gender ?? "").trim() || undefined,
-      dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
-      nrc: (parsed.data.nrc ?? "").trim() || undefined,
-      address: (parsed.data.address ?? "").trim() || undefined,
-      city: (parsed.data.city ?? "").trim() || undefined,
-      state: (parsed.data.state ?? "").trim() || undefined,
-      country: (parsed.data.country ?? "").trim() || undefined,
-    },
-  } as Parameters<typeof auth.api.signUpEmail>[0]);
-  if (result && "error" in result && result.error) {
-    const msg = String(result.error);
+  try {
+    // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
+    await auth.api.signUpEmail({
+      body: {
+        email,
+        password: parsed.data.password,
+        name: parsed.data.name,
+        image: imageUrl,
+        phone,
+        gender: (parsed.data.gender ?? "").trim() || undefined,
+        dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
+        nrc: (parsed.data.nrc ?? "").trim() || undefined,
+        address: (parsed.data.address ?? "").trim() || undefined,
+        city: (parsed.data.city ?? "").trim() || undefined,
+        state: (parsed.data.state ?? "").trim() || undefined,
+        country: (parsed.data.country ?? "").trim() || undefined,
+      },
+    } as Parameters<typeof auth.api.signUpEmail>[0]);
+  } catch (err: unknown) {
+    // better-auth's signUpEmail throws an APIError on failure rather than returning { error }.
+    const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
       return { error: "This NRC number is already registered to another account." };
     }
     if (
       msg.toLowerCase().includes("duplicate") ||
       msg.toLowerCase().includes("unique") ||
-      msg.toLowerCase().includes("already")
+      msg.toLowerCase().includes("already exists")
     ) {
       return { error: "A user with this email already exists." };
     }
-    return { error: msg };
+    return { error: msg || "Failed to create user." };
   }
   revalidatePath("/admin/users/new");
   await applyDefaultPointsToNewUser(email);
@@ -249,7 +253,23 @@ export async function deleteUserAction(formData: FormData) {
   }
   const deleted = await deleteUserInDb(parsed.data.userId);
   if (!deleted) return { error: "User not found" };
+  revalidatePath("/admin/users");
   return { success: true };
+}
+
+export async function bulkDeleteUsersAction(userIds: string[]) {
+  const parsed = userBulkDeleteSchema.safeParse({ userIds });
+  if (!parsed.success) return { error: zodErrorMessage(parsed.error) };
+  const session = await requireActionRole(canAdminManageUsers);
+  if (!session) {
+    return { error: "Unauthorized" };
+  }
+  if (parsed.data.userIds.includes(session.user.id)) {
+    return { error: "You cannot delete your own account." };
+  }
+  const count = await deleteUsersInDb(parsed.data.userIds);
+  revalidatePath("/admin/users");
+  return { success: true, count };
 }
 
 export async function searchUsersForPickerAction(query: string) {

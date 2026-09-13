@@ -7,29 +7,11 @@ import {
   rejectUserKycAction,
 } from "@/features/users/actions/kyc-actions"
 import type { UserForEdit } from "@/features/users/db/users"
+import { parseNrc, NRC_STATE_NAMES } from "@/lib/nrc"
 
 type Props = {
   userId: string
   user: UserForEdit
-}
-
-const NRC_REGEX = /^(\d{1,2})\s*\/\s*([A-Za-z]{3,12})\s*\(\s*(N|NAING)\s*\)\s*(\d{6})$/i
-
-const NRC_STATES: Record<string, string> = {
-  "1": "Kachin", "2": "Kayah", "3": "Kayin", "4": "Chin", "5": "Sagaing",
-  "6": "Tanintharyi", "7": "Bago", "8": "Magway", "9": "Mandalay",
-  "10": "Mon", "11": "Rakhine", "12": "Yangon", "13": "Shan", "14": "Ayeyarwady",
-}
-
-function parseNrc(nrc: string) {
-  const match = nrc.trim().match(NRC_REGEX)
-  if (!match) return null
-  const [, stateNum, township, type] = match
-  return {
-    stateName: NRC_STATES[stateNum] ?? `State ${stateNum}`,
-    township,
-    type: type.toUpperCase(),
-  }
 }
 
 const EXTRA_DOCS = [
@@ -169,7 +151,7 @@ export function KycDocumentsCard({ userId, user }: Props) {
 
             {parsed && (
               <p className="text-xs text-slate-500 mb-4">
-                {parsed.stateName} · {parsed.township} township · type {parsed.type}
+                {NRC_STATE_NAMES[String(parsed.state)] ?? `State ${parsed.state}`} · {parsed.township} township · type {parsed.type}
               </p>
             )}
 

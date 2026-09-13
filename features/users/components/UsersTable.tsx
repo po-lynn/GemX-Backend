@@ -1,10 +1,18 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
+import {
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { ListViewCard } from "@/components/admin/list-view"
 import type { ColumnDef, FilterDef, GroupOption, ViewTab } from "@/components/admin/list-view"
 import type { UserRow, ViewCounts } from "@/features/users/db/users"
+import { bulkDeleteUsersAction } from "@/features/users/actions/users"
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -262,6 +270,27 @@ export function UsersTable({
   hideAdminView = false,
 }: Props) {
   const router = useRouter()
+  const [deleteTarget, setDeleteTarget] = useState<{ ids: string[]; onClear: () => void } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleBulkDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const result = await bulkDeleteUsersAction(deleteTarget.ids)
+      if (result?.error) {
+        toast.error("Failed to delete users", { description: result.error })
+        return
+      }
+      const n = result?.count ?? deleteTarget.ids.length
+      toast.success(`${n} user${n === 1 ? "" : "s"} deleted`)
+      deleteTarget.onClear()
+      setDeleteTarget(null)
+      router.refresh()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const enriched = useMemo<UserRowX[]>(
     () =>
@@ -331,6 +360,7 @@ export function UsersTable({
   }
 
   return (
+    <>
     <ListViewCard
       rows={enriched}
       columnDefs={COLUMN_DEFS}
@@ -351,13 +381,19 @@ export function UsersTable({
         const qs = p.toString()
         router.push(`${BASE}/${u.id}/edit${qs ? `?${qs}` : ""}`)
       }}
-      renderBulkActions={(_rows, onClear) => (
+      renderBulkActions={(rows, onClear) => (
         <>
           <button className="lv-bulkbtn approve" onClick={onClear}>Verify KYC</button>
           <button className="lv-bulkbtn" onClick={onClear}>Grant points</button>
           <button className="lv-bulkbtn" onClick={onClear}>Message</button>
           <button className="lv-bulkbtn danger" onClick={onClear}>Suspend</button>
           <button className="lv-bulkbtn danger" onClick={onClear}>Archive</button>
+          <button
+            className="lv-bulkbtn danger"
+            onClick={() => setDeleteTarget({ ids: rows.map((r) => r.id), onClear })}
+          >
+            <Trash2 style={{ width: 13, height: 13 }} /> Delete
+          </button>
         </>
       )}
       page={page}
@@ -367,5 +403,23 @@ export function UsersTable({
       onRefresh={() => router.refresh()}
       emptyMessage="No users found."
     />
+
+    <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <DialogContent showCloseButton>
+        <DialogHeader>
+          <DialogTitle>Delete {deleteTarget?.ids.length ?? 0} user{(deleteTarget?.ids.length ?? 0) === 1 ? "" : "s"} permanently?</DialogTitle>
+          <DialogDescription>
+            This removes all data for the selected user{(deleteTarget?.ids.length ?? 0) === 1 ? "" : "s"}, including listings and points. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button type="button" variant="destructive" onClick={handleBulkDelete} disabled={deleting}>
+            {deleting ? "Deleting…" : "Delete permanently"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

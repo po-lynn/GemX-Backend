@@ -43,3 +43,6 @@ next-env.d.ts
 
 # git worktrees (local scratch, never committed)
 /.worktrees
+
+# local tool/session state (per-machine, not project source)
+/.superpowers

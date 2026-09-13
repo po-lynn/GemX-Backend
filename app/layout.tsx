@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Plus_Jakarta_Sans, Geist_Mono, Cormorant_Garamond, Bricolage_Grotesque, Manrope } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono, Cormorant_Garamond, Bricolage_Grotesque, Manrope, Noto_Sans_Myanmar } from "next/font/google";
 import { AppSpeedInsights } from "@/components/app-speed-insights";
 import { GlobalPushProvider } from "@/components/notifications/GlobalPushProvider";
 import { Analytics } from '@vercel/analytics/next';
@@ -35,6 +35,15 @@ const manrope = Manrope({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+// Plus Jakarta Sans has no Myanmar glyphs; without this the browser falls back to whatever
+// (possibly missing) Myanmar font the OS provides, rendering NRC township/type text as tofu —
+// see docs/technical/admin-nrc-form-fix.md. Declared as a --font-sans fallback in globals.css.
+const notoSansMyanmar = Noto_Sans_Myanmar({
+  variable: "--font-noto-myanmar",
+  subsets: ["myanmar"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "GemX | Premium Gemstone & Jewellery Marketplace",
   description:
@@ -49,7 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${plusJakartaSans.variable} ${geistMono.variable} ${cormorant.variable} ${bricolageGrotesque.variable} ${manrope.variable} font-sans antialiased`}
+        className={`${plusJakartaSans.variable} ${geistMono.variable} ${cormorant.variable} ${bricolageGrotesque.variable} ${manrope.variable} ${notoSansMyanmar.variable} font-sans antialiased`}
       >
         <GlobalPushProvider>
           <Suspense fallback={null}>{children}</Suspense>

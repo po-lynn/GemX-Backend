@@ -13,8 +13,9 @@ import {
 } from "@/features/users/actions/users";
 import type { UserForEdit } from "@/features/users/db/users";
 import DatePicker from "@/components/date-picker/date-picker";
-import myanmarNrcTownships from "@/features/users/data/myanmar-nrc-townships.json";
+import { NrcField, type NrcValue } from "@/features/users/components/NrcField";
 import { COUNTRY_LOCATIONS } from "@/features/users/data/country-locations";
+import { NRC_CITIZEN_TYPES_MM, buildMyanmarNrc, fromMyanmarDigits, type NrcCitizenType } from "@/lib/nrc";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, ArrowLeftRight, ChevronLeft, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
@@ -50,24 +51,16 @@ const GENDERS = [
 
 const COUNTRIES = ["Myanmar", "Thailand", "South Korea"];
 
-const MYANMAR_NRC_REGEX = /^(\d{1,2})\s*\/\s*([A-Za-z]{3,12})\s*\(\s*(N|NAING)\s*\)\s*(\d{6})$/i;
-const MYANMAR_NRC_DISTRICTS_BY_STATE = myanmarNrcTownships as Record<string, { value: string; label: string }[]>;
-const MYANMAR_NRC_STATES = [
-  { value: "1",  label: "1 - Kachin"      },
-  { value: "2",  label: "2 - Kayah"       },
-  { value: "3",  label: "3 - Kayin"       },
-  { value: "4",  label: "4 - Chin"        },
-  { value: "5",  label: "5 - Sagaing"     },
-  { value: "6",  label: "6 - Tanintharyi" },
-  { value: "7",  label: "7 - Bago"        },
-  { value: "8",  label: "8 - Magway"      },
-  { value: "9",  label: "9 - Mandalay"    },
-  { value: "10", label: "10 - Mon"        },
-  { value: "11", label: "11 - Rakhine"    },
-  { value: "12", label: "12 - Yangon"     },
-  { value: "13", label: "13 - Shan"       },
-  { value: "14", label: "14 - Ayeyarwady" },
-];
+// Parses either a legacy Latin-format NRC (12/ABC(N)123456, from before this form switched to
+// genuine Myanmar script) or a Myanmar-script one (၉/မလန(နိုင်)၁၂၃၄၃၃), so editing an
+// existing user always populates the 4 picker fields regardless of which format it was saved in.
+const MYANMAR_NRC_REGEX = /^([\d၀-၉]{1,2})\s*\/\s*([A-Za-zက-႟]{1,12})\s*\(\s*([A-Za-zက-႟]{1,10}|NAING)\s*\)\s*([\d၀-၉]{6})$/i;
+// Citizen type codes and Myanmar spellings mirror lib/nrc.ts NRC_CITIZEN_TYPES /
+// NRC_CITIZEN_TYPES_MM (verified against github.com/wai-lin/mm-nrc) — used to normalize a
+// Myanmar-word type parsed out of an existing user's stored NRC back to its N/P/T/E code.
+const NRC_TYPE_MM_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(NRC_CITIZEN_TYPES_MM).map(([code, mm]) => [mm, code])
+);
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin", dealer: "Dealer", seller: "Seller", buyer: "Buyer", user: "User",
@@ -151,11 +144,12 @@ function parseMyanmarNrc(nrc: string | null | undefined) {
   if (!nrc?.trim()) return null;
   const m = nrc.trim().match(MYANMAR_NRC_REGEX);
   if (!m) return null;
+  const rawType = m[3].toUpperCase() === "NAING" ? "N" : m[3];
   return {
-    state:    m[1],
-    district: m[2].length === 3 ? m[2].toUpperCase() : m[2],
-    type:     m[3].toUpperCase(),
-    number:   m[4],
+    state:    fromMyanmarDigits(m[1]),
+    district: /^[A-Za-z]+$/.test(m[2]) ? m[2].toUpperCase() : m[2],
+    type:     /^[NPTE]$/i.test(rawType) ? rawType.toUpperCase() : (NRC_TYPE_MM_TO_CODE[rawType] ?? rawType),
+    number:   fromMyanmarDigits(m[4]),
   };
 }
 
@@ -206,20 +200,20 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
   }
 
   // Myanmar NRC
-  const parsedNrc  = parseMyanmarNrc(user.nrc);
-  const [nrcText,     setNrcText]     = useState(user.nrc ?? "");
-  const [nrcState,    setNrcState]    = useState(parsedNrc?.state    ?? "");
-  const [nrcDistrict, setNrcDistrict] = useState(parsedNrc?.district ?? "");
-  const [nrcType,     setNrcType]     = useState(parsedNrc?.type === "NAING" ? "NAING" : "N");
-  const [nrcNumber,   setNrcNumber]   = useState(parsedNrc?.number   ?? "");
+  const parsedNrc = parseMyanmarNrc(user.nrc);
+  const [nrcText, setNrcText] = useState(user.nrc ?? "");
+  const [nrc, setNrc] = useState<NrcValue>({
+    state:    parsedNrc?.state    ?? "",
+    township: parsedNrc?.district ?? "",
+    type:     (parsedNrc?.type as NrcCitizenType) ?? "N",
+    number:   parsedNrc?.number   ?? "",
+  });
   const isMyanmar = country === "Myanmar";
   const availableStates = country ? Object.keys(COUNTRY_LOCATIONS[country] ?? {}) : [];
   const availableCities = country && stateVal
     ? (COUNTRY_LOCATIONS[country]?.[stateVal] ?? [])
     : [];
-  const myanmarNrcValue = isMyanmar && (nrcState || nrcDistrict || nrcNumber)
-    ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}` : "";
-  const nrcFinal = isMyanmar ? myanmarNrcValue : nrcText;
+  const nrcFinal = isMyanmar ? buildMyanmarNrc(nrc) : nrcText;
 
   // image
   const [imageUrl,        setImageUrl]        = useState(user.image ?? "");
@@ -732,50 +726,11 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
                     </div>
                   </div>
 
-                  <div className="ud-field">
-                    <label className="ud-label">Identification number</label>
-                    {isMyanmar ? (
-                      <>
-                        <div className="ud-row" style={{ "--cols": 4 } as React.CSSProperties}>
-                          <div className="ud-field">
-                            <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>State/Region</span>
-                            <select className="ud-select" value={nrcState}
-                              onChange={e => { setNrcState(e.target.value); setNrcDistrict(""); mark(); }}>
-                              <option value="">State</option>
-                              {MYANMAR_NRC_STATES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="ud-field">
-                            <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>District</span>
-                            <select className="ud-select" value={nrcDistrict} disabled={!nrcState}
-                              onChange={e => { setNrcDistrict(e.target.value); mark(); }}>
-                              <option value="">District</option>
-                              {(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                              {nrcDistrict && nrcState && !(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).some(d => d.value === nrcDistrict) && (
-                                <option value={nrcDistrict}>{nrcDistrict}</option>
-                              )}
-                            </select>
-                          </div>
-                          <div className="ud-field">
-                            <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>Type</span>
-                            <select className="ud-select" value={nrcType} onChange={e => { setNrcType(e.target.value); mark(); }}>
-                              <option value="N">N</option>
-                              <option value="NAING">NAING</option>
-                            </select>
-                          </div>
-                          <div className="ud-field">
-                            <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>Number (6 digits)</span>
-                            <input
-                              className="ud-input mono"
-                              type="text" inputMode="numeric" maxLength={6} placeholder="123456"
-                              value={nrcNumber}
-                              onChange={e => { setNrcNumber(e.target.value.replace(/\D/g, "").slice(0, 6)); mark(); }}
-                            />
-                          </div>
-                        </div>
-                        <span className="ud-help">Format: State/District(Type)Number — e.g. 12/ABC(N)123456</span>
-                      </>
-                    ) : (
+                  {isMyanmar ? (
+                    <NrcField value={nrc} onChange={next => { setNrc(next); mark(); }} />
+                  ) : (
+                    <div className="ud-field">
+                      <label className="ud-label">Identification number</label>
                       <input
                         className="ud-input mono"
                         placeholder="e.g. ID number, NRC, passport"
@@ -783,9 +738,9 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
                         maxLength={100}
                         onChange={e => { setNrcText(e.target.value); mark(); }}
                       />
-                    )}
-                    <span className="ud-help">Used for KYC review. Visible to admins only.</span>
-                  </div>
+                      <span className="ud-help">Used for KYC review. Visible to admins only.</span>
+                    </div>
+                  )}
                 </div>
               </section>
             </>
@@ -1212,19 +1167,14 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
   const [archived, setArchived] = useState(false);
 
   // Myanmar NRC
-  const [nrcText,     setNrcText]     = useState("");
-  const [nrcState,    setNrcState]    = useState("");
-  const [nrcDistrict, setNrcDistrict] = useState("");
-  const [nrcType,     setNrcType]     = useState("N");
-  const [nrcNumber,   setNrcNumber]   = useState("");
+  const [nrcText, setNrcText] = useState("");
+  const [nrc, setNrc] = useState<NrcValue>({ state: "", township: "", type: "N", number: "" });
   const isMyanmar = country === "Myanmar";
   const availableStates = country ? Object.keys(COUNTRY_LOCATIONS[country] ?? {}) : [];
   const availableCities = country && stateVal
     ? (COUNTRY_LOCATIONS[country]?.[stateVal] ?? [])
     : [];
-  const myanmarNrcValue = isMyanmar && (nrcState || nrcDistrict || nrcNumber)
-    ? `${nrcState}/${nrcDistrict}(${nrcType})${nrcNumber}` : "";
-  const nrcFinal = isMyanmar ? myanmarNrcValue : nrcText;
+  const nrcFinal = isMyanmar ? buildMyanmarNrc(nrc) : nrcText;
 
   // image
   const [imageUrl,         setImageUrl]         = useState("");
@@ -1295,7 +1245,7 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
       setRole("user"); setPhone(""); setGender(""); setDob("");
       setAddress(""); setCountry("Myanmar"); setStateVal(""); setCity("");
       setArchived(false);
-      setNrcText(""); setNrcState(""); setNrcDistrict(""); setNrcType("N"); setNrcNumber("");
+      setNrcText(""); setNrc({ state: "", township: "", type: "N", number: "" });
       setImageUrl(""); setImageUploadError(null);
       router.push("/admin/users");
     } catch {
@@ -1593,47 +1543,11 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
                 </div>
               </div>
 
-              <div className="ud-field">
-                <label className="ud-label">Identification number</label>
-                {isMyanmar ? (
-                  <>
-                    <div className="ud-row" style={{ "--cols": 4 } as React.CSSProperties}>
-                      <div className="ud-field">
-                        <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>State/Region</span>
-                        <select className="ud-select" value={nrcState}
-                          onChange={e => { setNrcState(e.target.value); setNrcDistrict(""); }}>
-                          <option value="">State</option>
-                          {MYANMAR_NRC_STATES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="ud-field">
-                        <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>District</span>
-                        <select className="ud-select" value={nrcDistrict} disabled={!nrcState}
-                          onChange={e => setNrcDistrict(e.target.value)}>
-                          <option value="">District</option>
-                          {(MYANMAR_NRC_DISTRICTS_BY_STATE[nrcState] ?? []).map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                        </select>
-                      </div>
-                      <div className="ud-field">
-                        <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>Type</span>
-                        <select className="ud-select" value={nrcType} onChange={e => setNrcType(e.target.value)}>
-                          <option value="N">N</option>
-                          <option value="NAING">NAING</option>
-                        </select>
-                      </div>
-                      <div className="ud-field">
-                        <span style={{ fontSize: 10.5, color: "var(--lv-text-3)", fontWeight: 600 }}>Number (6 digits)</span>
-                        <input
-                          className="ud-input mono"
-                          type="text" inputMode="numeric" maxLength={6} placeholder="123456"
-                          value={nrcNumber}
-                          onChange={e => setNrcNumber(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                        />
-                      </div>
-                    </div>
-                    <span className="ud-help">Format: State/District(Type)Number — e.g. 12/ABC(N)123456</span>
-                  </>
-                ) : (
+              {isMyanmar ? (
+                <NrcField value={nrc} onChange={setNrc} />
+              ) : (
+                <div className="ud-field">
+                  <label className="ud-label">Identification number</label>
                   <input
                     className="ud-input mono"
                     placeholder="e.g. ID number, NRC, passport"
@@ -1641,9 +1555,9 @@ function UserCreateForm({ canAssignAdmin }: { canAssignAdmin: boolean }) {
                     maxLength={100}
                     onChange={e => setNrcText(e.target.value)}
                   />
-                )}
-                <span className="ud-help">Used for KYC review. Visible to admins only.</span>
-              </div>
+                  <span className="ud-help">Used for KYC review. Visible to admins only.</span>
+                </div>
+              )}
             </div>
           </section>
 
