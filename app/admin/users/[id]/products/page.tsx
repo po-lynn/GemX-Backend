@@ -28,10 +28,6 @@ import { getAllOrigins } from "@/features/origin/db/origin"
 import { getUserById } from "@/features/users/db/users"
 import { FadeUp } from "@/components/admin/motion"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 type Props = {
   params: Promise<{ id: string }>
   searchParams: Promise<{

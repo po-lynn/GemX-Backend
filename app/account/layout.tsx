@@ -6,10 +6,6 @@ import { Toaster } from "sonner"
 import { auth } from "@/lib/auth"
 import { connection } from "next/server"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   await connection()
   const session = await auth.api.getSession({ headers: await headers() })

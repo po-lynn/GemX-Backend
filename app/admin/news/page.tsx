@@ -12,10 +12,6 @@ import { NewsTable } from "@/features/news/components"
 import { FadeUp } from "@/components/admin/motion"
 import { withQueryTimeout } from "@/lib/query-timeout"
 
-// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 /** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
 export const maxDuration = 10
 
