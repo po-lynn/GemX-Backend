@@ -75,36 +75,38 @@ export async function createUserAction(formData: FormData) {
   }
 
   const phone = rawPhone ? (normalizeMyanmarPhone(rawPhone) ?? rawPhone) : undefined;
-  // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
-  const result = await auth.api.signUpEmail({
-    body: {
-      email,
-      password: parsed.data.password,
-      name: parsed.data.name,
-      image: imageUrl,
-      phone,
-      gender: (parsed.data.gender ?? "").trim() || undefined,
-      dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
-      nrc: (parsed.data.nrc ?? "").trim() || undefined,
-      address: (parsed.data.address ?? "").trim() || undefined,
-      city: (parsed.data.city ?? "").trim() || undefined,
-      state: (parsed.data.state ?? "").trim() || undefined,
-      country: (parsed.data.country ?? "").trim() || undefined,
-    },
-  } as Parameters<typeof auth.api.signUpEmail>[0]);
-  if (result && "error" in result && result.error) {
-    const msg = String(result.error);
+  try {
+    // better-auth types omit some `user.additionalFields` on sign-up; runtime accepts them.
+    await auth.api.signUpEmail({
+      body: {
+        email,
+        password: parsed.data.password,
+        name: parsed.data.name,
+        image: imageUrl,
+        phone,
+        gender: (parsed.data.gender ?? "").trim() || undefined,
+        dateOfBirth: (parsed.data.dateOfBirth ?? "").trim() || undefined,
+        nrc: (parsed.data.nrc ?? "").trim() || undefined,
+        address: (parsed.data.address ?? "").trim() || undefined,
+        city: (parsed.data.city ?? "").trim() || undefined,
+        state: (parsed.data.state ?? "").trim() || undefined,
+        country: (parsed.data.country ?? "").trim() || undefined,
+      },
+    } as Parameters<typeof auth.api.signUpEmail>[0]);
+  } catch (err: unknown) {
+    // better-auth's signUpEmail throws an APIError on failure rather than returning { error }.
+    const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("user_nrc_unique") || (msg.includes("unique") && msg.includes("nrc"))) {
       return { error: "This NRC number is already registered to another account." };
     }
     if (
       msg.toLowerCase().includes("duplicate") ||
       msg.toLowerCase().includes("unique") ||
-      msg.toLowerCase().includes("already")
+      msg.toLowerCase().includes("already exists")
     ) {
       return { error: "A user with this email already exists." };
     }
-    return { error: msg };
+    return { error: msg || "Failed to create user." };
   }
   revalidatePath("/admin/users/new");
   await applyDefaultPointsToNewUser(email);
