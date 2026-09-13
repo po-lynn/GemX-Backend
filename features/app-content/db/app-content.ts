@@ -6,6 +6,7 @@ import type {
   BuyingGuideContent,
   FollowUsContent,
   HelpSupportContent,
+  PrivacyPolicyContent,
   SellingGuideContent,
   TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
@@ -17,6 +18,7 @@ export type AppContentSectionName =
   | "terms_conditions"
   | "buying_guide"
   | "selling_guide"
+  | "privacy_policy"
 
 export type AppContentSectionRow<T> = {
   draftContent: T
@@ -35,6 +37,7 @@ export type AppContentSections = {
   termsConditions: AppContentSectionRow<TermsConditionsContent>
   buyingGuide: AppContentSectionRow<BuyingGuideContent>
   sellingGuide: AppContentSectionRow<SellingGuideContent>
+  privacyPolicy: AppContentSectionRow<PrivacyPolicyContent>
 }
 
 export const DEFAULT_ABOUT_US_CONTENT: AboutUsContent = {
@@ -80,6 +83,9 @@ export const DEFAULT_BUYING_GUIDE_CONTENT: BuyingGuideContent = {
 export const DEFAULT_SELLING_GUIDE_CONTENT: SellingGuideContent = {
   ...DEFAULT_MULTILANG_BLOCKNOTE_CONTENT,
 }
+export const DEFAULT_PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
+  ...DEFAULT_MULTILANG_BLOCKNOTE_CONTENT,
+}
 
 type SectionContentMap = {
   about_us: AboutUsContent
@@ -88,6 +94,7 @@ type SectionContentMap = {
   terms_conditions: TermsConditionsContent
   buying_guide: BuyingGuideContent
   selling_guide: SellingGuideContent
+  privacy_policy: PrivacyPolicyContent
 }
 
 const SECTION_DEFAULTS: SectionContentMap = {
@@ -97,6 +104,7 @@ const SECTION_DEFAULTS: SectionContentMap = {
   terms_conditions: DEFAULT_TERMS_CONDITIONS_CONTENT,
   buying_guide: DEFAULT_BUYING_GUIDE_CONTENT,
   selling_guide: DEFAULT_SELLING_GUIDE_CONTENT,
+  privacy_policy: DEFAULT_PRIVACY_POLICY_CONTENT,
 }
 
 type RawSectionRow = {
@@ -154,6 +162,7 @@ export async function getAppContentSections(): Promise<AppContentSections> {
     termsConditions: toRow("terms_conditions", bySection.get("terms_conditions")),
     buyingGuide: toRow("buying_guide", bySection.get("buying_guide")),
     sellingGuide: toRow("selling_guide", bySection.get("selling_guide")),
+    privacyPolicy: toRow("privacy_policy", bySection.get("privacy_policy")),
   }
 }
 
@@ -164,6 +173,7 @@ export async function saveAppContentDraft(input: {
   termsConditions?: TermsConditionsContent
   buyingGuide?: BuyingGuideContent
   sellingGuide?: SellingGuideContent
+  privacyPolicy?: PrivacyPolicyContent
   updatedByName: string
 }): Promise<void> {
   const entries: Array<[AppContentSectionName, unknown]> = []
@@ -173,6 +183,7 @@ export async function saveAppContentDraft(input: {
   if (input.termsConditions) entries.push(["terms_conditions", input.termsConditions])
   if (input.buyingGuide) entries.push(["buying_guide", input.buyingGuide])
   if (input.sellingGuide) entries.push(["selling_guide", input.sellingGuide])
+  if (input.privacyPolicy) entries.push(["privacy_policy", input.privacyPolicy])
   if (entries.length === 0) return
 
   await db.transaction(async (tx) => {
@@ -265,4 +276,8 @@ export function getPublishedBuyingGuide(): Promise<BuyingGuideContent> {
 
 export function getPublishedSellingGuide(): Promise<SellingGuideContent> {
   return getPublishedContent("selling_guide")
+}
+
+export function getPublishedPrivacyPolicy(): Promise<PrivacyPolicyContent> {
+  return getPublishedContent("privacy_policy")
 }

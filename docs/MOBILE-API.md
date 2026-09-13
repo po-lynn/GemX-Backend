@@ -163,6 +163,7 @@
 | GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (`contentEn`/`contentMy`/`contentTh`/`contentKo`; optional `?lang=`). See **8.4**.                                                                  |
 | GET    | `/api/mobile/buying-guide` | No | Published Buying Guide BlockNote JSON (optional `?lang=`). See **8.5**.                                                                                                                          |
 | GET    | `/api/mobile/selling-guide` | No | Published Selling Guide BlockNote JSON (optional `?lang=`). See **8.6**.                                                                                                                         |
+| GET    | `/api/mobile/privacy-policy` | No | Published Privacy Policy BlockNote JSON (optional `?lang=`). See **8.7**.                                                                                                                        |
 | POST   | `/api/push/register`   | Yes  | Register FCM device token for push (body: `token`, optional `platform`: `android` \| `ios`). Call after login. Required to receive Surprise Bonus and other pushes. See **9**. |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM device token (body: `token`). Call on logout. See **9**. |
 
@@ -3757,6 +3758,12 @@ Same shape as Terms & Conditions. See `docs/api/mobile-buying-guide.md`.
 
 Same shape as Terms & Conditions. See `docs/api/mobile-selling-guide.md`.
 
+### 8.7 Privacy Policy
+
+**GET** `/api/mobile/privacy-policy`
+
+Same shape as Terms & Conditions. Edited under **Admin → App Content → Legal & Guides**. See `docs/api/mobile-privacy-policy.md`.
+
 ---
 
 ## 9. Push notifications (FCM)
@@ -3938,6 +3945,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (optional `?lang=`). See 8.4.                              |
 | GET    | `/api/mobile/buying-guide` | No | Published Buying Guide BlockNote JSON (optional `?lang=`). See 8.5.                                    |
 | GET    | `/api/mobile/selling-guide` | No | Published Selling Guide BlockNote JSON (optional `?lang=`). See 8.6.                                   |
+| GET    | `/api/mobile/privacy-policy` | No | Published Privacy Policy BlockNote JSON (optional `?lang=`). See 8.7.                                  |
 | POST   | `/api/push/register`   | Yes  | Register FCM token (required for Surprise Bonus and other pushes). See **9**.                              |
 | DELETE | `/api/push/register`   | Yes  | Unregister FCM token. See **9**.                                                                            |
 

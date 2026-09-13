@@ -10,8 +10,8 @@
 ## Using the feature
 
 1. Log in as an admin (or an internal user granted the `settings.app_content` permission) and go to **Admin → Settings → App Content** (`/admin/app-content`).
-2. Edit any of the six tabs — About us / Follow us / Help & Support / Terms & Conditions / Buying Guide / Selling Guide. Edits are local until you save.
-3. Click **Save** on the active tab — that section is written and goes live on the mobile APIs immediately (no separate publish step). Saving Terms / Buying Guide / Selling Guide while on **English** translates the BlockNote body into Myanmar, Thai, and Korean.
+2. Edit any of the four tabs — About us / Follow us / Help & Support / **Legal & Guides**. Under Legal & Guides, pick a document from the dropdown (Terms & Conditions, Buying Guide, Selling Guide, Privacy Policy). Edits are local until you save.
+3. Click **Save** on the active tab (or selected legal document) — that section is written and goes live on the mobile APIs immediately. Saving a Legal & Guides document while on **English** translates the BlockNote body into Myanmar, Thai, and Korean.
 4. Mobile reads published content via:
    - `GET /api/mobile/about-us`
    - `GET /api/mobile/follow-us`
@@ -19,6 +19,7 @@
    - `GET /api/mobile/terms-conditions`
    - `GET /api/mobile/buying-guide`
    - `GET /api/mobile/selling-guide`
+   - `GET /api/mobile/privacy-policy`
 
 ## Extending the feature
 

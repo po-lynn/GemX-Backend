@@ -168,11 +168,12 @@ describe("saveAppContentSchema", () => {
     ).toBe(true)
   })
 
-  it("accepts buyingGuide and sellingGuide sections", () => {
+  it("accepts buyingGuide, sellingGuide, and privacyPolicy sections", () => {
     expect(
       saveAppContentSchema.safeParse({
         buyingGuide: TERMS,
         sellingGuide: TERMS,
+        privacyPolicy: TERMS,
       }).success
     ).toBe(true)
   })
