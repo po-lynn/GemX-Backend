@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Noto+Sans+Myanmar:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#F4F5F8}
+a{color:#6D3BEB}
+a:hover{color:#5629D6}
+input,select,button{font-family:inherit}
+</style>
+</helmet>
+<div style="font-family:'Schibsted Grotesk',system-ui,sans-serif;color:#1A1C23;padding:28px 24px 56px;display:flex;flex-direction:column;gap:18px;align-items:stretch">
+
+<div style="max-width:1180px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8A90A2">Users › New user</div>
+<div style="font-size:22px;font-weight:700;letter-spacing:-.01em">Identification number (NRC)</div>
+<div style="font-size:13px;line-height:1.55;color:#5D6376;max-width:760px">Four parts, entered in the order the card prints them: state or region code, township code, citizenship type, then six digits. Township codes are loaded from the official state–township table, so the second field only ever offers codes that exist inside the chosen state.</div>
+</div>
+
+<div style="max-width:1180px;width:100%;margin:0 auto;background:#FFFFFF;border:1px solid #E4E6EE;border-radius:14px;box-shadow:0 1px 2px rgba(26,28,35,.04)">
+
+<div style="display:flex;align-items:center;gap:11px;padding:16px 20px;border-bottom:1px solid #EEF0F5">
+<div style="width:30px;height:30px;border-radius:9px;background:#F1ECFF;display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3BEB" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"></rect><circle cx="8.5" cy="11.5" r="2.2"></circle><path d="M5.6 16.4c.5-1.4 1.6-2.1 2.9-2.1s2.4.7 2.9 2.1M14.5 10h5M14.5 13.5h3"></path></svg>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14px;font-weight:700">National Registration Card</div>
+<div style="font-size:11.5px;color:#8A90A2">Used for KYC review. Visible to admins only.</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;background:#F5F6FA;border:1px solid #E4E6EE;border-radius:999px;padding:5px 11px">
+<span style="font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#6B7280">{{ rowCountLabel }}</span>
+</div>
+</div>
+
+<div style="padding:20px 20px 8px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:11.5px;font-weight:700">State / Region</span><span style="font-size:11.5px;color:#C0392B">*</span></div>
+<div style="position:relative">
+<select value="{{ stateCode }}" onChange="{{ onStateChange }}" style="appearance:none;width:100%;height:44px;padding:0 32px 0 12px;border:1px solid #D7DAE4;border-radius:10px;background:#fff;font-size:13.5px;color:#1A1C23;font-weight:500">
+<sc-for list="{{ states }}" as="st" hint-placeholder-count="14">
+<option value="{{ st.code }}">{{ st.label }}</option>
+</sc-for>
+</select>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A90A2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:11px;top:15px;pointer-events:none"><path d="M6 9.5l6 6 6-6"></path></svg>
+</div>
+<div style="font-size:11px;color:#8A90A2;font-family:'Noto Sans Myanmar','Schibsted Grotesk',sans-serif">{{ stateNameMm }}</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0;position:relative">
+<div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:11.5px;font-weight:700">Township code</span><span style="font-size:11.5px;color:#C0392B">*</span><span style="margin-left:auto;font-size:10.5px;color:#8A90A2">{{ townshipCountLabel }}</span></div>
+<div role="button" onClick="{{ onToggleOpen }}" style="height:44px;border:1px solid #D7DAE4;border-radius:10px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 11px 0 12px;cursor:pointer">
+<span style="font-family:'Noto Sans Myanmar',sans-serif;font-size:14px;font-weight:600;background:#F1ECFF;color:#4B25B5;border-radius:6px;padding:3px 8px;letter-spacing:.02em">{{ townshipCode }}</span>
+<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Noto Sans Myanmar',sans-serif;font-size:13.5px;color:#3A3F4E">{{ townshipName }}</span>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A90A2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"></path></svg>
+</div>
+<div style="font-size:11px;color:#8A90A2">Search by code or township name</div>
+
+<sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:74px;left:0;right:0;z-index:20;background:#fff;border:1px solid #D7DAE4;border-radius:12px;box-shadow:0 18px 40px rgba(26,28,35,.16);overflow:hidden">
+<div style="padding:10px;border-bottom:1px solid #EEF0F5;display:flex;align-items:center;gap:8px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A90A2" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<input value="{{ query }}" onChange="{{ onQuery }}" placeholder="ကမရ or ကျိုက်မရော" style="flex:1;min-width:0;border:0;outline:none;font-size:13.5px;font-family:'Noto Sans Myanmar','Schibsted Grotesk',sans-serif;color:#1A1C23;background:transparent">
+</div>
+<div style="max-height:264px;overflow:auto">
+<sc-for list="{{ filtered }}" as="tw" hint-placeholder-count="7">
+<div role="button" onClick="{{ tw.onPick }}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #F5F6FA;cursor:pointer" style-hover="background:#F8F6FF">
+<span style="font-family:'Noto Sans Myanmar',sans-serif;font-size:13.5px;font-weight:600;color:#4B25B5">{{ tw.code }}</span>
+<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Noto Sans Myanmar',sans-serif;font-size:13px;color:#3A3F4E">{{ tw.name }}</span>
+<span style="font-size:11px;color:#A6ABBA">{{ tw.mark }}</span>
+</div>
+</sc-for>
+<sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 12px;font-size:12.5px;color:#8A90A2">No township code matches that search inside this state.</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:11.5px;font-weight:700">Citizenship type</span><span style="font-size:11.5px;color:#C0392B">*</span></div>
+<div style="display:flex;gap:6px;height:44px;background:#F5F6FA;border:1px solid #E4E6EE;border-radius:10px;padding:4px">
+<sc-for list="{{ types }}" as="ty" hint-placeholder-count="3">
+<div role="button" onClick="{{ ty.onPick }}" style="{{ ty.style }}">
+<span style="font-family:'Noto Sans Myanmar',sans-serif;font-size:13.5px;font-weight:600">{{ ty.mm }}</span>
+</div>
+</sc-for>
+</div>
+<div style="font-size:11px;color:#8A90A2">{{ typeLabel }}</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+<div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:11.5px;font-weight:700">Number</span><span style="font-size:11.5px;color:#C0392B">*</span><span style="margin-left:auto;font-size:10.5px;color:#8A90A2">{{ digitCount }}</span></div>
+<input value="{{ number }}" onChange="{{ onNumber }}" inputMode="numeric" placeholder="123456" style="{{ numberStyle }}">
+<div style="{{ numberHintStyle }}">{{ numberHint }}</div>
+</div>
+
+</div>
+
+<div style="margin:4px 20px 20px;background:#FAFAFC;border:1px solid #EDEFF4;border-radius:12px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:18px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+<div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#8A90A2">AS STORED</div>
+<div style="font-family:'Noto Sans Myanmar',sans-serif;font-size:22px;font-weight:600;letter-spacing:.01em;color:#1A1C23">{{ nrcMm }}</div>
+</div>
+<div style="width:1px;align-self:stretch;background:#E7E9F0"></div>
+<div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+<div style="font-size:10.5px;font-weight:700;letter-spacing:.09em;color:#8A90A2">LATIN DIGITS</div>
+<div style="font-family:'Noto Sans Myanmar',sans-serif;font-size:18px;font-weight:500;color:#5D6376">{{ nrcLatin }}</div>
+</div>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #E4E6EE;border-radius:999px;padding:6px 12px">
+<span style="width:7px;height:7px;border-radius:999px;background:{{ statusDot }}"></span>
+<span style="font-size:11.5px;font-weight:600;color:#3A3F4E">{{ statusText }}</span>
+</div>
+</div>
+
+</div>
+
+<div style="max-width:1180px;width:100%;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+<div style="background:#fff;border:1px solid #E4E6EE;border-radius:12px;padding:14px 16px">
+<div style="font-size:12px;font-weight:700;margin-bottom:5px">State drives the code list</div>
+<div style="font-size:11.5px;line-height:1.55;color:#5D6376">Changing the state resets the township code to that state's first entry, so an impossible pair can never be saved.</div>
+</div>
+<div style="background:#fff;border:1px solid #E4E6EE;border-radius:12px;padding:14px 16px">
+<div style="font-size:12px;font-weight:700;margin-bottom:5px">Burmese numerals, not Latin</div>
+<div style="font-size:11.5px;line-height:1.55;color:#5D6376">The stored value uses the numerals printed on the card. The Latin line is a reading aid for admins, never the saved value.</div>
+</div>
+<div style="background:#fff;border:1px solid #E4E6EE;border-radius:12px;padding:14px 16px">
+<div style="font-size:12px;font-weight:700;margin-bottom:5px">Code is the identity, name the label</div>
+<div style="font-size:11.5px;line-height:1.55;color:#5D6376">The three-letter code is what the card carries; the full township name sits beside it so admins can confirm the right one.</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#6D3BEB&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#6D3BEB&quot;,&quot;#1A1C23&quot;,&quot;#2F6B4F&quot;,&quot;#B4762B&quot;]},&quot;showEnglishNames&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const MM_DIGITS = ['၀','၁','၂','၃','၄','၅','၆','၇','၈','၉'];
+const EN_STATES = {'၁':'Kachin','၂':'Kayah','၃':'Kayin','၄':'Chin','၅':'Sagaing','၆':'Tanintharyi','၇':'Bago','၈':'Magway','၉':'Mandalay','၁၀':'Mon','၁၁':'Rakhine','၁၂':'Yangon','၁၃':'Shan','၁၄':'Ayeyarwady'};
+const TYPES = [
+  {mm:'နိုင်', en:'Citizen'},
+  {mm:'ဧည့်', en:'Associate citizen'},
+  {mm:'ပြု', en:'Naturalised citizen'}
+];
+const toLatin = (s) => String(s).replace(/[၀-၉]/g, (c) => String(MM_DIGITS.indexOf(c)));
+const toMm = (s) => String(s).replace(/[0-9]/g, (c) => MM_DIGITS[Number(c)]);
+
+class Component extends DCLogic {
+  state = { rows: [], stateCode: '၁၂', townshipCode: '', typeIndex: 0, number: '123456', query: '', open: false };
+
+  componentDidMount() {
+    fetch('./nrc-townships.json').then(r => r.json()).then(rows => {
+      const first = rows.find(r => r.state_code === this.state.stateCode);
+      this.setState({ rows, townshipCode: first ? first.township_code_mm : '' });
+    }).catch(() => {});
+  }
+
+  pickState(code) {
+    const first = this.state.rows.find(r => r.state_code === code);
+    this.setState({ stateCode: code, townshipCode: first ? first.township_code_mm : '', query: '', open: false });
+  }
+
+  renderVals() {
+    const { rows, stateCode, townshipCode, typeIndex, number, query, open } = this.state;
+    const accent = this.props.accentColor ?? '#6D3BEB';
+    const showEnglish = this.props.showEnglishNames ?? true;
+
+    const seen = new Set();
+    const states = [];
+    for (const r of rows) {
+      if (seen.has(r.state_code)) continue;
+      seen.add(r.state_code);
+      states.push({ code: r.state_code, nameMm: r.state_mm, num: Number(toLatin(r.state_code)) });
+    }
+    states.sort((a, b) => a.num - b.num);
+    for (const s of states) {
+      const en = EN_STATES[s.code] || '';
+      const shortMm = s.nameMm.replace('ပြည်နယ်', '').replace('တိုင်းဒေသကြီး', '');
+      s.label = s.code + ' - ' + (showEnglish ? shortMm : s.nameMm);
+      s.en = en;
+    }
+
+    const inState = rows.filter(r => r.state_code === stateCode);
+    const current = inState.find(r => r.township_code_mm === townshipCode) || inState[0];
+    const q = query.trim();
+    const filtered = inState
+      .filter(r => !q || r.township_code_mm.includes(q) || r.township_mm.includes(q))
+      .slice(0, 120)
+      .map(r => ({
+        code: r.township_code_mm,
+        name: r.township_mm,
+        mark: r.township_code_mm === townshipCode ? 'selected' : '',
+        onPick: () => this.setState({ townshipCode: r.township_code_mm, open: false, query: '' })
+      }));
+
+    const digits = number.replace(/\D/g, '').slice(0, 6);
+    const valid = digits.length === 6 && !!current;
+
+    const types = TYPES.map((t, i) => ({
+      mm: t.mm,
+      style: 'flex:1;display:flex;align-items:center;justify-content:center;border-radius:7px;cursor:pointer;' +
+        (i === typeIndex
+          ? 'background:#fff;color:' + accent + ';box-shadow:0 1px 2px rgba(26,28,35,.12);border:1px solid #DFD6FB'
+          : 'color:#6B7280;border:1px solid transparent'),
+      onPick: () => this.setState({ typeIndex: i })
+    }));
+
+    const stateEn = EN_STATES[stateCode] || '';
+
+    return {
+      states,
+      stateCode,
+      stateNameMm: current ? current.state_mm + (showEnglish ? ' · ' + stateEn : '') : '',
+      rowCountLabel: rows.length ? rows.length + ' TOWNSHIP CODES' : 'LOADING TABLE',
+      townshipCountLabel: inState.length ? inState.length + ' in this state' : '',
+      townshipCode: current ? current.township_code_mm : '—',
+      townshipName: current ? current.township_mm : 'Select a township code',
+      open,
+      query,
+      filtered,
+      empty: open && rows.length > 0 && filtered.length === 0,
+      types,
+      typeLabel: TYPES[typeIndex].en,
+      number: digits,
+      digitCount: digits.length + '/6',
+      numberStyle: 'width:100%;height:44px;box-sizing:border-box;padding:0 12px;border-radius:10px;background:#fff;outline:none;font-size:14px;letter-spacing:.06em;color:#1A1C23;border:1px solid ' + (digits.length === 0 || valid ? '#D7DAE4' : '#E0A6A0'),
+      numberHint: digits.length === 0 || valid ? 'Six digits, as printed' : 'Needs six digits',
+      numberHintStyle: 'font-size:11px;color:' + (digits.length === 0 || valid ? '#8A90A2' : '#B23A2C'),
+      nrcMm: (current ? stateCode + '/' + current.township_code_mm : stateCode + '/—') + '(' + TYPES[typeIndex].mm + ')' + toMm(digits),
+      nrcLatin: (current ? toLatin(stateCode) + '/' + current.township_code_mm : '—') + '(' + TYPES[typeIndex].mm + ')' + digits,
+      statusDot: valid ? '#2F6B4F' : '#C9A24D',
+      statusText: valid ? 'Ready for KYC review' : 'Incomplete',
+      onStateChange: (e) => this.pickState(e.target.value),
+      onToggleOpen: () => this.setState(s => ({ open: !s.open, query: '' })),
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      onNumber: (e) => this.setState({ number: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

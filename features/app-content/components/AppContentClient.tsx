@@ -76,6 +76,7 @@ export function AppContentClient(props: AppContentClientProps) {
   const [termsEditLanguage, setTermsEditLanguage] = useState<NewsLanguage>("English")
   const [buyingEditLanguage, setBuyingEditLanguage] = useState<NewsLanguage>("English")
   const [sellingEditLanguage, setSellingEditLanguage] = useState<NewsLanguage>("English")
+  const [privacyEditLanguage, setPrivacyEditLanguage] = useState<NewsLanguage>("English")
 
   const dirty = useMemo(
     () => ({
@@ -159,6 +160,22 @@ export function AppContentClient(props: AppContentClientProps) {
     else setPrivacyPolicy(next)
   }
 
+  const legalEditLanguage: NewsLanguage =
+    legalDoc === "terms"
+      ? termsEditLanguage
+      : legalDoc === "buying"
+        ? buyingEditLanguage
+        : legalDoc === "selling"
+          ? sellingEditLanguage
+          : privacyEditLanguage
+
+  function setLegalEditLanguage(next: NewsLanguage) {
+    if (legalDoc === "terms") setTermsEditLanguage(next)
+    else if (legalDoc === "buying") setBuyingEditLanguage(next)
+    else if (legalDoc === "selling") setSellingEditLanguage(next)
+    else setPrivacyEditLanguage(next)
+  }
+
   function applySavedMultilang(
     next: MultilangBlockNoteContent,
     setValue: (v: MultilangBlockNoteContent) => void,
@@ -170,7 +187,7 @@ export function AppContentClient(props: AppContentClientProps) {
     setValue(next)
     setSaved(next)
     toast.success(
-      translated && legalEditLanguage === "English"
+      translated && editLanguage === "English"
         ? `${label} saved · translated to Myanmar, Thai, Korean`
         : `${label} saved`,
     )
@@ -181,6 +198,7 @@ export function AppContentClient(props: AppContentClientProps) {
     setSaving(true)
 
     const translate = legalEditLanguage === "English" ? true : undefined
+
     const payload =
       tab === "about"
         ? { aboutUs }
@@ -218,6 +236,7 @@ export function AppContentClient(props: AppContentClientProps) {
         setTermsConditions,
         setSavedTermsConditions,
         "Terms & Conditions",
+        termsEditLanguage,
         Boolean(result.termsConditions),
       )
     } else if (legalDoc === "buying") {
@@ -226,6 +245,7 @@ export function AppContentClient(props: AppContentClientProps) {
         setBuyingGuide,
         setSavedBuyingGuide,
         "Buying Guide",
+        buyingEditLanguage,
         Boolean(result.buyingGuide),
       )
     } else if (legalDoc === "selling") {
@@ -234,6 +254,7 @@ export function AppContentClient(props: AppContentClientProps) {
         setSellingGuide,
         setSavedSellingGuide,
         "Selling Guide",
+        sellingEditLanguage,
         Boolean(result.sellingGuide),
       )
     } else {
@@ -242,6 +263,7 @@ export function AppContentClient(props: AppContentClientProps) {
         setPrivacyPolicy,
         setSavedPrivacyPolicy,
         "Privacy Policy",
+        privacyEditLanguage,
         Boolean(result.privacyPolicy),
       )
     }
