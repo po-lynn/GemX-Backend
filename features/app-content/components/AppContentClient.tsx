@@ -73,8 +73,10 @@ export function AppContentClient(props: AppContentClientProps) {
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [legalEditLanguage, setLegalEditLanguage] = useState<ContentLanguage>("English")
-  const [aboutEditLanguage, setAboutEditLanguage] = useState<ContentLanguage>("English")
+  const [aboutEditLanguage, setAboutEditLanguage] = useState<NewsLanguage>("English")
+  const [termsEditLanguage, setTermsEditLanguage] = useState<NewsLanguage>("English")
+  const [buyingEditLanguage, setBuyingEditLanguage] = useState<NewsLanguage>("English")
+  const [sellingEditLanguage, setSellingEditLanguage] = useState<NewsLanguage>("English")
   const [privacyEditLanguage, setPrivacyEditLanguage] = useState<NewsLanguage>("English")
 
 
@@ -142,7 +144,6 @@ export function AppContentClient(props: AppContentClientProps) {
 
   function switchLegalDoc(next: LegalDocId) {
     setLegalDoc(next)
-    setLegalEditLanguage("English")
     syncUrl("legal", next)
   }
 
