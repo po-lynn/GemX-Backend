@@ -16,6 +16,7 @@ import {
   Eye,
   FlaskConical,
   Globe,
+  Shapes,
   FileText,
   ClipboardList,
   MessageSquare,
@@ -75,6 +76,7 @@ const navGroups: (NavItem | NavGroup)[] = [
           { href: "/admin/categories", label: "Category",    icon: FolderTree,   color: "#f59e0b", adminOnly: true },
           { href: "/admin/laboratory", label: "Laboratory",  icon: FlaskConical, color: "#22c55e", featureKey: FEATURE_KEYS.LABORATORY },
           { href: "/admin/origin",     label: "Origin",      icon: Globe,        color: "#14b8a6", featureKey: FEATURE_KEYS.ORIGIN },
+          { href: "/admin/product-shape", label: "Product Shape", icon: Shapes, color: "#0ea5e9", featureKey: FEATURE_KEYS.PRODUCT_SHAPE },
           {
             href: "/admin/settings/rating-tags",
             label: "Seller Rating Tags",

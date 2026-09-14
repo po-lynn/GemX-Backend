@@ -141,6 +141,11 @@ const quickActions: QuickAction[] = [
     bg: "#e7f0ff", stroke: "#3b7df6", featureKey: FEATURE_KEYS.ORIGIN,
   },
   {
+    href: "/admin/product-shape", label: "Product Shape",
+    iconPath: "M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z M3 14h7v7H3z M17.5 14a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
+    bg: "#e0f2fe", stroke: "#0284c7", featureKey: FEATURE_KEYS.PRODUCT_SHAPE,
+  },
+  {
     href: "/admin/credit", label: "Credit",
     iconPath: "M8 8a6 6 0 1 0 0 12A6 6 0 0 0 8 8z M18.09 10.37A6 6 0 1 1 10.34 18 M7 6h1v4 m16.71 13.88.7.71-2.82 2.82",
     bg: "#efeafe", stroke: "#6d5ce7", featureKey: FEATURE_KEYS.CREDIT_PACKAGES,

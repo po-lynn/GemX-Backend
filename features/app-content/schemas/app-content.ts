@@ -28,15 +28,33 @@ export const faqItemSchema = z.object({
   sortOrder: z.number().int().min(0),
 })
 
+/**
+ * About Us multilang plain-text fields (EN/MY/TH/KO).
+ * Save while Language = English auto-translates the four story/company fields.
+ * Non-translated: termsSlug, privacySlug, appVersion, *UpdatedAt.
+ */
 export const aboutUsContentSchema = z.object({
-  storyHeading: z.string().min(1, "Heading is required").max(100),
-  storyBody: z.string().max(5000),
+  storyHeadingEn: z.string().min(1, "Heading is required").max(100),
+  storyHeadingMy: z.string().max(100),
+  storyHeadingTh: z.string().max(100),
+  storyHeadingKo: z.string().max(100),
+  storyBodyEn: z.string().max(5000),
+  storyBodyMy: z.string().max(5000),
+  storyBodyTh: z.string().max(5000),
+  storyBodyKo: z.string().max(5000),
+  companyNameEn: z.string().max(200),
+  companyNameMy: z.string().max(200),
+  companyNameTh: z.string().max(200),
+  companyNameKo: z.string().max(200),
+  contactAddressEn: z.string().max(500),
+  contactAddressMy: z.string().max(500),
+  contactAddressTh: z.string().max(500),
+  contactAddressKo: z.string().max(500),
+  sourceLanguage: z.enum(["English", "Myanmar", "Thai", "Korean"]).default("English"),
   termsSlug: z.string().max(100),
   termsUpdatedAt: z.string().nullable(),
   privacySlug: z.string().max(100),
   privacyUpdatedAt: z.string().nullable(),
-  companyName: z.string().max(200),
-  contactAddress: z.string().max(500),
   appVersion: z.string().max(30),
 })
 

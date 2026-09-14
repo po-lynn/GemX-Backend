@@ -44,7 +44,7 @@ describe("AdminSidebar Configuration sub-menu", () => {
     expect(screen.queryByRole("link", { name: "Category" })).not.toBeInTheDocument()
   })
 
-  // Validates the expand/collapse toggle: expanding reveals all five
+  // Validates the expand/collapse toggle: expanding reveals all six
   // sub-links with correct hrefs, collapsing hides them again.
   it("expands to show all Configuration links, then collapses", () => {
     render(<AdminSidebar role="admin" permissions={{}} />)
@@ -54,6 +54,7 @@ describe("AdminSidebar Configuration sub-menu", () => {
     expect(screen.getByRole("link", { name: "Category" })).toHaveAttribute("href", "/admin/categories")
     expect(screen.getByRole("link", { name: "Laboratory" })).toHaveAttribute("href", "/admin/laboratory")
     expect(screen.getByRole("link", { name: "Origin" })).toHaveAttribute("href", "/admin/origin")
+    expect(screen.getByRole("link", { name: "Product Shape" })).toHaveAttribute("href", "/admin/product-shape")
     expect(screen.getByRole("link", { name: "Seller Rating Tags" })).toHaveAttribute("href", "/admin/settings/rating-tags")
     expect(screen.getByRole("link", { name: "Precaution Tags" })).toHaveAttribute("href", "/admin/settings/precaution-tags")
 

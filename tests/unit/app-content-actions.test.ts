@@ -29,7 +29,14 @@ describe("saveAppContentAction", () => {
   it("saves the provided section, revalidates cache, and returns success", async () => {
     vi.mocked(saveAppContentDraft).mockResolvedValue(undefined)
     const result = await saveAppContentAction({ aboutUs: DEFAULT_ABOUT_US_CONTENT })
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({
+      success: true,
+      aboutUs: DEFAULT_ABOUT_US_CONTENT,
+      termsConditions: undefined,
+      buyingGuide: undefined,
+      sellingGuide: undefined,
+      privacyPolicy: undefined,
+    })
     expect(saveAppContentDraft).toHaveBeenCalledWith({
       aboutUs: DEFAULT_ABOUT_US_CONTENT,
       followUs: undefined,
@@ -51,7 +58,7 @@ describe("saveAppContentAction", () => {
 
   it("returns an error for invalid content", async () => {
     const result = await saveAppContentAction({
-      aboutUs: { ...DEFAULT_ABOUT_US_CONTENT, storyHeading: "" },
+      aboutUs: { ...DEFAULT_ABOUT_US_CONTENT, storyHeadingEn: "" },
     })
     expect(result).toHaveProperty("error")
     expect(saveAppContentDraft).not.toHaveBeenCalled()

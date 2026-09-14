@@ -15,7 +15,7 @@
 - **News auto-translate (Google)** – On create, detects title language and translates **title + content** into the other three of **English / Myanmar / Thai / Korean** via **Google Cloud Translation API**. Stored on **`news`**: `language`, `titleEn/My/Th/Ko`, `contentEn/My/Th/Ko`. **GET `/api/news`** and **GET `/api/news/:id`** accept optional **`lang`**. See **6** and [docs/api/news.md](./api/news.md).
 - **Premium dealer auto-renew toggle** – Added **PATCH `/api/mobile/premium-dealers/auto-renew`** (auth): toggles `autoRenew` on the current user's active premium dealer subscription. Body: `autoRenew`. Previously the "Turn off"/"Turn on" auto-renew pill on the "Become Premium" screen (already-premium state) was client-side only and never persisted — the daily renewal cron (`POST /api/cron/renew-premium-dealers`) would still renew using the value set at activation time regardless of what the pill showed. This endpoint makes the toggle actually persist. Returns **400** `{ "error": "No active premium dealer subscription" }` if the user has no active, non-expired subscription. See **5.4.3d**.
 - **Social login (mobile)** – **POST `/api/mobile/google-login`** has been replaced by **POST `/api/mobile/social-login`** (no auth — issues a session): mobile app sends `provider` + the ID token it already obtained from the native Google Sign-In SDK; backend verifies it via better-auth (`socialProviders.google` in `lib/auth.ts`) and returns the same `{ redirect, token, user }` shape as `/api/mobile/login`. Generic by `provider`, but only `"google"` is wired/verified today (unsupported providers return **400**). First-time sign-ins are credited the registration bonus and sent a welcome push; returning users get a login push. Same rate limit as login (10 / 15 min). **New:** first-time sign-ins can also submit the Screen-1 profile fields (`name`, `country`, `state`, `city`, `address`, `gender`, `dateOfBirth`, `nrc`, KYC URLs) in the same call — written only on signup, never on a returning login; `nrc` is validated as a Myanmar NRC only when `country` is Myanmar or unset, otherwise stored as a plain passport/national ID. See **3.3**.
-- **App Content admin (About Us / Follow Us / Help & Support / Terms & Conditions / Buying Guide / Selling Guide)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, **GET `/api/mobile/help-support`**, **GET `/api/mobile/terms-conditions`**, **GET `/api/mobile/buying-guide`**, and **GET `/api/mobile/selling-guide`** (no auth): serve admin-managed content for the mobile app. Content is edited in **Admin → Settings → App Content**; **Save** goes live immediately. See **8**.
+- **App Content admin (About Us / Follow Us / Help & Support / Terms & Conditions / Buying Guide / Selling Guide)** – Added public **GET `/api/mobile/about-us`**, **GET `/api/mobile/follow-us`**, **GET `/api/mobile/help-support`**, **GET `/api/mobile/terms-conditions`**, **GET `/api/mobile/buying-guide`**, and **GET `/api/mobile/selling-guide`** (no auth): serve admin-managed content for the mobile app. About Us and Legal/Guides support optional **`?lang=`** (EN/MY/TH/KO). Content is edited in **Admin → Settings → App Content**; **Save** goes live immediately. See **8**.
 - **Removed managed colours — `GET /api/colors` + product `colorId`** – The colour lookup table and endpoint have been removed. **`GET /api/colors`** no longer exists. **POST `/api/products`** and **PATCH `/api/products/:id`** no longer accept **`colorId`**; product colour is a plain free-text **`color`** field only (same pattern jewellery gemstones already used). Product list and detail responses no longer include **`colorId`**. See **5.5** and **5.6**.
 - **News & articles — mobile redesign fields** – **GET `/api/news`** and **GET `/api/articles`** now accept **`search`** (title match), **`category`** (`general` | `market` | `gemology` | `guides` | `product`), and **`featured`** (`true`/`false`, for the hero card). Each item includes **`author`** (news; default `"Gem X Newsroom"`), **`category`**, **`coverImage`** (URL or `null`), **`isFeatured`**, and computed **`readTime`** (minutes at 200 wpm, min 1). List responses add **`categoryCounts`** (published counts per category + `all`) for the filter chips, and are now ordered by publish date (newest first). Detail routes (**GET `/api/news/:id`**, **GET `/api/articles/:id`**) include **`readTime`**. See **6** and **7**.
 - **KYC document upload + mobile profile KYC fields** – **POST `/api/upload/kyc-document`** (auth): upload one KYC document (NRC front/back, selfie, or business license); returns `{ "url": "..." }`. Allowed types: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`; max 10 MB. **PATCH `/api/mobile/profile`** (auth): update profile/KYC fields — `name`, `nrc`, `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC is validated against Myanmar format `StateNo/TownshipCode(Type)Serial` (Latin transliteration e.g. `12/ABC(N)123456`, or the Myanmar script equivalent) only when `country` is Myanmar or unset — any other country stores `nrc` as a plain passport/national ID with no format check; returns **400** on an invalid Myanmar NRC. Returns **409** `{ "error": "This NRC number is already registered to another account." }` if another user already has that NRC. **POST `/api/mobile/register`** also accepts `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl` and enforces the same NRC validation and uniqueness. See **4.6** and **5.4c.2**.
@@ -72,6 +72,7 @@
 - **GET /api/products/:id** – Response includes **`createdAt`** / **`updatedAt`**, a `seller` object (id, name, image, phone, username, displayUsername, `rating: { averageScore, totalRatings }`), and `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. No numeric `featured` field; use `isFeatured` (boolean). Includes `requestStatus` for collector pieces (`null` when none / unauthenticated, or `{ id, status, createdAt }` when available). **Collector pieces**: owner (seller) gets full data when authenticated; non-owner gets limited shape (`imageUrls`, `maskedPrice`, `currency`, `status`, `requestStatus`) unless the show-request is approved — see **5.2**.
 - **GET /api/profile** – Returns current user profile and a list of **active** products only; optional query params (page, limit, search, filters) apply to that list.
 - **GET /api/origins** – List origins for product create/edit (id, name, country).
+- **GET /api/product-shapes** – List product shapes for product create/edit (id, name). Admin CRUD under Configuration → Product Shape.
 - **GET /api/laboratories** – List laboratories for product create/edit (id, name, address, phone, precaution).
 - **POST /api/products** and **PATCH /api/products/:id** — New `pieceCount` field (integer, optional) at the **product level** for jewellery: total number of stones/pieces in the piece (e.g. `13` for a ring with 1 ruby + 12 diamonds). Distinct from `jewelleryGemstones[].pieceCount` (per stone-type count). Returned in GET `/api/products/:id` response.
 - **POST /api/products** and **PATCH /api/products/:id** — `jewelleryGemstones` fix: only `weightCarat` is required per item; `categoryId` (stone type UUID), `color`, `origin`, and all other fields are optional. Previously `color` and `origin` were incorrectly required, causing items that omitted them to be silently dropped and the array to come back empty. Items without a `categoryId` are accepted in the request but not stored (skipped). See **5.5**.
@@ -134,6 +135,7 @@
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `type` (optional)                                                                                                                                    |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for saving as `category.image` (admin only). See **4.1a**.                                                     |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
+| GET    | `/api/product-shapes`  | No   | List product shapes (for product create/edit). See **4.2a**.                                                                                                                                             |
 | GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See **5.4b**.                                                                                                                                       |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit).                                                                                                                                                             |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for `imageUrls` / `videoUrls`. See 4.4.                                                                                                        |
@@ -157,7 +159,7 @@
 | GET    | `/api/articles/:id`    | No   | Get single article by ID (published only). Includes `readTime`. Optional `lang`                                                                                                                          |
 | GET    | `/api/news-articles`   | No   | **Preferred** unified News & Articles list from **`articles`** table. Same query as `/api/articles` including **`type`** (`news` \| `article`). See **7.3**.                                              |
 | GET    | `/api/news-articles/:id` | No | Get one published News & Articles item by ID (same as `/api/articles/:id`). Optional `lang`                                                                                                              |
-| GET    | `/api/mobile/about-us` | No   | Published About Us content: story, terms/privacy slug + updated date, company name, contact address, app version. See **8.1**.                                                                          |
+| GET    | `/api/mobile/about-us` | No   | Published About Us content (multilang story/company fields; optional `?lang=`). See **8.1**.                                                                          |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms (`iconKey`/`customIconUrl`, `label`, `value`, `url`), active only, sorted by `sortOrder`. See **8.2**.                                                                     |
 | GET    | `/api/mobile/help-support` | No   | Published Help & Support content: `faqs` (active, sorted), `contact`, `hours`, `reportForm` config. See **8.3**.                                                                                     |
 | GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (`contentEn`/`contentMy`/`contentTh`/`contentKo`; optional `?lang=`). See **8.4**.                                                                  |
@@ -411,6 +413,32 @@ Use the returned `url` as the category’s `image` (saved via admin UI).
 
 
 **Use in app:** Call when building the product form (create/edit). Use `name` for the product `origin` field (loose stones and jewellery gemstones) or for filter dropdowns.
+
+---
+
+### 4.2a List product shapes (for product create/edit)
+
+**GET** `/api/product-shapes`
+
+**Auth:** Not required.
+
+**Success (200):** Array of product shapes (ordered by name).
+
+```json
+[
+  { "id": "uuid", "name": "Oval", "createdAt": "2026-09-14T00:00:00.000Z", "updatedAt": "2026-09-14T00:00:00.000Z" },
+  { "id": "uuid", "name": "Round", "createdAt": "2026-09-14T00:00:00.000Z", "updatedAt": "2026-09-14T00:00:00.000Z" }
+]
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Product shape UUID |
+| `name` | string | Shape label (e.g. Oval) |
+| `createdAt` | string | ISO timestamp |
+| `updatedAt` | string | ISO timestamp |
+
+**Use in app:** Call when building the product form shape dropdown or filters. Prefer `name` for the product `shape` field. Full reference: `docs/api/product-shapes.md`.
 
 ---
 
@@ -3718,7 +3746,7 @@ Content for the mobile app's About, Follow Us, Help & Support, and Terms & Condi
 
 **Auth:** Not required.
 
-Returns the About Us story heading/body, `termsSlug`/`termsUpdatedAt`, `privacySlug`/`privacyUpdatedAt`, `companyName`, `contactAddress`, and `appVersion`. If the section has never been published, fields fall back to their configured defaults (`storyHeading` defaults to `"Our Story"`; other string fields default to empty) and the `*UpdatedAt` fields are `null` — still returns **200**. See `docs/api/mobile-about-us.md`.
+Optional query **`lang`** (`English`/`en`, `Myanmar`/`my`, `Thai`/`th`, `Korean`/`ko`) remaps `storyHeading`, `storyBody`, `companyName`, and `contactAddress` to that locale (falls back to English). Response also includes all `*En`/`*My`/`*Th`/`*Ko` columns, `sourceLanguage`, `termsSlug`/`termsUpdatedAt`, `privacySlug`/`privacyUpdatedAt`, and `appVersion`. If never published, English heading defaults to `"Our Story"`; other strings empty; `*UpdatedAt` null — still **200**. See `docs/api/mobile-about-us.md`.
 
 ---
 
@@ -3918,6 +3946,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `?type` optional                                        |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (admin only). Returns `url` for `category.image`. See 4.1a.                      |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |
+| GET    | `/api/product-shapes`  | No   | List product shapes (for product create/edit). See 4.2a.                                                   |
 | GET    | `/api/rating-tags`     | No   | List active seller-rating preset tags (`ratingTags`). See 5.4b.                                             |
 | GET    | `/api/laboratories`    | No   | List laboratories (for product create/edit)                                                                 |
 | POST   | `/api/upload/product-media` | Yes  | Upload product images or videos (multipart); returns URLs for imageUrls/videoUrls. See 4.4.                 |
@@ -3939,7 +3968,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | GET    | `/api/articles/:id`    | No   | Get one article (published only)                                                            |
 | GET    | `/api/news-articles`   | No   | Unified News & Articles list (`articles` table; optional `?type=`). See **7.3**.            |
 | GET    | `/api/news-articles/:id` | No | Get one News & Articles item (published only). See **7.3**.                                 |
-| GET    | `/api/mobile/about-us` | No   | Published About Us content (story, terms/privacy metadata, company info, app version). See 8.1.             |
+| GET    | `/api/mobile/about-us` | No   | Published About Us content (multilang; optional `?lang=`). See 8.1.             |
 | GET    | `/api/mobile/follow-us` | No   | Published Follow Us platforms, active only, sorted by `sortOrder`. See 8.2.                                 |
 | GET    | `/api/mobile/help-support` | No | Published Help & Support content (`faqs`, `contact`, `hours`, `reportForm`). See 8.3.                    |
 | GET    | `/api/mobile/terms-conditions` | No | Published Terms & Conditions BlockNote JSON (optional `?lang=`). See 8.4.                              |

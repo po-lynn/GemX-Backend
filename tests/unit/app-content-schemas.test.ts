@@ -29,14 +29,27 @@ const FAQ = {
 }
 
 const ABOUT_US = {
-  storyHeading: "Our Story",
-  storyBody: "GemX began in 2019.",
+  storyHeadingEn: "Our Story",
+  storyHeadingMy: "",
+  storyHeadingTh: "",
+  storyHeadingKo: "",
+  storyBodyEn: "GemX began in 2019.",
+  storyBodyMy: "",
+  storyBodyTh: "",
+  storyBodyKo: "",
+  companyNameEn: "GemX Technologies Ltd.",
+  companyNameMy: "",
+  companyNameTh: "",
+  companyNameKo: "",
+  contactAddressEn: "Yangon, Myanmar",
+  contactAddressMy: "",
+  contactAddressTh: "",
+  contactAddressKo: "",
+  sourceLanguage: "English" as const,
   termsSlug: "terms",
   termsUpdatedAt: null,
   privacySlug: "privacy",
   privacyUpdatedAt: null,
-  companyName: "GemX Technologies Ltd.",
-  contactAddress: "Yangon, Myanmar",
   appVersion: "v2.4.1",
 }
 
@@ -94,13 +107,20 @@ describe("aboutUsContentSchema", () => {
     expect(aboutUsContentSchema.safeParse(ABOUT_US).success).toBe(true)
   })
 
-  it("accepts an empty storyBody (no content yet is valid)", () => {
-    expect(aboutUsContentSchema.safeParse({ ...ABOUT_US, storyBody: "" }).success).toBe(true)
+  it("accepts an empty storyBodyEn (no content yet is valid)", () => {
+    expect(aboutUsContentSchema.safeParse({ ...ABOUT_US, storyBodyEn: "" }).success).toBe(true)
   })
 
-  it("rejects a missing storyHeading", () => {
-    const { storyHeading: _drop, ...rest } = ABOUT_US
+  it("rejects a missing storyHeadingEn", () => {
+    const { storyHeadingEn: _drop, ...rest } = ABOUT_US
     expect(aboutUsContentSchema.safeParse(rest).success).toBe(false)
+  })
+
+  it("defaults sourceLanguage to English when omitted", () => {
+    const { sourceLanguage: _drop, ...rest } = ABOUT_US
+    const parsed = aboutUsContentSchema.safeParse(rest)
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data.sourceLanguage).toBe("English")
   })
 })
 
@@ -180,7 +200,7 @@ describe("saveAppContentSchema", () => {
 
   it("rejects a payload with an invalid nested section", () => {
     expect(
-      saveAppContentSchema.safeParse({ aboutUs: { ...ABOUT_US, storyHeading: "" } }).success
+      saveAppContentSchema.safeParse({ aboutUs: { ...ABOUT_US, storyHeadingEn: "" } }).success
     ).toBe(false)
   })
 })
