@@ -73,10 +73,10 @@ export function AppContentClient(props: AppContentClientProps) {
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [termsEditLanguage, setTermsEditLanguage] = useState<NewsLanguage>("English")
-  const [buyingEditLanguage, setBuyingEditLanguage] = useState<NewsLanguage>("English")
-  const [sellingEditLanguage, setSellingEditLanguage] = useState<NewsLanguage>("English")
+  const [legalEditLanguage, setLegalEditLanguage] = useState<ContentLanguage>("English")
+  const [aboutEditLanguage, setAboutEditLanguage] = useState<ContentLanguage>("English")
   const [privacyEditLanguage, setPrivacyEditLanguage] = useState<NewsLanguage>("English")
+
 
   const dirty = useMemo(
     () => ({
@@ -201,7 +201,7 @@ export function AppContentClient(props: AppContentClientProps) {
 
     const payload =
       tab === "about"
-        ? { aboutUs }
+        ? { aboutUs, translateFromEnglish: translate }
         : tab === "follow"
           ? { followUs }
           : tab === "help"
@@ -222,8 +222,14 @@ export function AppContentClient(props: AppContentClientProps) {
     }
 
     if (tab === "about") {
-      setSavedAboutUs(aboutUs)
-      toast.success("About us saved")
+      const next = result.aboutUs ?? aboutUs
+      setAboutUs(next)
+      setSavedAboutUs(next)
+      toast.success(
+        translate && aboutEditLanguage === "English"
+          ? "About us saved · translated to Myanmar, Thai, Korean"
+          : "About us saved",
+      )
     } else if (tab === "follow") {
       setSavedFollowUs(followUs)
       toast.success("Follow us saved")
@@ -315,7 +321,14 @@ export function AppContentClient(props: AppContentClientProps) {
         </button>
       </div>
 
-      {tab === "about" && <AboutUsTab value={aboutUs} onChange={setAboutUs} />}
+      {tab === "about" && (
+        <AboutUsTab
+          value={aboutUs}
+          onChange={setAboutUs}
+          editLanguage={aboutEditLanguage}
+          onEditLanguageChange={setAboutEditLanguage}
+        />
+      )}
       {tab === "follow" && <FollowUsTab value={followUs} onChange={setFollowUs} />}
       {tab === "help" && <HelpSupportTab value={helpSupport} onChange={setHelpSupport} />}
       {tab === "legal" && (

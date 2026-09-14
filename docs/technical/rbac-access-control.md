@@ -105,6 +105,7 @@ Allows admins unconditionally; allows internal users only when the feature is en
 | `news` | `/admin/news`, `/admin/news/new`, `/admin/news/[id]/edit` |
 | `articles` | `/admin/articles`, `/admin/articles/new`, `/admin/articles/[id]/edit` |
 | `origin` | `/admin/origin`, `/admin/origin/new`, `/admin/origin/[id]/edit` |
+| `product_shape` | `/admin/product-shape`, `/admin/product-shape/new`, `/admin/product-shape/[id]/edit` |
 | `laboratory` | `/admin/laboratory`, `/admin/laboratory/new`, `/admin/laboratory/[id]/edit` |
 | `messages` | `/admin/messages`, `/admin/messages/new`, `/admin/messages/[id]/edit` |
 | `chat_dashboard` | `/admin/chat-dashboard` |

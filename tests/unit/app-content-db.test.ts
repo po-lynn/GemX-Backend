@@ -66,7 +66,7 @@ describe("getAppContentSections", () => {
   })
 
   it("maps an existing row onto its section", async () => {
-    const aboutUsContent = { ...DEFAULT_ABOUT_US_CONTENT, companyName: "GemX Ltd." }
+    const aboutUsContent = { ...DEFAULT_ABOUT_US_CONTENT, companyNameEn: "GemX Ltd." }
     vi.mocked(db.select).mockReturnValueOnce(
       selectChain([
         {
@@ -86,6 +86,38 @@ describe("getAppContentSections", () => {
     expect(result.aboutUs.hasUnpublishedChanges).toBe(true)
     expect(result.aboutUs.updatedByName).toBe("Elena M.")
     expect(result.followUs.draftContent).toEqual(DEFAULT_FOLLOW_US_CONTENT)
+  })
+
+  // Legacy monolingual jsonb is normalized into *En fields when loaded.
+  it("normalizes legacy about-us fields into multilang En keys", async () => {
+    vi.mocked(db.select).mockReturnValueOnce(
+      selectChain([
+        {
+          section: "about_us",
+          draftContent: {
+            storyHeading: "Legacy",
+            storyBody: "Body",
+            companyName: "Co",
+            contactAddress: "Addr",
+            termsSlug: "",
+            termsUpdatedAt: null,
+            privacySlug: "",
+            privacyUpdatedAt: null,
+            appVersion: "",
+          },
+          publishedContent: null,
+          hasUnpublishedChanges: false,
+          updatedAt: null,
+          updatedByName: null,
+          publishedAt: null,
+          publishedByName: null,
+        },
+      ]) as never
+    )
+    const result = await getAppContentSections()
+    expect(result.aboutUs.draftContent.storyHeadingEn).toBe("Legacy")
+    expect(result.aboutUs.draftContent.companyNameEn).toBe("Co")
+    expect(result.aboutUs.draftContent.storyHeadingMy).toBe("")
   })
 })
 
@@ -162,7 +194,7 @@ describe("getPublishedAboutUs", () => {
   })
 
   it("returns the published snapshot when present", async () => {
-    const content = { ...DEFAULT_ABOUT_US_CONTENT, companyName: "GemX Ltd." }
+    const content = { ...DEFAULT_ABOUT_US_CONTENT, companyNameEn: "GemX Ltd." }
     vi.mocked(db.select).mockReturnValueOnce(selectChain([{ publishedContent: content }]) as never)
     await expect(getPublishedAboutUs()).resolves.toEqual(content)
   })

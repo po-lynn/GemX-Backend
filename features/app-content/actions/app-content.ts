@@ -6,6 +6,7 @@ import { saveAppContentSchema, type SaveAppContentInput } from "@/features/app-c
 import { saveAppContentDraft, publishAppContentSections } from "@/features/app-content/db/app-content"
 import { revalidateAppContentCache } from "@/features/app-content/db/cache/app-content"
 import { localizeMultilangBlockNoteIfEnglish } from "@/features/app-content/lib/localize-terms"
+import { localizeAboutUsIfEnglish } from "@/features/app-content/lib/localize-about-us"
 import { zodErrorMessage } from "@/lib/form-data"
 
 export async function saveAppContentAction(input: SaveAppContentInput) {
@@ -33,11 +34,15 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
       parsed.data.translateFromEnglish === true ||
       parsed.data.translateTermsFromEnglish === true
 
+    let aboutUs = parsed.data.aboutUs
     let termsConditions = parsed.data.termsConditions
     let buyingGuide = parsed.data.buyingGuide
     let sellingGuide = parsed.data.sellingGuide
     let privacyPolicy = parsed.data.privacyPolicy
 
+    if (aboutUs) {
+      aboutUs = await localizeAboutUsIfEnglish(aboutUs, translateFromEnglish)
+    }
     if (termsConditions) {
       termsConditions = await localizeMultilangBlockNoteIfEnglish(
         termsConditions,
@@ -68,7 +73,7 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
     }
 
     await saveAppContentDraft({
-      aboutUs: parsed.data.aboutUs,
+      aboutUs,
       followUs: parsed.data.followUs,
       helpSupport: parsed.data.helpSupport,
       termsConditions,
@@ -80,6 +85,7 @@ export async function saveAppContentAction(input: SaveAppContentInput) {
     revalidateAppContentCache()
     return {
       success: true as const,
+      aboutUs: aboutUs ?? undefined,
       termsConditions: termsConditions ?? undefined,
       buyingGuide: buyingGuide ?? undefined,
       sellingGuide: sellingGuide ?? undefined,

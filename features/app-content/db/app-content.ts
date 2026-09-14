@@ -10,6 +10,7 @@ import type {
   SellingGuideContent,
   TermsConditionsContent,
 } from "@/features/app-content/schemas/app-content"
+import { normalizeAboutUsContent } from "@/features/app-content/lib/localize-about-us"
 
 export type AppContentSectionName =
   | "about_us"
@@ -41,14 +42,27 @@ export type AppContentSections = {
 }
 
 export const DEFAULT_ABOUT_US_CONTENT: AboutUsContent = {
-  storyHeading: "Our Story",
-  storyBody: "",
+  storyHeadingEn: "Our Story",
+  storyHeadingMy: "",
+  storyHeadingTh: "",
+  storyHeadingKo: "",
+  storyBodyEn: "",
+  storyBodyMy: "",
+  storyBodyTh: "",
+  storyBodyKo: "",
+  companyNameEn: "",
+  companyNameMy: "",
+  companyNameTh: "",
+  companyNameKo: "",
+  contactAddressEn: "",
+  contactAddressMy: "",
+  contactAddressTh: "",
+  contactAddressKo: "",
+  sourceLanguage: "English",
   termsSlug: "",
   termsUpdatedAt: null,
   privacySlug: "",
   privacyUpdatedAt: null,
-  companyName: "",
-  contactAddress: "",
   appVersion: "",
 }
 
@@ -118,6 +132,22 @@ type RawSectionRow = {
   publishedByName: string | null
 }
 
+function mergeSectionContent<K extends AppContentSectionName>(
+  section: K,
+  raw: unknown,
+): SectionContentMap[K] {
+  if (section === "about_us") {
+    return normalizeAboutUsContent(
+      raw,
+      DEFAULT_ABOUT_US_CONTENT,
+    ) as SectionContentMap[K]
+  }
+  return {
+    ...SECTION_DEFAULTS[section],
+    ...(raw as object),
+  } as SectionContentMap[K]
+}
+
 function toRow<K extends AppContentSectionName>(
   section: K,
   raw: RawSectionRow | undefined
@@ -134,15 +164,9 @@ function toRow<K extends AppContentSectionName>(
     }
   }
   return {
-    draftContent: {
-      ...SECTION_DEFAULTS[section],
-      ...(raw.draftContent as object),
-    } as SectionContentMap[K],
+    draftContent: mergeSectionContent(section, raw.draftContent),
     publishedContent: raw.publishedContent
-      ? ({
-          ...SECTION_DEFAULTS[section],
-          ...(raw.publishedContent as object),
-        } as SectionContentMap[K])
+      ? mergeSectionContent(section, raw.publishedContent)
       : null,
     hasUnpublishedChanges: raw.hasUnpublishedChanges,
     updatedAt: raw.updatedAt,
@@ -251,7 +275,8 @@ async function getPublishedContent<K extends AppContentSectionName>(
     .from(appContentSection)
     .where(eq(appContentSection.section, section))
     .limit(1)
-  return (row?.publishedContent as SectionContentMap[K] | undefined) ?? SECTION_DEFAULTS[section]
+  if (!row?.publishedContent) return SECTION_DEFAULTS[section]
+  return mergeSectionContent(section, row.publishedContent)
 }
 
 export function getPublishedAboutUs(): Promise<AboutUsContent> {

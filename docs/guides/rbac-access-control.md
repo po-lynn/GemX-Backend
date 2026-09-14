@@ -177,6 +177,7 @@ The feature will be fully functional but invisible in the permissions UI — adm
 | `news` | News | `/admin/news/**` |
 | `articles` | Articles | `/admin/articles/**` |
 | `origin` | Origin | `/admin/origin/**` |
+| `product_shape` | Product Shape | `/admin/product-shape/**` |
 | `laboratory` | Laboratory | `/admin/laboratory/**` |
 | `messages` | Messages | `/admin/messages/**` |
 | `chat_dashboard` | Chat Dashboard | `/admin/chat-dashboard` |
