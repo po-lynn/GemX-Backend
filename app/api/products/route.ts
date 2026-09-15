@@ -42,7 +42,7 @@ function maskCollectorPiece(p: { id: string; price: string; currency: string; st
     sku: null, title: null, description: null, identification: null,
     price: null, maskedPrice: maskPrice(p.price), currency: p.currency,
     productType: null, categoryId: null, categoryName: null,
-    stoneCut: null, metal: null,
+    stoneCut: null, metal: null, shape: null, origin: null,
     status: p.status, moderationStatus: null,
     isFeatured: false, featured_expires_at: null, isCollectorPiece: true,
     isPrivilegeAssist: false, isVerified: false,

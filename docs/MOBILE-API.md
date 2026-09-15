@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Product list — `origin` field** – **GET `/api/products`**, **GET `/api/products/mine`**, and profile product lists (**GET `/api/profile`**, **GET `/api/profile/:id`**) each product item now includes **`origin`** (string or `null`; free-text from **`product.origin`**, same values as the **GET `/api/origins`** name list). Already present on **GET `/api/products/:id`**. Masked collector-piece list items return **`origin: null`**. See **5.1**, **5.2**, **5.3**.
 - **News & Articles unified API** – **GET `/api/news-articles`** and **GET `/api/news-articles/:id`** list/read the admin **News & Articles** content from the **`articles`** table (same data as `/api/articles`). Query includes optional **`type`** (`news` \| `article`), plus `page`, `limit`, `status`, `search`, `category`, `featured`, `lang`. Prefer this path for the combined mobile feed. See **7.3** and [docs/api/news-articles.md](./api/news-articles.md).
 - **Product search + `productType` filter** – **GET `/api/products`** supports **`search`** together with **`productType`** (`loose_stone` \| `jewellery`) and other list filters. Search matches title, description, and seller; `productType` narrows results (AND). Use when the user searches from a type tab (e.g. Loose Stones only). Autocomplete (**GET `/api/products/suggestions`**) is still global (all types); pass `productType` on the list call after submit. See **5.1**, **5.1.2**, and **Search and filter** examples.
 - **Surprise Bonus (admin All Users top-up)** – Admin can credit **all active users** via a queued campaign (`surprise_bonus_batch`). Each successful grant writes a `point_transaction` with **`type: surprise_bonus`**, **`direction: credit`**, **`referenceType: surprise_bonus_campaign`**, **`referenceId`** = campaign UUID (visible on **GET `/api/mobile/points/history`** with `filter=all`). The same grant creates an in-app **`app_notification`** row and sends an **FCM push** to registered devices (title `{campaignName} 🎁`, body `You received {N} surprise bonus points!`). Push `data`: `type=surprise_bonus`, `screen=home`, `campaignId`, `points`. Requires **POST `/api/push/register`** after login. See **5.4.2b** and **9**. Guides: [admin-top-up.md](./guides/admin-top-up.md), [surprise-bonus-cron.md](./guides/surprise-bonus-cron.md), [cron-surprise-bonus-push.md](./api/cron-surprise-bonus-push.md).
@@ -143,7 +144,7 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license). Allowed: `jpeg`, `png`, `webp`, `pdf`; max 10 MB. Returns `{ "url": "..." }`. See **4.6**.                                           |
 | PATCH  | `/api/mobile/profile`       | Yes  | Update profile/KYC fields: `name`, `nrc` (Myanmar-format-validated only when `country` is Myanmar/unset, else a free-text passport/ID), `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. **`search` + `productType`** (and other filters) can be combined. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price). Cached 60s/300s. See **5.1**. |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. Each item includes **`origin`**. **`search` + `productType`** (and other filters) can be combined. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price; `origin` null). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All listing statuses by default; optional **`moderationStatus`** (`pending` \| `approved` \| `rejected`). Same other query params as list all. See **5.3**.                                                                                                                    |
@@ -978,6 +979,8 @@ Both params are ignored when `search` is set (search always uses relevance order
       "categoryName": "Sapphire",
       "stoneCut": "Faceted",
       "metal": null,
+      "shape": "Oval",
+      "origin": "Myanmar",
       "status": "active",
       "moderationStatus": "approved",
       "isFeatured": false,
@@ -997,7 +1000,7 @@ Both params are ignored when `search` is set (search always uses relevance order
 }
 ```
 
-Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isFeatured`, and `isVerified` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`). The API does not return a numeric `featured` field.
+Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isFeatured`, and `isVerified` (all booleans), plus **`featured_expires_at`** (ISO 8601 or `null`), **`shape`**, and **`origin`** (string or `null`; free-text matching an origin **name** from **GET `/api/origins`**). The API does not return a numeric `featured` field.
 
 > **⚠️ `jewelleryGemstones` is NOT included in list responses.** The list endpoint returns a lightweight shape — `jewelleryGemstones` (the array of gemstones for a jewellery product) is only present on the **single product detail** response (`GET /api/products/:id`). Call the detail endpoint to get that data.
 
@@ -1046,7 +1049,7 @@ Each product item includes `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion
 
 To submit a show-request, use **POST `/api/mobile/collector-piece-show-requests`** (see **5.4.4**).
 
-**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isVerified`, etc.). `isVerified` is `true` when a staff member has verified the product; the internal `verifiedBy` staff user ID is never included in this response. Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`).
+**Full response (200) — non-collector or approved collector piece:** Single product with full detail (including `imageUrls[]`, **`jewelleryGemstones[]`** for jewellery — this is only present here, **not** in the list endpoint, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`, `isVerified`, **`origin`** (string or `null`), etc.). `isVerified` is `true` when a staff member has verified the product; the internal `verifiedBy` staff user ID is never included in this response. Top-level fields **`createdAt`** and **`updatedAt`** are ISO 8601 strings (listing created / last updated). For collector pieces, response also includes `requestStatus` (`null` or `{ id, status, createdAt }`).
 
 **`precautions`** — array of safety advisories to display to the buyer before they chat, call, or pay. The set returned depends on whether the product is certified (has any of `laboratoryId`, `certReportNumber`, `certReportDate`, `certReportUrl` set):
 

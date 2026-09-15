@@ -34,6 +34,7 @@ Only `status: "active"` products are returned; `rejected` moderation status is a
       "id": "...", "sku": "RUBY-...", "title": "...", "description": "...",
       "price": "500", "currency": "USD", "productType": "loose_stone",
       "categoryId": "...", "categoryName": "Ruby", "stoneCut": "Faceted",
+      "shape": "Oval", "origin": "Myanmar",
       "status": "active", "moderationStatus": "approved",
       "isFeatured": true, "featured_expires_at": "2026-07-01T00:00:00.000Z",
       "isCollectorPiece": false, "isPrivilegeAssist": false, "isVerified": true,
@@ -45,7 +46,8 @@ Only `status: "active"` products are returned; `rejected` moderation status is a
 }
 ```
 
-- Collector pieces are masked to `{ id, price: null, maskedPrice, currency, status, imageUrl, isCollectorPiece: true, ... }` in the general browse (`maskCollectorPiece`), unless explicitly filtering `isCollectorPiece=true`/`isFeatured=true`.
+- Each item includes **`origin`** (string or `null`; free-text from `product.origin`).
+- Collector pieces are masked to `{ id, price: null, maskedPrice, currency, status, imageUrl, isCollectorPiece: true, origin: null, ... }` in the general browse (`maskCollectorPiece`), unless explicitly filtering `isCollectorPiece=true`/`isFeatured=true`.
 - `featured_expires_at` is the DB's `featuredExpiresAt` as ISO 8601 (snake_case on the wire); `isFeatured` is `false` once expired even if the DB flag is still `true`.
 
 ### Collector-piece browse (`isCollectorPiece=true`)
