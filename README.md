@@ -10,7 +10,7 @@ npm run seed:admin
 
 admin@gemx.com
 gemx@2026
-
+RE
 ---
 # GemX
 
