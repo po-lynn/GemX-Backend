@@ -75,6 +75,11 @@ export function AppContentClient(props: AppContentClientProps) {
   const [saving, setSaving] = useState(false)
   const [legalEditLanguage, setLegalEditLanguage] = useState<NewsLanguage>("English")
   const [aboutEditLanguage, setAboutEditLanguage] = useState<NewsLanguage>("English")
+  const [termsEditLanguage, setTermsEditLanguage] = useState<NewsLanguage>("English")
+  const [buyingEditLanguage, setBuyingEditLanguage] = useState<NewsLanguage>("English")
+  const [sellingEditLanguage, setSellingEditLanguage] = useState<NewsLanguage>("English")
+  const [privacyEditLanguage, setPrivacyEditLanguage] = useState<NewsLanguage>("English")
+
 
   const dirty = useMemo(
     () => ({
@@ -140,7 +145,10 @@ export function AppContentClient(props: AppContentClientProps) {
 
   function switchLegalDoc(next: LegalDocId) {
     setLegalDoc(next)
-    setLegalEditLanguage("English")
+    if (next === "terms") setTermsEditLanguage("English")
+    else if (next === "buying") setBuyingEditLanguage("English")
+    else if (next === "selling") setSellingEditLanguage("English")
+    else setPrivacyEditLanguage("English")
     syncUrl("legal", next)
   }
 
@@ -194,7 +202,9 @@ export function AppContentClient(props: AppContentClientProps) {
     if (!currentTabDirty || saving) return
     setSaving(true)
 
-    const translate = legalEditLanguage === "English" ? true : undefined
+    const editLanguageForSave =
+      tab === "about" ? aboutEditLanguage : tab === "legal" ? legalEditLanguage : "English"
+    const translate = editLanguageForSave === "English" ? true : undefined
 
     const payload =
       tab === "about"
