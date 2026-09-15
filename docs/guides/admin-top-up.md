@@ -19,7 +19,7 @@ Navigate to **Point Transactions** (`/admin/credit/transactions`).
 
 ## Background Jobs panel
 
-Below the transactions table on the same page, **Surprise Bonus — Background Jobs** shows every `background_jobs` row (status counts + the 100 most recent), with a **STALE** tag on any `processing` job whose lock is >3 min old. Use **Retry stuck jobs** to run one drain pass on demand instead of submitting a throwaway Top-up — see [surprise-bonus-jobs-panel.md](../technical/surprise-bonus-jobs-panel.md).
+Below the transactions table on the same page, **Surprise Bonus — Background Jobs** shows every `background_jobs` row (status counts + the 100 most recent), with a **STALE** tag on any `processing` job whose lock is >3 min old. Use **Retry stuck jobs** to run one drain pass on demand instead of submitting a throwaway Top-up — see [surprise-bonus-jobs-panel.md](../technical/surprise-bonus-jobs-panel.md). For per-user detail (which specific credits already landed vs. which batch is stuck), switch to the **Transactions** tab there — see [queue-transactions.md](queue-transactions.md). To act on one stuck batch directly (requeue it, force it done, or cancel it), open its detail page — see [queue-job-lifecycle-actions.md](queue-job-lifecycle-actions.md).
 
 ## Top-up a single user
 

@@ -22,10 +22,12 @@ describe("drainJobs", () => {
 
     expect(result).toEqual({ batches: 1 })
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(completeJob).toHaveBeenCalledWith("job-1", undefined)
+    expect(completeJob).toHaveBeenCalledWith("job-1")
   })
 
-  it("records a handler's returned result on the completed job", async () => {
+  // completeJob now deletes the job's row (see lib/queue/queue.ts), so a
+  // handler's return value has nowhere to go — drain ignores it entirely.
+  it("ignores a handler's returned result — completeJob deletes the row regardless", async () => {
     vi.mocked(claimJob)
       .mockResolvedValueOnce({ id: "job-1", type: "t", payload: {}, attempts: 1, maxAttempts: 5 })
       .mockResolvedValueOnce(null)
@@ -33,7 +35,7 @@ describe("drainJobs", () => {
     const handler = vi.fn().mockResolvedValue({ credited: 48 })
     await drainJobs("t", handler)
 
-    expect(completeJob).toHaveBeenCalledWith("job-1", { credited: 48 })
+    expect(completeJob).toHaveBeenCalledWith("job-1")
   })
 
   it("stops after maxBatches even if more jobs are claimable", async () => {

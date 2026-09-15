@@ -6,7 +6,7 @@ import {
   SURPRISE_BONUS_JOB_TYPE,
   SURPRISE_BONUS_PUSH_JOB_TYPE,
 } from "@/drizzle/schema/surprise-bonus-schema"
-import { describeSurpriseBonusJobs } from "@/features/points/db/surprise-bonus"
+import { describeSurpriseBonusJobs, listSurpriseBonusTransactions } from "@/features/points/db/surprise-bonus"
 import { enqueueJob, normalizeRows } from "@/lib/queue/queue"
 import { registerQueueJob } from "@/lib/queue/registry"
 import type { ClaimedQueueJob, QueueJobResult } from "@/lib/queue/types"
@@ -140,4 +140,5 @@ registerQueueJob({
   label: "Surprise Bonus",
   handler: processSurpriseBonusJob,
   describeJobs: describeSurpriseBonusJobs,
+  listTransactions: listSurpriseBonusTransactions,
 })

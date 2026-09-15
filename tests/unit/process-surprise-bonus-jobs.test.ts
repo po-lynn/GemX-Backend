@@ -20,6 +20,7 @@ vi.mock("@/lib/queue/registry", () => ({
 
 vi.mock("@/features/points/db/surprise-bonus", () => ({
   describeSurpriseBonusJobs: vi.fn(),
+  listSurpriseBonusTransactions: vi.fn(),
 }))
 
 import { db } from "@/drizzle/db"

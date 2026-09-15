@@ -1,10 +1,15 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { connection } from "next/server"
+import "@/app/admin-queue-console.css"
 import { requireFeatureAccess } from "@/lib/admin-guard"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { FadeUp } from "@/components/admin/motion"
-import { QueueDashboard } from "@/components/admin/queue/QueueDashboard"
+import { QueueOverview } from "@/components/admin/queue/QueueOverview"
+
+// Feature-access check requires the signed-in session on every load, so this page can never
+// be part of a static shell — opt out of Instant Navigation validation like app/admin/layout.tsx.
+export const instant = false
 
 export default async function AdminQueuePage() {
   await connection()
@@ -13,19 +18,13 @@ export default async function AdminQueuePage() {
   return (
     <FadeUp>
       <div className="py-2">
-        <div className="lv-pagehead">
-          <div>
-            <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
-              <Link href="/admin">Admin</Link>
-              <ChevronRight />
-              <span className="lv-here">Queue</span>
-            </nav>
-            <h1 className="lv-h1">Queue</h1>
-            <p className="lv-subhead">Background job queue health across every feature that uses it.</p>
-          </div>
-        </div>
+        <nav className="lv-breadcrumbs" aria-label="Breadcrumb">
+          <Link href="/admin">Admin</Link>
+          <ChevronRight />
+          <span className="lv-here">Queue</span>
+        </nav>
 
-        <QueueDashboard />
+        <QueueOverview />
       </div>
     </FadeUp>
   )

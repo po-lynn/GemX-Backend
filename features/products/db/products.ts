@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache"
 import { db } from "@/drizzle/db"
 import {
   product,
@@ -1725,6 +1726,9 @@ export async function getHomepageFeaturedProducts(limit = 4): Promise<HomepageFe
  * account configured in company settings.
  */
 export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeaturedProduct[]> {
+  "use cache"
+  cacheLife("minutes")
+
   const [settings] = await db
     .select({ companyUserId: companySetting.companyUserId })
     .from(companySetting)
@@ -1780,6 +1784,9 @@ export async function getHomepageOwnProducts(limit = 3): Promise<HomepageFeature
  * Returns all lab names from the laboratory table for the homepage lab strip.
  */
 export async function getHomepageLabNames(): Promise<string[]> {
+  "use cache"
+  cacheLife("minutes")
+
   const rows = await db
     .select({ name: laboratory.name })
     .from(laboratory)

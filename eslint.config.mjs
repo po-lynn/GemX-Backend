@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "design_handoff_messages_triage/**",
     "design_handoff_reviews_admin/**",
     "design_handoff_nrc_field/**",
+    "design_handoff_queue_console/**",
     // Nested git worktrees are separate checkouts with their own lint config;
     // never descend into them from the parent repo's lint run.
     ".claude/worktrees/**",

@@ -1,0 +1,68 @@
+/**
+ * Scoped styles for the Queue Console (/admin/queue, /admin/queue/[type],
+ * /admin/queue/jobs/[id]) — hover states and keyframes that can't be
+ * expressed as plain inline styles. Everything else lives inline next to its
+ * design tokens in components/admin/queue/*. Imported only by the queue
+ * route pages, not globally.
+ */
+
+.qc-row:hover {
+  background: #FAF9F6;
+}
+
+.qc-btn-secondary:hover {
+  background: #FAF9F6;
+  border-color: #C4BFB2;
+}
+
+.qc-btn-primary:hover {
+  background: #2B2620;
+}
+
+.qc-btn-gold:hover {
+  background: #755513;
+}
+
+.qc-btn-danger:hover {
+  background: #FBE9E7;
+}
+
+.qc-btn-ghost:hover {
+  color: #17130E;
+}
+
+.qc-icon-btn:hover {
+  border-color: #C4BFB2;
+  color: #17130E;
+}
+
+.qc-icon-btn-danger:hover {
+  border-color: #E6B7B2;
+  color: #A8281F;
+}
+
+.qc-caret:hover {
+  background: #EFEDE7;
+  color: #17130E;
+}
+
+.qc-chip:hover {
+  background: #FAF9F6;
+}
+
+@keyframes qc-shimmer {
+  0% { opacity: .45; }
+  50% { opacity: .9; }
+  100% { opacity: .45; }
+}
+.qc-shimmer {
+  animation: qc-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes qc-slidein {
+  from { transform: translateX(22px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.qc-drawer-panel {
+  animation: qc-slidein .18s ease-out;
+}

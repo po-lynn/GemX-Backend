@@ -1,5 +1,9 @@
 # Queue Management — Collaborator Guide
 
+> This guide covers registering a job type / handler — still fully
+> accurate. For the `/admin/queue` UI itself, see
+> [`docs/guides/queue-console.md`](queue-console.md).
+
 ## Prerequisites
 
 Nothing extra — `lib/queue` reuses the existing `background_jobs` table and

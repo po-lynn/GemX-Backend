@@ -1,5 +1,13 @@
 # Queue Management — lib/queue
 
+> **UI note:** the admin-panel screens described below (`QueueDashboard`,
+> the single-page dropdown selector) were replaced by a three-screen console
+> — see [`docs/technical/queue-console-redesign.md`](queue-console-redesign.md).
+> `lib/queue/` itself (this doc's actual subject) is otherwise unaffected,
+> except that `getJobStatusCounts` (mentioned below) was removed as
+> redundant once `getQueueTypeSummary` started computing the same counts
+> (plus health/throughput/p95) in one query.
+
 ## What changed
 
 Extracted the generic parts of the Surprise Bonus background-job queue

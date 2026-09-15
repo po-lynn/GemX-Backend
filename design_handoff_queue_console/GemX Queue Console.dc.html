@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="app" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+body{margin:0;background:#F4F3EF;font-family:'Schibsted Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#8F6A1C;text-decoration:none}
+a:hover{color:#6E4F12}
+*{box-sizing:border-box}
+@keyframes shimmer{0%{opacity:.45}50%{opacity:.9}100%{opacity:.45}}
+@keyframes slidein{from{transform:translateX(22px);opacity:0}to{transform:translateX(0);opacity:1}}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#F4F3EF;color:#17130E">
+
+<div style="width:246px;flex:none;background:#14110C;color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+<div style="padding:20px 18px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.09)">
+<div style="width:28px;height:28px;border-radius:8px;background:#8F6A1C;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#14110C">G</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;font-weight:700;letter-spacing:-0.01em">GemX</div>
+<div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-top:1px">Admin console</div>
+</div>
+<span style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#E8D5A6;border:1px solid rgba(232,213,166,.34);border-radius:5px;padding:3px 6px">Prod</span>
+</div>
+
+<div style="flex:1;overflow:auto;padding:14px 10px 24px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+Dashboard</div>
+
+<div style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:16px 10px 7px">Master data</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"></path></svg>
+Products</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h6"></path></svg>
+Configuration</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"></path></svg>
+Trust &amp; reputation</div>
+
+<div style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:16px 10px 7px">Operations</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h18M3 12h18M3 17h18"></path></svg>
+Payment transactions</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+Collector requests</div>
+
+<div style="font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:16px 10px 7px">Platform health</div>
+<div onClick="{{ goOverview }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:rgba(143,106,28,.22);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:inset 2px 0 0 #D8A93C">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D8A93C" stroke-width="1.8"><path d="M4 18V9M9 18V5M14 18v-7M19 18v-4"></path></svg>
+Queue
+<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;background:#D8A93C;color:#14110C;border-radius:5px;padding:2px 6px">{{ sidebarBadge }}</span></div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+Scheduled jobs</div>
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.72);font-size:13.5px" style-hover="background:rgba(255,255,255,.06);color:#fff">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v6H4zM4 14h16v6H4z"></path></svg>
+Audit log</div>
+</div>
+
+<div style="padding:11px 12px;border-top:1px solid rgba(255,255,255,.09)">
+<div style="font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.34);padding:0 2px 8px">Prototype state</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ variants }}" as="v" hint-placeholder-count="6">
+<div onClick="{{ v.onClick }}" style="font-size:11px;font-weight:600;border-radius:7px;padding:5px 9px;cursor:pointer;background:{{ v.bg }};color:{{ v.ink }};border:1px solid {{ v.border }}">{{ v.label }}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:12px 14px;border-top:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:9px">
+<div style="width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">AK</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:12px;font-weight:600">Aung Kyaw</div>
+<div style="font-size:10px;color:rgba(255,255,255,.4)">Platform admin</div>
+</div>
+<div style="width:7px;height:7px;border-radius:99px;background:#4FA97A"></div>
+</div>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+<div style="height:60px;flex:none;background:rgba(255,255,255,.86);backdrop-filter:blur(8px);border-bottom:1px solid #E3E0D8;display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:30">
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#9A958C">
+<span>Admin</span><span>/</span>
+<span onClick="{{ goOverview }}" style="cursor:pointer;color:#6B6760" style-hover="color:#17130E">Queue</span>
+<sc-if value="{{ inDetail }}" hint-placeholder-val="{{ false }}"><span>/</span><span style="color:#17130E;font-weight:600">{{ queueName }}</span></sc-if>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:8px;background:#F4F3EF;border:1px solid #E3E0D8;border-radius:9px;padding:7px 11px;width:290px">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A958C" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.2-4.2"></path></svg>
+<span style="font-size:12.5px;color:#9A958C">Search jobs, refs, users…</span>
+<span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9A958C;border:1px solid #E3E0D8;border-radius:4px;padding:1px 4px;background:#fff">⌘K</span>
+</div>
+<div style="width:1px;height:26px;background:#E3E0D8"></div>
+<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6B6760">
+<span style="width:7px;height:7px;border-radius:99px;background:#1C7A4F"></span>Workers 4/4
+</div>
+</div>
+
+<div style="flex:1;min-width:0;padding:26px 26px 90px;max-width:1520px;width:100%;margin:0 auto">
+
+<sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+
+<div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap">
+<div style="flex:1;min-width:280px">
+<div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8F6A1C">Platform health</div>
+<h1 style="font-size:30px;font-weight:700;letter-spacing:-0.025em;margin:7px 0 0;line-height:1.1">Queue overview</h1>
+<p style="font-size:13.5px;color:#6B6760;margin:7px 0 0;line-height:1.5;max-width:56ch;text-wrap:pretty">Background job health across every feature that uses the queue. Depth, failure rate and latency are computed over the last 24 hours.</p>
+</div>
+<div style="display:flex;align-items:center;gap:9px">
+<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#6B6760;background:#fff;border:1px solid #E3E0D8;border-radius:9px;padding:9px 12px">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A958C" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3 2"></path></svg>
+Checked {{ checkedAt }}</div>
+<div onClick="{{ refresh }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#17130E;background:#fff;border:1px solid #D9D5CB;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#FAF9F6;border-color:#C4BFB2">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4"></path></svg>
+Refresh</div>
+<div onClick="{{ retryAll }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#fff;background:#17130E;border-radius:9px;padding:10px 15px;cursor:pointer;box-shadow:0 1px 2px rgba(23,19,14,.28)" style-hover="background:#2B2620">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8A93C" stroke-width="2"><path d="M4 12a8 8 0 1 0 8-8"></path><path d="M12 4v5h5"></path></svg>
+Retry stuck jobs</div>
+</div>
+</div>
+
+<sc-if value="{{ showAlert }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:14px;align-items:flex-start;background:#FDF6E8;border:1px solid #EBD9AE;border-left:3px solid #B98A16;border-radius:12px;padding:15px 17px">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9A6E0E" stroke-width="2" style="flex:none;margin-top:1px"><path d="M12 3l9.5 17H2.5L12 3z"></path><path d="M12 9.5v5M12 17.4v.1"></path></svg>
+<div style="flex:1;min-width:0">
+<div style="font-size:13.5px;font-weight:700;color:#5E4508">{{ alertTitle }}</div>
+<div style="font-size:12.5px;color:#7A5C10;margin-top:4px;line-height:1.55">{{ alertBody }}</div>
+</div>
+<div style="display:flex;gap:8px;flex:none">
+<div onClick="{{ retryAll }}" style="font-size:12px;font-weight:600;color:#5E4508;background:#fff;border:1px solid #E0CB9C;border-radius:8px;padding:8px 12px;cursor:pointer" style-hover="background:#FFFBF1">Retry all</div>
+<div onClick="{{ openQueue }}" style="font-size:12px;font-weight:600;color:#fff;background:#8F6A1C;border-radius:8px;padding:8px 12px;cursor:pointer" style-hover="background:#755513">Inspect queue</div>
+</div>
+</div>
+</sc-if>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px">
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:13px;padding:17px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;font-weight:600;color:#6B6760;letter-spacing:.01em">Jobs processed · 24h</span><span style="font-size:10.5px;font-weight:700;color:#1C7A4F;background:#E7F3EC;border-radius:5px;padding:2px 6px">+6.2%</span></div>
+<div style="font-size:29px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1">12,480</div>
+<svg width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline points="0,26 20,22 40,24 60,17 80,19 100,12 120,15 140,9 160,11 180,6 200,8" fill="none" stroke="#8F6A1C" stroke-width="1.8"></polyline><polyline points="0,26 20,22 40,24 60,17 80,19 100,12 120,15 140,9 160,11 180,6 200,8 200,34 0,34" fill="rgba(143,106,28,.08)" stroke="none"></polyline></svg>
+</div>
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:13px;padding:17px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;font-weight:600;color:#6B6760">Failure rate</span><span style="font-size:10.5px;color:#9A958C">SLO 1.0%</span></div>
+<div style="display:flex;align-items:baseline;gap:7px"><span style="font-size:29px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1">{{ failureRate }}</span><span style="font-size:12px;color:#6B6760">of 12,480</span></div>
+<div style="height:6px;border-radius:99px;background:#EFEDE7;overflow:hidden"><div style="width:38%;height:100%;background:#1C7A4F;border-radius:99px"></div></div>
+</div>
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:13px;padding:17px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;font-weight:600;color:#6B6760">p95 run time</span><span style="font-size:10.5px;font-weight:700;color:#A8620A;background:#FDF0DF;border-radius:5px;padding:2px 6px">+0.4s</span></div>
+<div style="font-size:29px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1">3.2s</div>
+<div style="display:flex;align-items:flex-end;gap:3px;height:34px">
+<div style="flex:1;height:38%;background:#EFEDE7;border-radius:2px"></div><div style="flex:1;height:52%;background:#EFEDE7;border-radius:2px"></div><div style="flex:1;height:44%;background:#EFEDE7;border-radius:2px"></div><div style="flex:1;height:66%;background:#EFEDE7;border-radius:2px"></div><div style="flex:1;height:58%;background:#EFEDE7;border-radius:2px"></div><div style="flex:1;height:74%;background:#D9D5CB;border-radius:2px"></div><div style="flex:1;height:62%;background:#D9D5CB;border-radius:2px"></div><div style="flex:1;height:88%;background:#8F6A1C;border-radius:2px"></div><div style="flex:1;height:70%;background:#D9D5CB;border-radius:2px"></div><div style="flex:1;height:100%;background:#8F6A1C;border-radius:2px"></div>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:13px;padding:17px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11.5px;font-weight:600;color:#6B6760">Oldest pending job</span><span style="font-size:10.5px;color:#9A958C">alert &gt; 15m</span></div>
+<div style="font-size:29px;font-weight:700;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1;color:{{ oldestColor }}">{{ oldestPending }}</div>
+<div style="font-size:11.5px;color:#6B6760;line-height:1.5">{{ oldestNote }}</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #EFEDE7">
+<div style="font-size:14.5px;font-weight:700;letter-spacing:-0.01em">Queues</div>
+<span style="font-size:11px;color:#9A958C;background:#F4F3EF;border-radius:6px;padding:3px 7px">7 features</span>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;color:#6B6760">Sorted by risk</span>
+</div>
+<div style="overflow-x:auto"><div style="min-width:1010px">
+<div style="display:grid;grid-template-columns:minmax(200px,2fr) 108px 96px 92px 84px 120px 132px 34px;column-gap:14px;padding:0 18px;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C;background:#FAF9F6;border-bottom:1px solid #EFEDE7">
+<div style="padding:9px 0">Queue</div><div style="padding:9px 0">Health</div><div style="padding:9px 0;text-align:right">Depth</div><div style="padding:9px 0;text-align:right">Failed 24h</div><div style="padding:9px 0;text-align:right">p95</div><div style="padding:9px 0;text-align:center">Throughput</div><div style="padding:9px 0;text-align:right">Last run</div><div></div>
+</div>
+<sc-for list="{{ queues }}" as="q" hint-placeholder-count="7">
+<div onClick="{{ openQueue }}" style="display:grid;grid-template-columns:minmax(200px,2fr) 108px 96px 92px 84px 120px 132px 34px;column-gap:14px;align-items:center;padding:0 18px;border-bottom:1px solid #F3F1EB;cursor:pointer" style-hover="background:#FAF9F6">
+<div style="padding:14px 0;display:flex;align-items:center;gap:11px;min-width:0">
+<div style="width:30px;height:30px;flex:none;border-radius:8px;background:#F4F3EF;border:1px solid #EFEDE7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#8F6A1C">{{ q.initials }}</div>
+<div style="min-width:0">
+<div style="font-size:13.5px;font-weight:600;letter-spacing:-0.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.name }}</div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9A958C;margin-top:2px">{{ q.handler }}</div>
+</div>
+</div>
+<div style="padding:14px 0"><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px 3px 7px;background:{{ q.pillBg }};color:{{ q.pillInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ q.pillInk }}"></span>{{ q.health }}</span></div>
+<div style="padding:14px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600">{{ q.depth }}</div>
+<div style="padding:14px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;color:{{ q.failedInk }}">{{ q.failed }}</div>
+<div style="padding:14px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;color:#3E3A33">{{ q.p95 }}</div>
+<div style="padding:14px 0;display:flex;align-items:flex-end;justify-content:center;gap:2px;height:26px">{{ q.spark }}</div>
+<div style="padding:14px 0;text-align:right;font-size:12px;color:#6B6760">{{ q.lastRun }}</div>
+<div style="padding:14px 0;text-align:right;color:#C4BFB2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"></path></svg></div>
+</div>
+</sc-for>
+</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:14px;padding:17px 18px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+<div style="font-size:14px;font-weight:700;letter-spacing:-0.01em">Alert thresholds</div>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;font-weight:600;color:#8F6A1C;cursor:pointer">Edit</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F3F1EB">
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">Pending age</div><div style="font-size:11px;color:#9A958C;margin-top:2px">Page on-call when breached for 5 min</div></div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:6px;padding:4px 8px">&gt; 15m</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F3F1EB">
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">Failure rate</div><div style="font-size:11px;color:#9A958C;margin-top:2px">Rolling 1h window, per queue</div></div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:6px;padding:4px 8px">&gt; 1.0%</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F3F1EB">
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">Visibility timeout</div><div style="font-size:11px;color:#9A958C;margin-top:2px">Jobs held past this are marked stale</div></div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:6px;padding:4px 8px">10m</span>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 0">
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">Max attempts</div><div style="font-size:11px;color:#9A958C;margin-top:2px">Then moved to dead letter</div></div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:6px;padding:4px 8px">5</span>
+</div>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:14px;padding:17px 18px;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+<div style="font-size:14px;font-weight:700;letter-spacing:-0.01em">On-call notes</div>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;color:#6B6760">Aung Kyaw · this week</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:11px">
+<div style="width:26px;height:26px;flex:none;border-radius:7px;background:#F4F3EF;border:1px solid #EFEDE7;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#8F6A1C">MM</div>
+<div style="min-width:0">
+<div style="font-size:12.5px;line-height:1.6;color:#3E3A33">Points payout worker was restarted at 08:12 after the MMK rate sync hung. Watch pending age until the 09:00 batch clears.</div>
+<div style="font-size:10.5px;color:#9A958C;margin-top:4px">Ma Moe · 1h ago</div>
+</div>
+</div>
+<div style="display:flex;gap:11px">
+<div style="width:26px;height:26px;flex:none;border-radius:7px;background:#F4F3EF;border:1px solid #EFEDE7;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#8F6A1C">TZ</div>
+<div style="min-width:0">
+<div style="font-size:12.5px;line-height:1.6;color:#3E3A33">Push fanout 401s are a stale FCM service key. Rotation ticket OPS-412 — safe to leave failed until deploy.</div>
+<div style="font-size:10.5px;color:#9A958C;margin-top:4px">Thet Zaw · yesterday</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:9px;border:1px dashed #D9D5CB;border-radius:9px;padding:10px 12px;color:#9A958C;font-size:12px;cursor:text">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+Add a note for the next shift
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ inDetail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+
+<div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+<div style="flex:1;min-width:280px">
+<div onClick="{{ goOverview }}" style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#6B6760;cursor:pointer" style-hover="color:#17130E">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"></path></svg>
+All queues</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+<h1 style="font-size:27px;font-weight:700;letter-spacing:-0.025em;margin:0;line-height:1.1">{{ queueName }}</h1>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:4px 10px 4px 8px;background:{{ detailPillBg }};color:{{ detailPillInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ detailPillInk }}"></span>{{ detailHealth }}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B6760;background:#fff;border:1px solid #E3E0D8;border-radius:6px;padding:3px 7px">surprise_bonus.grant</span>
+</div>
+<p style="font-size:13px;color:#6B6760;margin:8px 0 0;line-height:1.5;max-width:60ch">Grants bonus points to eligible collectors in batches. Retries are exponential up to 5 attempts, then the job moves to the dead letter queue.</p>
+</div>
+<div style="display:flex;align-items:center;gap:9px">
+<div onClick="{{ refresh }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#17130E;background:#fff;border:1px solid #D9D5CB;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#FAF9F6">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4"></path></svg>
+Refresh</div>
+<div onClick="{{ retryAll }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#fff;background:#17130E;border-radius:9px;padding:10px 15px;cursor:pointer" style-hover="background:#2B2620">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D8A93C" stroke-width="2"><path d="M4 12a8 8 0 1 0 8-8"></path><path d="M12 4v5h5"></path></svg>
+Retry stuck jobs</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid #E3E0D8;background:#fff;border-radius:13px;overflow:hidden;box-shadow:0 1px 2px rgba(23,19,14,.03)">
+<sc-for list="{{ stats }}" as="s" hint-placeholder-count="6">
+<div style="min-width:0;padding:15px 17px;border-right:1px solid #EFEDE7;border-bottom:1px solid #EFEDE7;background:{{ s.bg }}">
+<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.03em;color:{{ s.labelInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ s.dot }}"></span>{{ s.label }}</div>
+<div style="font-size:24px;font-weight:700;letter-spacing:-0.025em;font-variant-numeric:tabular-nums;margin-top:8px;color:{{ s.valueInk }}">{{ s.value }}</div>
+<div style="font-size:10.5px;color:#9A958C;margin-top:3px">{{ s.note }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="background:#fff;border:1px solid #E3E0D8;border-radius:14px;box-shadow:0 1px 2px rgba(23,19,14,.03);overflow:hidden">
+
+<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #EFEDE7;flex-wrap:wrap">
+<div style="display:flex;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:9px;padding:3px;gap:2px">
+<div onClick="{{ showJobs }}" style="font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;background:{{ jobsTabBg }};color:{{ jobsTabInk }};box-shadow:{{ jobsTabShadow }}">Jobs</div>
+<div onClick="{{ showTx }}" style="font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;background:{{ txTabBg }};color:{{ txTabInk }};box-shadow:{{ txTabShadow }}">Transactions</div>
+</div>
+<div style="width:1px;height:24px;background:#EFEDE7;margin:0 4px"></div>
+<div style="display:flex;align-items:center;gap:7px;background:#F4F3EF;border:1px solid #E3E0D8;border-radius:9px;padding:7px 10px;min-width:210px">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A958C" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.2-4.2"></path></svg>
+<span style="font-size:12px;color:#9A958C">Job name, user, reference…</span>
+</div>
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="5">
+<div onClick="{{ f.onClick }}" style="font-size:11.5px;font-weight:600;border-radius:99px;padding:6px 11px;cursor:pointer;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.ink }}">{{ f.label }}</div>
+</sc-for>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12px;color:#3E3A33;border:1px solid #E3E0D8;border-radius:9px;padding:7px 11px;cursor:pointer;background:#fff" style-hover="background:#FAF9F6">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A958C" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path></svg>
+Last 7 days</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#3E3A33;border:1px solid #E3E0D8;border-radius:9px;padding:7px 11px;cursor:pointer;background:#fff" style-hover="background:#FAF9F6">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A958C" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path></svg>
+Export CSV</div>
+</div>
+
+<sc-if value="{{ showTxTable }}" hint-placeholder-val="{{ false }}">
+<div style="overflow-x:auto"><div style="min-width:1010px">
+<div style="display:grid;grid-template-columns:minmax(210px,2.2fr) 128px 140px 140px 120px 100px;column-gap:14px;align-items:center;padding:0 18px;background:#FAF9F6;border-bottom:1px solid #EFEDE7;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">
+<div style="padding:9px 0">Description</div><div style="padding:9px 0">State</div><div style="padding:9px 0">Created</div><div style="padding:9px 0">Completed</div><div style="padding:9px 0">Reference</div><div style="padding:9px 0;text-align:right">Detail</div>
+</div>
+<sc-for list="{{ transactions }}" as="t" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:minmax(210px,2.2fr) 128px 140px 140px 120px 100px;column-gap:14px;align-items:center;padding:0 18px;border-bottom:1px solid #F3F1EB;background:#fff" style-hover="background:#FAF9F6">
+<div style="padding:12px 10px 12px 0;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9A958C;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.email }}</div></div>
+<div style="padding:12px 0"><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px 3px 7px;background:{{ t.pillBg }};color:{{ t.pillInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ t.pillInk }}"></span>{{ t.state }}</span></div>
+<div style="padding:12px 0;font-size:12px;color:#3E3A33;font-variant-numeric:tabular-nums">{{ t.created }}</div>
+<div style="padding:12px 0;font-size:12px;color:#3E3A33;font-variant-numeric:tabular-nums">{{ t.completed }}</div>
+<div style="padding:12px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B6760">{{ t.ref }}</div>
+<div style="padding:12px 0;text-align:right;font-size:12.5px;font-weight:700;color:{{ t.amountInk }};font-variant-numeric:tabular-nums">{{ t.amount }}</div>
+</div>
+</sc-for>
+</div></div>
+</sc-if>
+
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+<div style="padding:6px 0">
+<sc-for list="{{ skeletonRows }}" as="r" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid #F3F1EB;animation:shimmer 1.4s ease-in-out infinite">
+<div style="width:15px;height:15px;border-radius:4px;background:#EFEDE7"></div>
+<div style="width:{{ r.w }};height:11px;border-radius:99px;background:#EFEDE7"></div>
+<div style="flex:1"></div>
+<div style="width:78px;height:20px;border-radius:99px;background:#F3F1EB"></div>
+<div style="width:52px;height:11px;border-radius:99px;background:#EFEDE7"></div>
+<div style="width:96px;height:11px;border-radius:99px;background:#EFEDE7"></div>
+<div style="width:96px;height:11px;border-radius:99px;background:#EFEDE7"></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:70px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+<div style="width:52px;height:52px;border-radius:14px;background:#F4F3EF;border:1px solid #EFEDE7;display:flex;align-items:center;justify-content:center">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C4BFB2" stroke-width="1.7"><path d="M4 18V9M9 18V5M14 18v-7M19 18v-4"></path></svg>
+</div>
+<div>
+<div style="font-size:16px;font-weight:700;letter-spacing:-0.01em">Nothing in this queue</div>
+<div style="font-size:13px;color:#6B6760;margin-top:6px;max-width:44ch;line-height:1.55">No jobs match the current filters. The last job in Surprise Bonus completed 4 hours ago and the worker is idle.</div>
+</div>
+<div style="display:flex;gap:9px;margin-top:2px">
+<div onClick="{{ clearFilters }}" style="font-size:12.5px;font-weight:600;color:#17130E;background:#fff;border:1px solid #D9D5CB;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#FAF9F6">Clear filters</div>
+<div onClick="{{ goOverview }}" style="font-size:12.5px;font-weight:600;color:#fff;background:#17130E;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#2B2620">Back to overview</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="overflow-x:auto"><div style="min-width:1250px">
+<div style="display:grid;grid-template-columns:38px minmax(220px,2.1fr) 118px 82px 140px 128px 128px minmax(150px,1.1fr) 66px;column-gap:14px;align-items:center;padding:0 18px;background:#FAF9F6;border-bottom:1px solid #EFEDE7;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">
+<div style="padding:9px 0"><div onClick="{{ toggleAll }}" style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ allBorder }};background:{{ allBg }};cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" style="opacity:{{ allCheckOpacity }}"><path d="M5 13l4.5 4.5L19 7"></path></svg></div></div>
+<div style="padding:9px 0">Job</div><div style="padding:9px 0">Status</div><div style="padding:9px 0;text-align:right">Attempts</div><div style="padding:9px 0">Locked by</div><div style="padding:9px 0">Created</div><div style="padding:9px 0">Finished</div><div style="padding:9px 0">Last error</div><div style="padding:9px 0;text-align:right">Actions</div>
+</div>
+<sc-for list="{{ jobs }}" as="j" hint-placeholder-count="6">
+<div>
+<div style="display:grid;grid-template-columns:38px minmax(220px,2.1fr) 118px 82px 140px 128px 128px minmax(150px,1.1fr) 66px;column-gap:14px;align-items:center;padding:0 18px;border-bottom:1px solid #F3F1EB;background:{{ j.rowBg }};cursor:pointer" style-hover="background:#FAF9F6">
+<div style="padding:13px 0"><div onClick="{{ j.onSelect }}" style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ j.checkBorder }};background:{{ j.checkBg }};cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" style="opacity:{{ j.checkOpacity }}"><path d="M5 13l4.5 4.5L19 7"></path></svg></div></div>
+<div onClick="{{ j.onOpen }}" style="padding:13px 10px 13px 0;min-width:0;display:flex;align-items:center;gap:9px">
+<div onClick="{{ j.onExpand }}" style="width:18px;height:18px;flex:none;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#9A958C;background:{{ j.caretBg }}" style-hover="background:#EFEDE7;color:#17130E"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform:{{ j.caretRotate }}"><path d="M9 5l7 7-7 7"></path></svg></div>
+<div style="min-width:0">
+<div style="font-size:13.5px;font-weight:600;letter-spacing:-0.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9A958C;margin-top:2px">{{ j.id }}</div>
+</div>
+</div>
+<div style="padding:13px 0"><span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px 3px 7px;background:{{ j.pillBg }};color:{{ j.pillInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ j.pillInk }}"></span>{{ j.status }}</span></div>
+<div style="padding:13px 0;text-align:right;font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;color:{{ j.attemptInk }}">{{ j.attempts }}</div>
+<div style="padding:13px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B6760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.locked }}</div>
+<div style="padding:13px 0;font-size:12px;color:#3E3A33;font-variant-numeric:tabular-nums">{{ j.created }}</div>
+<div style="padding:13px 0;font-size:12px;color:#3E3A33;font-variant-numeric:tabular-nums">{{ j.finished }}</div>
+<div style="padding:13px 10px 13px 0;font-size:11.5px;color:{{ j.errorInk }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.error }}</div>
+<div style="padding:13px 0;display:flex;gap:5px;justify-content:flex-end">
+<div onClick="{{ j.onOpen }}" title="Open job" style="width:26px;height:26px;border-radius:7px;border:1px solid #E3E0D8;display:flex;align-items:center;justify-content:center;color:#6B6760;cursor:pointer;background:#fff" style-hover="border-color:#C4BFB2;color:#17130E"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></div>
+<div title="Delete job" style="width:26px;height:26px;border-radius:7px;border:1px solid #E3E0D8;display:flex;align-items:center;justify-content:center;color:#6B6760;cursor:pointer;background:#fff" style-hover="border-color:#E6B7B2;color:#A8281F"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></div>
+</div>
+</div>
+<sc-if value="{{ j.expanded }}" hint-placeholder-val="{{ false }}">
+<div style="padding:14px 18px 16px 84px;background:#FAF9F6;border-bottom:1px solid #F3F1EB;display:flex;gap:26px;flex-wrap:wrap">
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Batch users</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">28</div></div>
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Newly granted</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums;color:#1C7A4F">28</div></div>
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Already granted</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">0</div></div>
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Failed</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">0</div></div>
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Push enqueued</div><div style="font-size:13.5px;font-weight:600;margin-top:4px">Yes</div></div>
+<div><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Run time</div><div style="font-size:13.5px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">{{ j.duration }}</div></div>
+<div style="flex:1;min-width:120px;display:flex;align-items:flex-end;justify-content:flex-end"><div onClick="{{ j.onOpen }}" style="font-size:12px;font-weight:600;color:#8F6A1C;cursor:pointer">Open full job detail →</div></div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div></div>
+<div style="display:flex;align-items:center;gap:12px;padding:13px 18px;font-size:12px;color:#6B6760">
+<span>Showing <strong style="color:#17130E">{{ jobCount }}</strong> of {{ jobTotal }} jobs</span>
+<div style="flex:1"></div>
+<div style="display:flex;gap:4px;align-items:center">
+<div style="width:28px;height:28px;border-radius:7px;border:1px solid #E3E0D8;display:flex;align-items:center;justify-content:center;color:#C4BFB2;background:#fff"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"></path></svg></div>
+<div style="min-width:28px;height:28px;border-radius:7px;background:#17130E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">1</div>
+<div style="min-width:28px;height:28px;border-radius:7px;border:1px solid #E3E0D8;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#3E3A33;cursor:pointer" style-hover="background:#FAF9F6">2</div>
+<div style="min-width:28px;height:28px;border-radius:7px;border:1px solid #E3E0D8;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#3E3A33;cursor:pointer" style-hover="background:#FAF9F6">3</div>
+<div style="width:28px;height:28px;border-radius:7px;border:1px solid #E3E0D8;display:flex;align-items:center;justify-content:center;color:#3E3A33;background:#fff;cursor:pointer" style-hover="background:#FAF9F6"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"></path></svg></div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+<sc-if value="{{ bulkOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:12px;background:#17130E;color:#fff;border-radius:13px;padding:11px 13px 11px 17px;box-shadow:0 14px 34px rgba(23,19,14,.34)">
+<span style="font-size:12.5px;font-weight:600"><strong style="color:#D8A93C">{{ selectedCount }}</strong> jobs selected</span>
+<div style="width:1px;height:22px;background:rgba(255,255,255,.16)"></div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;border-radius:9px;padding:7px 12px;background:rgba(255,255,255,.1);cursor:pointer" style-hover="background:rgba(255,255,255,.18)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D8A93C" stroke-width="2"><path d="M4 12a8 8 0 1 0 8-8"></path><path d="M12 4v5h5"></path></svg>Retry</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;border-radius:9px;padding:7px 12px;background:rgba(255,255,255,.1);cursor:pointer" style-hover="background:rgba(255,255,255,.18)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 8.5l7 7"></path></svg>Cancel</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;border-radius:9px;padding:7px 12px;background:rgba(255,255,255,.1);cursor:pointer" style-hover="background:rgba(255,255,255,.18)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path></svg>Export</div>
+<div onClick="{{ clearSelection }}" style="font-size:12px;color:rgba(255,255,255,.62);padding:7px 10px;cursor:pointer" style-hover="color:#fff">Clear</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:80;display:flex;justify-content:flex-end">
+<div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(23,19,14,.28)"></div>
+<div style="position:relative;width:560px;max-width:92vw;height:100%;background:#fff;border-left:1px solid #E3E0D8;box-shadow:-18px 0 44px rgba(23,19,14,.16);display:flex;flex-direction:column;animation:slidein .18s ease-out">
+
+<div style="padding:18px 22px 15px;border-bottom:1px solid #EFEDE7;display:flex;align-items:flex-start;gap:14px">
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px 3px 7px;background:{{ jobPillBg }};color:{{ jobPillInk }}"><span style="width:6px;height:6px;border-radius:99px;background:{{ jobPillInk }}"></span>{{ jobStatus }}</span>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B6760;background:#F4F3EF;border:1px solid #EFEDE7;border-radius:6px;padding:3px 7px">{{ jobId }}</span>
+</div>
+<h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin:9px 0 0;line-height:1.2">{{ jobName }}</h2>
+<div style="font-size:12px;color:#6B6760;margin-top:5px">Surprise Bonus · attempt {{ jobAttempts }} · queued by scheduler</div>
+</div>
+<div onClick="{{ closeDrawer }}" style="width:30px;height:30px;flex:none;border-radius:8px;border:1px solid #E3E0D8;display:flex;align-items:center;justify-content:center;color:#6B6760;cursor:pointer" style-hover="background:#FAF9F6;color:#17130E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+</div>
+
+<div style="padding:12px 22px;border-bottom:1px solid #EFEDE7;display:flex;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#fff;background:#17130E;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#2B2620">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D8A93C" stroke-width="2"><path d="M4 12a8 8 0 1 0 8-8"></path><path d="M12 4v5h5"></path></svg>Retry now</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#17130E;background:#fff;border:1px solid #D9D5CB;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#FAF9F6">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 8.5l7 7"></path></svg>Cancel job</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#17130E;background:#fff;border:1px solid #D9D5CB;border-radius:9px;padding:9px 14px;cursor:pointer" style-hover="background:#FAF9F6">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 5H6a1 1 0 0 0-1 1v9"></path></svg>Copy payload</div>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#A8281F;background:#fff;border:1px solid #E6B7B2;border-radius:9px;padding:9px 12px;cursor:pointer" style-hover="background:#FBE9E7">Dead letter</div>
+</div>
+
+<div style="flex:1;overflow:auto;padding:20px 22px 34px;display:flex;flex-direction:column;gap:22px">
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#EFEDE7;border:1px solid #EFEDE7;border-radius:11px;overflow:hidden;flex:none">
+<div style="background:#fff;padding:12px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Created</div><div style="font-size:13px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">{{ jobCreated }}</div></div>
+<div style="background:#fff;padding:12px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Finished</div><div style="font-size:13px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">{{ jobFinished }}</div></div>
+<div style="background:#fff;padding:12px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Run time</div><div style="font-size:13px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums">{{ jobDuration }}</div></div>
+<div style="background:#fff;padding:12px 14px"><div style="font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#9A958C">Locked by</div><div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;margin-top:5px">{{ jobLocked }}</div></div>
+</div>
+
+<div>
+<div style="font-size:13px;font-weight:700;letter-spacing:-0.005em;margin-bottom:12px">Lifecycle</div>
+<div style="display:flex;flex-direction:column;gap:0">
+<sc-for list="{{ timeline }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;gap:13px">
+<div style="width:18px;flex:none;display:flex;flex-direction:column;align-items:center">
+<div style="width:10px;height:10px;border-radius:99px;background:{{ t.dot }};border:2px solid #fff;box-shadow:0 0 0 2px {{ t.ring }};margin-top:3px"></div>
+<div style="flex:1;width:1.5px;background:#EFEDE7;margin:3px 0"></div>
+</div>
+<div style="flex:1;min-width:0;padding-bottom:16px">
+<div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+<div style="font-size:12.5px;font-weight:600;color:{{ t.ink }}">{{ t.label }}</div>
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9A958C">{{ t.time }}</div>
+</div>
+<div style="font-size:12px;color:#6B6760;margin-top:3px;line-height:1.55">{{ t.detail }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{ jobHasError }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<div style="font-size:13px;font-weight:700">Error trace</div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#A8281F;background:#FBE9E7;border:1px solid #F0CFCB;border-radius:5px;padding:2px 6px">{{ jobErrorCode }}</span>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;font-weight:600;color:#8F6A1C;cursor:pointer">Copy trace</span>
+</div>
+<div style="background:#FDF7F6;border:1px solid #F0CFCB;border-radius:11px;padding:13px 15px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.75;color:#7A241D;white-space:pre-wrap;overflow-x:auto">{{ jobTrace }}</div>
+</div>
+</sc-if>
+
+<div>
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<div style="font-size:13px;font-weight:700">Payload</div>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;font-weight:600;color:#8F6A1C;cursor:pointer">Copy JSON</span>
+</div>
+<div style="background:#14110C;border-radius:11px;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.8;color:#D9D5CB;white-space:pre;overflow-x:auto">{{ jobPayload }}</div>
+</div>
+
+<div>
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<div style="font-size:13px;font-weight:700">Point transactions written</div>
+<span style="font-size:11px;color:#9A958C;background:#F4F3EF;border-radius:6px;padding:3px 7px">{{ txCount }}</span>
+<div style="flex:1"></div>
+<span style="font-size:11.5px;font-weight:600;color:#8F6A1C;cursor:pointer">View all</span>
+</div>
+<div style="border:1px solid #EFEDE7;border-radius:11px;overflow:hidden">
+<sc-for list="{{ relatedTx }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 13px;border-bottom:1px solid #F3F1EB;background:#fff">
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</div><div style="font-size:10.5px;color:#9A958C;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.email }}</div></div>
+<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6B6760">{{ t.ref }}</span>
+<span style="font-size:12px;font-weight:700;color:#1C7A4F;font-variant-numeric:tabular-nums">{{ t.amount }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</sc-if>
+
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;healthy&quot;,&quot;stuck&quot;,&quot;failed&quot;,&quot;bulk&quot;,&quot;empty&quot;,&quot;loading&quot;],&quot;default&quot;:&quot;stuck&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;}}">
+const P = {
+  green: { bg: '#E7F3EC', ink: '#1C7A4F' },
+  amber: { bg: '#FDF0DF', ink: '#A8620A' },
+  red: { bg: '#FBE9E7', ink: '#A8281F' },
+  blue: { bg: '#E8EEF8', ink: '#2B5CA8' },
+  grey: { bg: '#F4F3EF', ink: '#6B6760' }
+};
+
+const QUEUES = [
+  ['Surprise Bonus', 'surprise_bonus.grant', 'SB', 'Healthy', 'green', '0', '0', '1.4s', '2m ago', [8, 12, 9, 14, 11, 16, 12, 18]],
+  ['Points Payout', 'points.payout_batch', 'PP', 'Stale', 'amber', '3', '0', '9.8s', '42m ago', [14, 10, 12, 6, 4, 3, 2, 2]],
+  ['Push Notifications', 'push.fanout', 'PN', 'Failing', 'red', '1', '12', '2.1s', '5m ago', [16, 14, 15, 9, 11, 7, 6, 4]],
+  ['Listing Indexer', 'search.index_listing', 'LI', 'Healthy', 'green', '0', '0', '0.6s', '1m ago', [10, 12, 13, 12, 14, 13, 15, 14]],
+  ['Payment Webhooks', 'payments.webhook', 'PW', 'Healthy', 'green', '0', '1', '1.1s', '3m ago', [9, 11, 10, 12, 11, 13, 12, 13]],
+  ['Review Digest', 'reviews.daily_digest', 'RD', 'Idle', 'grey', '0', '0', '4.2s', '6h ago', [4, 3, 2, 2, 3, 2, 2, 3]],
+  ['Export Jobs', 'admin.export_csv', 'EJ', 'Healthy', 'green', '0', '0', '12.6s', '18m ago', [5, 7, 6, 8, 7, 9, 8, 10]]
+];
+
+const JOBS = [
+  { id: 'job_9f2c41', name: 'NTC New Year Bonus', status: 'Completed', tone: 'green', attempts: '1 / 5', locked: '—', created: '15 Sept, 04:05', finished: '15 Sept, 04:06', duration: '48s', error: '—' },
+  { id: 'job_e31a04', name: 'Loyalty Tier Recalc', status: 'Stale', tone: 'amber', attempts: '3 / 5', locked: 'worker-02 · 42m', created: '15 Sept, 08:50', finished: '—', duration: '42m 18s', error: 'Lock held past visibility timeout' },
+  { id: 'job_5cc9b2', name: 'Points Payout · Batch 88', status: 'Processing', tone: 'blue', attempts: '1 / 5', locked: 'worker-01 · 2m', created: '15 Sept, 09:28', finished: '—', duration: '2m 04s', error: '—' },
+  { id: 'job_2f77e1', name: 'Push Fanout · Segment A', status: 'Failed', tone: 'red', attempts: '5 / 5', locked: '—', created: '15 Sept, 07:14', finished: '15 Sept, 07:19', duration: '5m 11s', error: 'FCM 401 invalid_grant — service key rejected' },
+  { id: 'job_8ac410', name: 'Bonus Grant · Batch 89', status: 'Pending', tone: 'grey', attempts: '0 / 5', locked: '—', created: '15 Sept, 09:30', finished: '—', duration: '—', error: '—' },
+  { id: 'job_3be901', name: 'Bonus Grant · Batch 90', status: 'Pending', tone: 'grey', attempts: '0 / 5', locked: '—', created: '15 Sept, 09:31', finished: '—', duration: '—', error: '—' },
+  { id: 'job_7ab310', name: 'NwY1900', status: 'Completed', tone: 'green', attempts: '1 / 5', locked: '—', created: '12 Sept, 05:36', finished: '12 Sept, 05:37', duration: '1m 12s', error: '—' },
+  { id: 'job_44de09', name: 'Queue detail test', status: 'Completed', tone: 'green', attempts: '1 / 5', locked: '—', created: '12 Sept, 05:30', finished: '12 Sept, 05:31', duration: '22s', error: '—' },
+  { id: 'job_1c8f77', name: 'New Year Promotion 2020', status: 'Completed', tone: 'green', attempts: '1 / 5', locked: '—', created: '12 Sept, 05:14', finished: '12 Sept, 05:15', duration: '35s', error: '—' },
+  { id: 'job_b0e553', name: 'Task12 FINAL PASS Verification', status: 'Completed', tone: 'green', attempts: '1 / 5', locked: '—', created: '11 Sept, 16:18', finished: '11 Sept, 16:19', duration: '41s', error: '—' }
+];
+
+const TRACE = `QueueWorker::handle() surprise_bonus.grant
+  → PushGateway.send(segment: "A", tokens: 1_204)
+  ✕ FirebaseException: 401 invalid_grant
+      at PushGateway.authorize (push/gateway.ts:88)
+      at PushGateway.send (push/gateway.ts:141)
+      at SurpriseBonusJob.run (jobs/surprise_bonus.ts:212)
+  attempt 5/5 · no further retries · moved to dead letter`;
+
+const PAYLOAD = `{
+  "campaign_id": "ntc_new_year_2026",
+  "points": 400,
+  "segment": {
+    "tier": ["gold", "platinum"],
+    "active_within_days": 30
+  },
+  "batch_size": 28,
+  "push": { "enabled": true, "template": "bonus_granted" },
+  "idempotency_key": "e8fc3928"
+}`;
+
+class Component extends DCLogic {
+  state = {
+    screen: 'overview',
+    variant: this.props.variant || 'stuck',
+    tab: 'jobs',
+    filter: 'All',
+    selected: [],
+    expanded: 'job_9f2c41',
+    openJob: null
+  };
+
+  set(patch) { this.setState(patch); }
+
+  baseJobs() {
+    const v = this.state.variant;
+    if (v === 'empty' || v === 'loading') return [];
+    if (v === 'healthy') return JOBS.filter(j => j.status === 'Completed');
+    return JOBS;
+  }
+
+  visibleJobs() {
+    const list = this.baseJobs();
+    if (this.state.filter !== 'All') return list.filter(j => j.status === this.state.filter);
+    return list;
+  }
+
+  spark(vals, tone) {
+    const max = Math.max.apply(null, vals);
+    return React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 2, height: 26 } },
+      vals.map((n, i) => React.createElement('div', {
+        key: i,
+        style: {
+          width: 6, height: Math.max(3, Math.round((n / max) * 26)),
+          borderRadius: 2,
+          background: i === vals.length - 1 ? P[tone].ink : '#E3E0D8'
+        }
+      })));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const v = s.variant;
+    const stuck = v === 'stuck';
+    const failing = v === 'failed';
+    const base = this.baseJobs();
+    const tally = st => base.filter(j => j.status === st).length;
+    const jobs = this.visibleJobs();
+    const selected = v === 'bulk' && s.selected.length === 0 ? ['job_9f2c41', 'job_7ab310', 'job_44de09'] : s.selected;
+    const job = JOBS.find(j => j.id === s.openJob);
+    const tone = job ? job.tone : 'green';
+
+    const mkVariant = (key, label) => ({
+      label, onClick: () => this.set({ variant: key, selected: [], filter: 'All' }),
+      bg: v === key ? '#D8A93C' : 'rgba(255,255,255,.05)',
+      ink: v === key ? '#14110C' : 'rgba(255,255,255,.66)',
+      border: v === key ? '#D8A93C' : 'rgba(255,255,255,.12)'
+    });
+
+    const mkFilter = (label) => ({
+      label,
+      onClick: () => this.set({ filter: label }),
+      bg: s.filter === label ? '#17130E' : '#fff',
+      ink: s.filter === label ? '#fff' : '#3E3A33',
+      border: s.filter === label ? '#17130E' : '#E3E0D8'
+    });
+
+    const statPill = (label, value, tone, note, live) => ({
+      label, value, note,
+      bg: live ? P[tone].bg : '#fff',
+      dot: P[tone].ink,
+      labelInk: live ? P[tone].ink : '#6B6760',
+      valueInk: live ? P[tone].ink : '#17130E'
+    });
+
+    return {
+      isOverview: s.screen === 'overview',
+      inDetail: s.screen === 'queue',
+      queueName: 'Surprise Bonus',
+      sidebarBadge: stuck ? '3' : failing ? '12' : '0',
+      checkedAt: '09:32',
+      failureRate: failing ? '1.4%' : '0.4%',
+      oldestPending: stuck ? '42m' : '0s',
+      oldestColor: stuck ? '#A8620A' : '#17130E',
+      oldestNote: stuck ? 'Points Payout · batch 88 locked by worker-02' : 'No job has waited more than a second',
+      showAlert: stuck || failing,
+      alertTitle: failing ? '12 push fanout jobs failed in the last hour' : '3 jobs stale in Points Payout for over 42 minutes',
+      alertBody: failing
+        ? 'All failures return FCM 401 invalid_grant. Attempts are exhausted, so nothing will retry on its own — rotate the service key, then retry from the dead letter queue.'
+        : 'worker-02 holds the lock past the 10 minute visibility timeout. Retrying releases the lock and re-enqueues the batch; no points are granted twice.',
+
+      queues: QUEUES.map(q => ({
+        name: q[0], handler: q[1], initials: q[2], health: q[3],
+        pillBg: P[q[4]].bg, pillInk: P[q[4]].ink,
+        depth: q[5], failed: q[6],
+        failedInk: q[6] === '0' ? '#9A958C' : '#A8281F',
+        p95: q[7], lastRun: q[8],
+        spark: this.spark(q[9], q[4])
+      })),
+
+      stats: [
+        statPill('Pending', String(tally('Pending')), 'amber', 'waiting for a worker', tally('Pending') > 0),
+        statPill('Processing', String(tally('Processing')), 'blue', 'in flight now', tally('Processing') > 0),
+        statPill('Stale', String(tally('Stale')), 'amber', 'past visibility timeout', tally('Stale') > 0),
+        statPill('Completed', String(tally('Completed')), 'green', 'last 7 days', tally('Completed') > 0),
+        statPill('Failed', String(tally('Failed')), 'red', 'attempts exhausted', tally('Failed') > 0),
+        statPill('Cancelled', '0', 'grey', 'stopped by an admin', false)
+      ],
+
+      jobs: jobs.map(j => ({
+        id: j.id, name: j.name, status: j.status, attempts: j.attempts,
+        locked: j.locked, created: j.created, finished: j.finished,
+        duration: j.duration, error: j.error,
+        pillBg: P[j.tone].bg, pillInk: P[j.tone].ink,
+        errorInk: j.error === '—' ? '#9A958C' : '#A8281F',
+        attemptInk: j.attempts === '5 / 5' ? '#A8281F' : '#3E3A33',
+        rowBg: selected.indexOf(j.id) > -1 ? '#FBF7EC' : '#fff',
+        checkBg: selected.indexOf(j.id) > -1 ? '#17130E' : '#fff',
+        checkBorder: selected.indexOf(j.id) > -1 ? '#17130E' : '#D9D5CB',
+        checkOpacity: selected.indexOf(j.id) > -1 ? 1 : 0,
+        expanded: s.expanded === j.id,
+        caretBg: s.expanded === j.id ? '#EFEDE7' : 'transparent',
+        caretRotate: s.expanded === j.id ? 'rotate(90deg)' : 'rotate(0deg)',
+        onSelect: (e) => {
+          e.stopPropagation();
+          const next = selected.indexOf(j.id) > -1 ? selected.filter(x => x !== j.id) : selected.concat([j.id]);
+          this.set({ selected: next, variant: v === 'bulk' ? 'bulk' : v });
+        },
+        onExpand: (e) => { e.stopPropagation(); this.set({ expanded: s.expanded === j.id ? null : j.id }); },
+        onOpen: (e) => { e.stopPropagation(); this.set({ openJob: j.id }); }
+      })),
+
+      jobCount: String(jobs.length),
+      jobTotal: failing ? '412' : '128',
+      filters: ['All', 'Pending', 'Processing', 'Completed', 'Failed', 'Cancelled'].map(mkFilter),
+      isLoading: v === 'loading',
+      isEmpty: v === 'empty',
+      showTable: s.tab === 'jobs' && v !== 'loading' && v !== 'empty',
+      showTxTable: s.tab === 'tx' && v !== 'loading' && v !== 'empty',
+      transactions: [
+        ['Test', 'user_959911111111@phone.local', 'Completed', 'green', '+400 pts'],
+        ['Token Test', 'user_95941574215@phone.local', 'Completed', 'green', '+400 pts'],
+        ['Supervisor 2', 'supervisor2@gmail.com', 'Completed', 'green', '+400 pts'],
+        ['Testing', 'user_959977777777@phone.local', 'Completed', 'green', '+400 pts'],
+        ['Tester', 'user_959321456789@phone.local', failing ? 'Failed' : 'Completed', failing ? 'red' : 'green', failing ? '0 pts' : '+400 pts'],
+        ['Shwe Li', 'user_959233454454@phone.local', 'Completed', 'green', '+400 pts'],
+        ['John Doe', 'user_959123456789@phone.local', 'Completed', 'green', '+400 pts'],
+        ['Yadanar', 'ya@gmail.com', stuck ? 'Pending' : 'Completed', stuck ? 'amber' : 'green', '+400 pts']
+      ].map(t => ({
+        name: t[0], email: t[1], state: t[2], ref: 'e8fc3928',
+        created: '15 Sept, 04:05',
+        completed: t[2] === 'Completed' ? '15 Sept, 04:05' : '—',
+        pillBg: P[t[3]].bg, pillInk: P[t[3]].ink,
+        amount: t[4], amountInk: t[3] === 'green' ? '#1C7A4F' : '#9A958C'
+      })),
+      skeletonRows: [{ w: '210px' }, { w: '150px' }, { w: '240px' }, { w: '180px' }, { w: '200px' }, { w: '130px' }],
+
+      jobsTabBg: s.tab === 'jobs' ? '#fff' : 'transparent',
+      jobsTabInk: s.tab === 'jobs' ? '#17130E' : '#6B6760',
+      jobsTabShadow: s.tab === 'jobs' ? '0 1px 2px rgba(23,19,14,.1)' : 'none',
+      txTabBg: s.tab === 'tx' ? '#fff' : 'transparent',
+      txTabInk: s.tab === 'tx' ? '#17130E' : '#6B6760',
+      txTabShadow: s.tab === 'tx' ? '0 1px 2px rgba(23,19,14,.1)' : 'none',
+      showJobs: () => this.set({ tab: 'jobs' }),
+      showTx: () => this.set({ tab: 'tx' }),
+
+      detailHealth: stuck ? 'Stale jobs' : failing ? 'Failing' : 'Healthy',
+      detailPillBg: stuck ? P.amber.bg : failing ? P.red.bg : P.green.bg,
+      detailPillInk: stuck ? P.amber.ink : failing ? P.red.ink : P.green.ink,
+
+      allBg: selected.length ? '#17130E' : '#fff',
+      allBorder: selected.length ? '#17130E' : '#D9D5CB',
+      allCheckOpacity: selected.length ? 1 : 0,
+      toggleAll: () => this.set({ selected: selected.length ? [] : jobs.map(j => j.id) }),
+      bulkOpen: selected.length > 0,
+      selectedCount: String(selected.length),
+      clearSelection: () => this.set({ selected: [], variant: v === 'bulk' ? 'healthy' : v }),
+
+      goOverview: () => this.set({ screen: 'overview', openJob: null }),
+      openQueue: () => this.set({ screen: 'queue' }),
+      refresh: () => this.set({ variant: 'loading' }) || setTimeout(() => this.set({ variant: v === 'loading' ? 'healthy' : v }), 900),
+      retryAll: () => this.set({ variant: 'healthy', selected: [] }),
+      clearFilters: () => this.set({ variant: 'healthy', filter: 'All' }),
+
+      drawerOpen: !!job,
+      closeDrawer: () => this.set({ openJob: null }),
+      jobId: job ? job.id : '',
+      jobName: job ? job.name : '',
+      jobStatus: job ? job.status : '',
+      jobPillBg: P[tone].bg,
+      jobPillInk: P[tone].ink,
+      jobAttempts: job ? job.attempts : '',
+      jobCreated: job ? job.created : '',
+      jobFinished: job ? job.finished : '',
+      jobDuration: job ? job.duration : '',
+      jobLocked: job ? job.locked : '',
+      jobHasError: !!job && job.error !== '—',
+      jobErrorCode: job && job.status === 'Failed' ? 'FCM_401' : 'LOCK_TIMEOUT',
+      jobTrace: TRACE,
+      jobPayload: PAYLOAD,
+      txCount: '28 rows',
+      relatedTx: [
+        { name: 'Shwe Li', email: 'user_959233454454@phone.local', ref: 'e8fc3928', amount: '+400 pts' },
+        { name: 'John Doe', email: 'user_959123456789@phone.local', ref: 'e8fc3928', amount: '+400 pts' },
+        { name: 'Supervisor 2', email: 'supervisor2@gmail.com', ref: 'e8fc3928', amount: '+400 pts' },
+        { name: 'Tester', email: 'user_959321456789@phone.local', ref: 'e8fc3928', amount: '+400 pts' }
+      ],
+
+      timeline: [
+        { label: 'Enqueued', time: '15 Sept, 04:05:02', detail: 'Scheduled by cron surprise_bonus_daily · priority normal', dot: '#C4BFB2', ring: '#EFEDE7', ink: '#3E3A33' },
+        { label: 'Locked by worker-02', time: '15 Sept, 04:05:04', detail: 'Visibility timeout 10m · region sg-1', dot: '#2B5CA8', ring: '#E8EEF8', ink: '#3E3A33' },
+        { label: job && job.error !== '—' ? 'Attempt failed' : 'Batch resolved', time: '15 Sept, 04:05:38', detail: job && job.error !== '—' ? job.error : '28 users matched · 28 newly granted · 0 already granted', dot: job && job.error !== '—' ? '#A8281F' : '#1C7A4F', ring: job && job.error !== '—' ? '#FBE9E7' : '#E7F3EC', ink: '#17130E' },
+        (function () {
+          if (!job || job.error === '—') return { label: 'Completed', time: '15 Sept, 04:06:04', detail: 'Push notification enqueued · 28 point transactions written', dot: '#1C7A4F', ring: '#E7F3EC', ink: '#17130E' };
+          if (job.attempts === '5 / 5') return { label: 'Moved to dead letter', time: '15 Sept, 07:19:11', detail: 'Attempt 5 of 5 exhausted · no further retries · awaiting manual retry', dot: '#A8281F', ring: '#FBE9E7', ink: '#17130E' };
+          return { label: 'Retry scheduled', time: '15 Sept, 04:06:04', detail: 'Backoff 4m · attempt 4 of 5', dot: '#A8620A', ring: '#FDF0DF', ink: '#17130E' };
+        })()
+      ],
+
+      variants: [
+        mkVariant('healthy', 'Healthy'),
+        mkVariant('stuck', 'Stale'),
+        mkVariant('failed', 'Failing'),
+        mkVariant('bulk', 'Bulk'),
+        mkVariant('empty', 'Empty'),
+        mkVariant('loading', 'Loading')
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

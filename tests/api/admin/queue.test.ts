@@ -9,9 +9,15 @@ vi.mock("@/lib/api-guard", () => ({
 }))
 
 vi.mock("@/lib/queue/queue", () => ({
-  getJobStatusCounts: vi.fn(),
+  DEFAULT_MAX_ATTEMPTS: 5,
+  FAILURE_RATE_SLO_PCT: 1.0,
+  PENDING_AGE_ALERT_MS: 15 * 60 * 1000,
+  STALE_AFTER_MS: 3 * 60 * 1000,
   listJobs: vi.fn(),
   deleteJob: vi.fn(),
+  getJob: vi.fn(),
+  getQueueTypeSummary: vi.fn(),
+  getPlatformQueueSummary: vi.fn(),
 }))
 
 vi.mock("@/lib/queue/drain", () => ({
@@ -26,12 +32,12 @@ vi.mock("@/lib/queue/registry", () => ({
 vi.mock("@/lib/queue/registrations", () => ({}))
 
 import { requireAdminOrFeature } from "@/lib/api-guard"
-import { deleteJob, getJobStatusCounts, listJobs } from "@/lib/queue/queue"
+import { deleteJob, getJob, getPlatformQueueSummary, getQueueTypeSummary, listJobs } from "@/lib/queue/queue"
 import { drainJobs } from "@/lib/queue/drain"
 import { getQueueJobDefinition, listRegisteredJobTypes } from "@/lib/queue/registry"
 import { GET } from "@/app/api/admin/queue/route"
 import { POST } from "@/app/api/admin/queue/retry/route"
-import { DELETE } from "@/app/api/admin/queue/[id]/route"
+import { GET as getJobRoute, DELETE } from "@/app/api/admin/queue/[id]/route"
 
 function req(method: string, path: string, body?: unknown) {
   return new Request(`http://localhost${path}`, {
@@ -58,22 +64,30 @@ describe("GET /api/admin/queue", () => {
     expect(res.status).toBe(401)
   })
 
-  it("without a type: returns status counts for every registered type", async () => {
+  it("without a type: returns a per-type summary plus a platform-wide rollup", async () => {
     vi.mocked(listRegisteredJobTypes).mockReturnValue([{ type: "surprise_bonus_batch", label: "Surprise Bonus" }])
-    vi.mocked(getJobStatusCounts).mockResolvedValue({ pending: 1, processing: 0, completed: 5, failed: 0, stale: 0 })
+    const summary = {
+      type: "surprise_bonus_batch", label: "Surprise Bonus",
+      counts: { pending: 1, processing: 0, completed: 5, failed: 0, cancelled: 0, stale: 0 },
+      depth: 1, failed24h: 0, completed24h: 5, p95RunTimeMs: 1400,
+      throughput: [0, 0, 0, 0, 0, 0, 0, 1], lastRunAt: null, oldestPendingAgeMs: null, health: "healthy" as const,
+    }
+    const platform = {
+      completed24h: 5, completed24hDeltaPct: null, failed24h: 0, processed24h: 5, failureRatePct: 0,
+      p95RunTimeMs: 1400, throughput: [0, 0, 0, 0, 0, 0, 0, 1], oldestPendingAgeMs: null, oldestPendingType: null,
+    }
+    vi.mocked(getQueueTypeSummary).mockResolvedValue(summary)
+    vi.mocked(getPlatformQueueSummary).mockResolvedValue(platform)
 
     const res = await GET(req("GET", "/api/admin/queue"))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({
-      types: [
-        {
-          type: "surprise_bonus_batch",
-          label: "Surprise Bonus",
-          counts: { pending: 1, processing: 0, completed: 5, failed: 0, stale: 0 },
-        },
-      ],
+    expect(body.summaries).toEqual([summary])
+    expect(body.platform).toEqual(platform)
+    expect(body.thresholds).toEqual({
+      pendingAgeAlertMs: 15 * 60 * 1000, failureRateSloPct: 1.0, staleAfterMs: 3 * 60 * 1000, maxAttempts: 5,
     })
+    expect(getPlatformQueueSummary).toHaveBeenCalledWith(["surprise_bonus_batch"])
   })
 
   it("returns 404 for an unknown type", async () => {
@@ -92,7 +106,12 @@ describe("GET /api/admin/queue", () => {
       handler: vi.fn(),
       describeJobs: vi.fn().mockResolvedValue(new Map([["job-1", "Sweet December"]])),
     })
-    vi.mocked(getJobStatusCounts).mockResolvedValue({ pending: 0, processing: 1, completed: 0, failed: 0, stale: 0 })
+    vi.mocked(getQueueTypeSummary).mockResolvedValue({
+      type: "surprise_bonus_batch", label: "Surprise Bonus",
+      counts: { pending: 0, processing: 1, completed: 0, failed: 0, cancelled: 0, stale: 0 },
+      depth: 1, failed24h: 0, completed24h: 0, p95RunTimeMs: null,
+      throughput: [0, 0, 0, 0, 0, 0, 0, 0], lastRunAt: null, oldestPendingAgeMs: null, health: "healthy",
+    })
     const lockedAt = new Date("2026-09-08T10:00:00Z")
     vi.mocked(listJobs).mockResolvedValue([
       {
@@ -107,7 +126,7 @@ describe("GET /api/admin/queue", () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.selectedType).toBe("surprise_bonus_batch")
-    expect(body.counts).toEqual({ pending: 0, processing: 1, completed: 0, failed: 0, stale: 0 })
+    expect(body.counts).toEqual({ pending: 0, processing: 1, completed: 0, failed: 0, cancelled: 0, stale: 0 })
     expect(body.jobs).toEqual([
       {
         id: "job-1", status: "processing", isStale: true, attempts: 1, maxAttempts: 5,
@@ -206,5 +225,58 @@ describe("DELETE /api/admin/queue/[id]", () => {
 
     const res = await DELETE(req("DELETE", "/api/admin/queue/job-2"), params("job-2"))
     expect(res.status).toBe(404)
+  })
+})
+
+describe("GET /api/admin/queue/[id]", () => {
+  const params = (id: string) => ({ params: Promise.resolve({ id }) })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(connection).mockResolvedValue(undefined)
+    vi.mocked(requireAdminOrFeature).mockResolvedValue({
+      session: { user: { id: "admin-1", role: "admin" } },
+    } as never)
+  })
+
+  it("returns 401 when unauthorized", async () => {
+    vi.mocked(requireAdminOrFeature).mockResolvedValueOnce({
+      error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+    } as never)
+
+    const res = await getJobRoute(req("GET", "/api/admin/queue/job-1"), params("job-1"))
+    expect(res.status).toBe(401)
+  })
+
+  it("returns 404 when the job doesn't exist", async () => {
+    vi.mocked(getJob).mockResolvedValue(null)
+
+    const res = await getJobRoute(req("GET", "/api/admin/queue/missing"), params("missing"))
+    expect(res.status).toBe(404)
+  })
+
+  it("returns the full job detail, enriched with the type's label and describeJobs text", async () => {
+    vi.mocked(getQueueJobDefinition).mockReturnValue({
+      type: "surprise_bonus_batch",
+      label: "Surprise Bonus",
+      handler: vi.fn(),
+      describeJobs: vi.fn().mockResolvedValue(new Map([["job-1", "Sweet December"]])),
+    })
+    vi.mocked(getJob).mockResolvedValue({
+      id: "job-1", type: "surprise_bonus_batch", payload: { campaignId: "c1" }, status: "failed",
+      attempts: 5, maxAttempts: 5, availableAt: new Date("2026-09-08T09:59:00Z"),
+      lockedAt: null, lockedBy: null, lastError: "boom", result: null,
+      createdAt: new Date("2026-09-08T09:58:00Z"), completedAt: new Date("2026-09-08T10:00:00Z"), isStale: false,
+    })
+
+    const res = await getJobRoute(req("GET", "/api/admin/queue/job-1"), params("job-1"))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual({
+      id: "job-1", type: "surprise_bonus_batch", label: "Surprise Bonus", status: "failed", isStale: false,
+      attempts: 5, maxAttempts: 5, availableAt: "2026-09-08T09:59:00.000Z", lockedAt: null, lockedBy: null,
+      lastError: "boom", result: null, payload: { campaignId: "c1" },
+      createdAt: "2026-09-08T09:58:00.000Z", completedAt: "2026-09-08T10:00:00.000Z", description: "Sweet December",
+    })
   })
 })
