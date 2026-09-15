@@ -101,6 +101,55 @@ describe("GET /api/products", () => {
     expect(data.products[0]).not.toHaveProperty("featuredExpiresAt")
   })
 
+  // List items must include product.origin for mobile cards / filters without a detail round-trip.
+  it("returns origin on each product list item", async () => {
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
+      products: [
+        {
+          id: "p1",
+          title: "Mogok Ruby",
+          origin: "Myanmar",
+          featuredExpiresAt: null,
+        },
+      ] as never,
+      total: 1,
+    })
+    const req = new Request("http://localhost/api/products")
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    const data = (await res.json()) as { products: Array<{ origin: string | null }> }
+    expect(data.products[0].origin).toBe("Myanmar")
+  })
+
+  // Masked collector pieces hide origin along with other listing details.
+  it("masks origin to null for collector pieces on the public list", async () => {
+    vi.mocked(getAdminProductsFromDb).mockResolvedValue({
+      products: [
+        {
+          id: "cp1",
+          title: "Secret Ruby",
+          price: "9999",
+          currency: "USD",
+          status: "active",
+          origin: "Myanmar",
+          isCollectorPiece: true,
+          imageUrl: "https://cdn.example.com/img.jpg",
+          featuredExpiresAt: null,
+        },
+      ] as never,
+      total: 1,
+    })
+    const req = new Request("http://localhost/api/products")
+    const res = await GET(req as NextRequest)
+    expect(res.status).toBe(200)
+    const data = (await res.json()) as {
+      products: Array<{ isCollectorPiece: boolean; origin: string | null; title: string | null }>
+    }
+    expect(data.products[0].isCollectorPiece).toBe(true)
+    expect(data.products[0].origin).toBeNull()
+    expect(data.products[0].title).toBeNull()
+  })
+
   it("passes search params to getAdminProductsFromDb", async () => {
     const req = new Request(
       "http://localhost/api/products?page=2&search=ruby&productType=loose_stone&status=active"

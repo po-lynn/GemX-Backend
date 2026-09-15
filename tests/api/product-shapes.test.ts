@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { NextRequest } from "next/server"
 import { connection } from "next/server"
 import { GET } from "@/app/api/product-shapes/route"
 import { getAllProductShapes } from "@/features/product-shape/db/product-shape"
@@ -25,7 +24,7 @@ describe("GET /api/product-shapes", () => {
         updatedAt: new Date("2026-09-14T00:00:00.000Z"),
       },
     ])
-    const res = await GET({} as NextRequest)
+    const res = await GET()
     expect(res.status).toBe(200)
     expect(res.headers.get("Cache-Control")).toContain("public")
     const body = await res.json()
@@ -36,7 +35,7 @@ describe("GET /api/product-shapes", () => {
 
   it("returns 500 when the db layer throws", async () => {
     vi.mocked(getAllProductShapes).mockRejectedValue(new Error("db down"))
-    const res = await GET({} as NextRequest)
+    const res = await GET()
     expect(res.status).toBe(500)
   })
 })

@@ -117,6 +117,7 @@ export type AdminProductRow = {
   stoneCut: "Faceted" | "Cabochon" | null
   metal: "Gold" | "Silver" | "Other" | null
   shape: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart" | null
+  origin: string | null
   weightCarat: string | null
   status: "draft" | "pending" | "active" | "archive" | "sold"
   moderationStatus: "pending" | "approved" | "rejected"
@@ -304,6 +305,7 @@ export async function getAdminProductsFromDb(opts: {
       stoneCut: product.stoneCut,
       metal: product.metal,
       shape: product.shape,
+      origin: product.origin,
       weightCarat: product.weightCarat,
       laboratoryId: product.laboratoryId,
       status: product.status,
@@ -351,6 +353,7 @@ export async function getAdminProductsFromDb(opts: {
     stoneCut: p.stoneCut,
     metal: p.metal,
     shape: p.shape,
+    origin: p.origin ?? null,
     weightCarat: p.weightCarat ? String(p.weightCarat) : null,
     status: p.status,
     laboratoryId: p.laboratoryId,
@@ -790,6 +793,7 @@ export async function getProductsBySellerId(
       stoneCut: product.stoneCut,
       metal: product.metal,
       shape: product.shape,
+      origin: product.origin,
       weightCarat: product.weightCarat,
       laboratoryId: product.laboratoryId,
       status: product.status,
@@ -837,6 +841,7 @@ export async function getProductsBySellerId(
     stoneCut: p.stoneCut,
     metal: p.metal,
     shape: p.shape,
+    origin: p.origin ?? null,
     weightCarat: p.weightCarat ? String(p.weightCarat) : null,
     status: p.status,
     laboratoryId: p.laboratoryId,

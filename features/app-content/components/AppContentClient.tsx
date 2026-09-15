@@ -73,10 +73,8 @@ export function AppContentClient(props: AppContentClientProps) {
   const [lastEditedAt, setLastEditedAt] = useState(props.lastEditedAt)
   const [lastEditedBy, setLastEditedBy] = useState(props.lastEditedBy)
   const [saving, setSaving] = useState(false)
-  const [legalEditLanguage, setLegalEditLanguage] = useState<ContentLanguage>("English")
-  const [aboutEditLanguage, setAboutEditLanguage] = useState<ContentLanguage>("English")
-  const [privacyEditLanguage, setPrivacyEditLanguage] = useState<NewsLanguage>("English")
-
+  const [legalEditLanguage, setLegalEditLanguage] = useState<NewsLanguage>("English")
+  const [aboutEditLanguage, setAboutEditLanguage] = useState<NewsLanguage>("English")
 
   const dirty = useMemo(
     () => ({
@@ -181,7 +179,6 @@ export function AppContentClient(props: AppContentClientProps) {
     setValue: (v: MultilangBlockNoteContent) => void,
     setSaved: (v: MultilangBlockNoteContent) => void,
     label: string,
-    editLanguage: NewsLanguage,
     translated: boolean,
   ) {
     setValue(next)
