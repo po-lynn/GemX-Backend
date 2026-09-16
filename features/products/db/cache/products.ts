@@ -40,6 +40,7 @@ export async function getAdminProducts(opts: {
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
   shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
+  currency?: "USD" | "MMK"
   laboratoryId?: string | null
   createdFrom?: string
   createdTo?: string
@@ -84,6 +85,7 @@ export async function getPrivilegeAssistBrowse(opts: {
   identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
   shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
+  currency?: "USD" | "MMK"
   laboratoryId?: string | null
   createdFrom?: string
   createdTo?: string
@@ -111,6 +113,7 @@ export async function getCachedProductsBySellerId(
     identification?: "Natural" | "Heat Treated" | "Treatments" | "Others"
     shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
     origin?: string
+    currency?: "USD" | "MMK"
     laboratoryId?: string | null
     createdFrom?: string
     createdTo?: string

@@ -43,6 +43,8 @@ export const adminProductsSearchSchema = z.object({
   identification: productIdentificationSchema.optional(),
   shape: productShapeSchema.optional(),
   origin: z.string().max(200).optional(),
+  /** Filter by listing currency: `USD` or `MMK`. */
+  currency: currencySchema.optional(),
   laboratoryId: optionalUuid,
   /** Filter by created date: from (inclusive), YYYY-MM-DD */
   createdFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

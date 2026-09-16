@@ -152,7 +152,7 @@ describe("GET /api/products", () => {
 
   it("passes search params to getAdminProductsFromDb", async () => {
     const req = new Request(
-      "http://localhost/api/products?page=2&search=ruby&productType=loose_stone&status=active"
+      "http://localhost/api/products?page=2&search=ruby&productType=loose_stone&status=active&currency=USD"
     )
     await GET(req as NextRequest)
     expect(getAdminProductsFromDb).toHaveBeenCalledWith(
@@ -161,6 +161,7 @@ describe("GET /api/products", () => {
         search: "ruby",
         productType: "loose_stone",
         status: "active",
+        currency: "USD",
         sortByPublicPriority: true,
       })
     )

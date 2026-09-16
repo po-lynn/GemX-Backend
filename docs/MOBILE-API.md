@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Product list — `currency` filter** – **GET `/api/products`**, **GET `/api/products/mine`**, and profile product lists (**GET `/api/profile`**, **GET `/api/profile/:id`**) accept optional query **`currency`**: `USD` or `MMK` (exact match on **`product.currency`**). Combines with other filters (AND). Invalid values are ignored (same as other enum query params). See **5.1**, **5.3**, **5.4**.
 - **Product list — `origin` field** – **GET `/api/products`**, **GET `/api/products/mine`**, and profile product lists (**GET `/api/profile`**, **GET `/api/profile/:id`**) each product item now includes **`origin`** (string or `null`; free-text from **`product.origin`**, same values as the **GET `/api/origins`** name list). Already present on **GET `/api/products/:id`**. Masked collector-piece list items return **`origin: null`**. See **5.1**, **5.2**, **5.3**.
 - **News & Articles unified API** – **GET `/api/news-articles`** and **GET `/api/news-articles/:id`** list/read the admin **News & Articles** content from the **`articles`** table (same data as `/api/articles`). Query includes optional **`type`** (`news` \| `article`), plus `page`, `limit`, `status`, `search`, `category`, `featured`, `lang`. Prefer this path for the combined mobile feed. See **7.3** and [docs/api/news-articles.md](./api/news-articles.md).
 - **Product search + `productType` filter** – **GET `/api/products`** supports **`search`** together with **`productType`** (`loose_stone` \| `jewellery`) and other list filters. Search matches title, description, and seller; `productType` narrows results (AND). Use when the user searches from a type tab (e.g. Loose Stones only). Autocomplete (**GET `/api/products/suggestions`**) is still global (all types); pass `productType` on the list call after submit. See **5.1**, **5.1.2**, and **Search and filter** examples.
@@ -144,7 +145,7 @@
 | POST   | `/api/upload/certificate`   | Yes  | Upload one lab report / certificate file (PDF or image); returns `url` for `certReportUrl`. See 4.5.                                                                                                     |
 | POST   | `/api/upload/kyc-document`  | Yes  | Upload one KYC document (NRC front/back, selfie, business license). Allowed: `jpeg`, `png`, `webp`, `pdf`; max 10 MB. Returns `{ "url": "..." }`. See **4.6**.                                           |
 | PATCH  | `/api/mobile/profile`       | Yes  | Update profile/KYC fields: `name`, `nrc` (Myanmar-format-validated only when `country` is Myanmar/unset, else a free-text passport/ID), `address`, `city`, `state`, `country`, `gender`, `dateOfBirth`, `nrcFrontUrl`, `nrcBackUrl`, `selfieUrl`, `businessLicenseUrl`. NRC must be unique. See **5.4c.2**. |
-| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. Each item includes **`origin`**. **`search` + `productType`** (and other filters) can be combined. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price; `origin` null). Cached 60s/300s. See **5.1**. |
+| GET    | `/api/products`        | No   | List products (default **active** only). Query: `page`, `limit`, `search`, `productType`, `categoryId`, `status`, `stoneCut`, `metal`, `identification`, `shape`, `origin`, **`currency`** (`USD` \| `MMK`), `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`. Each item includes **`origin`**. **`search` + `productType`** (and other filters) can be combined. With `search`, results are full-text ranked. `isCollectorPiece=true` is **public** — returns masked list (image + masked price; `origin` null). Cached 60s/300s. See **5.1**. |
 | GET    | `/api/products/suggestions` | No   | Autocomplete suggestions (distinct titles). Query: `q` (min 2 chars), optional `limit` (default 5, max 10). Cached 30s/60s. See 5.1.1. |
 | GET    | `/api/products/:id`    | No†  | Get single product. Includes `seller` details with `image` and `rating` (`averageScore`, `totalRatings`). **†** Collector pieces: owner (seller) gets full data when authenticated; non-owner gets limited shape (image + masked price + `requestStatus`) unless approved. See **5.2**. |
 | GET    | `/api/products/mine`   | Yes  | List current user’s products. All listing statuses by default; optional **`moderationStatus`** (`pending` \| `approved` \| `rejected`). Same other query params as list all. See **5.3**.                                                                                                                    |
@@ -722,6 +723,7 @@ The API does **not** return a numeric `featured` field—only **`isFeatured`** (
 | `stoneCut`          | string  | -        | Filter by cut: `Faceted` or `Cabochon` (loose stones)                                    |
 | `shape`             | string  | -        | Filter by shape: `Oval`, `Cushion`, `Mixed Cushion`, `Star`, `Round`, `Pear`, `Heart`                             |
 | `origin`            | string  | -        | Filter by origin name (e.g. from GET /api/origins or your origins list)                  |
+| `currency`          | string  | -        | Filter by listing currency: `USD` or `MMK`                                               |
 | `laboratoryId`      | string  | -        | Filter by laboratory UUID (from GET /api/laboratories)                                   |
 | `isCollectorPiece`  | boolean | -        | When `true`, returns all active collector pieces with masked data (image + `maskedPrice`). No auth required. Full details per product require an approved show-request (see **5.4.4** and **5.2**). |
 | `isPrivilegeAssist` | boolean | -        | When `true`, return only Privilege Assist products (sold by us).                         |
@@ -813,6 +815,7 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 | `identification`    | string  | -       | Filter by identification: `Natural`, `Heat Treated`, `Treatments`, `Others`.                                                       |
 | `shape`             | string  | -       | Filter by shape: `Oval`, `Cushion`, `Mixed Cushion`, `Star`, `Round`, `Pear`, `Heart`.                                                                     |
 | `origin`            | string  | -       | Filter by origin name.                                                                                                            |
+| `currency`          | string  | -       | Filter by listing currency: `USD` or `MMK`.                                                                                       |
 | `laboratoryId`      | string  | -       | Filter by laboratory (UUID from GET /api/laboratories).                                                                           |
 | `isCollectorPiece`  | boolean | -       | When `true` on **GET /api/products**, public — returns all active collector pieces with masked data only (image + `maskedPrice`). On **GET /api/products/mine**, returns seller’s own collector-tagged listings as owner data (no public masking). |
 | `isPrivilegeAssist` | boolean | -       | When `true`, only Privilege Assist (sold by us).                                                                                  |
@@ -825,7 +828,7 @@ The list endpoints support **search**, **filters**, and **pagination**. Use the 
 
 When `search` is present, results are ordered by **relevance** (full-text rank) first, then collector piece, privilege assist, featured, then newest.
 
-**Combining `search` with filters:** All query params are **AND**ed. For example, `search=sapphire&productType=loose_stone` returns active loose stones whose title/description/seller matches “sapphire”. The same applies to `categoryId`, `shape`, `origin`, etc. **`productType` is the usual filter to pair with search** when the app has separate Loose Stone vs Jewellery browse/search tabs.
+**Combining `search` with filters:** All query params are **AND**ed. For example, `search=sapphire&productType=loose_stone` returns active loose stones whose title/description/seller matches “sapphire”. The same applies to `categoryId`, `shape`, `origin`, `currency`, etc. **`productType` is the usual filter to pair with search** when the app has separate Loose Stone vs Jewellery browse/search tabs.
 
 **Pagination**
 
@@ -875,11 +878,13 @@ GET /api/products/mine?productType=jewellery&status=active
 Authorization: Bearer <session_token>
 ```
 
-**6. Filter by cut, shape, origin, or laboratory**
+**6. Filter by cut, shape, origin, currency, or laboratory**
 
 ```
 GET /api/products?stoneCut=Cabochon
 GET /api/products?shape=Oval&origin=Myanmar
+GET /api/products?currency=USD
+GET /api/products?currency=MMK&productType=loose_stone
 GET /api/products?laboratoryId=<uuid-from-api>
 GET /api/products/mine?stoneCut=Faceted&status=active
 Authorization: Bearer <session_token>
@@ -1093,7 +1098,7 @@ The response includes a `seller` object (or `null` if seller not found) with:
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, **`moderationStatus`**, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. All are optional.
+**Query:** Same parameters as **List all products** (see 5.1 and “Search and filter” below): `page`, `limit`, `search`, `productType`, `categoryId`, `status`, **`moderationStatus`**, `stoneCut`, `shape`, `origin`, **`currency`**, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. All are optional.
 
 | Param | Values | Notes |
 | ----- | ------ | ----- |
@@ -1124,7 +1129,7 @@ For collector pieces, this endpoint is owner-scoped (`sellerId = logged-in user 
 
 **Auth:** Required. `Authorization: Bearer <session_token>`.
 
-**Query (optional):** Same as **List all products** for the products list: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`. Omit for default (page 1, limit 20). Note: the products list is **restricted to active products only**; the `status` query param does not override this.
+**Query (optional):** Same as **List all products** for the products list: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, **`currency`**, `laboratoryId`. Omit for default (page 1, limit 20). Note: the products list is **restricted to active products only**; the `status` query param does not override this.
 
 **Success (200):**
 
@@ -1183,7 +1188,7 @@ Use this endpoint when a user opens another seller’s profile page and needs th
 | ----- | ------ | ---------------------- |
 | `id`  | string | Seller user id (UUID). |
 
-**Query (optional):** Same filtering set as profile products: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Products are always restricted to `status=active`.
+**Query (optional):** Same filtering set as profile products: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, **`currency`**, `laboratoryId`, `isCollectorPiece`, `isPrivilegeAssist`, `isPromotion`. Products are always restricted to `status=active`.
 
 **Caching:** Responses include **`Cache-Control: no-store`** so **`presence`** / **`status`** stay reasonably fresh (not edge-cached for 60s).
 
@@ -3856,7 +3861,7 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
   - On app load or before “Add product”: `GET /api/categories` (optionally with `?type=loose_stone` or `?type=jewellery`).
   - Cache the list; use for dropdowns and for `categoryId` when creating/editing products.
 3. **Browse**
-  - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `laboratoryId`, `isPrivilegeAssist`, etc.). Public list defaults to active only.
+  - List: `GET /api/products?page=1&limit=20` (optional: `search`, `productType`, `categoryId`, `status`, `stoneCut`, `shape`, `origin`, `currency`, `laboratoryId`, `isPrivilegeAssist`, etc.). Public list defaults to active only.
   - **Save/Unsave favourites:** `POST /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to save; `DELETE /api/mobile/favourite-products` with `{ "productId": "<uuid>" }` to unsave; `GET /api/mobile/favourite-products?page=1&limit=20` to show saved items.
   - **Collector piece browse (public):** `GET /api/products?isCollectorPiece=true` — no auth needed. Returns image + masked price only for all active collector pieces.
   - **Collector piece detail:** `GET /api/products/:id` — seller(owner) gets full data when logged in; non-owner gets limited shape (image + masked price + `requestStatus`) until approved.
