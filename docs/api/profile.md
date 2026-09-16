@@ -12,7 +12,7 @@ Bearer token (Better Auth session). Required.
 
 **Headers:** `Authorization: Bearer <session_token>`
 
-**Query (optional):** Pagination and product filters for the embedded products list: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `laboratoryId`. Products are always restricted to `status=active`.
+**Query (optional):** Pagination and product filters for the embedded products list: `page`, `limit`, `search`, `productType`, `categoryId`, `stoneCut`, `shape`, `origin`, `currency` (`USD` \| `MMK`), `laboratoryId`. Products are always restricted to `status=active`.
 
 ## Response
 

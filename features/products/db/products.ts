@@ -158,6 +158,7 @@ export async function getAdminProductsFromDb(opts: {
   identification?: ProductIdentification
   shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
+  currency?: "USD" | "MMK"
   laboratoryId?: string | null
   /** Filter by created date (YYYY-MM-DD), inclusive range */
   createdFrom?: string
@@ -254,6 +255,7 @@ export async function getAdminProductsFromDb(opts: {
     opts.identification ? eq(product.identification, opts.identification) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+    opts.currency ? eq(product.currency, opts.currency) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
     createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
     createdToDate ? lte(product.createdAt, createdToDate) : undefined,
@@ -401,6 +403,7 @@ type ProductFacetOpts = {
   identification?: ProductIdentification
   shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
   origin?: string
+  currency?: "USD" | "MMK"
   laboratoryId?: string | null
   createdFrom?: string
   createdTo?: string
@@ -493,6 +496,7 @@ export async function getAdminProductFacetCounts(opts: ProductFacetOpts): Promis
       omit !== "shape" && opts.shape ? eq(product.shape, opts.shape) : undefined,
       omit !== "identification" && opts.identification ? eq(product.identification, opts.identification) : undefined,
       opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+      opts.currency ? eq(product.currency, opts.currency) : undefined,
       opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
       createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
       createdToDate ? lte(product.createdAt, createdToDate) : undefined,
@@ -683,6 +687,7 @@ export async function getProductsBySellerId(
     identification?: ProductIdentification
     shape?: "Oval" | "Cushion" | "Mixed Cushion" | "Star" | "Round" | "Pear" | "Heart"
     origin?: string
+    currency?: "USD" | "MMK"
     laboratoryId?: string | null
     /** Filter by created date (YYYY-MM-DD), inclusive range */
     createdFrom?: string
@@ -758,6 +763,7 @@ export async function getProductsBySellerId(
     opts.identification ? eq(product.identification, opts.identification) : undefined,
     opts.shape ? eq(product.shape, opts.shape) : undefined,
     opts.origin?.trim() ? eq(product.origin, opts.origin.trim()) : undefined,
+    opts.currency ? eq(product.currency, opts.currency) : undefined,
     opts.laboratoryId != null ? eq(product.laboratoryId, opts.laboratoryId) : undefined,
     createdFromDate ? gte(product.createdAt, createdFromDate) : undefined,
     createdToDate ? lte(product.createdAt, createdToDate) : undefined,

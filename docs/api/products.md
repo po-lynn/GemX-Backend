@@ -15,7 +15,7 @@ Consumed by the **mobile app** (Home tab: Featured, Privilege Assist, New Produc
 | `search` | string | full-text + `ILIKE` on title/description/seller |
 | `productType` | `loose_stone` \| `jewellery` | |
 | `categoryId` | uuid | matches direct category or any jewellery-gemstone category |
-| `stoneCut`, `metal`, `identification`, `shape`, `origin`, `laboratoryId` | | |
+| `stoneCut`, `metal`, `identification`, `shape`, `origin`, `currency`, `laboratoryId` | | `currency`: `USD` \| `MMK` |
 | `createdFrom`, `createdTo` | `YYYY-MM-DD` | inclusive range |
 | `sortBy`, `sortOrder` | admin-style column sort | overrides default marketplace ordering |
 | `newest` | `true` \| `1` | pure `createdAt desc`, ignored when `search` is set |
