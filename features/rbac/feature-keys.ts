@@ -17,6 +17,8 @@ export const FEATURE_KEYS = {
   LABORATORY:                "laboratory",
   MESSAGES:                  "messages",
   CHAT_DASHBOARD:            "chat_dashboard",
+  ESCROW_CASES:              "escrow.cases",
+  CHAT_MODERATION:           "chat.moderation",
   COLLECTOR_REQUESTS:        "collector_requests",
   SETTINGS_RATING_TAGS:      "settings.rating_tags",
   SETTINGS_PRECAUTION_TAGS:  "settings.precaution_tags",
@@ -80,6 +82,8 @@ export const FEATURE_GROUPS: Array<{
       // (see docs/technical/messages-triage.md) — one toggle controls both
       // underlying keys so the UI can't grant/revoke only half of it.
       { key: FEATURE_KEYS.MESSAGES, label: "Messages", aliasKeys: [FEATURE_KEYS.CHAT_DASHBOARD] },
+      { key: FEATURE_KEYS.ESCROW_CASES, label: "Escrow Cases" },
+      { key: FEATURE_KEYS.CHAT_MODERATION, label: "Chat Moderation" },
     ],
   },
   {

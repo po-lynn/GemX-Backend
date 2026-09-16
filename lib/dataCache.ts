@@ -15,6 +15,7 @@ export type CACHE_TAG =
   | "rankedProductsUser"
   | "news"
   | "internalPermission"
+  | "staffRole"
 
 export function getGlobalTag(tag: CACHE_TAG) {
   return `global:${tag}` as const

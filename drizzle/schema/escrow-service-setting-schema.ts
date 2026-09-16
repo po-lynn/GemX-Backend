@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { pgTable, text, timestamp, numeric, index } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, numeric, integer, bigint, index } from "drizzle-orm/pg-core"
 import { user } from "./auth-schema"
 
 /**
@@ -17,6 +17,15 @@ export const escrowServiceSetting = pgTable(
       .notNull()
       .default("0"),
     serviceOverview: text("service_overview").notNull().default(""),
+    /**
+     * Escrow-case fee terms, snapshotted onto each escrow_case at creation time (see
+     * escrow-case-schema.ts) so an in-flight case's fee never retroactively changes.
+     * Basis points (5000 = 50%) to avoid float math on money splits.
+     */
+    buyerFeeShareBps: integer("buyer_fee_share_bps").notNull().default(5000),
+    sellerFeeShareBps: integer("seller_fee_share_bps").notNull().default(5000),
+    feeMinMinor: bigint("fee_min_minor", { mode: "number" }),
+    feeCapMinor: bigint("fee_cap_minor", { mode: "number" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

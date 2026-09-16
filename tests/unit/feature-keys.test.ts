@@ -3,11 +3,14 @@ import { FEATURE_GROUPS, FEATURE_KEYS, featureSaveKeys } from "@/features/rbac/f
 
 describe("Communication feature group", () => {
   // Messages and Chat Dashboard were merged into one triage inbox page —
-  // the admin permission UI must expose exactly one toggle for it.
+  // the admin permission UI must expose exactly one toggle for it (not a
+  // separate Chat Dashboard entry), alongside the escrow-cases and
+  // chat-moderation toggles added for escrow case messaging/oversight.
   it("exposes a single Messages toggle, not a separate Chat Dashboard entry", () => {
     const communication = FEATURE_GROUPS.find((g) => g.label === "Communication")
-    expect(communication?.features).toHaveLength(1)
-    expect(communication?.features[0].key).toBe(FEATURE_KEYS.MESSAGES)
+    const keys = communication?.features.map((f) => f.key)
+    expect(keys).toEqual([FEATURE_KEYS.MESSAGES, FEATURE_KEYS.ESCROW_CASES, FEATURE_KEYS.CHAT_MODERATION])
+    expect(keys).not.toContain(FEATURE_KEYS.CHAT_DASHBOARD)
   })
 
   it("carries chat_dashboard as an alias key so both stay in sync when saved", () => {
