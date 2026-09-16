@@ -21,6 +21,10 @@ type Props = {
   searchParams: Promise<{ tab?: string; doc?: string }>
 }
 
+// Feature-access + draft content require the signed-in session on every load, so this page
+// can never be part of a static shell — opt out of Instant Navigation validation.
+export const instant = false
+
 export default async function AppContentAdminPage({ searchParams }: Props) {
   await connection()
   const session = await requireFeatureAccess(FEATURE_KEYS.SETTINGS_APP_CONTENT)
