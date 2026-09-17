@@ -1,16 +1,17 @@
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, inArray } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { escrowCaseMessage, escrowCaseReadCursor } from "@/drizzle/schema/escrow-case-schema"
 import { messageTypeEnum } from "@/drizzle/schema/chat-schema"
 
 export type EscrowCaseMessageAttachmentType = (typeof messageTypeEnum.enumValues)[number]
+export type EscrowCaseMessageVisibility = "case" | "agent_buyer" | "agent_seller"
 
 export type EscrowCaseMessageItem = {
   id: string
   caseId: string
   senderId: string | null
   kind: "message" | "system"
-  visibility: "case" | "agent_buyer" | "agent_seller"
+  visibility: EscrowCaseMessageVisibility
   content: string
   fileUrl: string | null
   imageUrls: string[] | null
@@ -24,13 +25,29 @@ function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 }
 
-/** visibility = "case" only for now — side-channel (agent_buyer/agent_seller) messages
- *  are added in a later step, along with the viewer-scoped filtering they need. */
-export async function listEscrowCaseMessages(caseId: string): Promise<EscrowCaseMessageItem[]> {
+/**
+ * `includeSideChannel` decides whether `agent_buyer`/`agent_seller` rows come back
+ * alongside `case` ones — the caller (the messages route) sets this from the viewer's
+ * case-access scope: false for "moderation" (general chat oversight never sees a
+ * specific case's confidential side channel), true for admin/supervisor/own (the
+ * assigned agent, plus anyone with equivalent full access to this one case). There is
+ * no per-party (buyer vs. seller) split here because nothing on this admin-only API
+ * surface is ever "the buyer" or "the seller" themselves — see the doc comment in
+ * app/api/admin/escrow-cases/[id]/messages/route.ts for why that's the right line to
+ * draw today, and what a future buyer/seller-facing surface would need to add.
+ */
+export async function listEscrowCaseMessages(
+  caseId: string,
+  includeSideChannel: boolean
+): Promise<EscrowCaseMessageItem[]> {
+  const visibilities: EscrowCaseMessageVisibility[] = includeSideChannel
+    ? ["case", "agent_buyer", "agent_seller"]
+    : ["case"]
+
   const rows = await db
     .select()
     .from(escrowCaseMessage)
-    .where(and(eq(escrowCaseMessage.caseId, caseId), eq(escrowCaseMessage.visibility, "case")))
+    .where(and(eq(escrowCaseMessage.caseId, caseId), inArray(escrowCaseMessage.visibility, visibilities)))
     .orderBy(asc(escrowCaseMessage.createdAt))
 
   return rows.map((r) => ({
@@ -49,11 +66,18 @@ export async function listEscrowCaseMessages(caseId: string): Promise<EscrowCase
   }))
 }
 
-/** Ordinary case-thread message (visibility "case", kind "message") from a real participant. */
+/**
+ * A case-thread message (`kind: "message"`), `visibility` defaulting to "case" (the
+ * shared buyer+seller+agent thread) or explicitly "agent_buyer"/"agent_seller" — the
+ * agent (or a supervisor/admin covering for them) messaging one party privately from
+ * within the case. Never disguised as a group message: the visibility value is stored
+ * on the row itself and rendered distinctly (see EscrowCaseThreadView.tsx).
+ */
 export async function sendEscrowCaseMessage(input: {
   caseId: string
   senderId: string
   content: string
+  visibility?: EscrowCaseMessageVisibility
   fileUrl?: string | null
   imageUrls?: string[] | null
   attachmentType?: EscrowCaseMessageAttachmentType
@@ -64,7 +88,7 @@ export async function sendEscrowCaseMessage(input: {
       caseId: input.caseId,
       senderId: input.senderId,
       kind: "message",
-      visibility: "case",
+      visibility: input.visibility ?? "case",
       content: input.content,
       fileUrl: input.fileUrl ?? null,
       imageUrls: input.imageUrls ?? null,

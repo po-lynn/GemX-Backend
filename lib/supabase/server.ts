@@ -55,3 +55,8 @@ export const KYC_DOCUMENTS_BUCKET = "kyc-documents"
 
 /** Bucket for custom Follow Us platform icons (public for direct links). */
 export const APP_CONTENT_ICONS_BUCKET = "app-content-icons"
+
+/** Bucket for escrow case evidence (photos, certificates, payment slips). Separate from
+ *  CHAT_MEDIA_BUCKET — evidence has its own retention/sensitivity profile, per this
+ *  repo's one-bucket-per-domain convention. Create in Supabase Dashboard > Storage. */
+export const ESCROW_EVIDENCE_BUCKET = "escrow-evidence"

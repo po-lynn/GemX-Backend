@@ -10,19 +10,28 @@ supervise an escrow deal end-to-end instead of routing it through the
 existing 1:1 `messages` table (which is strictly 2-party with no
 conversation entity).
 
-This is **Step 1+2+3 of a larger plan** — the minimum case model, its
-messaging thread, and now its state machine wired up end-to-end. Moderation/
-reports and canned responses are still schema-ready but not wired to any
-route — see "Edge cases & known limitations" below.
+This is **Step 1+2+3+4+5 of a larger plan** — the minimum case model, its
+messaging thread, its state machine, its side channel, and now attachments
+and canned responses, all wired up end-to-end. Moderation/reports
+(mute/ban, a reports queue, real server-side search) are still schema-ready
+but not wired to any route — see "Edge cases & known limitations" below.
 
 **Step 1** (`26bc962`): the schema, the state machine, the row-level access
 guard, and the `staff_role` concept.
 **Step 2** (`204ae24`): case listing/creation/detail, the messaging
 endpoints, the admin UI, realtime broadcast, and push notifications.
-**Step 3** (this change set): state transitions and agent assignment/
-reassignment, each atomically paired with a system message and an audit log
-row; the EN/MY system-message copy generator; the transition/reassign
-controls in the admin UI.
+**Step 3**: state transitions and agent assignment/reassignment, each
+atomically paired with a system message and an audit log row; the EN/MY
+system-message copy generator; the transition/reassign controls in the
+admin UI.
+**Step 4**: the `agent_buyer`/`agent_seller` side channel — an agent (or
+supervisor/admin) messaging one party privately from within the case,
+enforced in both the query and the notification fan-out, and independently
+audit-logged.
+**Step 5** (this change set): evidence attachments (photos, certificates,
+payment slips) linked to the case independent of any one message, and
+canned response templates (English + Burmese) with an admin config page
+and a reply-box picker.
 
 Files touched:
 
@@ -67,14 +76,22 @@ Files touched:
   pairing the state/assignment write with a system message and an audit log
   row inside one transaction.
 - `features/escrow-cases/db/case-messages.ts` —
-  `listEscrowCaseMessages()`, `sendEscrowCaseMessage()`, `markEscrowCaseRead()`.
+  `listEscrowCaseMessages()` **(Step 4: takes `includeSideChannel: boolean`,
+  filters via `inArray` instead of a hardcoded `eq(visibility, "case")`)**,
+  `sendEscrowCaseMessage()` **(Step 4: takes an optional `visibility`)**,
+  `markEscrowCaseRead()`.
 - `features/escrow-cases/types.ts` — client-side type mirror of the DB
-  layer's shapes; `EscrowCaseDetail` gained `agentName` in Step 3.
+  layer's shapes; `EscrowCaseDetail` gained `agentName` in Step 3;
+  `EscrowCaseMessageVisibility` + `ESCROW_CASE_MESSAGE_VISIBILITY_LABELS`
+  added in Step 4.
 - `app/api/admin/escrow-cases/route.ts` — `GET` (list) / `POST` (create,
   now takes `actorId` for the audit trail).
 - `app/api/admin/escrow-cases/[id]/route.ts` — `GET` (detail).
 - `app/api/admin/escrow-cases/[id]/messages/route.ts` — `GET`
-  (list messages) / `POST` (send).
+  (list messages, **Step 4:** passes `includeSideChannel = scope !==
+  "moderation"`) / `POST` (send, **Step 4:** accepts `visibility`, writes a
+  `side_channel_message_sent` audit row when it isn't `"case"`, and scopes
+  the push notification's recipients to just the addressed party + agent).
 - `app/api/admin/escrow-cases/[id]/read/route.ts` — `PATCH`
   (advance the caller's read cursor).
 - `app/api/admin/escrow-cases/[id]/transition/route.ts` — **new (Step 3)**,
@@ -88,7 +105,11 @@ Files touched:
 - `features/escrow-cases/components/EscrowCaseInboxPage.tsx`,
   `EscrowCaseThreadView.tsx`, `NewEscrowCaseDialog.tsx` — client components;
   `EscrowCaseThreadView.tsx` gained the state-transition picker and
-  "Reassign" button in Step 3.
+  "Reassign" button in Step 3, and the channel picker (Case / Private to
+  buyer / Private to seller) + distinct amber side-channel bubble styling
+  in Step 4. The channel resets to `"case"` on every case (re)load —
+  `EscrowCaseInboxPage.tsx` never lets a stale private-channel selection
+  carry over onto a newly selected case.
 - `features/escrow-cases/components/ReassignCaseDialog.tsx` — **new (Step 3)**.
 - `features/escrow-cases/actions/escrow-cases.ts` — server actions
   backing the New Case dialog's buyer/seller/listing/agent pickers (also
@@ -107,6 +128,54 @@ Files touched:
 - `features/users/components/UserForm.tsx`,
   `app/admin/users/[id]/edit/page.tsx` — the "Staff role" section on
   the internal-user edit page (see "Auth & permissions").
+
+**Step 5 additions**
+- `lib/supabase/server.ts` — **new**, `ESCROW_EVIDENCE_BUCKET =
+  "escrow-evidence"`, a dedicated Supabase Storage bucket separate from
+  `CHAT_MEDIA_BUCKET`.
+- `features/escrow-cases/db/case-attachments.ts` — **new**,
+  `listEscrowCaseAttachments()`, `createEscrowCaseAttachment()`.
+- `features/escrow-cases/db/canned-responses.ts` — **new**,
+  `listEscrowCannedResponses()`, `createEscrowCannedResponse()`,
+  `updateEscrowCannedResponse()`, `deleteEscrowCannedResponse()`.
+- `app/api/admin/escrow-cases/[id]/attachments/route.ts` — **new**, `GET`
+  (list evidence) / `POST` (upload one file to `escrow-evidence` +
+  record it, `messageId: null`) — see
+  [`docs/api/admin-escrow-cases-attachments.md`](../api/admin-escrow-cases-attachments.md).
+- `app/api/admin/escrow-cases/[id]/messages/route.ts` — extended:
+  `sendMessageSchema` now accepts `fileUrl`/`imageUrls` (max 1)/
+  `attachmentType`, `content` is optional once one of those is present
+  (matching `/api/chat/messages`'s own rule), and the route awaits an
+  `escrow_case_attachment` insert (linked to the new message) whenever an
+  attachment is present.
+- `app/api/admin/escrow-canned-responses/route.ts`,
+  `app/api/admin/escrow-canned-responses/[id]/route.ts` — **new**, full
+  CRUD gated by `FEATURE_KEYS.ESCROW_CASES` (the same key as the case
+  routes, not a separate settings key) — see
+  [`docs/api/admin-escrow-canned-responses.md`](../api/admin-escrow-canned-responses.md)
+  and
+  [`docs/api/admin-escrow-canned-responses-detail.md`](../api/admin-escrow-canned-responses-detail.md).
+- `app/admin/messages/escrow/canned-responses/page.tsx`,
+  `features/escrow-cases/components/CannedResponsesAdminPage.tsx` —
+  **new** admin config screen (list + create/edit dialog + active toggle +
+  delete) — a self-contained component matching this feature's other
+  dialogs, not the heavier `ListViewTable`/separate-page-per-action
+  pattern other admin CRUD screens use (the entity is small and
+  low-traffic).
+- `features/escrow-cases/components/EscrowCaseThreadView.tsx` — gained a
+  paperclip attachment picker (uploads via the existing generic
+  `/api/chat/media`, then sends with `fileUrl`/`imageUrls`), a canned-
+  response picker (inserts `bodyEn` into the reply box), inline
+  image/file rendering in message bubbles, and an "Evidence (N)" toggle
+  panel listing every `escrow_case_attachment` for the open case.
+- `features/escrow-cases/components/EscrowCaseInboxPage.tsx` — owns the
+  pending-attachment state (upload happens on send, not on pick),
+  fetches canned responses once on mount and case attachments alongside
+  case/messages on every case load, and adds a "Templates" link to the
+  canned-responses admin page.
+- `features/escrow-cases/types.ts` — added `EscrowCaseAttachment` and
+  `EscrowCannedResponse` (client-facing mirrors of the new db-layer
+  shapes).
 
 ## Data flow
 
@@ -169,27 +238,85 @@ EscrowCaseInboxPage.tsx               onCreated(caseId) → refreshCases() re-fe
                                        GET /api/admin/escrow-cases, selects the new case
 ```
 
-**Sending a message**
+**Sending a message (case thread or side channel)**
 
 ```
-EscrowCaseThreadView.tsx (REPLY box)  onSendReply → POST /api/admin/escrow-cases/[id]/messages
-        │                             { content }
+EscrowCaseThreadView.tsx (REPLY box +   onSendReply → POST /api/admin/escrow-cases/[id]/messages
+channel picker: Case/Buyer/Seller)      { content, visibility }  — visibility omitted/"case"
+        │                                unless the picker is set to agent_buyer/agent_seller
         ▼
 requireEscrowThreadWriteAccess()      requireEscrowCaseAccess() + reject scope
-                                       "moderation" (403)
+                                       "moderation" (403) — same guard regardless of channel
         │
         ▼
 sendEscrowCaseMessage()               inserts escrow_case_message
-                                       (kind: "message", visibility: "case" — always today)
+                                       (kind: "message", visibility as given, default "case")
         │
         ├──▶ broadcastCaseEvents(caseId, [{ event: "case_message_new", payload }])
         │      fire-and-forget → Supabase Realtime topic `case:<caseId>`
         │
+        ├──▶ [Step 4, awaited] if visibility !== "case": INSERT escrow_chat_audit_log
+        │      (actionType: "side_channel_message_sent", targetType: "case_message")
+        │
         └──▶ sendEscrowCaseMessageNotification()
-               fire-and-forget → FCM push to buyer + seller + assignedAgent, minus sender
+               fire-and-forget → FCM push, recipients scoped by visibility:
+               "case" → buyer+seller+agent · "agent_buyer" → buyer+agent only ·
+               "agent_seller" → seller+agent only (always minus the sender)
                → buildEscrowCaseMessageNotificationData() sets data.screen = "custom",
                  data.type = "escrow_case_message" (an old mobile build that doesn't
                  recognize the type still shows the OS banner)
+```
+
+**Reading a thread (moderation scope excludes the side channel)**
+
+```
+GET /api/admin/escrow-cases/[id]/messages   requireEscrowCaseAccess() resolves a scope
+        │
+        ▼
+listEscrowCaseMessages(caseId,              includeSideChannel = access.scope !== "moderation"
+  includeSideChannel)                       → WHERE visibility IN (...) via inArray:
+                                             ["case"] for moderation, ["case","agent_buyer",
+                                             "agent_seller"] for admin/supervisor/own
+```
+
+**Attaching evidence (Step 5)**
+
+```
+EscrowCaseThreadView.tsx (📎 button)   onPickAttachment(file) → held as client-side
+                                        pendingAttachment state; NOT uploaded yet
+        │  on Send
+        ▼
+POST /api/chat/media                   generic authenticated upload (session-only auth,
+                                        same route the flat chat/triage composers use) →
+                                        returns a public URL; NOT case-specific
+        │
+        ▼
+POST /api/admin/escrow-cases/[id]/messages   { content?, fileUrl | imageUrls: [url],
+                                                attachmentType, visibility }
+        │
+        ├──▶ sendEscrowCaseMessage()          inserts escrow_case_message with the file
+        │
+        └──▶ [awaited] createEscrowCaseAttachment({ caseId, messageId: saved.id, ... })
+               → one escrow_case_attachment row, visible in the thread AND in the
+                 case's independent "Evidence" panel
+
+Separately, POST /api/admin/escrow-cases/[id]/attachments uploads straight to the
+escrow-evidence bucket AND records the row in one request (messageId: null) — for
+adding evidence that isn't part of any chat message. The two paths must never both
+fire for the same file (would double-record it).
+```
+
+**Inserting a canned response (Step 5)**
+
+```
+EscrowCaseInboxPage.tsx (mount)   GET /api/admin/escrow-canned-responses (activeOnly
+                                  default true) → cannedResponses state, fetched once
+        │
+        ▼
+EscrowCaseThreadView.tsx          picker button lists titles; selecting one calls
+                                  onInsertCannedResponse(bodyEn), which appends bodyEn
+                                  into the existing reply textarea (client-side only —
+                                  no server round-trip until the agent hits Send)
 ```
 
 **Transitioning state**
@@ -266,23 +393,33 @@ setEscrowCaseAgent()          ONE db.transaction:
 |---|---|---|
 | `staff_role` | `user_id` (PK, FK `user`, `CASCADE`), `role` (`staff_role_type`: `escrow_agent`\|`moderator`\|`support`\|`analyst`), `is_supervisor` (bool, default `false`, meaningful only for `escrow_agent`) | A dedicated identity/assignment designation layered on `user.role = "internal"` — see "Auth & permissions". |
 
-**`escrow_chat_audit_log` is now live (Step 3).** Every state transition and
-every assign/reassign writes one row (`actorId`, `actionType`,
-`targetType: "escrow_case"`, `targetId`, `before`/`afterState`, optional
-`reason`) inside the same transaction as the underlying change — see "Data
-flow" above. There is no reader for it yet (no per-case/per-user audit
-trail UI), only writers.
+**`escrow_chat_audit_log` is now live (Step 3, extended in Step 4).** Every
+state transition and every assign/reassign writes one row (`actorId`,
+`actionType`, `targetType: "escrow_case"`, `targetId`, `before`/`afterState`,
+optional `reason`) inside the same transaction as the underlying change.
+**Step 4** adds a fourth writer: every side-channel message send writes a
+row too (`actionType: "side_channel_message_sent"`, `targetType:
+"case_message"`, `targetId`: the message id, `afterState: { visibility }`)
+— awaited synchronously in the route, not fire-and-forget, since an
+unaudited side-channel message would defeat the point of it being
+independently auditable. There is still no reader for any of this (no
+per-case/per-user audit trail UI), only writers.
+
+**`escrow_case_attachment` and `escrow_canned_response` are now live
+(Step 5).** `escrow_case_attachment` is written both by
+`POST .../attachments` (`messageId: null`) and automatically by
+`POST .../messages` whenever a message carries `fileUrl`/`imageUrls`
+(`messageId`: the new message's id) — see "Data flow" below.
+`escrow_canned_response` has full CRUD via
+`/api/admin/escrow-canned-responses[/[id]]` and an admin config UI.
 
 **Still schema-only, reserved for a later step** —
 `drizzle/schema/chat-moderation-schema.ts`'s `messaging_restriction` and
-`message_report`, and `drizzle/schema/escrow-canned-response-schema.ts`'s
-`escrow_canned_response`, plus `escrow_case_attachment`
-(`escrow-case-schema.ts`) — all fully defined, indexed, RLS-enabled tables
-with zero references anywhere outside their own schema files (verified by
-grepping the whole codebase for `messagingRestriction`, `messageReport`,
-`escrowCannedResponse`, `escrowCaseAttachment`). They exist so a later
-moderation/canned-response/reports-queue/attachments step doesn't need its
-own schema-diff pass.
+`message_report` — fully defined, indexed, RLS-enabled tables with zero
+references anywhere outside their own schema files (verified by grepping
+the whole codebase for `messagingRestriction`, `messageReport`). They exist
+so a later moderation/reports-queue step doesn't need its own schema-diff
+pass.
 
 **Migration**
 
@@ -380,15 +517,14 @@ out of scope for Step 1+2.
    is no mobile-facing case-creation endpoint. Staff open a case from the
    admin panel after reviewing an initial buyer/seller contact made through
    the existing 1:1 chat.
-3. **Moderation/reports/mute-ban schema exists but has no routes yet —
-   reserved for a later step.** `message_report`, `messaging_restriction`,
-   `escrow_chat_audit_log` (`drizzle/schema/chat-moderation-schema.ts`) and
-   `escrow_canned_response` (`drizzle/schema/escrow-canned-response-schema.ts`)
-   are fully defined tables with zero code references outside their own
-   schema files. `escrow_case_attachment` is in the same state. The
-   `"moderation"` access scope is enforced today (read-only thread
-   oversight), but there is no reports queue, no mute/ban UI, and no
-   canned-response picker.
+3. **Reports/mute-ban schema exists but has no routes yet — reserved for a
+   later step.** `message_report` and `messaging_restriction`
+   (`drizzle/schema/chat-moderation-schema.ts`) are fully defined tables
+   with zero code references outside their own schema files. The
+   `"moderation"` access scope is enforced today (read-only thread and
+   evidence oversight), but there is no reports queue and no mute/ban UI.
+   (`escrow_chat_audit_log` and `escrow_canned_response` are no longer in
+   this bucket — both are live as of Steps 3–5.)
 4. **Search is a plain client-side substring filter, not server-side.**
    `EscrowCaseInboxPage.tsx`'s `filteredCases` runs `.filter()` over the
    buyer/seller name and listing title of whatever
@@ -415,12 +551,18 @@ out of scope for Step 1+2.
    thread at all yet. The Burmese strings are a first-pass, static
    translation — not run through `lib/google-translate.ts` — and should get
    a native-speaker review before they ever reach a real buyer/seller.
-7. **Side-channel visibility is schema-only.**
-   `escrow_case_message_visibility` has `agent_buyer`/`agent_seller` values
-   in addition to `case`, but `listEscrowCaseMessages()` and
-   `sendEscrowCaseMessage()` both hardcode `visibility: "case"` — see the
-   doc comment at the top of `case-messages.ts`. There is currently no way
-   to send or read a private agent↔buyer or agent↔seller message.
+7. **Side-channel visibility is live (Step 4), with one real limitation:
+   there's no per-party (buyer vs. seller) reader distinction, because
+   there's no buyer/seller reader at all.** `agent_buyer`/`agent_seller`
+   messages are correctly withheld from the `"moderation"` scope's query
+   and from the *other* party's push notification (an `agent_buyer` message
+   never notifies the seller — not just hides content from them, hides the
+   fact a message was sent at all). But `admin`/`supervisor`/`own` all see
+   *both* side channels identically today — there's no staff-side concept
+   of "you are the buyer" or "you are the seller" to filter by, since this
+   whole API surface is admin/staff-only. A future buyer/seller-facing
+   surface (mobile, out of scope here) is what would actually need to tell
+   `agent_buyer` and `agent_seller` apart for a specific viewer.
 8. **Page-gate vs. row-level scope mismatch for moderators** — see "Auth &
    permissions" above.
 9. **Realtime broadcast and push notification are fire-and-forget, with no
@@ -443,3 +585,37 @@ out of scope for Step 1+2.
     call a notification service. A buyer/seller finds out their case was
     (re)assigned only by opening the thread (or via the next state-change
     push), not immediately.
+12. **One attachment per message, no gallery.** `sendMessageSchema`'s
+    `imageUrls` is capped at `min(1).max(1)` — deliberately narrower than
+    the flat chat model's multi-image gallery support, to keep the
+    composer's upload flow (and the case-attachment linkage) simple. An
+    agent sharing multiple photos sends them as separate messages.
+13. **No admin UI for `escrow_case_attachment` rows uploaded directly via
+    `POST .../attachments`** (as opposed to attached to a message) —
+    `EscrowCaseThreadView.tsx`'s attachment picker always goes through the
+    message-send path (`POST .../messages` with `fileUrl`/`imageUrls`),
+    which is what actually gets exercised today. The dedicated attachments
+    endpoint works (verified directly via the API) and is what a future
+    "add evidence without a message" action would call, but no UI drives
+    it yet.
+14. **Canned response management shares the `ESCROW_CASES` feature key**,
+    not a separate settings permission — any internal user who can open
+    the case inbox can also create/edit/delete templates via
+    `/admin/messages/escrow/canned-responses`. If template editing should
+    ever be admin-only, that page needs its own guard, not
+    `requireEscrowCasesAccess()`.
+15. **The Supabase Storage upload step could not be live-verified against
+    the real `escrow-evidence` bucket in this environment** (outbound
+    HTTPS to `*.supabase.co` timed out from the sandbox this was built in
+    — a network restriction, not application code). What *was* verified
+    directly against the real database: the message-with-attachment write
+    path (an `escrow_case_message` row plus its linked
+    `escrow_case_attachment` row, correct `fileType`/`messageId`) and the
+    evidence list endpoint, using a `fileUrl` that doesn't require actual
+    storage. The upload call itself reuses `requireUploadContext`/
+    `validateUploadFile`/`uploadFileToBucket`
+    (`lib/supabase/storage-upload.ts`) — the exact same helpers
+    `/api/chat/media` already uses successfully in this codebase — pointed
+    at the new `ESCROW_EVIDENCE_BUCKET` instead of `CHAT_MEDIA_BUCKET`.
+    Confirm a real upload succeeds in an environment with outbound network
+    access before relying on this in production.

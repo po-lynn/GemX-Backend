@@ -2,12 +2,16 @@
 
 ## Prerequisites
 
-- No new env vars or dependencies are required for the core feature.
-  `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are only needed for
-  the live realtime broadcast of new messages/read receipts
-  (`lib/supabase/case-broadcast.ts`) — if they're unset, `broadcastCaseEvents()`
-  silently no-ops and the page still works, it just won't update live without
-  a manual refresh.
+- No new dependencies are required. `NEXT_PUBLIC_SUPABASE_URL`/
+  `SUPABASE_SERVICE_ROLE_KEY` (already required elsewhere in this repo) are
+  needed for two things: the live realtime broadcast of new messages/read
+  receipts (`lib/supabase/case-broadcast.ts` — if unset, `broadcastCaseEvents()`
+  silently no-ops and the page still works, just without live updates
+  without a manual refresh), and evidence attachment uploads
+  (`ESCROW_EVIDENCE_BUCKET`, created automatically on first upload — if
+  Supabase Storage is unreachable, uploading a file fails with a `500`
+  instead of silently no-opping, since a lost attachment isn't as safe to
+  ignore as a missed realtime update).
 - A user with `role = "admin"` needs nothing else — they see and can post in
   every case.
 - An **internal** user needs two separate things, both granted from the same
@@ -82,6 +86,24 @@
    `PATCH /api/admin/escrow-cases/{id}/read` in the background — this only
    advances *your own* read cursor and never affects anyone else's unread
    state.
+
+   **Send a private (side-channel) message instead**: above the REPLY box,
+   three small buttons — **Case thread**, **Private to buyer**, **Private to
+   seller** — pick which channel you're sending on. Picking one of the
+   private options changes the request to:
+   ```http
+   POST /api/admin/escrow-cases/{id}/messages
+   Content-Type: application/json
+
+   { "content": "Can you confirm the payment amount?", "visibility": "agent_buyer" }
+   ```
+   A private message is rendered with an amber "🔒 Private to buyer/seller"
+   label so it's never mistaken for a message the other party can see — the
+   other party genuinely never learns it was sent (their push notification
+   list excludes them too, not just the message content). The channel
+   picker always resets back to **Case thread** whenever you open a
+   (different, or the same) case, so a private selection never silently
+   carries over.
 5. **Move the case forward** — the pill next to the case header (normally
    just showing the current state) becomes a `<select>` whenever a valid
    next state exists; picking one sends:
@@ -109,26 +131,46 @@
    Assigning an unassigned (`requested`) case also advances its state to
    `agent_assigned` in the same call — you don't do that as two separate
    steps.
+7. **Attach evidence** — click the paperclip icon next to REPLY and pick a
+   photo, PDF, or Word doc (≤ 20 MB). It shows as a small preview chip
+   above the reply box; type an optional caption and hit Send (or send with
+   no caption at all — a caption isn't required once there's a file). The
+   file uploads first, then the message goes out with the resulting URL.
+   Click **Evidence (N)** in the case header to see every file recorded
+   against this case, independent of which message it came from.
+8. **Insert a canned response** — click the speech-bubble icon next to the
+   paperclip to open the template picker, then click a template to insert
+   its English body into the reply box (you can still edit it before
+   sending). Manage the template list itself via the **Templates** link in
+   the inbox header, or directly at `/admin/messages/escrow/canned-responses`
+   — create, edit, disable (without deleting), or delete a template there.
 
 ## Extending it
 
-- **Side-channel messages (agent↔buyer or agent↔seller only, hidden from the
-  other party)**: the schema is already there —
-  `escrow_case_message.visibility` (`drizzle/schema/escrow-case-schema.ts`)
-  has `agent_buyer`/`agent_seller` values alongside `case`, but
-  `listEscrowCaseMessages()`/`sendEscrowCaseMessage()`
-  (`features/escrow-cases/db/case-messages.ts`) both currently hardcode
-  `visibility: "case"` — see the doc comment at the top of that file for the
-  exact 3-party visibility rule to implement. You'd add a `visibility`
-  param to both functions and a way for the UI to pick a channel.
-- **Canned responses**: `escrow_canned_response`
-  (`drizzle/schema/escrow-canned-response-schema.ts`) is already a full,
-  RLS-enabled table (`title`, `bodyEn`, `bodyMy`, `isActive`, `sortOrder`,
-  `createdByAdminId`) with zero code referencing it yet. Build an admin CRUD
-  for it plus a template picker above the REPLY box in
-  `EscrowCaseThreadView.tsx` that fills the reply input from a selected row.
-- **Reports / moderation queue**: `message_report`, `messaging_restriction`,
-  and `escrow_chat_audit_log` (`drizzle/schema/chat-moderation-schema.ts`)
+- **A buyer/seller-facing reader for side channels**: today `agent_buyer`/
+  `agent_seller` messages are correctly withheld from the wrong *party's
+  notification* and from the `"moderation"` oversight scope's query, but
+  `admin`/`supervisor`/`own` all see both channels identically — there's no
+  concept of "you are the buyer" anywhere on this admin-only API surface. A
+  future mobile/buyer-seller surface would need its own query that filters
+  `agent_buyer` to the buyer specifically and `agent_seller` to the seller
+  specifically, not just reuse `listEscrowCaseMessages()` as-is.
+- **Multi-image galleries**: `sendMessageSchema`'s `imageUrls` is capped at
+  one entry per message (unlike the flat chat model's gallery support) —
+  raise the cap and extend the composer's file picker to `multiple` if
+  agents need to attach several photos at once.
+- **Admin-only canned response management**: template CRUD currently shares
+  `FEATURE_KEYS.ESCROW_CASES` with case access itself — add a dedicated
+  guard (or a new feature key) to `app/api/admin/escrow-canned-responses*`
+  and the config page if editing templates should be a stricter permission
+  than opening the case inbox.
+- **A UI for standalone evidence uploads**: `POST
+  .../escrow-cases/[id]/attachments` (evidence not tied to any chat
+  message, `messageId: null`) works today but nothing in the admin UI
+  calls it — the "Evidence" panel is read-only. Add an "+ Add evidence"
+  button there that uploads directly to this endpoint.
+- **Reports / moderation queue**: `message_report` and
+  `messaging_restriction` (`drizzle/schema/chat-moderation-schema.ts`)
   are fully defined and indexed but have no routes yet.
   `message_report` already has the exactly-one-of
   `flatMessageId`/`caseMessageId` CHECK constraint wired so it can report
@@ -179,11 +221,20 @@
 - **`400 { "error": "Invalid input" }`** creating a case or sending a
   message: something failed the Zod schema — most commonly
   `agreedPriceMinor` not a positive integer (check you converted major units
-  correctly), `currency` not exactly `"USD"` or `"MMK"`, or a message
-  `content` that's empty or over 5000 characters.
+  correctly), `currency` not exactly `"USD"` or `"MMK"`, a message
+  `content` that's empty or over 5000 characters, or `visibility` set to
+  anything other than `"case"`, `"agent_buyer"`, or `"agent_seller"`.
 - **`404 { "error": "Not found" }`**: the case id in the URL doesn't exist.
   Cases are never soft- or hard-deleted by this feature today, so this
   usually means a typo'd/stale id.
+- **Attaching a file returns `400 { "error": "Invalid file type: ..." }`
+  or `"File too large: ..."`**: only images (JPEG/PNG/WebP/GIF), PDF, and
+  Word docs up to 20 MB are accepted for evidence — audio isn't, unlike the
+  flat chat composer. Convert or compress the file and try again.
+- **Attaching a file returns a `500` with no other detail**: most likely
+  the Supabase Storage upload itself failed (network issue, bucket/RLS
+  misconfiguration) rather than a validation problem — check the server
+  log for a `Storage...Error` line naming the `escrow-evidence` bucket.
 - **Can't find a case you know exists**: the in-page search box only filters
   buyer name / seller name / listing title across the cases your own scope
   already returned (see the technical doc's "search is a plain client-side

@@ -66,12 +66,20 @@ export type EscrowCaseDetail = {
   seller: EscrowCaseParticipant
 }
 
+export type EscrowCaseMessageVisibility = "case" | "agent_buyer" | "agent_seller"
+
+export const ESCROW_CASE_MESSAGE_VISIBILITY_LABELS: Record<EscrowCaseMessageVisibility, string> = {
+  case: "Case thread",
+  agent_buyer: "Private to buyer",
+  agent_seller: "Private to seller",
+}
+
 export type EscrowCaseMessage = {
   id: string
   caseId: string
   senderId: string | null
   kind: "message" | "system"
-  visibility: "case" | "agent_buyer" | "agent_seller"
+  visibility: EscrowCaseMessageVisibility
   content: string
   fileUrl: string | null
   imageUrls: string[] | null
@@ -79,4 +87,27 @@ export type EscrowCaseMessage = {
   systemEventType: string | null
   systemEventPayload: Record<string, unknown> | null
   createdAt: string
+}
+
+export type EscrowCaseAttachment = {
+  id: string
+  caseId: string
+  messageId: string | null
+  uploadedByUserId: string | null
+  url: string
+  fileType: "text" | "image" | "audio" | "file"
+  label: string | null
+  createdAt: string
+}
+
+export type EscrowCannedResponse = {
+  id: string
+  title: string
+  bodyEn: string
+  bodyMy: string
+  isActive: boolean
+  sortOrder: number
+  createdByAdminId: string | null
+  createdAt: string
+  updatedAt: string
 }

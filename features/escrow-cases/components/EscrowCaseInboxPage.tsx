@@ -1,13 +1,22 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Plus } from "lucide-react"
+import Link from "next/link"
+import { MessageSquareText, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { ConversationList, type TriageListRow } from "@/features/messages/components/triage/ConversationList"
 import { EscrowCaseThreadView } from "@/features/escrow-cases/components/EscrowCaseThreadView"
 import { NewEscrowCaseDialog } from "@/features/escrow-cases/components/NewEscrowCaseDialog"
 import { ReassignCaseDialog } from "@/features/escrow-cases/components/ReassignCaseDialog"
-import { ESCROW_CASE_STATE_LABELS, type EscrowCaseDetail, type EscrowCaseListItem, type EscrowCaseMessage } from "@/features/escrow-cases/types"
+import {
+  ESCROW_CASE_STATE_LABELS,
+  type EscrowCaseAttachment,
+  type EscrowCaseDetail,
+  type EscrowCaseListItem,
+  type EscrowCaseMessage,
+  type EscrowCaseMessageVisibility,
+  type EscrowCannedResponse,
+} from "@/features/escrow-cases/types"
 import { formatMoneyMinor } from "@/features/escrow-cases/lib/money"
 import type { EscrowCaseState } from "@/features/escrow-cases/lib/state-machine"
 
@@ -40,8 +49,17 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
   const [error, setError] = useState<string | null>(null)
 
   const [replyValue, setReplyValue] = useState("")
+  const [replyChannel, setReplyChannel] = useState<EscrowCaseMessageVisibility>("case")
   const [replyPending, setReplyPending] = useState(false)
   const [transitionPending, setTransitionPending] = useState(false)
+
+  const [pendingAttachment, setPendingAttachment] = useState<{ file: File; previewUrl: string | null } | null>(
+    null
+  )
+  const [attachmentUploading, setAttachmentUploading] = useState(false)
+  const [cannedResponses, setCannedResponses] = useState<EscrowCannedResponse[]>([])
+  const [attachments, setAttachments] = useState<EscrowCaseAttachment[]>([])
+  const [showEvidence, setShowEvidence] = useState(false)
 
   const filteredCases = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -71,22 +89,31 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
     if (!selectedId) {
       setCaseDetail(null)
       setMessages([])
+      setAttachments([])
       return
     }
     setLoading(true)
     setError(null)
+    // Reset to the shared channel and clear any pending attachment on every (re)load —
+    // a stale "private to buyer/seller" selection or an in-progress attachment from a
+    // previous case must never carry over onto a newly selected one.
+    setReplyChannel("case")
+    setPendingAttachment(null)
     try {
-      const [caseRes, messagesRes] = await Promise.all([
+      const [caseRes, messagesRes, attachmentsRes] = await Promise.all([
         fetch(`/api/admin/escrow-cases/${selectedId}`, { credentials: "include" }),
         fetch(`/api/admin/escrow-cases/${selectedId}/messages`, { credentials: "include" }),
+        fetch(`/api/admin/escrow-cases/${selectedId}/attachments`, { credentials: "include" }),
       ])
       const caseData = await caseRes.json().catch(() => ({}))
       if (!caseRes.ok) throw new Error((caseData as { error?: string }).error ?? "Failed to load case")
       const messagesData = await messagesRes.json().catch(() => ({}))
       if (!messagesRes.ok) throw new Error((messagesData as { error?: string }).error ?? "Failed to load messages")
+      const attachmentsData = await attachmentsRes.json().catch(() => ({}))
 
       setCaseDetail((caseData as { case: EscrowCaseDetail }).case)
       setMessages((messagesData as { messages: EscrowCaseMessage[] }).messages ?? [])
+      setAttachments((attachmentsData as { attachments?: EscrowCaseAttachment[] }).attachments ?? [])
 
       void fetch(`/api/admin/escrow-cases/${selectedId}/read`, { method: "PATCH", credentials: "include" }).catch(
         () => {}
@@ -102,6 +129,13 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
     queueMicrotask(fetchCase)
   }, [fetchCase])
 
+  useEffect(() => {
+    void fetch("/api/admin/escrow-canned-responses", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => setCannedResponses((data as { responses?: EscrowCannedResponse[] }).responses ?? []))
+      .catch(() => {})
+  }, [])
+
   const refreshCases = useCallback(async (selectAfter?: string) => {
     try {
       const res = await fetch("/api/admin/escrow-cases", { credentials: "include" })
@@ -114,24 +148,76 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
     }
   }, [])
 
+  function messageTypeFromMime(mime: string): "image" | "file" {
+    return mime.startsWith("image/") ? "image" : "file"
+  }
+
+  function handlePickAttachment(files: FileList | null) {
+    const file = files?.[0]
+    if (!file) return
+    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : null
+    setPendingAttachment((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+      return { file, previewUrl }
+    })
+  }
+
+  function handleRemoveAttachment() {
+    setPendingAttachment((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
+  }
+
+  function handleInsertCannedResponse(bodyEn: string) {
+    setReplyValue((prev) => (prev ? `${prev}\n${bodyEn}` : bodyEn))
+  }
+
   async function handleSendReply() {
     const content = replyValue.trim()
-    if (!selectedId || !content || replyPending) return
+    if (!selectedId || (!content && !pendingAttachment) || replyPending) return
     setReplyPending(true)
     try {
+      let fileUrl: string | undefined
+      let imageUrls: string[] | undefined
+      let attachmentType: "image" | "file" | undefined
+
+      if (pendingAttachment) {
+        setAttachmentUploading(true)
+        const formData = new FormData()
+        formData.set("file", pendingAttachment.file)
+        const uploadRes = await fetch("/api/chat/media", { method: "POST", body: formData, credentials: "include" })
+        const uploadData = await uploadRes.json().catch(() => ({}))
+        setAttachmentUploading(false)
+        if (!uploadRes.ok) throw new Error((uploadData as { error?: string }).error ?? "Failed to upload attachment")
+        const url = (uploadData as { url?: string }).url
+        if (!url) throw new Error("Upload did not return a URL")
+        attachmentType = messageTypeFromMime(pendingAttachment.file.type)
+        if (attachmentType === "image") imageUrls = [url]
+        else fileUrl = url
+      }
+
       const res = await fetch(`/api/admin/escrow-cases/${selectedId}/messages`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content: content || undefined,
+          visibility: replyChannel,
+          fileUrl,
+          imageUrls,
+          attachmentType,
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to send message")
       setReplyValue("")
+      handleRemoveAttachment()
       await fetchCase()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send message")
     } finally {
+      setAttachmentUploading(false)
       setReplyPending(false)
     }
   }
@@ -161,13 +247,21 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center justify-between">
         <h1 className="text-[17px] font-extrabold tracking-[-0.02em] text-[#17161c]">Escrow Cases</h1>
-        <button
-          type="button"
-          onClick={() => setNewCaseOpen(true)}
-          className="flex h-9 items-center gap-1.5 rounded-[9px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white hover:bg-[#6d28d9]"
-        >
-          <Plus className="size-4" /> New Case
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/messages/escrow/canned-responses"
+            className="flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e3e3ec] bg-white px-3.5 text-[13px] font-semibold text-[#3d3c49] hover:border-[#cfcfe0]"
+          >
+            <MessageSquareText className="size-4" /> Templates
+          </Link>
+          <button
+            type="button"
+            onClick={() => setNewCaseOpen(true)}
+            className="flex h-9 items-center gap-1.5 rounded-[9px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white hover:bg-[#6d28d9]"
+          >
+            <Plus className="size-4" /> New Case
+          </button>
+        </div>
       </div>
       <div className="flex h-full min-h-0 overflow-hidden rounded-2xl border border-[#ececf3]">
         <ConversationList
@@ -191,11 +285,22 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
           onReplyChange={setReplyValue}
           onSendReply={handleSendReply}
           replyPending={replyPending}
+          replyChannel={replyChannel}
+          onReplyChannelChange={setReplyChannel}
           canReply
           onTransition={handleTransition}
           transitionPending={transitionPending}
           canReassign={canReassign}
           onOpenReassign={() => setReassignOpen(true)}
+          pendingAttachment={pendingAttachment}
+          onPickAttachment={handlePickAttachment}
+          onRemoveAttachment={handleRemoveAttachment}
+          attachmentUploading={attachmentUploading}
+          cannedResponses={cannedResponses}
+          onInsertCannedResponse={handleInsertCannedResponse}
+          attachments={attachments}
+          showEvidence={showEvidence}
+          onToggleEvidence={() => setShowEvidence((v) => !v)}
         />
       </div>
       <NewEscrowCaseDialog
