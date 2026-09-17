@@ -10,11 +10,9 @@ supervise an escrow deal end-to-end instead of routing it through the
 existing 1:1 `messages` table (which is strictly 2-party with no
 conversation entity).
 
-This is **Step 1+2+3+4+5 of a larger plan** — the minimum case model, its
-messaging thread, its state machine, its side channel, and now attachments
-and canned responses, all wired up end-to-end. Moderation/reports
-(mute/ban, a reports queue, real server-side search) are still schema-ready
-but not wired to any route — see "Edge cases & known limitations" below.
+This is **Step 1+2+3+4+5+6 of a larger plan** — the minimum case model, its
+messaging thread, its state machine, its side channel, attachments and
+canned responses, and now oversight & moderation, all wired up end-to-end.
 
 **Step 1** (`26bc962`): the schema, the state machine, the row-level access
 guard, and the `staff_role` concept.
@@ -28,10 +26,91 @@ admin UI.
 supervisor/admin) messaging one party privately from within the case,
 enforced in both the query and the notification fan-out, and independently
 audit-logged.
-**Step 5** (this change set): evidence attachments (photos, certificates,
-payment slips) linked to the case independent of any one message, and
-canned response templates (English + Burmese) with an admin config page
-and a reply-box picker.
+**Step 5**: evidence attachments (photos, certificates, payment slips)
+linked to the case independent of any one message, and canned response
+templates (English + Burmese) with an admin config page and a reply-box
+picker.
+**Step 6** (this change set): oversight & moderation — mute/ban enforcement
+on both message-send paths, a reports queue wired to real resolution
+actions (dismiss/warn/delete/mute/ban), a read-only audited thread viewer
+(`thread_viewed` logged for both escrow cases and flat 1:1 threads), a
+per-thread/per-user audit trail viewer, and real server-side search for the
+escrow case list. This also fixes the "page-gate vs. moderation scope"
+inconsistency flagged in Step 1+2 (below) so a pure moderator can actually
+reach the escrow case inbox and its list endpoint.
+
+Files touched (Step 6):
+
+- `drizzle/schema/chat-moderation-schema.ts` — added `"flat_thread"` to
+  `escrow_chat_audit_target` (a new enum value, migration
+  `0100_legal_jamie_braddock.sql`, `ALTER TYPE ... ADD VALUE`) so a flat 1:1
+  conversation view has its own target kind, distinct from `flat_message`
+  (a single message) and `escrow_case` (a case thread).
+- `features/chat-moderation/db/restrictions.ts` — **new**:
+  `getActiveRestriction()` (the one check both send paths call),
+  `listRestrictions()`, `issueRestriction()` (transactional: the mute/ban
+  row plus its `user_muted`/`user_banned` audit row), `liftRestriction()`
+  (transactional: `liftedAt`/`liftedByAdminId`/`liftReason` plus a
+  `user_restriction_lifted` audit row).
+- `features/chat-moderation/db/reports.ts` — **new**: `createMessageReport()`,
+  `listMessageReports()` (denormalizes reporter/sender names for the queue
+  UI), `resolveMessageReport()` — the five resolution actions from the
+  brief (`dismiss`/`warn`/`delete_message`/`mute_user`/`ban_user`), each
+  writing a `report_dismissed`/`report_actioned` audit row; `delete_message`
+  performs a real hard delete (matching how the flat table already treats
+  deletion — no soft-delete column exists); `mute_user`/`ban_user` look up
+  the reported message's **sender** (never the reporter) and call
+  `issueRestriction()` against them.
+- `features/chat-moderation/db/audit-log.ts` — **new**: the first *reader*
+  of `escrow_chat_audit_log` (every prior step only wrote to it) —
+  `listAuditLogForTarget()`, `listAuditLogForActor()`,
+  `listRecentAuditLog()`, and `recordThreadViewed()` (the writer the
+  read-only viewers call).
+- `app/api/chat/messages/route.ts` — one new check: `getActiveRestriction()`
+  before the existing recipient/rate-limit checks; a muted/banned sender
+  gets `403` with the restriction's reason before anything is written.
+- `app/api/admin/escrow-cases/[id]/messages/route.ts` — same restriction
+  check added to `POST`; `GET` now calls `recordThreadViewed()` when
+  (and only when) `access.scope === "moderation"` — an agent/admin/
+  supervisor's own read of a case they have real access to is ordinary
+  casework, not oversight, so it isn't logged.
+- `app/api/admin/messages/thread/route.ts` — now also accepts
+  `FEATURE_KEYS.CHAT_MODERATION` (alongside `MESSAGES`/`CHAT_DASHBOARD`),
+  and every successful `GET` logs a `thread_viewed` row (`targetType:
+  "flat_thread"`, `targetId: pairKey(userA, userB)`) — this route is never
+  how a participant reads their own conversation, so a request reaching it
+  is always staff viewing someone else's thread.
+- `app/api/admin/escrow-cases/route.ts` — `GET` now also accepts
+  `FEATURE_KEYS.CHAT_MODERATION` and gained real server-side search
+  (`?q=`, `?state=`, `?reportedOnly=`, `?dateFrom=`/`?dateTo=`); the
+  scope decision was rewritten (see "Auth & permissions" below) to
+  correctly give a moderator every-case visibility instead of the old
+  binary admin-or-own split.
+- `features/escrow-cases/db/escrow-cases.ts` — `listEscrowCasesForViewer()`
+  gained a `search: EscrowCaseSearchParams` param, composed as dynamic SQL
+  `AND`-joined conditions (`sql.join`) rather than a fixed query shape.
+- `features/escrow-cases/lib/require-escrow-cases-access.ts` — the page
+  gate now also accepts `CHAT_MODERATION` (was `ESCROW_CASES`-only).
+- `app/admin/messages/escrow/page.tsx` — the server-side scope decision now
+  distinguishes moderator (`isModerationOnly`, sees every case read-only)
+  from a plain agent/no-staff-role (own cases only) from a supervisor (every
+  case, full access) — previously a moderator fell into neither branch.
+- `features/escrow-cases/components/EscrowCaseInboxPage.tsx` — new
+  `readOnly` prop (disables the composer, transitions, reassignment, and
+  the "New Case"/"Templates" header controls when true); the search box now
+  debounces (300ms) and calls the real `GET /api/admin/escrow-cases?q=`
+  endpoint instead of filtering the `initialCases` snapshot client-side —
+  fixing "can't find a case outside whatever page loaded initially."
+- New moderation dashboard: `features/chat-moderation/components/
+  ChatModerationDashboard.tsx` (reports queue / mutes & bans / audit trail,
+  three tabs in one client component), `features/chat-moderation/lib/
+  require-chat-moderation-access.ts` (page gate, `CHAT_MODERATION` key),
+  `app/admin/messages/moderation/page.tsx`, and a new "Chat Moderation"
+  sidebar entry (`components/admin/AdminSidebar.tsx`).
+- New API routes: `app/api/admin/chat-moderation/restrictions/route.ts`
+  (`GET`/`POST`), `.../restrictions/[id]/route.ts` (`PATCH`, lift/restore),
+  `.../reports/route.ts` (`GET`/`POST`), `.../reports/[id]/resolve/route.ts`
+  (`POST`), `.../audit-log/route.ts` (`GET`, three modes).
 
 Files touched:
 
@@ -40,10 +119,10 @@ Files touched:
   `escrow_case_attachment`, `escrow_case_read_cursor` + their enums.
 - `drizzle/schema/staff-role-schema.ts` — `staff_role` table + `staff_role_type` enum.
 - `drizzle/schema/chat-moderation-schema.ts` — `messaging_restriction`,
-  `message_report`, `escrow_chat_audit_log` (schema-only, reserved for a
-  later step — see below).
+  `message_report`, `escrow_chat_audit_log` (schema-only at Step 1; wired up
+  in Step 6 — see below).
 - `drizzle/schema/escrow-canned-response-schema.ts` — `escrow_canned_response`
-  (schema-only, reserved for a later step — see below).
+  (schema-only at Step 1; wired up with full CRUD in Step 5 — see below).
 - `drizzle/migrations/0099_sleepy_mathemanic.sql` — the generated migration
   for all of the above (see "Schema impact").
 
@@ -376,6 +455,72 @@ setEscrowCaseAgent()          ONE db.transaction:
              (no push notification on assign/reassign — only on a state change)
 ```
 
+**Send path → mute/ban check (Step 6)**
+
+```
+POST /api/chat/messages                    getActiveRestriction(senderId)
+POST /api/admin/escrow-cases/[id]/messages     │
+                                                ├─ active mute/ban → 403, nothing written
+                                                └─ none → existing send logic proceeds
+```
+
+`getActiveRestriction()` is one query: the most recent `messaging_restriction`
+row for that user where `liftedAt IS NULL` and (`expiresAt IS NULL` OR
+`expiresAt > now()`) — a ban has `expiresAt: null` (indefinite), a mute has
+a real timestamp. It's called *before* the existing recipient/rate-limit
+checks on the flat route, and *before* the visibility/attachment logic on
+the case route.
+
+**Reports queue → resolution (Step 6)**
+
+```
+POST /api/admin/chat-moderation/reports              createMessageReport()
+  (moderator files a report while reviewing a thread)  INSERT message_report (status "open")
+        │
+        ▼
+POST .../reports/[id]/resolve      resolveMessageReport(reportId, action, reason)
+                                     1. SELECT report; 404 if missing, 409 if already resolved
+                                     2. if mute_user/ban_user: SELECT the reported
+                                        message's SENDER (flat or case table) — 500 if
+                                        the sender no longer exists
+                                     3. db.transaction:
+                                        a. UPDATE message_report (status "dismissed" or
+                                           "actioned", resolutionAction, resolutionReason)
+                                        b. if delete_message: DELETE the underlying
+                                           flat/case message row (real hard delete)
+                                        c. INSERT audit row ("report_dismissed" or
+                                           "report_actioned")
+                                     4. if mute_user/ban_user: issueRestriction(...)
+                                        against the SENDER — runs as its own transaction,
+                                        sequenced AFTER the report is marked resolved (a
+                                        restriction failure never leaves the report
+                                        silently un-actioned)
+```
+
+**Read-only oversight view → audit log (Step 6)**
+
+```
+GET /api/admin/escrow-cases/[id]/messages     if access.scope === "moderation":
+                                                 recordThreadViewed({ targetType:
+                                                 "escrow_case", targetId: caseId })
+                                               (admin/supervisor/own reads are ordinary
+                                               casework — not logged)
+
+GET /api/admin/messages/thread                 every successful read:
+  (Messages Triage's reading pane)                recordThreadViewed({ targetType:
+                                                   "flat_thread", targetId:
+                                                   pairKey(userA, userB) })
+                                               (this route is only ever reached by
+                                               staff viewing someone else's conversation
+                                               — a participant reads their own thread
+                                               through /api/chat/messages instead)
+```
+
+Neither read path notifies the case/thread's participants — the brief's
+"viewing is itself audit-logged; the participants are not notified" is
+satisfied by simply not adding any notification call alongside the log
+write (both routes already had none).
+
 ## Schema impact
 
 **New tables — `drizzle/schema/escrow-case-schema.ts`**
@@ -393,17 +538,21 @@ setEscrowCaseAgent()          ONE db.transaction:
 |---|---|---|
 | `staff_role` | `user_id` (PK, FK `user`, `CASCADE`), `role` (`staff_role_type`: `escrow_agent`\|`moderator`\|`support`\|`analyst`), `is_supervisor` (bool, default `false`, meaningful only for `escrow_agent`) | A dedicated identity/assignment designation layered on `user.role = "internal"` — see "Auth & permissions". |
 
-**`escrow_chat_audit_log` is now live (Step 3, extended in Step 4).** Every
-state transition and every assign/reassign writes one row (`actorId`,
-`actionType`, `targetType: "escrow_case"`, `targetId`, `before`/`afterState`,
-optional `reason`) inside the same transaction as the underlying change.
-**Step 4** adds a fourth writer: every side-channel message send writes a
-row too (`actionType: "side_channel_message_sent"`, `targetType:
-"case_message"`, `targetId`: the message id, `afterState: { visibility }`)
-— awaited synchronously in the route, not fire-and-forget, since an
-unaudited side-channel message would defeat the point of it being
-independently auditable. There is still no reader for any of this (no
-per-case/per-user audit trail UI), only writers.
+**`escrow_chat_audit_log` is now live (Step 3, extended in Step 4 and 6),
+with its first readers (Step 6).** Writers, by action type: `state_changed`/
+`case_assigned`/`case_reassigned` (Step 3, `case-transitions.ts`),
+`side_channel_message_sent` (Step 4, awaited synchronously in the message
+route, not fire-and-forget — an unaudited side-channel message would defeat
+the point of it being independently auditable), and (**Step 6**)
+`thread_viewed` (`recordThreadViewed()`, called from the escrow-case
+messages `GET` for `"moderation"`-scope reads and from the flat
+`/api/admin/messages/thread` `GET` unconditionally), `user_muted`/
+`user_banned` (`issueRestriction()`), `user_restriction_lifted`
+(`liftRestriction()`), and `report_dismissed`/`report_actioned`
+(`resolveMessageReport()`). Readers: `listAuditLogForTarget()` /
+`listAuditLogForActor()` / `listRecentAuditLog()`
+(`features/chat-moderation/db/audit-log.ts`), surfaced in the "Audit Trail"
+tab of `/admin/messages/moderation`.
 
 **`escrow_case_attachment` and `escrow_canned_response` are now live
 (Step 5).** `escrow_case_attachment` is written both by
@@ -413,13 +562,24 @@ per-case/per-user audit trail UI), only writers.
 `escrow_canned_response` has full CRUD via
 `/api/admin/escrow-canned-responses[/[id]]` and an admin config UI.
 
-**Still schema-only, reserved for a later step** —
-`drizzle/schema/chat-moderation-schema.ts`'s `messaging_restriction` and
-`message_report` — fully defined, indexed, RLS-enabled tables with zero
-references anywhere outside their own schema files (verified by grepping
-the whole codebase for `messagingRestriction`, `messageReport`). They exist
-so a later moderation/reports-queue step doesn't need its own schema-diff
-pass.
+**`messaging_restriction` and `message_report` are now live (Step 6).**
+`messaging_restriction` is written by `issueRestriction()`/
+`liftRestriction()` (`features/chat-moderation/db/restrictions.ts`) and
+read by both send paths' `getActiveRestriction()` check and the "Mutes &
+Bans" tab. `message_report` is written by `createMessageReport()` (a
+moderator filing a report while reviewing a thread — see the note on
+report submission below) and resolved by `resolveMessageReport()`; read by
+the "Reports Queue" tab.
+
+**New enum value — `escrow_chat_audit_target` gained `"flat_thread"`
+(Step 6, migration `0100_legal_jamie_braddock.sql`, `ALTER TYPE ... ADD
+VALUE`).** The audit log's `targetType` is polymorphic text, and none of
+the 5 existing values (`escrow_case`, `flat_message`, `case_message`,
+`user`, `report`) correctly represents "a flat 1:1 conversation as a whole"
+— `flat_message` means one specific message row. `flat_thread`'s
+`targetId` is the conversation's `pairKey(userA, userB)`
+(`features/messages/db/triage.ts`), not a real FK (same app-level-discipline
+trade-off the other 5 values already make).
 
 **Migration**
 
@@ -488,18 +648,25 @@ rejecting the `"moderation"` scope with 403. It guards `POST
 four scopes, since a moderator reading a thread, or marking their own read
 cursor, doesn't touch anyone else's state.
 
-**Known inconsistency — page gate vs. moderation scope.**
-`requireEscrowCasesAccess()` (the page gate) checks only `ESCROW_CASES`, not
-`CHAT_MODERATION`. A moderator granted only `CHAT_MODERATION` is redirected
-away from `/admin/messages/escrow` before ever reaching the inbox UI, even
-though `requireEscrowCaseAccess()` would grant them the `"moderation"` scope
-on a specific case if they already had its id. `GET
-/api/admin/escrow-cases` (the list endpoint) has the same gap — it is also
-`ESCROW_CASES`-only, so a moderator has no listing endpoint to discover case
-ids through today. In practice, a moderator needs both feature keys granted
-to use anything here right now. This is flagged, not fixed — resolving it
-is a product decision (should moderators get their own case-discovery view?)
-out of scope for Step 1+2.
+**Resolved in Step 6 — page gate vs. moderation scope.**
+`requireEscrowCasesAccess()` (the page gate) and `GET
+/api/admin/escrow-cases` (the list endpoint) previously checked only
+`ESCROW_CASES`, so a moderator granted only `CHAT_MODERATION` could never
+reach the inbox UI or discover a case id to review, even though
+`requireEscrowCaseAccess()` would grant them the `"moderation"` scope on a
+specific case if they already had its id. Both now also accept
+`CHAT_MODERATION`. The list endpoint's scope decision was also corrected
+while fixing this: it previously computed `assignedAgentId` from `!
+staffRole?.isSupervisor` alone, which — once a moderator could reach the
+route at all — would have wrongly scoped them to "cases assigned to
+`session.user.id`" (i.e., an empty list, since a moderator is never
+assigned a case) rather than every case, read-only. The corrected rule:
+`assignedAgentId` is set (own-cases-only) for everyone **except** a
+supervisor (`escrow_agent` + `isSupervisor`) or a moderator, both of whom
+see every case. `app/admin/messages/escrow/page.tsx`'s server-rendered
+initial load has the equivalent fix, plus a new `isModerationOnly` flag
+passed to `EscrowCaseInboxPage` as `readOnly` (composer, transitions,
+reassignment, and the "New Case"/"Templates" controls all hidden/disabled).
 
 ## Edge cases & known limitations
 
@@ -517,14 +684,8 @@ out of scope for Step 1+2.
    is no mobile-facing case-creation endpoint. Staff open a case from the
    admin panel after reviewing an initial buyer/seller contact made through
    the existing 1:1 chat.
-3. **Reports/mute-ban schema exists but has no routes yet — reserved for a
-   later step.** `message_report` and `messaging_restriction`
-   (`drizzle/schema/chat-moderation-schema.ts`) are fully defined tables
-   with zero code references outside their own schema files. The
-   `"moderation"` access scope is enforced today (read-only thread and
-   evidence oversight), but there is no reports queue and no mute/ban UI.
-   (`escrow_chat_audit_log` and `escrow_canned_response` are no longer in
-   this bucket — both are live as of Steps 3–5.)
+3. **Reports/mute-ban/audit-trail are all live as of Step 6** — no schema
+   in this feature is still "reserved for a later step."
 4. **Search is a plain client-side substring filter, not server-side.**
    `EscrowCaseInboxPage.tsx`'s `filteredCases` runs `.filter()` over the
    buyer/seller name and listing title of whatever
@@ -619,3 +780,52 @@ out of scope for Step 1+2.
     at the new `ESCROW_EVIDENCE_BUCKET` instead of `CHAT_MEDIA_BUCKET`.
     Confirm a real upload succeeds in an environment with outbound network
     access before relying on this in production.
+16. **No end-user "report this message" endpoint exists (Step 6, unchanged
+    from the Step 1 plan's flagged assumption).** `POST
+    /api/admin/chat-moderation/reports` is admin/moderator-only —
+    `reporterId` is always the session's own staff account. A real
+    self-service report flow would need a new mobile endpoint, which is
+    out of scope for this admin-backend-only task. Today, a report only
+    exists if a moderator manually files one while reviewing a thread —
+    the reports queue is a resolution tool for staff-discovered issues, not
+    (yet) a destination for user-submitted ones.
+17. **"warn" has no delivery mechanism.** Resolving a report with
+    `action: "warn"` records the resolution (status, action, reason) but
+    sends nothing to the warned user — there's no in-app warning/
+    notification surface to send it through. It exists as a lighter
+    alternative to mute/ban for the audit trail's sake, not as a
+    user-facing feature yet.
+18. **A lifted mute/ban is soft-deleted (`liftedAt`), never removed** —
+    `getActiveRestriction()`'s query already excludes it
+    (`liftedAt IS NULL`), so a restore takes effect immediately; the row
+    stays as a permanent record that the user was once restricted and why.
+19. **Restriction/report ids typed as free-text `<input>` fields in the
+    moderation dashboard.** `ChatModerationDashboard.tsx`'s "Mute / Ban
+    user" dialog takes a raw user id (no user-search picker, unlike
+    `NewEscrowCaseDialog`'s buyer/seller autocomplete) and the audit trail
+    tab's "Target id" filter is likewise a raw text field. Both work
+    correctly against the API but are not friendly for a moderator who
+    doesn't already have the id memorized or copied from elsewhere — a
+    follow-up could reuse `searchUsersForEscrowCaseAction` here too.
+20. **`listEscrowCasesForViewer`'s `q` search is participant name and
+    listing title only, not message content.** The brief's "find threads
+    by ... message content" is intentionally not implemented for escrow
+    cases — searching `escrow_case_message.content` would need either a
+    slower `ILIKE` scan or a dedicated GIN/trigram index (the
+    `0089_product_search_indexes.sql` precedent), and the inbox's search
+    box is used for "find this buyer/seller/listing," not "find this
+    phrase," day to day. The flat Messages Triage inbox's own search
+    (`features/messages/lib/triage-filters.ts`) is unchanged by Step 6 —
+    it remains the pre-existing client-side substring filter over an
+    at-most-500-row snapshot, a known limitation that predates this
+    feature and was not in this step's scope (Step 6 only added real
+    server-side search to the escrow case list, which is wholly new in
+    this feature).
+21. **A moderator's mute/ban dialog defaults every mute to 7 days** — both
+    the dashboard's quick "Mute (7 days)" default and
+    `resolveMessageReport()`'s own `mute_user` resolution hardcode
+    `7 * 24 * 60 * 60 * 1000` ms. The dashboard's "Mute / Ban user" dialog
+    does let a moderator type a different `durationHours`; the
+    reports-queue "Resolve" action does not — resolving a report with
+    `mute_user` is always exactly 7 days. A follow-up could add a duration
+    field to the resolve dialog too.

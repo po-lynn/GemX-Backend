@@ -30,6 +30,7 @@ At least one of `content` / `fileUrl` / `imageUrls` is required.
   - `200` `{ success: true, message: {...saved, tempId?} }`
   - `400` `Invalid input` / `Cannot send message to yourself`
   - `401` `Unauthorized`
+  - `403` `You are banned from messaging: <reason>` / `You are muted from messaging until <ISO timestamp>: <reason>` — the sender has an active row in `messaging_restriction` (`getActiveRestriction()`, checked before the recipient/rate-limit checks; see `docs/technical/escrow-case-messaging.md`'s Step 6 section). Checked against the **sender** only, never the recipient — a muted/banned user can still receive messages, they just can't send any.
   - `404` `Recipient not found` (unknown or archived)
   - `429` `Too many messages — please slow down`
   - `500` `Failed to send message`

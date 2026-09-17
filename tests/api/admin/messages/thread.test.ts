@@ -7,10 +7,14 @@ vi.mock("@/features/rbac/db/permissions", () => ({ checkInternalAccess: vi.fn() 
 vi.mock("@/features/chat/db/admin-all-conversations", () => ({
   getConversationMessagesForAdmin: vi.fn(),
 }))
+vi.mock("@/features/chat-moderation/db/audit-log", () => ({
+  recordThreadViewed: vi.fn(),
+}))
 
 const { auth } = await import("@/lib/auth")
 const { checkInternalAccess } = await import("@/features/rbac/db/permissions")
 const { getConversationMessagesForAdmin } = await import("@/features/chat/db/admin-all-conversations")
+const { recordThreadViewed } = await import("@/features/chat-moderation/db/audit-log")
 const { GET } = await import("@/app/api/admin/messages/thread/route")
 
 function makeRequest(query: string): NextRequest {
@@ -89,6 +93,22 @@ describe("GET /api/admin/messages/thread", () => {
     expect(json.messages).toHaveLength(1)
     expect(checkInternalAccess).not.toHaveBeenCalled()
     expect(getConversationMessagesForAdmin).toHaveBeenCalledWith("user-a", "user-b", 1, 100)
+  })
+
+  // Validates the new "viewing is itself audit-logged" requirement: every successful
+  // read through this admin-oversight route writes a thread_viewed row, since a
+  // participant never reaches this route for their own conversation.
+  it("logs a thread_viewed audit row on every successful read", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: "admin-1", role: "admin" } } as never)
+    vi.mocked(getConversationMessagesForAdmin).mockResolvedValue({ messages: [], total: 0 })
+
+    await GET(makeRequest("?userA=user-a&userB=user-b"))
+
+    expect(recordThreadViewed).toHaveBeenCalledWith({
+      actorId: "admin-1",
+      targetType: "flat_thread",
+      targetId: "user-a:user-b",
+    })
   })
 
   // Validates the same-user guard rejects a degenerate pair before hitting the DB.

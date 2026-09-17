@@ -102,6 +102,7 @@ export const escrowChatAuditActionEnum = pgEnum("escrow_chat_audit_action", [
 export const escrowChatAuditTargetEnum = pgEnum("escrow_chat_audit_target", [
   "escrow_case",
   "flat_message",
+  "flat_thread",
   "case_message",
   "user",
   "report",
@@ -113,7 +114,7 @@ export const escrowChatAuditTargetEnum = pgEnum("escrow_chat_audit_target", [
  * reassignment, state changes) — not a per-domain table like reputation's, because
  * nothing here doubles as live state the way `sellerArchive` does; actual state lives
  * in escrow_case.state / messagingRestriction / message_report.status. targetId is
- * polymorphic (text, not a real FK) across the 5 target kinds — application-level
+ * polymorphic (text, not a real FK) across the 6 target kinds — application-level
  * discipline required, same trade-off message_report already makes with two FKs,
  * just pushed one level further. actorId is "set null" so deleting an admin/agent
  * account never destroys audit history.

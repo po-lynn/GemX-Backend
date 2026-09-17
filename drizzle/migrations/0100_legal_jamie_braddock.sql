@@ -1,0 +1,1 @@
+ALTER TYPE "public"."escrow_chat_audit_target" ADD VALUE 'flat_thread' BEFORE 'case_message';

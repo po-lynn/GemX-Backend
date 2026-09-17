@@ -17,9 +17,19 @@ export default async function AdminEscrowCasesPage() {
   const session = await requireEscrowCasesAccess()
 
   let assignedAgentId: string | undefined
+  let isModerationOnly = false
   if (session.user.role !== "admin") {
     const staffRole = await getStaffRole(session.user.id)
-    if (!staffRole?.isSupervisor) assignedAgentId = session.user.id
+    // Mirrors GET /api/admin/escrow-cases's scope decision: only a supervisor or a
+    // moderator sees every case; anyone else (a plain agent, or no staff_role row at
+    // all) conservatively defaults to "own cases only."
+    if (staffRole?.role === "moderator") {
+      // A moderator has no cases "assigned to them" — they see every case, same
+      // breadth as a supervisor, but read-only (see EscrowCaseThreadView's canReply).
+      isModerationOnly = true
+    } else if (!(staffRole?.role === "escrow_agent" && staffRole.isSupervisor)) {
+      assignedAgentId = session.user.id
+    }
   }
 
   const cases = await withQueryTimeout(
@@ -34,7 +44,8 @@ export default async function AdminEscrowCasesPage() {
         <EscrowCaseInboxPage
           initialCases={cases}
           currentUserId={session.user.id}
-          canReassign={assignedAgentId === undefined}
+          canReassign={assignedAgentId === undefined && !isModerationOnly}
+          readOnly={isModerationOnly}
         />
       </Suspense>
     </FadeUp>

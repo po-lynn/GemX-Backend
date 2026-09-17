@@ -144,6 +144,32 @@
    sending). Manage the template list itself via the **Templates** link in
    the inbox header, or directly at `/admin/messages/escrow/canned-responses`
    — create, edit, disable (without deleting), or delete a template there.
+9. **Chat oversight & moderation** — grant the internal user the
+   `chat.moderation` feature key (Permissions tab), give them the
+   `moderator` staff role, then go to
+   **Admin Panel → Communication → Chat Moderation**
+   (`/admin/messages/moderation`):
+   - **Reports Queue**: file a report by calling
+     `POST /api/admin/chat-moderation/reports` with either `flatMessageId`
+     or `caseMessageId` (there's no in-thread "Report" button yet — see
+     "Extending it"), then find it under the **Open** tab and click
+     **Resolve** to dismiss it, warn the sender, delete the message, or
+     mute/ban the sender — each requires a reason.
+   - **Mutes & Bans**: click **Mute / Ban user**, paste a user id, pick
+     mute (with a duration in hours) or ban (indefinite), give a reason,
+     and submit. That user's next send attempt (flat chat or an escrow
+     case) gets `403` with the reason until you **Restore** them.
+   - **Audit Trail**: pick a target type (e.g. "Escrow case") and paste its
+     id to see every logged action against it, or leave it on "Recent
+     activity" for a global feed. A moderator's own case/thread views show
+     up here too — every escrow-case `GET` by a `"moderation"`-scope viewer,
+     and every `GET /api/admin/messages/thread` request, writes a
+     `thread_viewed` row automatically; you don't do anything to produce
+     these, they're logged as a side effect of viewing.
+   - With only `chat.moderation` (no `escrow.cases`), the same user can
+     also now open `/admin/messages/escrow` itself — they'll see every
+     case, read-only (no composer, no New Case/Templates buttons, no
+     transition/reassign controls).
 
 ## Extending it
 
@@ -169,15 +195,28 @@
   message, `messageId: null`) works today but nothing in the admin UI
   calls it — the "Evidence" panel is read-only. Add an "+ Add evidence"
   button there that uploads directly to this endpoint.
-- **Reports / moderation queue**: `message_report` and
-  `messaging_restriction` (`drizzle/schema/chat-moderation-schema.ts`)
-  are fully defined and indexed but have no routes yet.
-  `message_report` already has the exactly-one-of
-  `flatMessageId`/`caseMessageId` CHECK constraint wired so it can report
-  either an escrow case message or a flat 1:1 chat message from the same
-  table. Add a "Report" action in the thread view (inserts a `message_report`
-  row), a queue page listing `status = 'open'` rows, and
-  dismiss/action handlers that also write an `escrow_chat_audit_log` row.
+- **A "Report" button inside the thread views themselves**: today filing a
+  report means calling `POST /api/admin/chat-moderation/reports` directly
+  (there's no button in `ReadingPane.tsx` or `EscrowCaseThreadView.tsx` yet)
+  — add one that captures the message id + a reason and calls that
+  endpoint, so a moderator can report a message without leaving the thread
+  they're reading.
+- **An end-user "report this message" mobile endpoint**: today
+  `reporterId` on a report is always a staff session — there's no
+  self-service path for a buyer/seller to report a message themselves. That
+  needs a new `/api/mobile/...` endpoint (out of scope for this
+  admin-backend-only feature) that calls `createMessageReport()` with the
+  reporting user's own id.
+- **A duration field on the reports queue's `mute_user` resolution**:
+  `resolveMessageReport()` hardcodes a 7-day mute for that action; the
+  standalone "Mute / Ban user" dialog in **Chat Moderation → Mutes & Bans**
+  already lets you type a custom duration — add the same input to the
+  reports queue's resolve dialog if 7 days shouldn't always be the default.
+- **A user-search picker for mute/ban and the audit trail's target-id
+  filter**: both currently take a raw user/target id typed into a plain
+  text input. Reuse `searchUsersForEscrowCaseAction`
+  (`features/escrow-cases/actions/escrow-cases.ts`) to add an autocomplete,
+  matching `NewEscrowCaseDialog`'s buyer/seller picker.
 - **A reason field for transitions**: `POST .../transition`'s body already
   accepts an optional `reason` and stores it on the `escrow_chat_audit_log`
   row, but `EscrowCaseThreadView.tsx`'s picker doesn't collect one yet — add
@@ -235,11 +274,17 @@
   the Supabase Storage upload itself failed (network issue, bucket/RLS
   misconfiguration) rather than a validation problem — check the server
   log for a `Storage...Error` line naming the `escrow-evidence` bucket.
-- **Can't find a case you know exists**: the in-page search box only filters
-  buyer name / seller name / listing title across the cases your own scope
-  already returned (see the technical doc's "search is a plain client-side
-  substring filter" note) — it can never surface a case outside your access
-  scope, and there's no way to search by case id from the UI.
+- **Can't find a case you know exists**: the search box queries
+  `GET /api/admin/escrow-cases?q=` server-side (buyer name / seller name /
+  listing title, case-insensitive substring) — it can never surface a case
+  outside your access scope (a plain agent's search still only searches
+  their own cases), and there's no way to search by case id or message
+  content from the UI yet (see the technical doc's edge case #20).
+- **A moderator can see the escrow case inbox but the "New Case"/"Templates"
+  buttons and the composer are gone**: expected — a chat moderator
+  (`staff_role.role === "moderator"`) gets read-only oversight of every
+  case. Give them the `escrow_agent` staff role instead if they need to
+  actually work cases.
 - **New messages/read receipts don't appear live, only after a manual
   refresh**: `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` aren't
   configured in this environment, so `broadcastCaseEvents()` is silently
@@ -264,3 +309,20 @@
   states — check `getValidNextStates()` for what's actually valid from the
   case's current state), or someone else changed the case between your
   page load and your click (reload and retry).
+- **A user's messages start returning `403 "You are banned/muted from
+  messaging: <reason>"`** on both `/api/chat/messages` and the escrow case
+  message route: they have an active row in `messaging_restriction`. Go to
+  **Chat Moderation → Mutes & Bans**, find them, and click **Restore** (with
+  a reason) if the restriction should be lifted early — a mute also expires
+  on its own once `expiresAt` passes.
+- **`409` resolving a report**: it was already resolved (its `status` isn't
+  `"open"` anymore) — reload the Reports Queue tab; someone else likely
+  actioned it first.
+- **Resolving a report with `mute_user`/`ban_user` returns a `500`**: the
+  reported message's sender account no longer exists (deleted user) —
+  `resolveMessageReport()` refuses to issue a restriction against nobody.
+  Use `delete_message` or `dismiss` instead.
+- **Can't reach `/admin/messages/moderation` at all**: the user needs the
+  `chat.moderation` feature key on their Permissions tab — it's a separate
+  key from `escrow.cases`, so a plain escrow agent doesn't automatically
+  get moderation access, and vice versa.

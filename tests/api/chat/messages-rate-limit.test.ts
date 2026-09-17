@@ -10,6 +10,9 @@ vi.mock("@/features/notifications/services/chat-notifications", () => ({
 vi.mock("@/lib/supabase/chat-broadcast", () => ({
   broadcastChatEvents: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/features/chat-moderation/db/restrictions", () => ({
+  getActiveRestriction: vi.fn().mockResolvedValue(null),
+}));
 
 const { auth } = await import("@/lib/auth");
 const { db } = await import("@/drizzle/db");

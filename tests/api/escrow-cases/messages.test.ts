@@ -27,6 +27,12 @@ vi.mock("@/lib/supabase/case-broadcast", () => ({
 vi.mock("@/features/notifications/services/escrow-case-notifications", () => ({
   sendEscrowCaseMessageNotification: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/features/chat-moderation/db/restrictions", () => ({
+  getActiveRestriction: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/features/chat-moderation/db/audit-log", () => ({
+  recordThreadViewed: vi.fn().mockResolvedValue(undefined),
+}));
 
 const { auth } = await import("@/lib/auth");
 const { getStaffRole } = await import("@/features/staff-roles/db/staff-roles");
@@ -40,6 +46,8 @@ const { db } = await import("@/drizzle/db");
 const { sendEscrowCaseMessageNotification } = await import(
   "@/features/notifications/services/escrow-case-notifications"
 );
+const { getActiveRestriction } = await import("@/features/chat-moderation/db/restrictions");
+const { recordThreadViewed } = await import("@/features/chat-moderation/db/audit-log");
 const { GET, POST } = await import("@/app/api/admin/escrow-cases/[id]/messages/route");
 
 /** Thenable select-chain mock, matching this repo's existing convention for raw Drizzle
@@ -137,6 +145,23 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(json.messages).toHaveLength(1);
+    expect(recordThreadViewed).toHaveBeenCalledWith({
+      actorId: "mod-1",
+      targetType: "escrow_case",
+      targetId: "case-1",
+    });
+  });
+
+  // Ordinary casework by the assigned agent (or an admin/supervisor covering the case)
+  // is not oversight — logging every poll of your own assigned case would drown the
+  // audit trail in noise with zero oversight value.
+  it("does not log thread_viewed for a non-moderation scope's GET", async () => {
+    mockAssignedAgentSession();
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue([savedMessage as never]);
+
+    await GET(makeGetRequest(), makeContext());
+
+    expect(recordThreadViewed).not.toHaveBeenCalled();
   });
 
   // General chat oversight doesn't imply access to one case's confidential side
@@ -174,6 +199,24 @@ describe("POST /api/admin/escrow-cases/[id]/messages", () => {
     mockModeratorSession();
 
     const res = await POST(makePostRequest({ content: "I would like to weigh in" }), makeContext());
+
+    expect(res.status).toBe(403);
+    expect(sendEscrowCaseMessage).not.toHaveBeenCalled();
+  });
+
+  // A muted/banned sender is blocked before the message is ever written, even though
+  // they otherwise have full write access to this case (same enforcement as the flat
+  // chat send path).
+  it("returns 403 and never sends when the caller has an active restriction", async () => {
+    mockAssignedAgentSession();
+    vi.mocked(getActiveRestriction).mockResolvedValueOnce({
+      id: "r1",
+      restrictionType: "ban",
+      reason: "spamming",
+      expiresAt: null,
+    } as never);
+
+    const res = await POST(makePostRequest({ content: "hello" }), makeContext());
 
     expect(res.status).toBe(403);
     expect(sendEscrowCaseMessage).not.toHaveBeenCalled();

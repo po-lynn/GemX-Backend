@@ -9,6 +9,7 @@ import { jsonError, jsonUncached } from "@/lib/api";
 import { sendChatMessageNotification } from "@/features/notifications/services/chat-notifications";
 import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout";
+import { getActiveRestriction } from "@/features/chat-moderation/db/restrictions";
 
 const messageTypeValues = messageTypeEnum.enumValues;
 
@@ -73,6 +74,16 @@ export async function POST(request: NextRequest) {
     const senderName = session.user.name ?? null;
     const { recipientId, content, fileUrl, imageUrls, tempId } = parsed.data;
     if (senderId === recipientId) return jsonError("Cannot send message to yourself", 400);
+
+    const restriction = await getActiveRestriction(senderId);
+    if (restriction) {
+      return jsonError(
+        restriction.restrictionType === "ban"
+          ? `You are banned from messaging: ${restriction.reason}`
+          : `You are muted from messaging until ${restriction.expiresAt?.toISOString() ?? "further notice"}: ${restriction.reason}`,
+        403
+      );
+    }
 
     // Both checks gate whether the send is ALLOWED to happen (recipient must exist, rate
     // limit must not be exceeded), so both are primary/fail-closed: run them sequentially

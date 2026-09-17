@@ -11,13 +11,16 @@ always staff-initiated from the admin panel.
 
 ## GET /api/admin/escrow-cases
 
-**Auth:** `requireAdminOrFeature(request, FEATURE_KEYS.ESCROW_CASES)`
-(`FEATURE_KEYS.ESCROW_CASES = "escrow.cases"`, `lib/api-guard.ts`):
+**Auth:** `requireAdminOrAnyFeature(request, [FEATURE_KEYS.ESCROW_CASES,
+FEATURE_KEYS.CHAT_MODERATION])` (`lib/api-guard.ts`) — as of Step 6, either
+key alone is enough:
 
 - No session → `401`.
 - `role === "admin"` → passes the gate.
-- `role === "internal"` holding the `escrow.cases` RBAC permission
-  (`checkInternalAccess`) → passes the gate.
+- `role === "internal"` holding **either** the `escrow.cases` or the
+  `chat.moderation` RBAC permission (`checkInternalAccess`) → passes the
+  gate. (Before Step 6, only `escrow.cases` was accepted — a pure chat
+  moderator had no listing endpoint to discover a case id through.)
 - Anything else → `403`.
 
 Passing the gate only proves the caller may open the endpoint — the actual
@@ -27,20 +30,40 @@ feature key:
 - `session.user.role === "admin"` → sees every case (`assignedAgentId` filter
   left `undefined`).
 - `role === "internal"`: the handler looks up `getStaffRole(session.user.id)`.
-  - `staffRole.isSupervisor === true` → sees every case, same as admin.
-  - No staff role row, or `isSupervisor` falsy → `assignedAgentId` is forced
-    to the caller's own `session.user.id`, so `listEscrowCasesForViewer` only
+  - `staffRole.role === "moderator"` → sees every case, read-only (same
+    breadth as a supervisor; per-case write access is still independently
+    enforced by `requireEscrowThreadWriteAccess` on the `[id]` routes — this
+    list endpoint never exposes a write action a moderator could take).
+  - `staffRole.role === "escrow_agent"` and `staffRole.isSupervisor === true`
+    → sees every case, same as admin.
+  - Anything else (a plain `escrow_agent`, a `support`/`analyst` staff role,
+    or no staff role row at all) → `assignedAgentId` is forced to the
+    caller's own `session.user.id`, so `listEscrowCasesForViewer` only
     returns cases where `escrow_case.assigned_agent_id` equals the caller —
-    this is the plain `escrow_agent` inbox view.
+    the conservative default. A non-agent with no cases assigned to them
+    simply sees an empty list.
 
 Note this is a simpler check than `features/escrow-cases/lib/case-access.ts`
-(used by the `[id]` routes): it only reads `isSupervisor`, not
-`staffRole.role`, and it has no `moderation` scope — a chat moderator with
-only the `chat.moderation` key and no `escrow.cases` key gets `403` here.
+(used by the `[id]` routes): it decides breadth once for the whole list,
+rather than per case.
 
 ### Request
 
-No path params, no query params, no body.
+No path params. Query params (all optional — real server-side search, added
+in Step 6, replacing what used to be a pure client-side substring filter):
+
+| Param          | Type      | Notes                                                              |
+|----------------|-----------|---------------------------------------------------------------------|
+| `q`            | `string`  | Substring match (`ILIKE`, case-insensitive) against buyer name, seller name, and listing title. ≤200 chars. |
+| `state`        | `string`  | One of `escrow_case_state`'s enum values — exact match.              |
+| `reportedOnly` | `"true"`  | Only cases with at least one **open** `message_report` against one of their case messages. Any other value (including omitted) means "no filter." |
+| `dateFrom`     | ISO datetime | Inclusive lower bound on `state_entered_at`.                    |
+| `dateTo`       | ISO datetime | Inclusive upper bound on `state_entered_at`.                    |
+
+Message *content* search is intentionally not supported here — see
+`docs/technical/escrow-case-messaging.md`'s edge case #20 for why.
+
+No body.
 
 ### Response
 
@@ -77,8 +100,9 @@ convention.
 
 | Status | Body                                            | Cause                                                          |
 |--------|--------------------------------------------------|-----------------------------------------------------------------|
+| 400    | `{ "error": "Invalid query" }`                   | A query param failed validation (e.g. `state` isn't a real enum value, `dateFrom`/`dateTo` isn't a valid ISO datetime) |
 | 401    | `{ "error": "Unauthorized" }`                    | No session                                                       |
-| 403    | `{ "error": "Forbidden" }`                       | Not admin, and not internal with the `escrow.cases` permission  |
+| 403    | `{ "error": "Forbidden" }`                       | Not admin, and not internal with `escrow.cases` or `chat.moderation` |
 | 500    | `{ "error": "Failed to load escrow cases" }`     | Unexpected server error                                          |
 
 ### Example
@@ -86,7 +110,7 @@ convention.
 ```bash
 curl -s \
   -H "Cookie: better-auth.session_token=<session-cookie>" \
-  "http://localhost:3000/api/admin/escrow-cases"
+  "http://localhost:3000/api/admin/escrow-cases?q=jane&state=verification&reportedOnly=true"
 ```
 
 ---

@@ -12,6 +12,8 @@ import { listEscrowCaseMessages, sendEscrowCaseMessage } from "@/features/escrow
 import { createEscrowCaseAttachment } from "@/features/escrow-cases/db/case-attachments"
 import { broadcastCaseEvents } from "@/lib/supabase/case-broadcast"
 import { sendEscrowCaseMessageNotification } from "@/features/notifications/services/escrow-case-notifications"
+import { getActiveRestriction } from "@/features/chat-moderation/db/restrictions"
+import { recordThreadViewed } from "@/features/chat-moderation/db/audit-log"
 
 const sendMessageSchema = z
   .object({
@@ -45,6 +47,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 
   try {
     const messages = await listEscrowCaseMessages(id, access.scope !== "moderation")
+
+    // Oversight, not casework: a moderator's own GET of a case they aren't assigned to
+    // is exactly the "read-only audited thread viewer" from the brief — every such view
+    // is logged, and (per the brief) the case's actual participants are never notified.
+    // admin/supervisor/own reads are ordinary casework and are not logged here — logging
+    // an agent's every poll of their own assigned case would drown the audit trail in
+    // noise with no oversight value.
+    if (access.scope === "moderation") {
+      await recordThreadViewed({ actorId: access.session.user.id, targetType: "escrow_case", targetId: id })
+    }
+
     return jsonUncached({ success: true, messages })
   } catch (error) {
     console.error("GET /api/admin/escrow-cases/[id]/messages:", error)
@@ -71,6 +84,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (!parsed.success) return jsonError("Invalid input", 400)
 
     const senderId = access.session.user.id
+
+    const restriction = await getActiveRestriction(senderId)
+    if (restriction) {
+      return jsonError(
+        restriction.restrictionType === "ban"
+          ? `You are banned from messaging: ${restriction.reason}`
+          : `You are muted from messaging until ${restriction.expiresAt?.toISOString() ?? "further notice"}: ${restriction.reason}`,
+        403
+      )
+    }
+
     const visibility = parsed.data.visibility ?? "case"
     const fileUrl = parsed.data.imageUrls?.[0] ?? parsed.data.fileUrl ?? null
     const saved = await sendEscrowCaseMessage({

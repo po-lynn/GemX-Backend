@@ -1,11 +1,12 @@
 import { NextRequest, connection } from "next/server"
 import { z } from "zod"
-import { requireAdminOrFeature } from "@/lib/api-guard"
+import { requireAdminOrAnyFeature, requireAdminOrFeature } from "@/lib/api-guard"
 import { jsonError, jsonUncached } from "@/lib/api"
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys"
 import { getStaffRole } from "@/features/staff-roles/db/staff-roles"
 import { createEscrowCase, listEscrowCasesForViewer } from "@/features/escrow-cases/db/escrow-cases"
 import { currencyEnum } from "@/drizzle/schema/product-schema"
+import { escrowCaseStateEnum } from "@/drizzle/schema/escrow-case-schema"
 
 const createCaseSchema = z.object({
   buyerId: z.string().trim().min(1),
@@ -16,25 +17,62 @@ const createCaseSchema = z.object({
   currency: z.enum(currencyEnum.enumValues),
 })
 
+const searchQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  state: z.enum(escrowCaseStateEnum.enumValues).optional(),
+  reportedOnly: z.enum(["true", "false"]).optional(),
+  dateFrom: z.string().trim().datetime().optional(),
+  dateTo: z.string().trim().datetime().optional(),
+})
+
 /**
  * GET /api/admin/escrow-cases
  * Admin or a supervisor (staff_role.isSupervisor) sees every case; a plain escrow_agent
- * sees only cases assigned to them. Scope is decided here, not by the ESCROW_CASES feature
- * key alone — that key only answers "can this internal user open the page at all."
+ * sees only cases assigned to them; a chat moderator (CHAT_MODERATION, no ESCROW_CASES
+ * needed) sees every case too, read-only — the same "moderation" scope as a single
+ * case's GET .../messages, extended to the list so oversight can actually discover a
+ * case worth reviewing without already knowing its id. Scope is decided here, not by
+ * either feature key alone — a key only answers "can this internal user reach this
+ * endpoint at all."
+ *
+ * Supports real server-side search (?q=, ?state=, ?reportedOnly=, ?dateFrom=/?dateTo=)
+ * — see listEscrowCasesForViewer's EscrowCaseSearchParams.
  */
 export async function GET(request: NextRequest) {
   await connection()
-  const gate = await requireAdminOrFeature(request, FEATURE_KEYS.ESCROW_CASES)
+  const gate = await requireAdminOrAnyFeature(request, [FEATURE_KEYS.ESCROW_CASES, FEATURE_KEYS.CHAT_MODERATION])
   if ("error" in gate) return gate.error
 
   try {
     const { session } = gate
+    const parsedQuery = searchQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
+    if (!parsedQuery.success) return jsonError("Invalid query", 400)
+
     let assignedAgentId: string | undefined
     if (session.user.role !== "admin") {
       const staffRole = await getStaffRole(session.user.id)
-      if (!staffRole?.isSupervisor) assignedAgentId = session.user.id
+      // Only a supervisor (escrow_agent + isSupervisor) or a moderator sees every
+      // case; every other case — a plain escrow_agent, or no staff_role row at all —
+      // conservatively defaults to "own cases only" (the same safe default as before
+      // this endpoint knew about moderators; a non-agent with no cases assigned to
+      // them simply sees an empty list, not everything).
+      const staffRoleValue = staffRole?.role
+      const seesEveryCase = staffRoleValue === "moderator" || (staffRoleValue === "escrow_agent" && staffRole?.isSupervisor)
+      if (!seesEveryCase) assignedAgentId = session.user.id
     }
-    const cases = await listEscrowCasesForViewer({ viewerId: session.user.id, assignedAgentId })
+
+    const { q, state, reportedOnly, dateFrom, dateTo } = parsedQuery.data
+    const cases = await listEscrowCasesForViewer({
+      viewerId: session.user.id,
+      assignedAgentId,
+      search: {
+        q,
+        state,
+        reportedOnly: reportedOnly === "true",
+        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+        dateTo: dateTo ? new Date(dateTo) : undefined,
+      },
+    })
     return jsonUncached({ success: true, cases })
   } catch (error) {
     console.error("GET /api/admin/escrow-cases:", error)

@@ -94,17 +94,58 @@ function mapListRow(row: EscrowCaseListRow): EscrowCaseListItem {
   }
 }
 
+export type EscrowCaseSearchParams = {
+  /** Substring match against buyer name, seller name, and listing title (ILIKE, case-insensitive). */
+  q?: string
+  state?: EscrowCaseState
+  /** Only cases with at least one open message_report against one of their case messages. */
+  reportedOnly?: boolean
+  /** Inclusive date-range filter on state_entered_at (the SLA-age clock). */
+  dateFrom?: Date
+  dateTo?: Date
+}
+
 /**
  * Case list for one viewer: unread-first (a case-thread message newer than the viewer's
  * own read cursor), then oldest state-entry first (SLA age) — mirrors the Queue Console's
  * "oldest unattended first" convention. `assignedAgentId` scopes to one agent's own cases
- * (the plain agent inbox); omit it for the supervisor/admin "all cases" view.
+ * (the plain agent inbox); omit it for the supervisor/admin/moderation "all cases" view.
+ *
+ * `search` is real server-side filtering (item 1 of the brief's oversight scope:
+ * "find threads by participant, listing, date range, reported status, or message
+ * content") — replacing what used to be a pure client-side substring filter over the
+ * full unfiltered list. Message-*content* search isn't included here (it would need
+ * scanning escrow_case_message.content, a separate, heavier query); `q` covers
+ * participant/listing, which is what the inbox's search box actually needs day to day.
  */
 export async function listEscrowCasesForViewer(params: {
   viewerId: string
   assignedAgentId?: string
+  search?: EscrowCaseSearchParams
 }): Promise<EscrowCaseListItem[]> {
-  const { viewerId, assignedAgentId } = params
+  const { viewerId, assignedAgentId, search } = params
+
+  const conditions: ReturnType<typeof sql>[] = []
+  if (assignedAgentId) conditions.push(sql`ec.assigned_agent_id = ${assignedAgentId}`)
+  if (search?.q?.trim()) {
+    const like = `%${search.q.trim()}%`
+    conditions.push(sql`(buyer.name ILIKE ${like} OR seller.name ILIKE ${like} OR p.title ILIKE ${like})`)
+  }
+  if (search?.state) conditions.push(sql`ec.state = ${search.state}`)
+  if (search?.dateFrom) conditions.push(sql`ec.state_entered_at >= ${search.dateFrom}`)
+  if (search?.dateTo) conditions.push(sql`ec.state_entered_at <= ${search.dateTo}`)
+  if (search?.reportedOnly) {
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM message_report mr
+      JOIN escrow_case_message ecm ON ecm.id = mr.case_message_id
+      WHERE ecm.case_id = ec.id AND mr.status = 'open'
+    )`)
+  }
+
+  const whereClause = conditions.length
+    ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+    : sql``
+
   const result = await db.execute(sql`
     SELECT
       ec.id,
@@ -133,7 +174,7 @@ export async function listEscrowCasesForViewer(params: {
       WHERE case_id = ec.id AND visibility = 'case'
     ) latest ON true
     LEFT JOIN escrow_case_read_cursor rc ON rc.case_id = ec.id AND rc.user_id = ${viewerId}
-    ${assignedAgentId ? sql`WHERE ec.assigned_agent_id = ${assignedAgentId}` : sql``}
+    ${whereClause}
     ORDER BY "hasUnread" DESC, ec.state_entered_at ASC
   `)
   return [...result].map((row) => mapListRow(row as EscrowCaseListRow))

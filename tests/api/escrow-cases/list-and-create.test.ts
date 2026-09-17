@@ -95,6 +95,7 @@ describe("GET /api/admin/escrow-cases", () => {
     expect(listEscrowCasesForViewer).toHaveBeenCalledWith({
       viewerId: "admin-1",
       assignedAgentId: undefined,
+      search: { q: undefined, state: undefined, reportedOnly: false, dateFrom: undefined, dateTo: undefined },
     });
   });
 
@@ -113,6 +114,7 @@ describe("GET /api/admin/escrow-cases", () => {
     expect(listEscrowCasesForViewer).toHaveBeenCalledWith({
       viewerId: "agent-1",
       assignedAgentId: "agent-1",
+      search: { q: undefined, state: undefined, reportedOnly: false, dateFrom: undefined, dateTo: undefined },
     });
   });
 
@@ -135,6 +137,33 @@ describe("GET /api/admin/escrow-cases", () => {
     expect(listEscrowCasesForViewer).toHaveBeenCalledWith({
       viewerId: "agent-1",
       assignedAgentId: "agent-1",
+      search: { q: undefined, state: undefined, reportedOnly: false, dateFrom: undefined, dateTo: undefined },
+    });
+  });
+
+  // Validates the moderator path (CHAT_MODERATION, no ESCROW_CASES needed): sees every
+  // case for oversight, same breadth as a supervisor/admin — this is the fix for the
+  // "moderator can GET one case's messages but can never discover a case to review"
+  // gap. The list itself carries no scope info; per-case write access is still
+  // independently enforced by requireEscrowThreadWriteAccess.
+  it("sees every case when the caller is a moderator (no ESCROW_CASES key)", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "mod-1", role: "internal" },
+    } as never);
+    vi.mocked(checkInternalAccess).mockImplementation(async (_id, key) => key === "chat.moderation");
+    vi.mocked(getStaffRole).mockResolvedValue({
+      userId: "mod-1",
+      role: "moderator",
+      isSupervisor: false,
+    });
+    vi.mocked(listEscrowCasesForViewer).mockResolvedValue([]);
+
+    const res = await GET(makeGetRequest());
+    expect(res.status).toBe(200);
+    expect(listEscrowCasesForViewer).toHaveBeenCalledWith({
+      viewerId: "mod-1",
+      assignedAgentId: undefined,
+      search: { q: undefined, state: undefined, reportedOnly: false, dateFrom: undefined, dateTo: undefined },
     });
   });
 
@@ -157,6 +186,7 @@ describe("GET /api/admin/escrow-cases", () => {
     expect(listEscrowCasesForViewer).toHaveBeenCalledWith({
       viewerId: "super-1",
       assignedAgentId: undefined,
+      search: { q: undefined, state: undefined, reportedOnly: false, dateFrom: undefined, dateTo: undefined },
     });
   });
 });

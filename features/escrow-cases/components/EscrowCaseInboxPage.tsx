@@ -24,6 +24,11 @@ type Props = {
   initialCases: EscrowCaseListItem[]
   currentUserId: string
   canReassign: boolean
+  /** Chat moderator viewing every case for oversight — read-only everywhere, same
+   *  as requireEscrowThreadWriteAccess's "moderation" scope on the server. Composer,
+   *  transitions, and reassignment are all disabled; this only controls what renders,
+   *  the actual write paths are already independently enforced server-side. */
+  readOnly?: boolean
 }
 
 function formatRowTime(iso: string | null): string {
@@ -36,7 +41,7 @@ function formatRowTime(iso: string | null): string {
   return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" })
 }
 
-export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }: Props) {
+export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign, readOnly = false }: Props) {
   const [cases, setCases] = useState(initialCases)
   const [selectedId, setSelectedId] = useState<string | null>(initialCases[0]?.id ?? null)
   const [query, setQuery] = useState("")
@@ -61,17 +66,25 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
   const [attachments, setAttachments] = useState<EscrowCaseAttachment[]>([])
   const [showEvidence, setShowEvidence] = useState(false)
 
-  const filteredCases = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return cases
-    return cases.filter((c) =>
-      [c.buyer.name, c.seller.name, c.listingTitle ?? ""].some((field) => field.toLowerCase().includes(q))
-    )
-  }, [cases, query])
+  // Real server-side search (listEscrowCasesForViewer's `q` param — participant name or
+  // listing title, ILIKE) rather than filtering the client's one-time initialCases
+  // snapshot — the old approach couldn't find a case outside whatever page loaded
+  // initially. Debounced so every keystroke doesn't fire a request.
+  useEffect(() => {
+    const trimmed = query.trim()
+    const timer = setTimeout(() => {
+      const params = trimmed ? `?q=${encodeURIComponent(trimmed)}` : ""
+      fetch(`/api/admin/escrow-cases${params}`, { credentials: "include" })
+        .then((res) => res.json())
+        .then((data) => setCases((data as { cases?: EscrowCaseListItem[] }).cases ?? []))
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query])
 
   const rows: TriageListRow[] = useMemo(
     () =>
-      filteredCases.map((c) => ({
+      cases.map((c) => ({
         id: c.id,
         avatarId: c.buyer.id,
         avatarName: c.buyer.name,
@@ -82,7 +95,7 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
         selected: c.id === selectedId,
         awaitingReply: c.hasUnread,
       })),
-    [filteredCases, selectedId]
+    [cases, selectedId]
   )
 
   const fetchCase = useCallback(async () => {
@@ -246,22 +259,26 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-[17px] font-extrabold tracking-[-0.02em] text-[#17161c]">Escrow Cases</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/messages/escrow/canned-responses"
-            className="flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e3e3ec] bg-white px-3.5 text-[13px] font-semibold text-[#3d3c49] hover:border-[#cfcfe0]"
-          >
-            <MessageSquareText className="size-4" /> Templates
-          </Link>
-          <button
-            type="button"
-            onClick={() => setNewCaseOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-[9px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white hover:bg-[#6d28d9]"
-          >
-            <Plus className="size-4" /> New Case
-          </button>
-        </div>
+        <h1 className="text-[17px] font-extrabold tracking-[-0.02em] text-[#17161c]">
+          Escrow Cases{readOnly ? <span className="ml-2 text-[12px] font-semibold text-[#8b8a99]">(read-only oversight)</span> : null}
+        </h1>
+        {readOnly ? null : (
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/messages/escrow/canned-responses"
+              className="flex h-9 items-center gap-1.5 rounded-[9px] border border-[#e3e3ec] bg-white px-3.5 text-[13px] font-semibold text-[#3d3c49] hover:border-[#cfcfe0]"
+            >
+              <MessageSquareText className="size-4" /> Templates
+            </Link>
+            <button
+              type="button"
+              onClick={() => setNewCaseOpen(true)}
+              className="flex h-9 items-center gap-1.5 rounded-[9px] bg-[#7c3aed] px-3.5 text-[13px] font-bold text-white hover:bg-[#6d28d9]"
+            >
+              <Plus className="size-4" /> New Case
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex h-full min-h-0 overflow-hidden rounded-2xl border border-[#ececf3]">
         <ConversationList
@@ -270,7 +287,7 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
           onQueryChange={setQuery}
           sortDesc
           onToggleSort={() => {}}
-          resultLabel={`${filteredCases.length} case${filteredCases.length === 1 ? "" : "s"}`}
+          resultLabel={`${cases.length} case${cases.length === 1 ? "" : "s"}`}
           rows={rows}
           onSelectRow={setSelectedId}
         />
@@ -287,10 +304,10 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }
           replyPending={replyPending}
           replyChannel={replyChannel}
           onReplyChannelChange={setReplyChannel}
-          canReply
+          canReply={!readOnly}
           onTransition={handleTransition}
           transitionPending={transitionPending}
-          canReassign={canReassign}
+          canReassign={canReassign && !readOnly}
           onOpenReassign={() => setReassignOpen(true)}
           pendingAttachment={pendingAttachment}
           onPickAttachment={handlePickAttachment}

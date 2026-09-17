@@ -24,6 +24,16 @@ route passes `includeSideChannel = access.scope !== "moderation"` to
 rows. General chat oversight doesn't imply access to one specific case's
 confidential agent↔party notes.
 
+**A `moderation`-scope read is audit-logged (Step 6).** After a successful
+read, if `access.scope === "moderation"` the route calls
+`recordThreadViewed({ actorId: session.user.id, targetType: "escrow_case",
+targetId: id })`, writing a `thread_viewed` row to `escrow_chat_audit_log`.
+`admin`/`supervisor`/`own` reads are **not** logged — that's ordinary
+casework by someone with real access to the case, not oversight; logging
+every poll of an agent's own assigned case would drown the audit trail in
+noise with zero oversight value. Neither the case's buyer/seller/agent is
+notified of the view.
+
 ### Request
 
 Path params:
@@ -89,6 +99,12 @@ curl -s \
 ---
 
 ## POST /api/admin/escrow-cases/[id]/messages
+
+**Mute/ban check (Step 6):** before anything else, the route calls
+`getActiveRestriction(senderId)` (`features/chat-moderation/db/
+restrictions.ts`) — a sender with an active `messaging_restriction` row gets
+`403` with the restriction's reason, and nothing is written. This is the
+same check `POST /api/chat/messages` runs; see `docs/api/chat.md`.
 
 **Auth:** `requireEscrowThreadWriteAccess(request, id)`
 (`features/escrow-cases/lib/case-access.ts`) — runs `requireEscrowCaseAccess`
@@ -218,6 +234,7 @@ identity.
 | 400    | `{ "error": "Invalid input" }`             | Body missing/malformed, none of `content`/`fileUrl`/`imageUrls` provided, `content` over 5000 chars, `visibility`/`attachmentType` not a real enum value, or `imageUrls` has more than one entry |
 | 401    | `{ "error": "Unauthorized" }`              | No session                                                                                                            |
 | 403    | `{ "error": "Forbidden" }`                 | Either the caller has no case access at all, **or** the caller's scope is `"moderation"` (read-only chat moderator) |
+| 403    | `You are banned/muted from messaging: <reason>` | The sender has an active `messaging_restriction` row (checked before the access-scope check's write rejection would even matter) |
 | 404    | `{ "error": "Not found" }`                 | No case with that `id`                                                                                                |
 | 500    | `{ "error": "Failed to send message" }`    | Unexpected server error                                                                                                |
 

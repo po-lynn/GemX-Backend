@@ -1,13 +1,26 @@
 # GET /api/admin/messages/thread
 
-**Auth:** admin session, or `role === "internal"` holding **either** the
-`messages` or `chat_dashboard` RBAC permission (`requireAdminOrAnyFeature` in
+**Auth:** admin session, or `role === "internal"` holding **any of** the
+`messages`, `chat_dashboard`, or (as of Step 6 of the escrow-case-messaging
+feature) `chat.moderation` RBAC permissions (`requireAdminOrAnyFeature` in
 `lib/api-guard.ts`). This deliberately differs from the very similar
 `/api/admin/chat/all-conversations/messages` (admin-only, see that route's
 own doc) — this endpoint backs the merged Messages triage inbox, whose page
-guard (`requireMessagesAccess`) already accepts either permission, so the
-thread fetch has to match or internal staff would load the list but 403 on
-opening a thread.
+guard (`requireMessagesAccess`) already accepts either of the first two
+permissions, so the thread fetch has to match or internal staff would load
+the list but 403 on opening a thread. `chat.moderation` was added so a pure
+chat moderator (who may hold neither `messages` nor `chat_dashboard`) can
+also use this as the oversight thread viewer.
+
+**Every successful read writes a `thread_viewed` audit row**
+(`escrow_chat_audit_log`, `targetType: "flat_thread"`, `targetId:
+pairKey(userA, userB)` — see `features/messages/db/triage.ts`'s `pairKey`).
+This route is never how a participant reads their own conversation (that's
+`GET /api/chat/history` on mobile/web), so a request reaching it is always
+staff viewing someone else's thread — logging every read here is exactly
+the brief's "viewing is itself audit-logged" requirement. Neither
+participant is notified (this route never sent notifications to begin
+with).
 
 **Mobile flag:** not used by the mobile app — admin web panel only
 (`app/admin/messages/page.tsx`'s reading pane).
