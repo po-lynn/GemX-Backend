@@ -5,6 +5,7 @@ import { UserForm } from "@/features/users/components";
 import { KycDocumentsCard } from "@/features/users/components/KycDocumentsCard";
 import { getUserById } from "@/features/users/db/users";
 import { getUserPermissions } from "@/features/rbac/db/permissions";
+import { getStaffRole } from "@/features/staff-roles/db/staff-roles";
 import { requireFeatureAccess } from "@/lib/admin-guard";
 import { FEATURE_KEYS } from "@/features/rbac/feature-keys";
 import { FadeUp } from "@/components/admin/motion";
@@ -27,8 +28,9 @@ async function AdminUsersEditContent({ params, searchParams }: Props) {
   // Internal users cannot view or edit admin accounts.
   if (isInternal && user.role === "admin") redirect("/admin/users");
 
-  const [permissions, adjacent] = await Promise.all([
+  const [permissions, staffRole, adjacent] = await Promise.all([
     user.role === "internal" ? getUserPermissions(user.id) : Promise.resolve({}),
+    user.role === "internal" ? getStaffRole(user.id) : Promise.resolve(null),
     resolveAdjacentUsers(id, { page: sp.page, search: sp.search, view: sp.view }),
   ]);
 
@@ -39,6 +41,7 @@ async function AdminUsersEditContent({ params, searchParams }: Props) {
         mode="edit"
         user={user}
         permissions={permissions}
+        staffRole={staffRole}
         canAssignAdmin={!isInternal}
         prevHref={adjacent.prevHref}
         nextHref={adjacent.nextHref}

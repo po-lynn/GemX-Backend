@@ -19,8 +19,8 @@ import { NRC_CITIZEN_TYPES_MM, buildMyanmarNrc, fromMyanmarDigits, type NrcCitiz
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle, ArrowLeftRight, ChevronLeft, ChevronRight, Coins, Crown, Edit, Eye, EyeOff,
-  FileText, FlaskConical, Gem, Globe, Info, KeyRound, MapPin, MessageSquare,
-  MessagesSquare, Newspaper, Package, Plus, Receipt, Shield, ShieldHalf, Tag, Tags,
+  FileText, FlaskConical, Gem, Globe, Handshake, Info, KeyRound, MapPin, MessageSquare,
+  MessagesSquare, Newspaper, Package, Plus, Receipt, Shield, ShieldAlert, ShieldHalf, Tag, Tags,
   Trash2, Upload, Users,
 } from "lucide-react";
 import {
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { FEATURE_GROUPS, featureSaveKeys, type FeatureGroupItem } from "@/features/rbac/feature-keys";
 import { saveUserPermissionsAction } from "@/features/rbac/actions/permissions";
+import { saveStaffRoleAction } from "@/features/staff-roles/actions/staff-roles";
+import type { StaffRoleRow, StaffRoleValue } from "@/features/staff-roles/db/staff-roles";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -82,7 +84,16 @@ const FEATURE_ICONS: Record<string, React.ElementType> = {
   "articles":                 FileText,
   "settings.rating_tags":     Tags,
   "settings.escrow":          ShieldHalf,
+  "escrow.cases":             Handshake,
+  "chat.moderation":          ShieldAlert,
 };
+
+const STAFF_ROLES: { value: StaffRoleValue; label: string }[] = [
+  { value: "escrow_agent", label: "Escrow Agent" },
+  { value: "moderator",    label: "Moderator" },
+  { value: "support",      label: "Support" },
+  { value: "analyst",      label: "Analyst" },
+];
 
 // ─── Input styles (used by create form only) ──────────────────────────────────
 const inputClass =
@@ -93,6 +104,7 @@ type Props = {
   mode: "create" | "edit";
   user?: UserForEdit | null;
   permissions?: Record<string, boolean>;
+  staffRole?: StaffRoleRow | null;
   canAssignAdmin?: boolean;
   prevHref?: string | null;
   nextHref?: string | null;
@@ -154,15 +166,15 @@ function parseMyanmarNrc(nrc: string | null | undefined) {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function UserForm({ mode, user, permissions, canAssignAdmin = true, prevHref, nextHref, listPosition, listTotal }: Props) {
-  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} canAssignAdmin={canAssignAdmin} prevHref={prevHref ?? null} nextHref={nextHref ?? null} listPosition={listPosition ?? null} listTotal={listTotal ?? null} />;
+export function UserForm({ mode, user, permissions, staffRole, canAssignAdmin = true, prevHref, nextHref, listPosition, listTotal }: Props) {
+  if (mode === "edit" && user) return <UserEditForm user={user} initialPermissions={permissions ?? {}} initialStaffRole={staffRole ?? null} canAssignAdmin={canAssignAdmin} prevHref={prevHref ?? null} nextHref={nextHref ?? null} listPosition={listPosition ?? null} listTotal={listTotal ?? null} />;
   return <UserCreateForm canAssignAdmin={canAssignAdmin} />;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EDIT FORM — premium detail layout
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, nextHref, listPosition, listTotal }: { user: UserForEdit; initialPermissions: Record<string, boolean>; canAssignAdmin: boolean; prevHref: string | null; nextHref: string | null; listPosition: number | null; listTotal: number | null }) {
+function UserEditForm({ user, initialPermissions, initialStaffRole, canAssignAdmin, prevHref, nextHref, listPosition, listTotal }: { user: UserForEdit; initialPermissions: Record<string, boolean>; initialStaffRole: StaffRoleRow | null; canAssignAdmin: boolean; prevHref: string | null; nextHref: string | null; listPosition: number | null; listTotal: number | null }) {
   const router = useRouter();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -171,6 +183,11 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
 
   // permissions (internal only)
   const [perms, setPerms] = useState<Record<string, boolean>>(initialPermissions);
+  // Staff role (escrow_agent/moderator/support/analyst): a dedicated identity/assignment
+  // concept layered on role="internal", separate from feature-key permissions above —
+  // see drizzle/schema/staff-role-schema.ts. "" means no designation (plain internal staff).
+  const [staffRoleValue, setStaffRoleValue] = useState<StaffRoleValue | "">(initialStaffRole?.role ?? "");
+  const [isSupervisor, setIsSupervisor] = useState(initialStaffRole?.isSupervisor ?? false);
   const [error,   setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -329,6 +346,13 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
         }));
         const permsResult = await saveUserPermissionsAction(user.id, completePerms);
         if (!permsResult.ok) { setError(permsResult.error ?? "Failed to save permissions"); return; }
+
+        const staffRoleResult = await saveStaffRoleAction(
+          user.id,
+          staffRoleValue || null,
+          staffRoleValue === "escrow_agent" ? isSupervisor : false
+        );
+        if (!staffRoleResult.ok) { setError(staffRoleResult.error ?? "Failed to save staff role"); return; }
       }
       setDirty(false);
       router.push("/admin/users");
@@ -845,6 +869,7 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
 
           {/* ── PERMISSIONS TAB ── */}
           {tab === "permissions" && role === "internal" && canAssignAdmin && (
+            <>
             <section className="ud-sec">
               <div className="ud-sec-head" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -931,6 +956,50 @@ function UserEditForm({ user, initialPermissions, canAssignAdmin, prevHref, next
                 </div>
               </div>
             </section>
+
+            <section className="ud-sec">
+              <div className="ud-sec-head">
+                <div className="ud-sec-icon" data-tone="blue"><Handshake style={{ width: 16, height: 16 }} /></div>
+                <div>
+                  <div className="ud-sec-title">Staff role</div>
+                  <div className="ud-sec-sub">A dedicated designation for escrow case messaging and chat oversight — separate from the feature toggles above</div>
+                </div>
+              </div>
+              <div className="ud-sec-body" style={{ paddingTop: 22, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
+                <select
+                  value={staffRoleValue}
+                  onChange={(e) => {
+                    const value = e.target.value as StaffRoleValue | "";
+                    setStaffRoleValue(value);
+                    if (value !== "escrow_agent") setIsSupervisor(false);
+                    mark();
+                  }}
+                  className={inputClass}
+                  style={{ maxWidth: 240 }}
+                >
+                  <option value="">No staff role</option>
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+                <label
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600,
+                    color: staffRoleValue === "escrow_agent" ? "#1d2333" : "#9aa1ad",
+                    cursor: staffRoleValue === "escrow_agent" ? "pointer" : "not-allowed",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSupervisor}
+                    disabled={staffRoleValue !== "escrow_agent"}
+                    onChange={(e) => { setIsSupervisor(e.target.checked); mark(); }}
+                  />
+                  Supervisor — can reassign any case and see every agent&apos;s inbox
+                </label>
+              </div>
+            </section>
+            </>
           )}
 
           {/* ── DANGER ZONE TAB ── */}

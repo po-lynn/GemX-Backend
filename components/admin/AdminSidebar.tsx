@@ -31,6 +31,7 @@ import {
   FileStack,
   ShieldCheck,
   ListChecks,
+  Handshake,
 } from "lucide-react";
 import { FEATURE_KEYS, type FeatureKey } from "@/features/rbac/feature-keys";
 import { useReviewsBadgeCounts } from "@/features/reviews/hooks/use-reviews-badge-counts";
@@ -142,6 +143,14 @@ const navGroups: (NavItem | NavGroup)[] = [
     label: "Communication",
     items: [
       { href: "/admin/messages",       label: "Messages",       icon: MessageSquare, color: "#d946ef", featureKey: FEATURE_KEYS.MESSAGES },
+      {
+        href: "/admin/messages/escrow",
+        label: "Escrow Cases",
+        icon: Handshake,
+        color: "#0ea5e9",
+        featureKey: FEATURE_KEYS.ESCROW_CASES,
+        isActive: (p) => p.startsWith("/admin/messages/escrow"),
+      },
       { href: "/admin/users",          label: "Users",          icon: Users,         color: "#ec4899", featureKey: FEATURE_KEYS.USERS },
     ],
   },
