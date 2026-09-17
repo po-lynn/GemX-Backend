@@ -1,8 +1,12 @@
 "use server";
 
 import { sendPushNotificationToUserIds } from "@/features/notifications/services/send-push-notification";
-import { buildEscrowCaseMessageNotificationData } from "@/features/notifications/payloads/escrow-case";
+import {
+  buildEscrowCaseMessageNotificationData,
+  buildEscrowCaseStateChangeNotificationData,
+} from "@/features/notifications/payloads/escrow-case";
 import { notificationLogger } from "@/features/notifications/logger";
+import { ESCROW_CASE_STATE_LABELS, type EscrowCaseState } from "@/features/escrow-cases/types";
 
 function truncatePreview(text: string, max = 120): string {
   const t = text.trim();
@@ -42,6 +46,34 @@ export async function sendEscrowCaseMessageNotification(input: {
   notificationLogger.info("Escrow case push sent", {
     caseId: input.caseId,
     messageId: input.messageId,
+    recipients: recipients.length,
+    sent: pushResult.sent,
+    failed: pushResult.failed,
+  });
+}
+
+/** Push for a case state change (verification complete, handover scheduled, etc.), to
+ *  the buyer and seller — they aren't logged into the admin panel to see the system
+ *  message directly, so this is how they're told a state change happened. */
+export async function sendEscrowCaseStateChangeNotification(input: {
+  caseId: string;
+  state: EscrowCaseState;
+  recipientIds: string[];
+}): Promise<void> {
+  const recipients = Array.from(new Set(input.recipientIds.filter(Boolean)));
+  if (recipients.length === 0) return;
+
+  const data = buildEscrowCaseStateChangeNotificationData({ caseId: input.caseId, state: input.state });
+
+  const pushResult = await sendPushNotificationToUserIds(recipients, {
+    title: "Escrow case update",
+    body: `Status changed to "${ESCROW_CASE_STATE_LABELS[input.state]}".`,
+    data,
+  });
+
+  notificationLogger.info("Escrow case state-change push sent", {
+    caseId: input.caseId,
+    state: input.state,
     recipients: recipients.length,
     sent: pushResult.sent,
     failed: pushResult.failed,

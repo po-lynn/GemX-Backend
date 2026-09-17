@@ -6,6 +6,7 @@ const ESCROW_CASE_FCM_DATA_KEYS = {
   caseId: "caseId",
   senderId: "senderId",
   messageId: "messageId",
+  state: "state",
 } as const;
 
 export type EscrowCaseMessageNotificationDataInput = {
@@ -13,6 +14,25 @@ export type EscrowCaseMessageNotificationDataInput = {
   senderId: string;
   messageId: string;
 };
+
+export type EscrowCaseStateChangeNotificationDataInput = {
+  caseId: string;
+  state: string;
+};
+
+/** FCM data for an escrow case state change — same "custom" catch-all screen as the
+ *  message notification above, for the same reason (no new mobile screen in this task). */
+export function buildEscrowCaseStateChangeNotificationData(
+  input: EscrowCaseStateChangeNotificationDataInput
+): Record<string, string> {
+  const screen: NotificationScreen = "custom";
+  return {
+    [ESCROW_CASE_FCM_DATA_KEYS.type]: "escrow_case_state_changed",
+    [ESCROW_CASE_FCM_DATA_KEYS.screen]: screen,
+    [ESCROW_CASE_FCM_DATA_KEYS.caseId]: input.caseId,
+    [ESCROW_CASE_FCM_DATA_KEYS.state]: input.state,
+  };
+}
 
 /**
  * FCM data for an escrow case message. `screen: "custom"` (the existing catch-all) rather

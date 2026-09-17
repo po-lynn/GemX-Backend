@@ -31,7 +31,11 @@ export default async function AdminEscrowCasesPage() {
   return (
     <FadeUp className="block h-full">
       <Suspense>
-        <EscrowCaseInboxPage initialCases={cases} currentUserId={session.user.id} />
+        <EscrowCaseInboxPage
+          initialCases={cases}
+          currentUserId={session.user.id}
+          canReassign={assignedAgentId === undefined}
+        />
       </Suspense>
     </FadeUp>
   )

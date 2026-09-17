@@ -3,6 +3,7 @@ import {
   assertValidTransition,
   canTransition,
   EscrowCaseStateError,
+  getValidNextStates,
   isTerminalState,
   type EscrowCaseState,
 } from "@/features/escrow-cases/lib/state-machine"
@@ -91,6 +92,26 @@ describe("isTerminalState", () => {
   it("identifies in-flight states as non-terminal", () => {
     for (const state of LINEAR_PATH.filter((s) => !TERMINAL_STATES.includes(s))) {
       expect(isTerminalState(state)).toBe(false)
+    }
+  })
+})
+
+describe("getValidNextStates", () => {
+  // The UI's transition picker must never offer "agent_assigned" — that state is only
+  // ever reached via the dedicated assign endpoint, not the generic transition one.
+  it("never includes agent_assigned, even from requested", () => {
+    expect(getValidNextStates("requested")).not.toContain("agent_assigned")
+  })
+
+  it("returns the linear next step plus all three off-ramps for an in-flight state", () => {
+    const next = getValidNextStates("verification")
+    expect(next).toEqual(expect.arrayContaining(["payment_pending", "cancelled", "rejected", "disputed"]))
+    expect(next).toHaveLength(4)
+  })
+
+  it("returns an empty list for a terminal state", () => {
+    for (const state of TERMINAL_STATES) {
+      expect(getValidNextStates(state)).toEqual([])
     }
   })
 })

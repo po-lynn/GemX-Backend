@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
       assignedAgentId: parsed.data.assignedAgentId ?? null,
       agreedPriceMinor: parsed.data.agreedPriceMinor,
       currency: parsed.data.currency,
+      actorId: gate.session.user.id,
     })
     return jsonUncached({ success: true, case: created })
   } catch (error) {

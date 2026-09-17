@@ -10,16 +10,19 @@ supervise an escrow deal end-to-end instead of routing it through the
 existing 1:1 `messages` table (which is strictly 2-party with no
 conversation entity).
 
-This is **Step 1+2 of a larger plan** — the minimum case model plus its
-messaging thread, not the full escrow operations console. State transitions
-(verification → payment → handover → completed), moderation/reports, and
-canned responses are schema-ready but not yet wired to any route — see
-"Edge cases & known limitations" below.
+This is **Step 1+2+3 of a larger plan** — the minimum case model, its
+messaging thread, and now its state machine wired up end-to-end. Moderation/
+reports and canned responses are still schema-ready but not wired to any
+route — see "Edge cases & known limitations" below.
 
-**Step 1** (already committed, `26bc962`): the schema, the state machine, the
-row-level access guard, and the `staff_role` concept.
-**Step 2** (this change set): case listing/creation/detail, the messaging
+**Step 1** (`26bc962`): the schema, the state machine, the row-level access
+guard, and the `staff_role` concept.
+**Step 2** (`204ae24`): case listing/creation/detail, the messaging
 endpoints, the admin UI, realtime broadcast, and push notifications.
+**Step 3** (this change set): state transitions and agent assignment/
+reassignment, each atomically paired with a system message and an audit log
+row; the EN/MY system-message copy generator; the transition/reassign
+controls in the admin UI.
 
 Files touched:
 
@@ -38,44 +41,71 @@ Files touched:
 **Business logic / auth**
 - `features/escrow-cases/lib/case-access.ts` — `requireEscrowCaseAccess()` /
   `requireEscrowThreadWriteAccess()`, the row-level scope resolver.
-- `features/escrow-cases/lib/require-escrow-cases-access.ts` — **new**,
+- `features/escrow-cases/lib/require-escrow-cases-access.ts` —
   page-level gate for `/admin/messages/escrow`.
 - `features/escrow-cases/lib/state-machine.ts` — transition table
-  (`canTransition`/`assertValidTransition`); not called by any route yet.
-- `features/escrow-cases/lib/money.ts` — **new**, integer-minor-unit helpers.
+  (`canTransition`/`assertValidTransition`), now called from
+  `transitionEscrowCaseState()`; added `getValidNextStates()` (Step 3) to
+  drive the UI's transition picker.
+- `features/escrow-cases/lib/system-message-copy.ts` — **new (Step 3)**,
+  `buildSystemMessageCopy()` — pure EN/MY copy generator for
+  `case_created`/`state_changed`/`assigned`/`reassigned` system messages.
+- `features/escrow-cases/lib/money.ts` — integer-minor-unit helpers.
 - `features/staff-roles/db/staff-roles.ts`,
   `features/staff-roles/actions/staff-roles.ts`,
   `features/staff-roles/schemas/staff-roles.ts` — the `staff_role`
   get/set/clear CRUD and its admin-only save action.
 
 **Data + API + UI**
-- `features/escrow-cases/db/escrow-cases.ts` — extended with
-  `listEscrowCasesForViewer()`, `createEscrowCase()`, `getEscrowCaseDetail()`
-  (`getEscrowCaseById()` already existed from Step 1).
-- `features/escrow-cases/db/case-messages.ts` — **new**,
+- `features/escrow-cases/db/escrow-cases.ts` — `listEscrowCasesForViewer()`,
+  `getEscrowCaseDetail()` (now also returns `agentName`); `createEscrowCase()`
+  **rewritten in Step 3** to run inside one `db.transaction` and post its own
+  `case_created` system message (plus an `assigned` system message + audit
+  row if an agent was chosen at creation time) — see "Data flow".
+- `features/escrow-cases/db/case-transitions.ts` — **new (Step 3)**,
+  `transitionEscrowCaseState()` / `setEscrowCaseAgent()`, each atomically
+  pairing the state/assignment write with a system message and an audit log
+  row inside one transaction.
+- `features/escrow-cases/db/case-messages.ts` —
   `listEscrowCaseMessages()`, `sendEscrowCaseMessage()`, `markEscrowCaseRead()`.
-- `features/escrow-cases/types.ts` — **new**, client-side type mirror of the
-  DB layer's shapes.
-- `app/api/admin/escrow-cases/route.ts` — **new**, `GET` (list) / `POST` (create).
-- `app/api/admin/escrow-cases/[id]/route.ts` — **new**, `GET` (detail).
-- `app/api/admin/escrow-cases/[id]/messages/route.ts` — **new**, `GET`
+- `features/escrow-cases/types.ts` — client-side type mirror of the DB
+  layer's shapes; `EscrowCaseDetail` gained `agentName` in Step 3.
+- `app/api/admin/escrow-cases/route.ts` — `GET` (list) / `POST` (create,
+  now takes `actorId` for the audit trail).
+- `app/api/admin/escrow-cases/[id]/route.ts` — `GET` (detail).
+- `app/api/admin/escrow-cases/[id]/messages/route.ts` — `GET`
   (list messages) / `POST` (send).
-- `app/api/admin/escrow-cases/[id]/read/route.ts` — **new**, `PATCH`
+- `app/api/admin/escrow-cases/[id]/read/route.ts` — `PATCH`
   (advance the caller's read cursor).
-- `app/admin/messages/escrow/page.tsx` — **new** server page.
+- `app/api/admin/escrow-cases/[id]/transition/route.ts` — **new (Step 3)**,
+  `POST` (drive the state machine) — see
+  [`docs/api/admin-escrow-cases-transition.md`](../api/admin-escrow-cases-transition.md).
+- `app/api/admin/escrow-cases/[id]/assign/route.ts` — **new (Step 3)**,
+  `POST` (assign/reassign, supervisor/admin only) — see
+  [`docs/api/admin-escrow-cases-assign.md`](../api/admin-escrow-cases-assign.md).
+- `app/admin/messages/escrow/page.tsx` — server page; now also computes and
+  passes `canReassign` (Step 3).
 - `features/escrow-cases/components/EscrowCaseInboxPage.tsx`,
-  `EscrowCaseThreadView.tsx`, `NewEscrowCaseDialog.tsx` — **new** client components.
-- `features/escrow-cases/actions/escrow-cases.ts` — **new** server actions
-  backing the New Case dialog's buyer/seller/listing/agent pickers.
-- `lib/supabase/case-broadcast.ts` — **new**, realtime broadcast, sibling to
-  `lib/supabase/chat-broadcast.ts`.
+  `EscrowCaseThreadView.tsx`, `NewEscrowCaseDialog.tsx` — client components;
+  `EscrowCaseThreadView.tsx` gained the state-transition picker and
+  "Reassign" button in Step 3.
+- `features/escrow-cases/components/ReassignCaseDialog.tsx` — **new (Step 3)**.
+- `features/escrow-cases/actions/escrow-cases.ts` — server actions
+  backing the New Case dialog's buyer/seller/listing/agent pickers (also
+  reused by the Step 3 reassign dialog's agent picker).
+- `lib/supabase/case-broadcast.ts` — realtime broadcast, sibling to
+  `lib/supabase/chat-broadcast.ts`; `case_state_changed` events are now
+  actually emitted (Step 3).
 - `features/notifications/payloads/escrow-case.ts`,
-  `features/notifications/services/escrow-case-notifications.ts` — **new**,
-  FCM push payload/service for new case messages.
-- `components/admin/AdminSidebar.tsx` — added the "Escrow Cases" nav entry
+  `features/notifications/services/escrow-case-notifications.ts` — FCM
+  push for new case messages; gained
+  `buildEscrowCaseStateChangeNotificationData()` /
+  `sendEscrowCaseStateChangeNotification()` in Step 3 (buyer/seller only,
+  not the agent — they're the one driving the change).
+- `components/admin/AdminSidebar.tsx` — the "Escrow Cases" nav entry
   under Communication.
 - `features/users/components/UserForm.tsx`,
-  `app/admin/users/[id]/edit/page.tsx` — added the "Staff role" section to
+  `app/admin/users/[id]/edit/page.tsx` — the "Staff role" section on
   the internal-user edit page (see "Auth & permissions").
 
 ## Data flow
@@ -162,6 +192,63 @@ sendEscrowCaseMessage()               inserts escrow_case_message
                  recognize the type still shows the OS banner)
 ```
 
+**Transitioning state**
+
+```
+EscrowCaseThreadView.tsx (state <select>)  onTransition(toState) — options come from
+                                            getValidNextStates(caseDetail.state), which
+                                            always excludes "agent_assigned"
+        │
+        ▼
+POST /api/admin/escrow-cases/[id]/transition  requireEscrowThreadWriteAccess() — admin/
+                                               supervisor/own may drive it, "moderation"
+                                               scope is rejected (403)
+        │
+        ▼
+transitionEscrowCaseState()   ONE db.transaction:
+                               1. SELECT current state
+                               2. assertValidTransition(current, toState) — throws
+                                  EscrowCaseStateError (→ 409) if invalid; throws
+                                  EscrowCaseInvalidRequestError (→ 400) up front if
+                                  toState === "agent_assigned"
+                               3. conditional UPDATE ... WHERE state = <state just read>
+                                  — 0 rows updated → EscrowCaseConflictError (→ 409)
+                               4. INSERT escrow_case_message (kind: "system",
+                                  systemEventType: "state_changed")
+                               5. INSERT escrow_chat_audit_log (actionType:
+                                  "state_changed", before/afterState: {state})
+        │
+        ├──▶ broadcastCaseEvents(caseId, [{ event: "case_state_changed", ... }])
+        └──▶ sendEscrowCaseStateChangeNotification({ recipientIds: [buyerId, sellerId] })
+```
+
+**Assigning / reassigning an agent**
+
+```
+EscrowCaseThreadView.tsx ("Reassign" button, shown only if canReassign)
+        │  opens
+        ▼
+ReassignCaseDialog.tsx        agent list from getEscrowAgentOptionsAction()
+        │  on confirm
+        ▼
+POST /api/admin/escrow-cases/[id]/assign   requireEscrowCaseAccess() then an EXTRA
+                                            in-route check: only scope "admin" or
+                                            "supervisor" may proceed (own/moderation → 403)
+        │
+        ▼
+setEscrowCaseAgent()          ONE db.transaction:
+                               1. SELECT current assignedAgentId + state
+                               2. same agentId as current → EscrowCaseInvalidRequestError (400)
+                               3. conditional UPDATE (agentId, and state → "agent_assigned"
+                                  ONLY if this is a first assignment from "requested";
+                                  a reassignment leaves state untouched)
+                               4. INSERT system message ("assigned" or "reassigned")
+                               5. INSERT audit row ("case_assigned" or "case_reassigned")
+        │
+        └──▶ broadcastCaseEvents(caseId, [{ event: "case_state_changed", ... }])
+             (no push notification on assign/reassign — only on a state change)
+```
+
 ## Schema impact
 
 **New tables — `drizzle/schema/escrow-case-schema.ts`**
@@ -179,17 +266,23 @@ sendEscrowCaseMessage()               inserts escrow_case_message
 |---|---|---|
 | `staff_role` | `user_id` (PK, FK `user`, `CASCADE`), `role` (`staff_role_type`: `escrow_agent`\|`moderator`\|`support`\|`analyst`), `is_supervisor` (bool, default `false`, meaningful only for `escrow_agent`) | A dedicated identity/assignment designation layered on `user.role = "internal"` — see "Auth & permissions". |
 
-**New tables — `drizzle/schema/chat-moderation-schema.ts` and `escrow-canned-response-schema.ts` — reserved for a later step**
+**`escrow_chat_audit_log` is now live (Step 3).** Every state transition and
+every assign/reassign writes one row (`actorId`, `actionType`,
+`targetType: "escrow_case"`, `targetId`, `before`/`afterState`, optional
+`reason`) inside the same transaction as the underlying change — see "Data
+flow" above. There is no reader for it yet (no per-case/per-user audit
+trail UI), only writers.
 
-`messaging_restriction`, `message_report`, `escrow_chat_audit_log`, and
-`escrow_canned_response` are fully defined, indexed, RLS-enabled tables with
-**zero references anywhere outside their own schema files** (verified by
+**Still schema-only, reserved for a later step** —
+`drizzle/schema/chat-moderation-schema.ts`'s `messaging_restriction` and
+`message_report`, and `drizzle/schema/escrow-canned-response-schema.ts`'s
+`escrow_canned_response`, plus `escrow_case_attachment`
+(`escrow-case-schema.ts`) — all fully defined, indexed, RLS-enabled tables
+with zero references anywhere outside their own schema files (verified by
 grepping the whole codebase for `messagingRestriction`, `messageReport`,
-`escrowChatAuditLog`, `escrowCannedResponse`) — no query, action, or route
-reads or writes any of them yet. `escrow_case_attachment` (above) is in the
-same state. They exist so a later moderation/canned-response/reports-queue
-step doesn't need its own schema-diff pass; nothing in Step 1+2 is "using"
-them.
+`escrowCannedResponse`, `escrowCaseAttachment`). They exist so a later
+moderation/canned-response/reports-queue/attachments step doesn't need its
+own schema-diff pass.
 
 **Migration**
 
@@ -303,22 +396,25 @@ out of scope for Step 1+2.
    query param and no `ILIKE`/index-backed search. The underlying SQL also
    has no `LIMIT`, so this is fine at current volume but won't scale past a
    few hundred cases for one viewer.
-5. **No state-transition endpoint exists yet.**
-   `features/escrow-cases/lib/state-machine.ts`'s `canTransition`/
-   `assertValidTransition` are fully implemented and unit-tested
-   (`tests/unit/escrow-case-state-machine.test.ts`) but are not called from
-   any route or action. `createEscrowCase()` sets the initial state
-   directly (`"agent_assigned"` if an agent was chosen at creation, else
-   `"requested"`), bypassing the state machine since there's no prior state
-   to transition from. Advancing a case through verification, payment,
-   handover, or completion has no UI or API surface today.
-6. **No system messages are ever produced.** `escrow_case_message.kind =
-   "system"` and the `system_event_type`/`system_event_payload` columns
-   exist, and `EscrowCaseThreadView.tsx` already renders a system row as a
-   centered pill instead of a bubble — but `sendEscrowCaseMessage()`
-   (`features/escrow-cases/db/case-messages.ts`) always inserts `kind:
-   "message"`. Nothing in this change set inserts a system row (e.g. "Case
-   created", "Agent reassigned") yet.
+5. **State transitions are now live (Step 3), with two caveats.**
+   `disputed` is modeled as a terminal state (`isTerminalState`/
+   `getValidNextStates` return no outgoing transitions from it) — the brief
+   doesn't specify whether a disputed case can later resume, so this is a
+   conservative default that should be confirmed before anyone relies on
+   it; resuming would need its own explicit rule in `state-machine.ts`, not
+   an ad hoc exception in the route. Second, `transitionEscrowCaseState()`'s
+   `reason` field is accepted and stored on the audit row, but no UI
+   currently collects it — every transition made through
+   `EscrowCaseThreadView.tsx`'s picker sends no reason.
+6. **System messages are produced for `case_created`, `assigned`,
+   `reassigned`, and `state_changed`** (Step 3) — `buildSystemMessageCopy()`
+   renders the English string stored on `content`; the Burmese branch
+   exists (`locale: "my"`) but is not yet reachable from any route, since
+   there is no per-user locale to read (confirmed: `user` has no
+   locale/language column) and no buyer/seller-facing surface renders this
+   thread at all yet. The Burmese strings are a first-pass, static
+   translation — not run through `lib/google-translate.ts` — and should get
+   a native-speaker review before they ever reach a real buyer/seller.
 7. **Side-channel visibility is schema-only.**
    `escrow_case_message_visibility` has `agent_buyer`/`agent_seller` values
    in addition to `case`, but `listEscrowCaseMessages()` and
@@ -328,9 +424,22 @@ out of scope for Step 1+2.
 8. **Page-gate vs. row-level scope mismatch for moderators** — see "Auth &
    permissions" above.
 9. **Realtime broadcast and push notification are fire-and-forget, with no
-   retry.** `broadcastCaseEvents()`/`sendEscrowCaseMessageNotification()`
-   are invoked as `void ... .catch(console.error)` in the messages route —
-   a failure only logs server-side and never surfaces to the sender or
-   blocks the HTTP response. If `NEXT_PUBLIC_SUPABASE_URL` or
-   `SUPABASE_SERVICE_ROLE_KEY` are unset, `broadcastCaseEvents()` silently
-   no-ops.
+   retry.** `broadcastCaseEvents()`/`sendEscrowCaseMessageNotification()`/
+   `sendEscrowCaseStateChangeNotification()` are invoked as `void ...
+   .catch(console.error)` — a failure only logs server-side and never
+   surfaces to the caller or blocks the HTTP response. If
+   `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` are unset,
+   `broadcastCaseEvents()` silently no-ops.
+10. **No audit row for case creation itself.**
+    `escrow_chat_audit_action` has no `"case_created"` value — only the
+    `case_created` *system message* marks it. If an agent was chosen at
+    creation time, that initial assignment **does** get a `case_assigned`
+    audit row (`createEscrowCase()` writes one explicitly, since it can't
+    call `setEscrowCaseAgent()` — the case doesn't exist yet). The case
+    row's own `created_at`/the system message's `created_at` are the only
+    record of "who created this and when" beyond that.
+11. **No push notification on assign/reassign**, only on a state change —
+    `setEscrowCaseAgent()`'s callers broadcast a realtime event but never
+    call a notification service. A buyer/seller finds out their case was
+    (re)assigned only by opening the thread (or via the next state-change
+    push), not immediately.

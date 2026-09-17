@@ -82,6 +82,33 @@
    `PATCH /api/admin/escrow-cases/{id}/read` in the background — this only
    advances *your own* read cursor and never affects anyone else's unread
    state.
+5. **Move the case forward** — the pill next to the case header (normally
+   just showing the current state) becomes a `<select>` whenever a valid
+   next state exists; picking one sends:
+   ```http
+   POST /api/admin/escrow-cases/{id}/transition
+   Content-Type: application/json
+
+   { "toState": "payment_pending" }
+   ```
+   This is only enabled for the assigned agent, a supervisor, or an admin
+   — a moderator never sees it as clickable (`canReply` is false for that
+   scope). Every transition posts a system message into the thread itself
+   ("Status changed from ... to ...") so there's no separate activity log to
+   check.
+6. **Reassign a case** — only a supervisor or admin sees the **Reassign**
+   button in the case header. Click it, pick a different agent from the
+   dropdown (the case's own current agent is excluded from the list), and
+   confirm. This sends:
+   ```http
+   POST /api/admin/escrow-cases/{id}/assign
+   Content-Type: application/json
+
+   { "agentId": "usr_new_agent" }
+   ```
+   Assigning an unassigned (`requested`) case also advances its state to
+   `agent_assigned` in the same call — you don't do that as two separate
+   steps.
 
 ## Extending it
 
@@ -109,13 +136,21 @@
   table. Add a "Report" action in the thread view (inserts a `message_report`
   row), a queue page listing `status = 'open'` rows, and
   dismiss/action handlers that also write an `escrow_chat_audit_log` row.
-- **State transitions**: `features/escrow-cases/lib/state-machine.ts`'s
-  `canTransition()`/`assertValidTransition()` are implemented and unit
-  tested (`tests/unit/escrow-case-state-machine.test.ts`) but nothing calls
-  them yet. A future `PATCH /api/admin/escrow-cases/[id]/state` route would
-  validate the transition, update `escrow_case.state`/`stateEnteredAt`, and
-  insert a `kind: "system"` row (`systemEventType: "state_changed"`) so the
-  thread shows it.
+- **A reason field for transitions**: `POST .../transition`'s body already
+  accepts an optional `reason` and stores it on the `escrow_chat_audit_log`
+  row, but `EscrowCaseThreadView.tsx`'s picker doesn't collect one yet — add
+  a small prompt/textarea before calling `onTransition()` if you need
+  reasons to actually get captured.
+- **A push notification on assign/reassign**: `setEscrowCaseAgent()`
+  currently only broadcasts realtime, unlike the message-send and
+  state-transition paths which also call a notification service — add a
+  call mirroring `sendEscrowCaseStateChangeNotification()`
+  (`features/notifications/services/escrow-case-notifications.ts`) if
+  buyers/sellers should be pushed immediately on reassignment too.
+- **Resuming from `disputed`**: it's currently modeled as a terminal state
+  (`state-machine.ts`) — add an explicit transition rule there (not a
+  special case in the route) if a disputed case should ever be able to
+  resume into an active state.
 - **Mobile case creation**: there is no mobile-facing endpoint today —
   `POST /api/admin/escrow-cases` is staff-only. A mobile flow would reuse
   `createEscrowCase()` (`features/escrow-cases/db/escrow-cases.ts`) behind a
@@ -159,3 +194,22 @@
   configured in this environment, so `broadcastCaseEvents()` is silently
   no-oping. Sending and receiving messages themselves are unaffected — only
   the live push update is missing.
+- **`403 Forbidden` reassigning a case, even though you're the assigned
+  agent and can otherwise message/transition it fine**: reassignment is
+  supervisor/admin-only. Your `own` scope is enough to drive the case's
+  state, but not to hand it to someone else — you (or an admin) need to
+  check the **Supervisor** box on your staff role, or have a supervisor/
+  admin do the reassignment.
+- **`400` "Use assignEscrowCaseAgent to transition into \"agent_assigned\""**:
+  something tried to send `toState: "agent_assigned"` to
+  `POST .../transition`. That state can only be reached through
+  `POST .../assign` — assigning the case's first agent sets it
+  automatically.
+- **`400` "Case is already assigned to this agent"**: `POST .../assign`'s
+  `agentId` matched the case's current `assignedAgentId` exactly. Pick a
+  different agent, or there's nothing to do.
+- **`409` reassigning/transitioning a case**: either the state machine
+  rejected the specific transition you attempted (the message names both
+  states — check `getValidNextStates()` for what's actually valid from the
+  case's current state), or someone else changed the case between your
+  page load and your click (reload and retry).

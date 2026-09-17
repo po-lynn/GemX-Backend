@@ -51,6 +51,7 @@ export type EscrowCaseDetail = {
   listingId: string
   listingTitle: string | null
   assignedAgentId: string | null
+  agentName: string | null
   state: EscrowCaseState
   stateEnteredAt: string
   agreedPriceMinor: number

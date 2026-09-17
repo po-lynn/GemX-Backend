@@ -64,3 +64,9 @@ export function assertValidTransition(from: EscrowCaseState, to: EscrowCaseState
 export function isTerminalState(state: EscrowCaseState): boolean {
   return TERMINAL_STATES.has(state)
 }
+
+/** Every state reachable in one step from `from` — drives the UI's transition picker
+ *  (excludes "agent_assigned", which is only ever reached via the assign endpoint). */
+export function getValidNextStates(from: EscrowCaseState): EscrowCaseState[] {
+  return (TRANSITION_TABLE[from] ?? []).filter((state) => state !== "agent_assigned")
+}

@@ -1,7 +1,10 @@
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
-import { escrowCase, type escrowCaseStateEnum } from "@/drizzle/schema/escrow-case-schema"
+import { escrowCase, escrowCaseMessage, type escrowCaseStateEnum } from "@/drizzle/schema/escrow-case-schema"
 import { escrowServiceSetting } from "@/drizzle/schema/escrow-service-setting-schema"
+import { escrowChatAuditLog } from "@/drizzle/schema/chat-moderation-schema"
+import { user } from "@/drizzle/schema/auth-schema"
+import { buildSystemMessageCopy } from "@/features/escrow-cases/lib/system-message-copy"
 
 export type EscrowCaseState = (typeof escrowCaseStateEnum.enumValues)[number]
 
@@ -143,6 +146,12 @@ export async function listEscrowCasesForViewer(params: {
  * case's fee never retroactively changes if the global config is edited later. Emits no
  * system message or audit row here — those are wired in alongside the state machine.
  */
+/**
+ * Creates the case, then atomically posts its opening system message (and, if an agent
+ * was picked at creation time, an "assigned" system message + audit row too — creating
+ * a case pre-assigned skips setEscrowCaseAgent, so this is the only place that path's
+ * assignment would otherwise go unannounced).
+ */
 export async function createEscrowCase(input: {
   buyerId: string
   sellerId: string
@@ -150,6 +159,7 @@ export async function createEscrowCase(input: {
   assignedAgentId: string | null
   agreedPriceMinor: number
   currency: "USD" | "MMK"
+  actorId: string
 }): Promise<EscrowCaseRow> {
   const [settings] = await db
     .select({
@@ -166,33 +176,69 @@ export async function createEscrowCase(input: {
   // serviceFee is a percent (e.g. "2.50" = 2.5%) stored as numeric text; convert to bps.
   const feeBps = settings ? Math.round(Number(settings.serviceFee) * 100) : 0
 
-  const [row] = await db
-    .insert(escrowCase)
-    .values({
-      buyerId: input.buyerId,
-      sellerId: input.sellerId,
-      listingId: input.listingId,
-      assignedAgentId: input.assignedAgentId,
-      state: input.assignedAgentId ? "agent_assigned" : "requested",
-      agreedPriceMinor: input.agreedPriceMinor,
-      currency: input.currency,
-      feeBps,
-      buyerFeeShareBps: settings?.buyerFeeShareBps ?? 5000,
-      sellerFeeShareBps: settings?.sellerFeeShareBps ?? 5000,
-      feeMinMinor: settings?.feeMinMinor ?? null,
-      feeCapMinor: settings?.feeCapMinor ?? null,
-    })
-    .returning({
-      id: escrowCase.id,
-      buyerId: escrowCase.buyerId,
-      sellerId: escrowCase.sellerId,
-      listingId: escrowCase.listingId,
-      assignedAgentId: escrowCase.assignedAgentId,
-      state: escrowCase.state,
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(escrowCase)
+      .values({
+        buyerId: input.buyerId,
+        sellerId: input.sellerId,
+        listingId: input.listingId,
+        assignedAgentId: input.assignedAgentId,
+        state: input.assignedAgentId ? "agent_assigned" : "requested",
+        agreedPriceMinor: input.agreedPriceMinor,
+        currency: input.currency,
+        feeBps,
+        buyerFeeShareBps: settings?.buyerFeeShareBps ?? 5000,
+        sellerFeeShareBps: settings?.sellerFeeShareBps ?? 5000,
+        feeMinMinor: settings?.feeMinMinor ?? null,
+        feeCapMinor: settings?.feeCapMinor ?? null,
+      })
+      .returning({
+        id: escrowCase.id,
+        buyerId: escrowCase.buyerId,
+        sellerId: escrowCase.sellerId,
+        listingId: escrowCase.listingId,
+        assignedAgentId: escrowCase.assignedAgentId,
+        state: escrowCase.state,
+      })
+    if (!row) throw new Error("Failed to create escrow case")
+
+    await tx.insert(escrowCaseMessage).values({
+      caseId: row.id,
+      senderId: null,
+      kind: "system",
+      visibility: "case",
+      content: buildSystemMessageCopy("case_created", {}),
+      systemEventType: "case_created",
+      systemEventPayload: {},
     })
 
-  if (!row) throw new Error("Failed to create escrow case")
-  return row
+    if (input.assignedAgentId) {
+      const [agent] = await tx.select({ name: user.name }).from(user).where(eq(user.id, input.assignedAgentId)).limit(1)
+      const agentName = agent?.name ?? "the assigned agent"
+
+      await tx.insert(escrowCaseMessage).values({
+        caseId: row.id,
+        senderId: null,
+        kind: "system",
+        visibility: "case",
+        content: buildSystemMessageCopy("assigned", { agentName }),
+        systemEventType: "assigned",
+        systemEventPayload: { agentName },
+      })
+
+      await tx.insert(escrowChatAuditLog).values({
+        actorId: input.actorId,
+        actionType: "case_assigned",
+        targetType: "escrow_case",
+        targetId: row.id,
+        beforeState: { assignedAgentId: null },
+        afterState: { assignedAgentId: input.assignedAgentId },
+      })
+    }
+
+    return row
+  })
 }
 
 export type EscrowCaseDetail = EscrowCaseRow & {
@@ -208,6 +254,7 @@ export type EscrowCaseDetail = EscrowCaseRow & {
   nextActionNote: string | null
   buyer: EscrowCaseParticipant
   seller: EscrowCaseParticipant
+  agentName: string | null
 }
 
 /** Full case context for the thread view's context panel. */
@@ -222,11 +269,13 @@ export async function getEscrowCaseDetail(caseId: string): Promise<EscrowCaseDet
       ec.next_action_note AS "nextActionNote",
       p.title AS "listingTitle",
       buyer.name AS "buyerName", buyer.image AS "buyerImage",
-      seller.name AS "sellerName", seller.image AS "sellerImage"
+      seller.name AS "sellerName", seller.image AS "sellerImage",
+      agent.name AS "agentName"
     FROM escrow_case ec
     JOIN "user" buyer ON buyer.id = ec.buyer_id
     JOIN "user" seller ON seller.id = ec.seller_id
     LEFT JOIN product p ON p.id = ec.listing_id
+    LEFT JOIN "user" agent ON agent.id = ec.assigned_agent_id
     WHERE ec.id = ${caseId}
     LIMIT 1
   `)
@@ -246,6 +295,7 @@ export async function getEscrowCaseDetail(caseId: string): Promise<EscrowCaseDet
         buyerImage: string | null
         sellerName: string
         sellerImage: string | null
+        agentName: string | null
       })
     | undefined
   if (!row) return null
@@ -256,6 +306,7 @@ export async function getEscrowCaseDetail(caseId: string): Promise<EscrowCaseDet
     sellerId: row.sellerId,
     listingId: row.listingId,
     assignedAgentId: row.assignedAgentId,
+    agentName: row.agentName,
     state: row.state,
     listingTitle: row.listingTitle,
     agreedPriceMinor: Number(row.agreedPriceMinor),

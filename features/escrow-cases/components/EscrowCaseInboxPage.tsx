@@ -6,12 +6,15 @@ import { toast } from "sonner"
 import { ConversationList, type TriageListRow } from "@/features/messages/components/triage/ConversationList"
 import { EscrowCaseThreadView } from "@/features/escrow-cases/components/EscrowCaseThreadView"
 import { NewEscrowCaseDialog } from "@/features/escrow-cases/components/NewEscrowCaseDialog"
+import { ReassignCaseDialog } from "@/features/escrow-cases/components/ReassignCaseDialog"
 import { ESCROW_CASE_STATE_LABELS, type EscrowCaseDetail, type EscrowCaseListItem, type EscrowCaseMessage } from "@/features/escrow-cases/types"
 import { formatMoneyMinor } from "@/features/escrow-cases/lib/money"
+import type { EscrowCaseState } from "@/features/escrow-cases/lib/state-machine"
 
 type Props = {
   initialCases: EscrowCaseListItem[]
   currentUserId: string
+  canReassign: boolean
 }
 
 function formatRowTime(iso: string | null): string {
@@ -24,11 +27,12 @@ function formatRowTime(iso: string | null): string {
   return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" })
 }
 
-export function EscrowCaseInboxPage({ initialCases, currentUserId }: Props) {
+export function EscrowCaseInboxPage({ initialCases, currentUserId, canReassign }: Props) {
   const [cases, setCases] = useState(initialCases)
   const [selectedId, setSelectedId] = useState<string | null>(initialCases[0]?.id ?? null)
   const [query, setQuery] = useState("")
   const [newCaseOpen, setNewCaseOpen] = useState(false)
+  const [reassignOpen, setReassignOpen] = useState(false)
 
   const [caseDetail, setCaseDetail] = useState<EscrowCaseDetail | null>(null)
   const [messages, setMessages] = useState<EscrowCaseMessage[]>([])
@@ -37,6 +41,7 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId }: Props) {
 
   const [replyValue, setReplyValue] = useState("")
   const [replyPending, setReplyPending] = useState(false)
+  const [transitionPending, setTransitionPending] = useState(false)
 
   const filteredCases = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -131,6 +136,27 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId }: Props) {
     }
   }
 
+  async function handleTransition(toState: EscrowCaseState) {
+    if (!selectedId || transitionPending) return
+    setTransitionPending(true)
+    try {
+      const res = await fetch(`/api/admin/escrow-cases/${selectedId}/transition`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toState }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error ?? "Failed to update case state")
+      await fetchCase()
+      await refreshCases()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update case state")
+    } finally {
+      setTransitionPending(false)
+    }
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -166,6 +192,10 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId }: Props) {
           onSendReply={handleSendReply}
           replyPending={replyPending}
           canReply
+          onTransition={handleTransition}
+          transitionPending={transitionPending}
+          canReassign={canReassign}
+          onOpenReassign={() => setReassignOpen(true)}
         />
       </div>
       <NewEscrowCaseDialog
@@ -173,6 +203,18 @@ export function EscrowCaseInboxPage({ initialCases, currentUserId }: Props) {
         onOpenChange={setNewCaseOpen}
         onCreated={(caseId) => void refreshCases(caseId)}
       />
+      {selectedId && (
+        <ReassignCaseDialog
+          open={reassignOpen}
+          onOpenChange={setReassignOpen}
+          caseId={selectedId}
+          currentAgentId={caseDetail?.assignedAgentId ?? null}
+          onReassigned={() => {
+            void fetchCase()
+            void refreshCases()
+          }}
+        />
+      )}
     </div>
   )
 }

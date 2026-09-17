@@ -196,6 +196,7 @@ describe("POST /api/admin/escrow-cases", () => {
       assignedAgentId: null,
       agreedPriceMinor: 100000,
       currency: "USD",
+      actorId: "admin-1",
     });
   });
 });

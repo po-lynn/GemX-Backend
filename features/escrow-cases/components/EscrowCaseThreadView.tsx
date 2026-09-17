@@ -1,10 +1,11 @@
 "use client"
 
 import { Fragment } from "react"
-import { Loader2, RotateCcw } from "lucide-react"
+import { Loader2, RotateCcw, UserCog } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ParticipantAvatar } from "@/features/messages/components/triage/ParticipantAvatar"
 import { formatMoneyMinor } from "@/features/escrow-cases/lib/money"
+import { getValidNextStates, type EscrowCaseState } from "@/features/escrow-cases/lib/state-machine"
 import { ESCROW_CASE_STATE_LABELS, type EscrowCaseDetail, type EscrowCaseMessage } from "@/features/escrow-cases/types"
 
 // Same visual language as features/messages/components/triage/ReadingPane.tsx (purple
@@ -28,6 +29,11 @@ type Props = {
   replyPending?: boolean
   /** false for the read-only "moderation" oversight scope — see requireEscrowThreadWriteAccess. */
   canReply: boolean
+  onTransition: (toState: EscrowCaseState) => void
+  transitionPending?: boolean
+  /** true only for scope "supervisor"/"admin" — see requireEscrowCaseAccess. */
+  canReassign: boolean
+  onOpenReassign: () => void
 }
 
 function formatTime(iso: string) {
@@ -54,6 +60,10 @@ export function EscrowCaseThreadView({
   onSendReply,
   replyPending,
   canReply,
+  onTransition,
+  transitionPending,
+  canReassign,
+  onOpenReassign,
 }: Props) {
   if (!caseDetail) {
     return (
@@ -67,9 +77,11 @@ export function EscrowCaseThreadView({
     if (senderId === null) return "System"
     if (senderId === caseDetail!.buyerId) return caseDetail!.buyer.name
     if (senderId === caseDetail!.sellerId) return caseDetail!.seller.name
-    if (senderId === caseDetail!.assignedAgentId) return "Agent"
+    if (senderId === caseDetail!.assignedAgentId) return caseDetail!.agentName ?? "Agent"
     return "Unknown"
   }
+
+  const nextStates = getValidNextStates(caseDetail.state)
 
   return (
     <div className="flex min-w-[560px] flex-1 flex-col bg-[#fbfbfd]">
@@ -89,12 +101,42 @@ export function EscrowCaseThreadView({
           </div>
           <div className="truncate text-[12.5px] text-[#8b8a99]">
             {caseDetail.listingTitle ?? "Listing"} · {formatMoneyMinor(caseDetail.agreedPriceMinor, caseDetail.currency)}
+            {" · Agent: "}
+            {caseDetail.agentName ?? "Unassigned"}
           </div>
         </div>
         <div className="flex-1" />
-        <span className="whitespace-nowrap rounded-md bg-[#f2edff] px-[9px] py-1 text-[11.5px] font-bold text-[#6d28d9]">
-          {ESCROW_CASE_STATE_LABELS[caseDetail.state]}
-        </span>
+        {canReassign && (
+          <button
+            type="button"
+            onClick={onOpenReassign}
+            className="flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-[#e3e3ec] bg-white px-3.5 text-[13px] font-semibold text-[#3d3c49] hover:border-[#cfcfe0]"
+          >
+            <UserCog className="size-3.5" /> Reassign
+          </button>
+        )}
+        {canReply && nextStates.length > 0 ? (
+          <select
+            value=""
+            disabled={transitionPending}
+            onChange={(e) => {
+              const value = e.target.value as EscrowCaseState
+              if (value) onTransition(value)
+            }}
+            className="h-[34px] whitespace-nowrap rounded-[9px] bg-[#f2edff] px-[9px] text-[11.5px] font-bold text-[#6d28d9]"
+          >
+            <option value="">{ESCROW_CASE_STATE_LABELS[caseDetail.state]}</option>
+            {nextStates.map((s) => (
+              <option key={s} value={s}>
+                Move to: {ESCROW_CASE_STATE_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="whitespace-nowrap rounded-md bg-[#f2edff] px-[9px] py-1 text-[11.5px] font-bold text-[#6d28d9]">
+            {ESCROW_CASE_STATE_LABELS[caseDetail.state]}
+          </span>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
