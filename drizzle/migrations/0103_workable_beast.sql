@@ -1,0 +1,2 @@
+CREATE INDEX "messages_sender_created_at_idx" ON "messages" USING btree ("sender_id","created_at");--> statement-breakpoint
+CREATE INDEX "escrow_case_message_sender_created_at_idx" ON "escrow_case_message" USING btree ("sender_id","created_at");

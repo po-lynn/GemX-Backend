@@ -190,7 +190,7 @@ describe("getConversationMessagesForAdmin", () => {
 
     const result = await getConversationMessagesForAdmin("user-a", "user-b", 1, 100);
     expect(result).toEqual({ messages: [], total: 0 });
-    expect(db.select).toHaveBeenCalledTimes(2); // rows + count, run in parallel
+    expect(db.select).toHaveBeenCalledTimes(2); // rows + count, run sequentially
   });
 
   // Validates messages come back oldest-first (DB query is DESC + limit, then reversed).

@@ -248,26 +248,27 @@ export async function getConversationMessagesForAdmin(
     and(eq(messages.senderId, userB), eq(messages.recipientId, userA))
   );
 
-  const [rows, countRows] = await Promise.all([
-    db
-      .select({
-        id: messages.id,
-        senderId: messages.senderId,
-        recipientId: messages.recipientId,
-        content: messages.content,
-        fileUrl: messages.fileUrl,
-        imageUrls: messages.imageUrls,
-        messageType: messages.messageType,
-        createdAt: messages.createdAt,
-        starred: messages.starred,
-      })
-      .from(messages)
-      .where(whereClause)
-      .orderBy(desc(messages.createdAt))
-      .limit(limit)
-      .offset(offset),
-    db.select({ count: sql<number>`count(*)::int` }).from(messages).where(whereClause),
-  ]);
+  // Sequential, not Promise.all: matches every other query pair in this codebase (see
+  // conversations-list.ts, message-search.ts, case-messages.ts) — keeps this request to
+  // at most one pooler connection at a time instead of two concurrently.
+  const rows = await db
+    .select({
+      id: messages.id,
+      senderId: messages.senderId,
+      recipientId: messages.recipientId,
+      content: messages.content,
+      fileUrl: messages.fileUrl,
+      imageUrls: messages.imageUrls,
+      messageType: messages.messageType,
+      createdAt: messages.createdAt,
+      starred: messages.starred,
+    })
+    .from(messages)
+    .where(whereClause)
+    .orderBy(desc(messages.createdAt))
+    .limit(limit)
+    .offset(offset);
+  const countRows = await db.select({ count: sql<number>`count(*)::int` }).from(messages).where(whereClause);
 
   const ordered = rows
     .slice()

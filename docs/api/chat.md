@@ -31,6 +31,7 @@ At least one of `content` / `fileUrl` / `imageUrls` is required.
   - `400` `Invalid input` / `Cannot send message to yourself`
   - `401` `Unauthorized`
   - `403` `You are banned from messaging: <reason>` / `You are muted from messaging until <ISO timestamp>: <reason>` — the sender has an active row in `messaging_restriction` (`getActiveRestriction()`, checked before the recipient/rate-limit checks; see `docs/technical/escrow-case-messaging.md`'s Step 6 section). Checked against the **sender** only, never the recipient — a muted/banned user can still receive messages, they just can't send any.
+  - `403` `You can't message this user` — either party has blocked the other (`isBlockedEitherDirection()`, `features/chat/db/blocks.ts`; see [`docs/api/chat-blocks.md`](./chat-blocks.md)). Checked right after the restriction check, before the recipient/rate-limit queries.
   - `404` `Recipient not found` (unknown or archived)
   - `429` `Too many messages — please slow down`
   - `500` `Failed to send message`
@@ -53,7 +54,14 @@ Conversation list: one row per peer with last message, unread count, presence.
 - **Auth:** session cookie or bearer token
 - **Query:**
   - `stream=1|true|sse` — switch to **Server-Sent Events**
-  - `intervalMs` (SSE only) — poll cadence, clamped 2000–30000, default 4000
+  - `intervalMs` (SSE only) — poll cadence, clamped **15000–30000**, default **15000**. The
+    floor is set by the DB connection pooler's idle timeout (see
+    `docs/technical/chat-architecture-improvements.md`), not a UX choice — a shorter
+    interval kept the pooled connection backing the stream from ever going idle long
+    enough to be released, exhausting the whole app's connection pool at a handful of
+    concurrently open streams. **A client requesting a lower value is silently clamped up
+    to 15000 — this floor changed from 2000 to 15000; any client hardcoding a shorter
+    value keeps working, just gets throttled server-side.**
 - **JSON mode:** `200` `{ success: true, conversations: ChatConversationListItem[] }`
 - **SSE mode:** emits a `data:` line with the same payload whenever it changes,
   `: keep-alive` comments every 25s, closes after 4 min (client reconnects).
@@ -87,5 +95,55 @@ curl "https://<host>/api/chat/history?userId=usr_123&page=1&limit=30" \
 
 ---
 
-**Mobile flag:** all three endpoints are consumed by the mobile app; response
-shapes are frozen — additive changes only.
+## GET /api/chat/search
+
+Full-text search over the caller's own flat-chat history. Escrow-case threads are out
+of scope — see [`docs/technical/chat-message-search.md`](../technical/chat-message-search.md).
+
+- **Auth:** session cookie or bearer token
+- **Query:** `q` (required, 2–200 chars), `peerId` (optional — narrows to one
+  conversation), `page` ≥1 (default 1), `limit` 1–100 (default 30)
+- **Response:** `200` `{ success: true, results: ChatMessageSearchResult[], total, page, limit }`
+  — each result has `id`, `peerId`, `peerName`, `peerImage`, `content`, `messageType`,
+  `createdAt`. Ordered newest-first.
+- **Errors:** `400` (missing/too-short `q`), `401`, `500`, `503` with `Retry-After: 3`
+  (search query didn't complete within 6s).
+
+```bash
+curl "https://<host>/api/chat/search?q=sapphire&page=1&limit=30" \
+  -H "Authorization: Bearer <token>"
+```
+
+---
+
+## POST /api/chat/messages/[messageId]/report
+
+The end-user counterpart to the admin-only `POST /api/admin/chat-moderation/reports`
+(see `docs/api/admin-chat-moderation-reports.md`) — files a `message_report` row
+against a flat message. Only a participant (sender or recipient) may report it.
+
+- **Auth:** session cookie or bearer token
+- **Body:** `{ "reason": "string 1–1000 (required)" }`
+- **Response:** `200` `{ success: true, report: { id }, alreadyReported?: true }` —
+  `alreadyReported` is set (and no new row inserted) if this reporter already has an
+  open/actioned report against the same message. `contentSnapshot` is taken from the
+  message row server-side, never trusted from the request body.
+- **Errors:**
+  - `400` `Invalid input` — missing/empty `reason`
+  - `401` `Unauthorized`
+  - `404` `Message not found` — the message doesn't exist, **or** the caller isn't its
+    sender or recipient (same response either way, so message ids can't be probed)
+  - `500` `Failed to report message`
+
+```bash
+curl -X POST "https://<host>/api/chat/messages/msg_123/report" \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"reason":"spam"}'
+```
+
+---
+
+**Mobile flag:** all endpoints on this page are consumed by the mobile app; response
+shapes are frozen — additive changes only. See also
+[`docs/api/chat-blocks.md`](./chat-blocks.md) for the self-service block/unblock
+endpoints.

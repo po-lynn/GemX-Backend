@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server";
 // escrow participation" structurally true rather than a comment. It also validates that
 // the sender id on a sent message always comes from the session, never the request body.
 
-vi.mock("next/server", () => ({ connection: vi.fn() }));
+vi.mock("next/server", () => ({ connection: vi.fn(), after: vi.fn((fn: () => unknown) => fn()) }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/features/staff-roles/db/staff-roles", () => ({ getStaffRole: vi.fn() }));
 vi.mock("@/features/rbac/db/permissions", () => ({ checkInternalAccess: vi.fn() }));
@@ -137,7 +137,7 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
   // oversight requires visibility, just not participation.
   it("returns 200 for a moderator (read-only scope may read)", async () => {
     mockModeratorSession();
-    vi.mocked(listEscrowCaseMessages).mockResolvedValue([savedMessage as never]);
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue({ messages: [savedMessage as never], total: 1 });
 
     const res = await GET(makeGetRequest(), makeContext());
     const json = await res.json();
@@ -145,6 +145,9 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(json.messages).toHaveLength(1);
+    expect(json.total).toBe(1);
+    expect(json.page).toBe(1);
+    expect(json.limit).toBe(50);
     expect(recordThreadViewed).toHaveBeenCalledWith({
       actorId: "mod-1",
       targetType: "escrow_case",
@@ -157,7 +160,7 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
   // audit trail in noise with zero oversight value.
   it("does not log thread_viewed for a non-moderation scope's GET", async () => {
     mockAssignedAgentSession();
-    vi.mocked(listEscrowCaseMessages).mockResolvedValue([savedMessage as never]);
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue({ messages: [savedMessage as never], total: 1 });
 
     await GET(makeGetRequest(), makeContext());
 
@@ -168,11 +171,11 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
   // channel — a moderator's query must exclude agent_buyer/agent_seller rows entirely.
   it("withholds side-channel visibility from a moderator's query", async () => {
     mockModeratorSession();
-    vi.mocked(listEscrowCaseMessages).mockResolvedValue([]);
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue({ messages: [], total: 0 });
 
     await GET(makeGetRequest(), makeContext());
 
-    expect(listEscrowCaseMessages).toHaveBeenCalledWith("case-1", false);
+    expect(listEscrowCaseMessages).toHaveBeenCalledWith("case-1", false, { page: 1, limit: 50 });
   });
 
   // The assigned agent (and, by the same "own"/"supervisor"/"admin" scopes, anyone
@@ -180,11 +183,29 @@ describe("GET /api/admin/escrow-cases/[id]/messages", () => {
   // thread — they're the ones who created them.
   it("includes side-channel visibility for the assigned agent's query", async () => {
     mockAssignedAgentSession();
-    vi.mocked(listEscrowCaseMessages).mockResolvedValue([]);
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue({ messages: [], total: 0 });
 
     await GET(makeGetRequest(), makeContext());
 
-    expect(listEscrowCaseMessages).toHaveBeenCalledWith("case-1", true);
+    expect(listEscrowCaseMessages).toHaveBeenCalledWith("case-1", true, { page: 1, limit: 50 });
+  });
+
+  // Validates the page/limit query params are parsed and forwarded to the db layer,
+  // and echoed back in the response for the client's pagination controls.
+  it("forwards page and limit query params", async () => {
+    mockAssignedAgentSession();
+    vi.mocked(listEscrowCaseMessages).mockResolvedValue({ messages: [], total: 120 });
+
+    const res = await GET(
+      new Request("http://localhost/api/admin/escrow-cases/case-1/messages?page=2&limit=25") as unknown as NextRequest,
+      makeContext()
+    );
+    const json = await res.json();
+
+    expect(listEscrowCaseMessages).toHaveBeenCalledWith("case-1", true, { page: 2, limit: 25 });
+    expect(json.page).toBe(2);
+    expect(json.limit).toBe(25);
+    expect(json.total).toBe(120);
   });
 });
 

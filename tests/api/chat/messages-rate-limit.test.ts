@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
-vi.mock("next/server", () => ({ connection: vi.fn() }));
+vi.mock("next/server", () => ({ connection: vi.fn(), after: vi.fn((fn: () => unknown) => fn()) }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/drizzle/db", () => ({ db: { select: vi.fn(), insert: vi.fn() } }));
 vi.mock("@/features/notifications/services/chat-notifications", () => ({
@@ -12,6 +12,9 @@ vi.mock("@/lib/supabase/chat-broadcast", () => ({
 }));
 vi.mock("@/features/chat-moderation/db/restrictions", () => ({
   getActiveRestriction: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/features/chat/db/blocks", () => ({
+  isBlockedEitherDirection: vi.fn().mockResolvedValue(false),
 }));
 
 const { auth } = await import("@/lib/auth");

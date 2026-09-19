@@ -16,7 +16,7 @@ export async function broadcastCaseEvents(caseId: string, events: CaseBroadcastE
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey || events.length === 0) return
 
-  await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
+  const res = await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -31,4 +31,9 @@ export async function broadcastCaseEvents(caseId: string, events: CaseBroadcastE
       })),
     }),
   })
+  // See chat-broadcast.ts's identical check: fetch() only rejects on network failure,
+  // so a non-2xx response must be thrown explicitly for the caller's `.catch(...)` to see it.
+  if (!res.ok) {
+    throw new Error(`Supabase broadcast failed: ${res.status} ${await res.text().catch(() => "")}`)
+  }
 }

@@ -131,6 +131,7 @@ describe("getUnreadConversationPreviews latest-unread-message query", () => {
     ] as never);
 
     vi.mocked(db.select)
+      .mockReturnValueOnce(selectChain([]) as never) // getBlockedPeerIds: nothing blocked
       .mockReturnValueOnce(
         selectChain([
           { id: "peer-older", name: "Alice", image: null },
@@ -171,7 +172,8 @@ describe("getUnreadConversationPreviews latest-unread-message query", () => {
     ] as never);
 
     vi.mocked(db.select)
-      .mockReturnValueOnce(selectChain([]) as never)
+      .mockReturnValueOnce(selectChain([]) as never) // getBlockedPeerIds: nothing blocked
+      .mockReturnValueOnce(selectChain([]) as never) // profile lookup: no match
       .mockReturnValueOnce(selectChain([{ senderId: "ghost-peer", unread: 1 }]) as never);
 
     const result = await getUnreadConversationPreviews("user-abc");

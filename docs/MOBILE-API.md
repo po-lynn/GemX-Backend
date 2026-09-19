@@ -6,6 +6,11 @@
 
 ## Recent changes
 
+- **⚠ Action required — stop using `GET /api/chat/conversations?stream=1` (SSE) for the chat inbox.** A pre-launch scalability audit found the mobile app's `useChatConversationsStream` hook (`features/chat/chat.hooks.ts`, wired up in `app/(tabs)/messages.tsx`) opens this stream at `intervalMs=4000` whenever the Messages tab is focused. The backend runs against a database connection pooler with only **15 backend connections total, shared across the entire app** (not just chat) — a poll interval shorter than the pooler's idle timeout means the connection backing an open SSE stream never gets released, so as few as ~10-15 concurrently active users on the Messages tab could exhaust the whole pool and break every other request in the app. **Backend mitigation already shipped** (no mobile change needed for safety): the server now clamps `intervalMs` to a floor of **15000ms** (was 2000) regardless of what the client requests — see updated **5.4d**. **Still required from mobile:** replace `useChatConversationsStream`/SSE with a plain `GET /api/chat/conversations` refetch triggered by the `new_message`/`read_update` events your app already subscribes to via Supabase Broadcast (`chat.realtime.ts`) — the plumbing for this already exists in `useUnreadChatCount` and can be mirrored into the inbox list. This is both safer for the backend and gives fresher updates than any polling interval. Also worth a look while in that code: `useChatConversationsStream`'s reconnect backoff (`chat.hooks.ts`) grows from 2s toward 30s but never resets after a successful cycle — moot once SSE is removed, but flag if any polling loop is kept.
+- **New: self-service block/unblock a chat user** – **GET `/api/chat/blocks`** (list who you've blocked), **POST `/api/chat/blocks`** (block a user, body `{ "userId", "reason"? }`), **DELETE `/api/chat/blocks/:userId`** (unblock). Once blocked (checked in both directions), `POST /api/chat/messages` returns **403** for either party, and the conversation disappears from both parties' **GET `/api/chat/conversations`** and unread preview. Blocking does **not** hide previously-exchanged history from **GET `/api/chat/history`**. Not yet wired up on mobile — pure net-new UI work (block button, blocked-users list). See **5.4d**.
+- **New: report a chat message** – **POST `/api/chat/messages/:messageId/report`** (body `{ "reason" }`), the mobile counterpart to the admin-only moderation report flow. Only the message's sender or recipient may file it; a repeat report from the same user against the same message returns the existing report instead of creating a duplicate. Not yet wired up on mobile — pure net-new UI work (report action on a message, e.g. via long-press menu). See **5.4d**.
+- **New: full-text chat search** – **GET `/api/chat/search?q=&peerId=&page=&limit=`** searches the current user's own chat message content (`q` min 2 chars; optional `peerId` narrows to one conversation). This is a real server-side search, unlike the mobile app's current search bar on the Messages tab, which only does a local client-side substring filter over already-loaded conversation previews (`messages.tsx`'s `filteredRecents`) and cannot search message *content* or anything not already fetched. Rate-limited (20 searches/min/user). Migrating the search bar to call this endpoint is optional but recommended once there's a "search in chat" UI need beyond filtering the visible conversation list. See **5.4d**.
+- **Chat send — add specific handling for `403` and `429`.** `POST /api/chat/messages` has always been able to return `403` (sender is muted/banned by an admin) and now can also return `403` (blocked user, see above) and `429` (rate limited — max 30 messages/60s). The mobile client currently shows the same generic `Alert.alert("Send failed", ...)` for every failure (`messages.tsx`), with `error.message` coming through as axios's generic `"Request failed with status code 403"` rather than the backend's actual message, since there's no response interceptor unwrapping the error body. Recommend reading the JSON error body (`{ "error": "..." }`) and showing that message specifically for 403/429 so a muted/banned/blocked/rate-limited user gets an informative message instead of a generic failure.
 - **Product list — `origin` field** – **GET `/api/products`**, **GET `/api/products/mine`**, and profile product lists (**GET `/api/profile`**, **GET `/api/profile/:id`**) each product item now includes **`origin`** (string or `null`; free-text from **`product.origin`**, same values as the **GET `/api/origins`** name list). Already present on **GET `/api/products/:id`**. Masked collector-piece list items return **`origin: null`**. See **5.1**, **5.2**, **5.3**.
 - **News & Articles unified API** – **GET `/api/news-articles`** and **GET `/api/news-articles/:id`** list/read the admin **News & Articles** content from the **`articles`** table (same data as `/api/articles`). Query includes optional **`type`** (`news` \| `article`), plus `page`, `limit`, `status`, `search`, `category`, `featured`, `lang`. Prefer this path for the combined mobile feed. See **7.3** and [docs/api/news-articles.md](./api/news-articles.md).
 - **Product search + `productType` filter** – **GET `/api/products`** supports **`search`** together with **`productType`** (`loose_stone` \| `jewellery`) and other list filters. Search matches title, description, and seller; `productType` narrows results (AND). Use when the user searches from a type tab (e.g. Loose Stones only). Autocomplete (**GET `/api/products/suggestions`**) is still global (all types); pass `productType` on the list call after submit. See **5.1**, **5.1.2**, and **Search and filter** examples.
@@ -33,7 +38,7 @@
 - **Profile — admin verified flag** – **GET `/api/profile`** and **GET `/api/profile/:id`** response **`profile`** now include **`verified`** (`boolean` from **`user.verified`**; set by admin when the account is verified). See **5.4** and **5.4a**.
 - **Premium dealer auto-renew** – **POST `/api/mobile/premium-dealers/activate`** `autoRenew` field now triggers automatic renewal: a daily server-side cron job (`POST /api/cron/renew-premium-dealers`) deducts `pointsRequired` and creates a new subscription row on expiry; if the user has insufficient points the subscription expires without renewal. **GET `/api/mobile/premium-dealers/status`** now returns `points` (always), `daysRemaining`, and `autoRenew` alongside the existing `active`/`packageName`/`expiresAt` fields. **GET `/api/mobile/premium-dealers/settings`** now includes `recommended` (boolean; `true` for the second package when 2+ packages exist). See **5.4.3**, **5.4.3a**, and **5.4.3b**.
 - **My products — filter by moderation status** – **GET `/api/products/mine`** accepts optional query **`moderationStatus`**: `pending`, `approved`, or `rejected` (admin review state). Omit to return all moderation states. Each product includes **`moderationStatus`**. Combine with **`status`** (listing lifecycle) and other filters. See **5.3** and **5.1** (Search and filter).
-- **Chat conversations — live SSE** – **GET `/api/chat/conversations?stream=1`** (auth, same Bearer as JSON mode) returns **`text/event-stream`**: Server-Sent Events with **`data:`** lines of `{ "success": true, "conversations": [...] }` whenever that payload **changes** (polled on an **`intervalMs`** window, default **4000**, clamped **2000–30000**), plus comment keep-alives. Use **fetch** with `Authorization` and read the body as a stream (browser **EventSource** cannot send Bearer). Plain **GET `/api/chat/conversations`** (no `stream`) stays JSON. See **5.4d**.
+- *(Superseded — see the "⚠ Action required" entry at the top of this section)* **Chat conversations — live SSE** – **GET `/api/chat/conversations?stream=1`** (auth, same Bearer as JSON mode) returns **`text/event-stream`**: Server-Sent Events with **`data:`** lines of `{ "success": true, "conversations": [...] }` whenever that payload **changes** (polled on an **`intervalMs`** window, default **4000**, clamped **2000–30000**), plus comment keep-alives. Use **fetch** with `Authorization` and read the body as a stream (browser **EventSource** cannot send Bearer). Plain **GET `/api/chat/conversations`** (no `stream`) stays JSON. See **5.4d**.
 - **Chat conversations list (mobile)** – **GET `/api/chat/conversations`** (auth): returns **`conversations`**: every user who shares a **`messages`** thread with the current user, each with **`userId`**, **`name`**, **`profileImage`**, **`lastMessage`** (preview; media-only threads use short labels like `"Sent photos"`), **`lastMessageTime`** (ISO 8601), **`unreadCount`** (incoming unread from that peer), and **`isOnline`** (session-derived, same ~5 minute window as **GET `/api/profile/:id`**). Sorted by **`lastMessageTime`** descending. **`Cache-Control: no-store`**. See **5.4d** (GET `/api/chat/conversations`).
 - **Approved point top-up history (mobile)** – **GET `/api/mobile/points/purchase-history`** (auth): returns **`point_purchase_request`** rows for the current user with **`status`** `"approved"` only (completed credit purchases), newest first. Same per-item fields as **GET `/api/mobile/points/purchase-requests`**, wrapped as **`history`**. See **5.4.2**.
 - **Premium dealers list — city, rating, tenure year** – **GET `/api/mobile/premium-dealers`** each **`premiumDealers`** item now includes **`city`** (from **`user.city`**), **`ratingScore`** (average of received **`seller_rating`** scores, rounded like **`seller.rating.averageScore`** on **GET `/api/products/:id`**; **`0`** when the seller has no ratings), and **`firstPremiumDealerYear`** (calendar year of the earliest **`premium_dealers_packages.created_at`** for that user). See **5.4.3c**.
@@ -129,10 +134,15 @@
 | POST   | `/api/chat/messages` | Yes  | Send/save one chat message (`recipientId`, `content`/`fileUrl`, optional `messageType`). Realtime delivery via Supabase **Broadcast** (`new_message` event); **FCM push** to receiver (unless they are viewing this chat). See **5.4d**. |
 | PUT    | `/api/chat/viewing` | Yes  | Heartbeat: user is on chat screen with `peerId` (suppresses push for that thread). Repeat every ~30s. See **5.4d**. |
 | DELETE | `/api/chat/viewing` | Yes  | User left chat screen (resume push). See **5.4d**. |
-| GET    | `/api/chat/conversations` | Yes  | List chat peers (JSON) **or** live updates via **`?stream=1`** (SSE: same payload when it changes; optional **`intervalMs`**). See **5.4d**. |
+| GET    | `/api/chat/conversations` | Yes  | List chat peers (JSON) **or** live updates via **`?stream=1`** (SSE, ⚠ deprecated for mobile — see "Action required" in Recent changes; floor now **15000ms**, was 2000). See **5.4d**. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history with another user (`userId`, `page`, `limit`); response includes `participantImage` (other user’s profile URL). See **5.4d**. |
 | POST   | `/api/chat/media` | Yes  | Upload one chat media file (`multipart/form-data`, `file`) and get `{ "url": "..." }`. See **5.4d**. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark messages as read. Body: `messageIds: string[]`. See **5.4d**. |
+| GET    | `/api/chat/blocks` | Yes  | List users you've blocked. See **5.4d**. |
+| POST   | `/api/chat/blocks` | Yes  | Block a user (`userId`, optional `reason`). See **5.4d**. |
+| DELETE | `/api/chat/blocks/:userId` | Yes  | Unblock a user. See **5.4d**. |
+| POST   | `/api/chat/messages/:messageId/report` | Yes  | Report a message (`reason`); sender or recipient only. See **5.4d**. |
+| GET    | `/api/chat/search` | Yes  | Full-text search your own chat message content (`q`, optional `peerId`, `page`, `limit`). See **5.4d**. |
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `type` (optional)                                                                                                                                    |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (`multipart/form-data`, `file`). Returns `{ "url": "..." }` for saving as `category.image` (admin only). See **4.1a**.                                                     |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit).                                                                                                                                                                  |
@@ -1410,11 +1420,13 @@ The server pushes four event types to `chat:<userId>` after every DB write. All 
 | `message_deleted` | Sender deleted a message | `{ id: string }` |
 | `read_update` | Recipient marked messages as read | `{ messageIds: string[], recipientId: string }` — pushed to both the sender (read-receipt ✓✓) and the recipient themselves (multi-tab sync) |
 
-Mobile flow:
+Mobile flow (**recommended**):
 1. Subscribe to `chat:<currentUserId>` via Supabase **Broadcast** (see example below).
-2. Load the inbox with `GET /api/chat/conversations`, or open **`GET /api/chat/conversations?stream=1`** (SSE) for server-pushed list refreshes when **`lastMessage`**, **`lastMessageTime`**, **`unreadCount`**, or **`isOnline`** change (tunable **`intervalMs`**).
-3. Send a message via `POST /api/chat/messages`.
-4. Receive `new_message` / `message_updated` / `message_deleted` / `read_update` events from the Broadcast subscription.
+2. Load the inbox with `GET /api/chat/conversations` (JSON).
+3. On `new_message` / `read_update` events from the Broadcast subscription, refetch `GET /api/chat/conversations` to refresh the list — no polling needed.
+4. Send a message via `POST /api/chat/messages`.
+
+**⚠ Do not use `GET /api/chat/conversations?stream=1` (SSE polling) for the inbox** — see the "Action required" entry at the top of `docs/MOBILE-API.md`'s Recent changes. It's documented below for completeness (and the backend still supports it, floored at 15000ms), but Broadcast-driven refetch above is strictly better: no held connection, and fresher updates than any poll interval.
 
 **React Native quick example (Supabase Broadcast):**
 
@@ -1603,7 +1615,7 @@ Notification title = sender name; body = message preview.
 | Param | Type | Default | Description |
 | ----- | ---- | ------- | ----------- |
 | `stream` | string | *(omit)* | Set to **`1`**, **`true`**, or **`sse`** to receive a **Server-Sent Events** stream instead of JSON (see **Live inbox stream (SSE)** below). |
-| `intervalMs` | number | `4000` | **SSE only:** milliseconds between server recomputes of the inbox (**2000**–**30000**). Lower = fresher `lastMessage` / `lastMessageTime` / `unreadCount` / `isOnline`, at higher DB load. |
+| `intervalMs` | number | `15000` | **SSE only:** milliseconds between server recomputes of the inbox (**15000**–**30000**; floor raised from 2000 — see the "Action required" note above). Lower = fresher `lastMessage` / `lastMessageTime` / `unreadCount` / `isOnline`, at higher DB load. **⚠ Deprecated for mobile — see the SSE section below.** |
 
 **Modes**
 
@@ -1664,22 +1676,35 @@ Notification title = sender name; body = message preview.
 
 ---
 
-#### Live inbox stream (SSE) — `GET /api/chat/conversations?stream=1`
+#### Live inbox stream (SSE) — `GET /api/chat/conversations?stream=1` — ⚠ deprecated for mobile
+
+**Do not use this for the mobile inbox.** Use the Broadcast-driven refetch pattern in
+"Mobile flow" above instead: subscribe to `chat:<currentUserId>`, and call the plain
+JSON `GET /api/chat/conversations` whenever a relevant event arrives. That needs no
+held-open connection, has no poll-interval floor, and updates faster than this stream
+ever could. This section is kept for completeness / non-mobile consumers only.
+
+**Why it's deprecated:** the backend's DB connection pooler has a small, fixed number of
+backend connections shared across the *entire app* (not just chat). A poll interval
+shorter than the pooler's idle timeout means the connection backing an open SSE stream
+never gets released — so a modest number of concurrently open streams can exhaust the
+pool and degrade or break every other endpoint in the app, not just chat. The server-side
+floor below is a safety net, not a green light to keep using this.
 
 Same authentication as JSON mode. Typical request:
 
-`GET /api/chat/conversations?stream=1&intervalMs=4000`  
+`GET /api/chat/conversations?stream=1&intervalMs=15000`  
 `Authorization: Bearer <session_token>`
 
 - **First `data:` event** arrives after the first successful load (may be immediate).
 - **Later `data:` events** only when the stringified `{ success, conversations }` **differs** from the previous emission (e.g. new message, read receipt, or presence flip).
-- **`intervalMs`** clamps between **2000** and **30000** (default **4000**): this is how often the server **checks** for changes, not how fast Postgres notifies (for sub-second message rows, prefer **Supabase Realtime** on `messages` in addition to or instead of a very low `intervalMs`).
+- **`intervalMs`** clamps between **15000** and **30000** (default **15000**; floor raised from the previous 2000/4000 — a lower value is silently clamped up, not rejected). This is how often the server **checks** for changes, not how fast Postgres notifies — prefer **Supabase Realtime** Broadcast (already used elsewhere in this doc) over any polling interval for near-real-time delivery.
 - **Hosting:** Long-lived streams may hit **platform max duration** (e.g. some serverless defaults). If the connection drops, reopen the stream or fall back to JSON polling / Realtime-driven refetches.
 
 **React Native / fetch sketch (Bearer + SSE):**
 
 ```ts
-const res = await fetch(`${baseUrl}/api/chat/conversations?stream=1&intervalMs=3000`, {
+const res = await fetch(`${baseUrl}/api/chat/conversations?stream=1&intervalMs=15000`, {
   headers: { Authorization: `Bearer ${token}` },
 });
 const reader = res.body!.getReader();
@@ -1782,6 +1807,190 @@ for (;;) {
 4. **Ownership guard**  
    Request: include IDs not belonging to current user conversation (neither sender nor recipient)  
    Expect: `200`, those IDs are not updated (lower `updatedCount`).
+
+---
+
+#### Self-service block / unblock — `GET/POST /api/chat/blocks`, `DELETE /api/chat/blocks/:userId`
+
+Not yet integrated on mobile — net-new UI work (a "Block" action on a conversation, plus
+a blocked-users list screen). Separate from admin-issued mute/ban; this is entirely
+user-controlled.
+
+**GET `/api/chat/blocks`** — **Auth:** required.
+
+Success (200):
+
+```json
+{
+  "success": true,
+  "blocked": [
+    {
+      "userId": "other-user-id",
+      "name": "Jane Seller",
+      "image": "https://…/profile.jpg",
+      "reason": "harassment",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**POST `/api/chat/blocks`** — **Auth:** required. Body:
+
+```json
+{ "userId": "other-user-id", "reason": "optional, max 500 chars" }
+```
+
+Success (200): `{ "success": true }`. Idempotent — blocking an already-blocked user
+succeeds without creating a duplicate. Errors: `400` (missing `userId`, or blocking
+yourself), `404` (unknown/archived `userId`).
+
+**DELETE `/api/chat/blocks/:userId`** — **Auth:** required. Success (200):
+`{ "success": true }`. `404` if there was no block to lift (only the blocker can unblock
+— you can't unblock someone who blocked *you*).
+
+**Effect on the rest of the chat API once blocked (either direction):**
+
+- `POST /api/chat/messages` returns `403` for either party sending to the other.
+- The conversation disappears from `GET /api/chat/conversations` and the unread preview
+  for **both** parties.
+- `GET /api/chat/history` is **unaffected** — old messages remain visible to both parties;
+  blocking hides the active conversation, it doesn't delete history.
+
+**API tests (blocks):**
+
+1. **Happy path — block, then send fails**  
+   Block a user, then attempt `POST /api/chat/messages` to them  
+   Expect: block succeeds `200`; the send returns `403`.
+2. **Idempotent block**  
+   Block the same user twice  
+   Expect: both calls `200`, only one row exists.
+3. **Cannot block yourself**  
+   `POST /api/chat/blocks` with your own user id  
+   Expect: `400`.
+4. **Unblock**  
+   Block, then `DELETE /api/chat/blocks/:userId`, then send again  
+   Expect: unblock `200`; the send that follows succeeds.
+5. **Unauthorized**  
+   Any of the three without a token  
+   Expect: `401`.
+
+---
+
+#### Report a message — `POST /api/chat/messages/:messageId/report`
+
+Not yet integrated on mobile — net-new UI work (e.g. a "Report" action on a message via
+long-press menu). This is the mobile counterpart to the existing admin-only moderation
+report flow — reports filed here land in the same admin review queue.
+
+**Auth:** required. Only the message's sender or recipient may file a report against it.
+
+**Request body:**
+
+```json
+{ "reason": "spam, max 1000 chars" }
+```
+
+**Success (200):**
+
+```json
+{ "success": true, "report": { "id": "report-uuid" } }
+```
+
+If this reporter already has an open report against the same message, the existing
+report is returned instead (`"alreadyReported": true` alongside `report`) — no duplicate
+is created; treat this the same as a fresh success in the UI.
+
+**Errors:** `400` (missing/empty `reason`), `401`, `404` (message doesn't exist, **or**
+the caller is neither its sender nor recipient — both cases return the same `404` so a
+message id can't be probed for existence by someone who isn't part of the conversation).
+
+**API tests (report):**
+
+1. **Happy path (recipient reports)**  
+   Recipient of a message files a report with a reason  
+   Expect: `200`, `report.id` present.
+2. **Happy path (sender reports own message)**  
+   Sender of a message files a report (e.g. "sent by mistake")  
+   Expect: `200` — sender reporting is allowed, not just recipient.
+3. **Duplicate report**  
+   File a report against the same message twice as the same user  
+   Expect: second call `200` with `alreadyReported: true`, same `report.id`.
+4. **Not a participant**  
+   A third user (neither sender nor recipient) reports the message  
+   Expect: `404`.
+5. **Unauthorized**  
+   Request without a token  
+   Expect: `401`.
+
+---
+
+#### Chat search — `GET /api/chat/search`
+
+Full-text search over the current user's **own** chat message content. Distinct from
+the mobile app's existing Messages-tab search bar, which today only filters the
+already-loaded conversation preview list client-side and cannot search message content
+or anything not already fetched.
+
+**Auth:** required.
+
+**Query params:**
+
+| Param | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `q` | string | Yes | Search text, 2–200 chars. |
+| `peerId` | string | No | Narrow the search to one conversation. Omit to search across every peer. |
+| `page` | number | No | Default `1`, min `1`. |
+| `limit` | number | No | Default `30`, min `1`, max `100`. |
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "id": "message-uuid",
+      "peerId": "other-user-id",
+      "peerName": "Jane Seller",
+      "peerImage": "https://…/profile.jpg",
+      "content": "let's talk about the sapphire",
+      "messageType": "text",
+      "createdAt": "2026-08-01T00:00:00.000Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 30
+}
+```
+
+Results are ordered newest-first. `total` drives "is there a next page" — it is **not**
+guaranteed exact for a `page` requested past the last page of results (an accepted
+trade-off for keeping this query cheap; see `docs/technical/chat-message-search.md`).
+
+**Rate limit:** 20 searches per 60s per user. `429` `{ "error": "Too many searches — please slow down" }` if exceeded.
+
+**Errors:** `400` (`q` missing or under 2 chars), `401`, `429` (rate limited), `500`,
+`503` with `Retry-After` (search timed out — retry).
+
+**API tests (search):**
+
+1. **Happy path**  
+   Search for a term that appears in a past message  
+   Expect: `200`, `results` includes that message, `peerName`/`peerImage` populated.
+2. **Scoped to one peer**  
+   Same search with `peerId` set to a specific conversation  
+   Expect: `200`, only results from that conversation.
+3. **No matches**  
+   Search for a term that appears nowhere  
+   Expect: `200`, `results: []`, `total: 0`.
+4. **Query too short**  
+   `q=a` (1 char)  
+   Expect: `400`.
+5. **Unauthorized**  
+   Request without a token  
+   Expect: `401`.
 
 ---
 
@@ -3871,12 +4080,15 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
   - Update profile image (upload first): `POST /api/profile/image` with multipart `file` → receive `{ "url": "..." }`.
   - Edit profile fields: `POST /api/profile` with one or more of `{ "name", "address", "image" }` (use uploaded image `url` for `image`).
   - **Submit KYC documents:** upload each document via `POST /api/upload/kyc-document` (multipart `file`) → receive `{ "url": "..." }`, then `PATCH /api/mobile/profile` with `{ "nrc": "12/ABC(N)123456", "nrcFrontUrl": "<url>", "nrcBackUrl": "<url>", "selfieUrl": "<url>", "businessLicenseUrl": "<url>" }`. Admin reviews and sets `verified = true` on approval — check `profile.verified` from `GET /api/profile`. See **5.4c.2**.
-  - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`.
-  - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first). For **live** list updates from the server without polling JSON yourself, use **`GET /api/chat/conversations?stream=1`** (SSE; see **5.4d**).
+  - Chat send: `POST /api/chat/messages` with `recipientId` and `content` or `fileUrl`. Handle `403` (muted/banned/blocked) and `429` (rate limited) with their specific error messages, not a generic failure alert.
   - Chat realtime: subscribe to `chat:<currentUserId>` via Supabase **Broadcast** for `new_message`, `message_updated`, `message_deleted`, and `read_update` events (see **5.4d**).
+  - Chat inbox: `GET /api/chat/conversations` — list peers with `lastMessage`, `lastMessageTime`, `unreadCount`, `isOnline`, `profileImage` (newest thread first). Refetch this on the Broadcast events above, not by polling. **⚠ Do not use `?stream=1` (SSE)** — see the "Action required" entry at the top of Recent changes and **5.4d**.
   - Chat history: `GET /api/chat/history?userId=<otherUserId>&page=1&limit=30` — includes `participantImage` for the peer’s avatar.
   - Chat media upload: `POST /api/chat/media` with multipart `file` → receive `{ "url": "..." }`.
   - Mark messages as seen: `PATCH /api/chat/read-status` with `{ "messageIds": ["<uuid>", ...] }`.
+  - Block a user: `POST /api/chat/blocks` with `{ "userId": "<peerId>" }`; list blocked users with `GET /api/chat/blocks`; unblock with `DELETE /api/chat/blocks/<peerId>`. See **5.4d**.
+  - Report a message: `POST /api/chat/messages/<messageId>/report` with `{ "reason": "..." }` (sender or recipient only). See **5.4d**.
+  - Search your own chat history: `GET /api/chat/search?q=<term>&page=1&limit=30` (optional `peerId` to scope to one conversation). See **5.4d**.
 6. **Sell**
   - **Upload media first (optional):**
     - **Images (simple):** `POST /api/upload/product-media` with `type=image` and `file`/`files` (multipart/form-data, Bearer token) → `{ "urls": ["..."] }` → use as `imageUrls`.
@@ -3942,10 +4154,15 @@ When an admin runs **All Users** Surprise Bonus top-up, each newly credited user
 | POST   | `/api/profile/image` | Yes  | Upload one profile image (`multipart/form-data`, `file`) and get back `url`. See 5.4c. |
 | POST   | `/api/profile` | Yes  | Edit current user profile fields (`name`, `address`, `image`). See 5.4c. |
 | POST   | `/api/chat/messages` | Yes  | Send/save chat message; realtime delivery via Supabase **Broadcast** (`new_message` event on `chat:<userId>`). See 5.4d. |
-| GET    | `/api/chat/conversations` | Yes  | Inbox list (JSON) or **`?stream=1`** SSE live pushes when payload changes; optional **`intervalMs`**. See 5.4d. |
+| GET    | `/api/chat/conversations` | Yes  | Inbox list (JSON) or **`?stream=1`** SSE live pushes when payload changes; optional **`intervalMs`** (⚠ deprecated for mobile, floor now 15000ms). See 5.4d. |
 | GET    | `/api/chat/history` | Yes  | Fetch paginated chat history (`userId`, `page`, `limit`); includes `participantImage`. See 5.4d. |
 | POST   | `/api/chat/media` | Yes  | Upload chat media and return public URL (`multipart/form-data`, `file`). See 5.4d. |
 | PATCH  | `/api/chat/read-status` | Yes  | Mark message IDs as read (`messageIds`). See 5.4d. |
+| GET    | `/api/chat/blocks` | Yes  | List blocked users. See 5.4d. |
+| POST   | `/api/chat/blocks` | Yes  | Block a user (`userId`, optional `reason`). See 5.4d. |
+| DELETE | `/api/chat/blocks/:userId` | Yes  | Unblock a user. See 5.4d. |
+| POST   | `/api/chat/messages/:messageId/report` | Yes  | Report a message (`reason`). See 5.4d. |
+| GET    | `/api/chat/search` | Yes  | Full-text search own chat message content (`q`, `peerId`, `page`, `limit`). See 5.4d. |
 | GET    | `/api/categories`      | No   | List categories (includes optional `image`, **`productCount`**). Query: `?type` optional                                        |
 | POST   | `/api/categories/image` | Yes* | Upload one category image (admin only). Returns `url` for `category.image`. See 4.1a.                      |
 | GET    | `/api/origins`         | No   | List origins (for product create/edit)                                                                     |

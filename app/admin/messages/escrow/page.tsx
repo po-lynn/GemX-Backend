@@ -10,6 +10,10 @@ import { withQueryTimeout } from "@/lib/query-timeout"
 /** Vercel backstop: if a query hangs past this, the platform kills the render instead of it hanging on the shared connection pool indefinitely. */
 export const maxDuration = 10
 
+// Feature-access check requires the signed-in session on every load, so this page can never
+// be part of a static shell — opt out of Instant Navigation validation like app/admin/queue/page.tsx.
+export const instant = false
+
 const ESCROW_CASES_QUERY_TIMEOUT_MS = 6000
 
 export default async function AdminEscrowCasesPage() {

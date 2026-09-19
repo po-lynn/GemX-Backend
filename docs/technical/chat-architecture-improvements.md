@@ -67,9 +67,11 @@ reconnect reconciles unread counts with Postgres instead of trusting the gap.
 
 `POST /api/chat/messages` now counts the sender's messages in the last 60s
 (DB-counted sliding window — correct across serverless instances, unlike
-in-memory limiters) and returns **429** at ≥30. The count runs in `Promise.all`
-with the recipient-exists check, so the happy path gains no latency; the check
-rides `chat_idx`.
+in-memory limiters) and returns **429** at ≥30. **Correction (2026-09-18): this
+section previously said the count runs in `Promise.all` with the recipient-exists
+check and "rides `chat_idx`" — both are now wrong; see the follow-up section
+below for the current sequential/fail-closed shape and the dedicated index this
+query actually needs.**
 
 ## Auth & Permissions
 
@@ -92,3 +94,131 @@ Unchanged on all routes (session auth; sender/recipient scoping as before).
   handler-throw safety.
 - `tests/api/chat/messages-rate-limit.test.ts` — 429 over limit (no insert),
   happy path under limit, 404 precedence, 401 gating.
+
+---
+
+## Follow-up (2026-09-18): Connection-pool scalability pass
+
+Prompted by a pre-launch scalability audit calibrated against the actual constraint —
+Supabase's pooler on this project's tier caps at **15 backend connections total, shared
+across the whole app**, not just chat (`drizzle/db.ts`). Six fixes, no API contract
+changes except the SSE poll-interval range (documented in `docs/api/chat.md`).
+
+### 1. SSE poll-interval floor raised: connection-pinning fix (BLOCKING finding)
+
+**The bug:** `SSE_POLL_MIN_MS`/`SSE_POLL_DEFAULT_MS` were 2000/4000ms — both *shorter*
+than the pooler's `idle_timeout` (10s, `drizzle/db.ts`). Since postgres-js only returns
+an idle connection to the shared pool once it's actually been idle for `idle_timeout`,
+a poll interval shorter than that meant the connection backing an open SSE stream never
+went idle long enough to be released — it stayed reserved for the stream's entire life
+(up to `SSE_MAX_LIFETIME_MS`, 4 minutes), not briefly borrowed per tick. Confirmed the
+mobile client (`GemX-Mobile`) opens exactly this stream, at the default 4000ms interval,
+whenever the Messages tab is focused — so as few as ~10-15 concurrently active mobile
+users on that tab could have exhausted the entire pool, breaking every other request in
+the app project-wide, not just chat.
+
+**The fix:** `SSE_POLL_MIN_MS`/`SSE_POLL_DEFAULT_MS` raised to **15000ms** (`~5s` margin
+over the 10s `idle_timeout`), `SSE_POLL_MAX_MS` unchanged at 30000ms
+(`app/api/chat/conversations/route.ts`). `clampPollIntervalMs` applies this floor to
+*any* client-requested `intervalMs`, including a value below it — so a client hardcoding
+the old default (like the mobile app's `intervalMs=4000`) is silently clamped up to
+15000ms server-side, with **no mobile-side change required** for this specific fix to
+take effect. Also added `maxDuration = 260` (previously unset, unlike every sibling
+route), a platform backstop above `SSE_MAX_LIFETIME_MS`.
+
+**Still recommended (see `docs/MOBILE-API.md`):** the mobile client should stop opening
+`?stream=1` for the inbox at all and instead trigger a plain `GET /api/chat/conversations`
+refetch off the Supabase Broadcast events it already subscribes to — this needs no held
+connection whatsoever and is fresher than any polling interval. The floor above is the
+safety net that makes the backend survive regardless of whether/when that ships.
+
+### 2. Send-rate-limit count queries: added dedicated indexes (BLOCKING finding)
+
+**The bug:** `POST /api/chat/messages`'s rate-limit count
+(`sender_id = ? AND created_at > windowStart`) has no `recipient_id` predicate, so
+`chat_idx (sender_id, recipient_id, created_at DESC)` can't use `created_at` as an index
+range (btree leftmost-prefix rules require `recipient_id` to be equality-bound first) —
+Postgres applies `sender_id = ?` as the index condition and `created_at > windowStart` as
+a post-scan filter, visiting every message that sender has *ever* sent, on every single
+send. Same shape on `POST /api/admin/escrow-cases/[id]/messages` against
+`escrow_case_message`, whose only sender index had no `created_at` column at all.
+
+**The fix:** two new dedicated indexes — `messages_sender_created_at_idx
+(sender_id, created_at)` and `escrow_case_message_sender_created_at_idx
+(sender_id, created_at)` (`drizzle/schema/chat-schema.ts`,
+`drizzle/schema/escrow-case-schema.ts`, migration `0103_workable_beast.sql`) — kept
+separate from `chatIdx`/`escrow_case_message_sender_idx` rather than reordering them,
+since those serve different access patterns. `chat-schema.ts`'s comment claiming
+`chatIdx` already covered rate-limit counting was corrected.
+
+### 3. Chat search: halved query cost + added rate limiting (WORTH-FIXING finding)
+
+`features/chat/db/message-search.ts` previously ran the full participant+FTS predicate
+**twice** per request — once for the page of rows, once again for the exact total. Now
+uses `count(*) OVER()` to get both in one round trip. Trade-off: a `page` requested past
+the last page returns 0 rows (OFFSET removes them before the window function can be
+read), so `total` comes back `0` instead of the true count for that specific edge case —
+accepted, since `total` exists to drive "is there a next page," not to be authoritative
+for an out-of-range page number.
+
+`GET /api/chat/search` also had no rate limiting at all, unlike both send paths. Added
+an in-memory limiter (`lib/rate-limit.ts`, 20 searches/60s per user) rather than a
+DB-counted one — a DB round trip purely to rate-limit a query we're trying to make
+*cheaper* would be self-defeating, and a per-instance-only soft cap is an accepted
+trade-off for a read endpoint.
+
+### 4. Fire-and-forget push/broadcast now use `after()`, not bare `void`/`catch`
+
+`POST /api/chat/messages` and `POST /api/admin/escrow-cases/[id]/messages` dispatched
+their post-response push notification and Realtime broadcast with `void promise.catch()`
+— if the runtime freezes the invocation immediately after the response streams, that
+work (including its own DB reads/writes) could be abandoned mid-flight. Both routes now
+wrap these in `after()` (the pattern already used correctly in
+`features/articles/actions/articles.ts`), which keeps the invocation alive until the
+work actually finishes.
+
+### 5. Broadcast helpers now check the response status
+
+`lib/supabase/chat-broadcast.ts` and `lib/supabase/case-broadcast.ts` called `fetch()`
+against Supabase Realtime with no `res.ok` check — `fetch()` only rejects on a
+network-level failure, so a non-2xx response (rotated service-role key, rate limiting,
+a Supabase-side outage) resolved normally and was silently indistinguishable from
+"recipient was offline." Both now throw on a non-ok response, which the existing
+`.catch(...)` call sites already log.
+
+### 6. Admin oversight query: restored sequential-await discipline
+
+`getConversationMessagesForAdmin` (`features/chat/db/admin-all-conversations.ts`) ran
+its rows and count queries via `Promise.all`, the only place in the audited chat/
+escrow-case surface that didn't follow this codebase's otherwise-consistent
+"sequential, not `Promise.all`" rule for holding at most one pooler connection per
+request at a time. Low urgency (admin-only, bounded by staff headcount), fixed for
+consistency with every sibling query pair.
+
+### Deliberately deferred (not done in this pass)
+
+- **Conversation-list query scaling with a user's total message history, not their
+  conversation count** — `getChatConversationsForUser`'s `DISTINCT ON` groups by a
+  computed `peerId` that no index can back, so cost scales with lifetime message volume.
+  This is the conversation-summary-table refactor already flagged as deferred in the
+  original 2026-07-05 review above — still correctly deferred; not urgent at current
+  data volumes, but will need a denormalized table with lead time before high-volume
+  sellers' histories grow into the thousands.
+- FTS search's 2-character minimum and offset-based deep pagination — infrequent,
+  user-initiated action; revisit only if evidence of heavy interactive search emerges.
+- Reconnect resync only covers the conversation list / unread counts, not an
+  already-open thread's messages (`ChatDashboard.tsx`) — a real correctness gap, not
+  a scale one; out of scope for this pass.
+
+### Tests
+
+- `tests/api/chat/conversations.test.ts` — `clampPollIntervalMs` floor/ceiling/default,
+  JSON-mode happy path, SSE content-type switch.
+- `tests/api/escrow-cases/messages-rate-limit.test.ts` — 429 and fail-closed 503 for the
+  case-thread send rate limit.
+- `tests/unit/chat-message-search-query.test.ts` — single-query rows+total via
+  `count(*) OVER()`, including the over-paginated-page edge case.
+- `tests/api/chat/search.test.ts` — added rate-limit test.
+- `tests/unit/chat-broadcast-response-check.test.ts` — non-ok broadcast response throws.
+- `tests/unit/admin-all-conversations-query.test.ts` — updated comment for the
+  sequential-await fix (behavior unchanged, call count/order unchanged).

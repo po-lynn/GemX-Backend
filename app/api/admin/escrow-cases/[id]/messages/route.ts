@@ -1,12 +1,12 @@
-import { NextRequest, connection } from "next/server"
+import { NextRequest, connection, after } from "next/server"
 import { z } from "zod"
-import { eq } from "drizzle-orm"
+import { and, eq, gt, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
-import { escrowCaseMessageVisibilityEnum } from "@/drizzle/schema/escrow-case-schema"
+import { escrowCaseMessage, escrowCaseMessageVisibilityEnum } from "@/drizzle/schema/escrow-case-schema"
 import { escrowChatAuditLog } from "@/drizzle/schema/chat-moderation-schema"
 import { messageTypeEnum } from "@/drizzle/schema/chat-schema"
-import { jsonError, jsonUncached } from "@/lib/api"
+import { jsonError, jsonUncached, parseQuery } from "@/lib/api"
 import { requireEscrowCaseAccess, requireEscrowThreadWriteAccess } from "@/features/escrow-cases/lib/case-access"
 import { listEscrowCaseMessages, sendEscrowCaseMessage } from "@/features/escrow-cases/db/case-messages"
 import { createEscrowCaseAttachment } from "@/features/escrow-cases/db/case-attachments"
@@ -14,6 +14,28 @@ import { broadcastCaseEvents } from "@/lib/supabase/case-broadcast"
 import { sendEscrowCaseMessageNotification } from "@/features/notifications/services/escrow-case-notifications"
 import { getActiveRestriction } from "@/features/chat-moderation/db/restrictions"
 import { recordThreadViewed } from "@/features/chat-moderation/db/audit-log"
+import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout"
+
+/** Vercel backstop: if a query hangs past this, the platform kills the invocation instead of it running to the plan default. */
+export const maxDuration = 10
+
+/** Mirrors /api/chat/messages's sliding window: same threshold, own counter (this table, not the flat one). */
+const SEND_RATE_LIMIT_WINDOW_MS = 60_000
+const SEND_RATE_LIMIT_MAX_MESSAGES = 30
+/** Client-facing ceiling for the rate-limit count query; leaves headroom under maxDuration. */
+const CASE_SEND_QUERY_TIMEOUT_MS = 6000
+
+function jsonTimeout(message: string): Response {
+  return Response.json(
+    { error: message },
+    { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "3" } }
+  )
+}
+
+const listMessagesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+})
 
 const sendMessageSchema = z
   .object({
@@ -30,14 +52,19 @@ const sendMessageSchema = z
   })
 
 /**
- * GET /api/admin/escrow-cases/[id]/messages — any access scope may read the shared
- * "case" thread. Side-channel (`agent_buyer`/`agent_seller`) rows are additionally
+ * GET /api/admin/escrow-cases/[id]/messages?page=&limit= — any access scope may read the
+ * shared "case" thread. Side-channel (`agent_buyer`/`agent_seller`) rows are additionally
  * withheld from the read-only "moderation" scope: general chat oversight doesn't imply
  * access to one specific case's confidential agent<->party notes. There is no per-party
  * (buyer-only vs. seller-only) split here because this whole API surface is admin/staff
  * -only — nothing calling it is ever "the buyer" or "the seller" themselves. A future
  * buyer/seller-facing surface (mobile, out of scope today) would need its own query that
  * filters agent_buyer to the buyer and agent_seller to the seller specifically.
+ *
+ * Paginated like /api/chat/history: page 1 is the most recent `limit` messages (default 50,
+ * max 200), returned oldest-first for direct rendering. Older messages before this feature
+ * were loaded in full in one shot — most case threads are short enough that the default
+ * limit still returns everything; callers that need older messages pass a higher `page`.
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   await connection()
@@ -46,7 +73,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   if (!access.ok) return access.error
 
   try {
-    const messages = await listEscrowCaseMessages(id, access.scope !== "moderation")
+    const { page, limit } = parseQuery(new URL(request.url).searchParams, listMessagesQuerySchema)
+    const { messages, total } = await listEscrowCaseMessages(id, access.scope !== "moderation", { page, limit })
 
     // Oversight, not casework: a moderator's own GET of a case they aren't assigned to
     // is exactly the "read-only audited thread viewer" from the brief — every such view
@@ -58,7 +86,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       await recordThreadViewed({ actorId: access.session.user.id, targetType: "escrow_case", targetId: id })
     }
 
-    return jsonUncached({ success: true, messages })
+    return jsonUncached({ success: true, messages, total, page, limit })
   } catch (error) {
     console.error("GET /api/admin/escrow-cases/[id]/messages:", error)
     return jsonError("Failed to load messages", 500)
@@ -95,6 +123,31 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       )
     }
 
+    // DB-counted sliding window, same shape as /api/chat/messages's — a fail-closed check
+    // (a timed-out count must never be treated as "0 sent so far") gated separately from the
+    // rest of the send so a stalled pool can't bypass abuse prevention.
+    const windowStart = new Date(Date.now() - SEND_RATE_LIMIT_WINDOW_MS)
+    let recentRows: Array<{ count: number }>
+    try {
+      recentRows = await withQueryTimeout(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(escrowCaseMessage)
+          .where(and(eq(escrowCaseMessage.senderId, senderId), gt(escrowCaseMessage.createdAt, windowStart))),
+        CASE_SEND_QUERY_TIMEOUT_MS,
+        "escrow-case-send-rate-limit"
+      )
+    } catch (error) {
+      if (error instanceof QueryTimeoutError) {
+        console.error("POST /api/admin/escrow-cases/[id]/messages: rate-limit check timed out:", error.message)
+        return jsonTimeout("Sending is taking longer than usual — please retry")
+      }
+      throw error
+    }
+    if ((recentRows[0]?.count ?? 0) >= SEND_RATE_LIMIT_MAX_MESSAGES) {
+      return jsonError("Too many messages — please slow down", 429)
+    }
+
     const visibility = parsed.data.visibility ?? "case"
     const fileUrl = parsed.data.imageUrls?.[0] ?? parsed.data.fileUrl ?? null
     const saved = await sendEscrowCaseMessage({
@@ -107,8 +160,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       attachmentType: parsed.data.attachmentType,
     })
 
-    void broadcastCaseEvents(id, [{ event: "case_message_new", payload: saved }]).catch((e) =>
-      console.error("Escrow case broadcast failed:", e)
+    // after(), not bare void/catch: see the identical comment in POST /api/chat/messages —
+    // keeps the invocation alive until the broadcast/notification work (and its DB reads/
+    // writes) actually finishes, rather than risking it being abandoned mid-flight.
+    after(() =>
+      broadcastCaseEvents(id, [{ event: "case_message_new", payload: saved }]).catch((e) =>
+        console.error("Escrow case broadcast failed:", e)
+      )
     )
 
     // A message-borne attachment is ALSO recorded as case-level evidence (item 6 of the
@@ -147,14 +205,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           : [access.case.buyerId, access.case.sellerId, access.case.assignedAgentId]
 
     const [sender] = await db.select({ name: user.name }).from(user).where(eq(user.id, senderId)).limit(1)
-    void sendEscrowCaseMessageNotification({
-      caseId: id,
-      messageId: saved.id,
-      senderId,
-      senderName: sender?.name?.trim() || "Someone",
-      recipientIds: recipientIds.filter((candidateId): candidateId is string => !!candidateId),
-      preview: saved.content,
-    }).catch((e) => console.error("Escrow case push notification failed:", e))
+    after(() =>
+      sendEscrowCaseMessageNotification({
+        caseId: id,
+        messageId: saved.id,
+        senderId,
+        senderName: sender?.name?.trim() || "Someone",
+        recipientIds: recipientIds.filter((candidateId): candidateId is string => !!candidateId),
+        preview: saved.content,
+      }).catch((e) => console.error("Escrow case push notification failed:", e))
+    )
 
     return jsonUncached({ success: true, message: saved })
   } catch (error) {

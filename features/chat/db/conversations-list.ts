@@ -6,6 +6,7 @@ import {
   SESSION_PRESENCE_ONLINE_WINDOW_MS,
   getPresenceMapsForUserIds,
 } from "@/features/chat/db/session-presence";
+import { getBlockedPeerIds } from "@/features/chat/db/blocks";
 
 export type ChatConversationListItem = {
   userId: string;
@@ -83,7 +84,11 @@ export async function getChatActivitySignature(currentUserId: string): Promise<s
  * Uses DISTINCT ON instead of ROW_NUMBER() — PostgreSQL stops at the first matching
  * row per peer (ordered by created_at DESC) rather than ranking the full result set.
  * Also merges the two session-presence queries into one round-trip.
- * Total: 4 queries → 3 queries per SSE tick.
+ * 5 sequential round trips: latest-message query, getBlockedPeerIds, profiles, unread
+ * counts, presence. Each SSE tick that runs the full pipeline (not just the cheap
+ * activity-signature check) pays this cost again — see docs/technical/chat-user-blocking.md
+ * and the scalability audit notes in docs/technical/chat-architecture-improvements.md for
+ * why this is a real cost driver as concurrent open inbox streams grow.
  */
 export async function getChatConversationsForUser(
   currentUserId: string
@@ -113,7 +118,16 @@ export async function getChatConversationsForUser(
     ORDER BY t."peerId", t."createdAt" DESC
   `);
 
-  const latestRows = [...latestResult] as LatestSqlRow[];
+  const rawLatestRows = [...latestResult] as LatestSqlRow[];
+  if (rawLatestRows.length === 0) return [];
+
+  // A block (either direction) drops the thread from both parties' active list —
+  // it isn't deleted, just hidden here; /api/chat/history still shows the old messages.
+  const blockedPeerIds = await getBlockedPeerIds(
+    currentUserId,
+    [...new Set(rawLatestRows.map((r) => r.peerId))]
+  );
+  const latestRows = rawLatestRows.filter((r) => !blockedPeerIds.has(r.peerId));
   if (latestRows.length === 0) return [];
 
   const peerIds = [...new Set(latestRows.map((r) => r.peerId))];
@@ -212,7 +226,14 @@ export async function getUnreadConversationPreviews(
     ORDER BY m.sender_id, m.created_at DESC
   `);
 
-  const latestRows = [...latestResult] as UnreadLatestSqlRow[];
+  const rawLatestRows = [...latestResult] as UnreadLatestSqlRow[];
+  if (rawLatestRows.length === 0) return [];
+
+  const blockedPeerIds = await getBlockedPeerIds(
+    currentUserId,
+    [...new Set(rawLatestRows.map((r) => r.peerId))]
+  );
+  const latestRows = rawLatestRows.filter((r) => !blockedPeerIds.has(r.peerId));
   if (latestRows.length === 0) return [];
 
   const peerIds = latestRows.map((r) => r.peerId);

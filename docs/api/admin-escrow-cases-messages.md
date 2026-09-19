@@ -42,7 +42,15 @@ Path params:
 |-------|--------|----------|--------------------------|
 | `id`  | string | yes      | Escrow case id (`escrow_case.id`) |
 
-No query params, no body.
+Query params (added — see
+[`docs/technical/case-thread-pagination.md`](../technical/case-thread-pagination.md)):
+
+| Param   | Type   | Required | Notes                                    |
+|---------|--------|----------|-------------------------------------------|
+| `page`  | number | no       | ≥1, default 1                              |
+| `limit` | number | no       | 1–200, default 50                          |
+
+No body.
 
 ### Response
 
@@ -66,18 +74,23 @@ No query params, no body.
       "systemEventPayload": null,
       "createdAt": "2026-09-15T10:02:00.000Z"
     }
-  ]
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50
 }
 ```
 
-Messages are ordered oldest-first (ascending `createdAt`) and, for a viewer
-who isn't scoped `"moderation"`, include `agent_buyer`/`agent_seller`
-side-channel rows interleaved with `"case"` ones (see "Auth" above) —
-`visibility` on each row tells the caller which. `senderId` is `null` for a
-`kind: "system"` row. `attachmentType` is one of `text | image | audio |
-file`. There is no per-party (buyer-only vs. seller-only) filter — this API
-surface is admin/staff-only, so nothing calling it is ever "the buyer" or
-"the seller" needing their own restricted view.
+Page 1 returns the most recent `limit` messages (queried newest-first, then
+reversed), so the response is still ordered oldest-first within the page — the same
+convention as `GET /api/chat/history`. `total` is the full thread's row count (for the
+caller's visibility scope), for client-side pagination controls. For a viewer who isn't
+scoped `"moderation"`, results include `agent_buyer`/`agent_seller` side-channel rows
+interleaved with `"case"` ones (see "Auth" above) — `visibility` on each row tells the
+caller which. `senderId` is `null` for a `kind: "system"` row. `attachmentType` is one
+of `text | image | audio | file`. There is no per-party (buyer-only vs. seller-only)
+filter — this API surface is admin/staff-only, so nothing calling it is ever "the
+buyer" or "the seller" needing their own restricted view.
 
 #### Errors
 
@@ -105,6 +118,13 @@ curl -s \
 restrictions.ts`) — a sender with an active `messaging_restriction` row gets
 `403` with the restriction's reason, and nothing is written. This is the
 same check `POST /api/chat/messages` runs; see `docs/api/chat.md`.
+
+**Rate limit:** max **30 case messages per 60s** per sender, counted against
+`escrow_case_message` (not the flat `messages` table) — the same DB-counted sliding
+window as `POST /api/chat/messages`, checked right after the restriction check. See
+[`docs/technical/escrow-case-rate-limiting.md`](../technical/escrow-case-rate-limiting.md).
+A hung count query fails closed with `503`/`Retry-After: 3`, same fail-closed
+contract as the flat chat send path — never treated as "0 sent so far."
 
 **Auth:** `requireEscrowThreadWriteAccess(request, id)`
 (`features/escrow-cases/lib/case-access.ts`) — runs `requireEscrowCaseAccess`
@@ -236,7 +256,9 @@ identity.
 | 403    | `{ "error": "Forbidden" }`                 | Either the caller has no case access at all, **or** the caller's scope is `"moderation"` (read-only chat moderator) |
 | 403    | `You are banned/muted from messaging: <reason>` | The sender has an active `messaging_restriction` row (checked before the access-scope check's write rejection would even matter) |
 | 404    | `{ "error": "Not found" }`                 | No case with that `id`                                                                                                |
+| 429    | `{ "error": "Too many messages — please slow down" }` | Sender exceeded 30 case messages in the last 60s |
 | 500    | `{ "error": "Failed to send message" }`    | Unexpected server error                                                                                                |
+| 503    | `{ "error": "..." }` with `Retry-After: 3` | The rate-limit count query didn't complete within 6s (fails closed — the send does not go through) |
 
 ### Example
 

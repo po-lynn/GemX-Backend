@@ -29,7 +29,10 @@ export const messages = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    // Outgoing direction: history, latest-per-peer, and send rate-limit counting.
+    // Outgoing direction: history and latest-per-peer. NOT the send rate-limit count —
+    // that query has no recipientId predicate, so createdAt can't be used as an index
+    // range here (btree leftmost-prefix rules require recipientId to be equality-bound
+    // first); see senderCreatedAtIdx below for the index that actually serves it.
     chatIdx: index("chat_idx").on(
       table.senderId,
       table.recipientId,
@@ -45,6 +48,14 @@ export const messages = pgTable(
     unreadByRecipientIdx: index("unread_by_recipient_idx")
       .on(table.recipientId, table.senderId)
       .where(sql`${table.isRead} = false`),
+    // Dedicated to the send-rate-limit count (`sender_id = ? AND created_at > windowStart`,
+    // no recipient predicate) — deliberately a separate index rather than reusing chatIdx's
+    // column order, so this stays a true bounded range scan over the last N seconds
+    // regardless of how many total messages that sender has ever sent.
+    senderCreatedAtIdx: index("messages_sender_created_at_idx").on(
+      table.senderId,
+      table.createdAt
+    ),
   })
 ).enableRLS();
 

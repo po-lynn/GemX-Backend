@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { escrowCaseMessage, escrowCaseReadCursor } from "@/drizzle/schema/escrow-case-schema"
 import { messageTypeEnum } from "@/drizzle/schema/chat-schema"
@@ -35,35 +35,59 @@ function toIso(value: Date | string): string {
  * surface is ever "the buyer" or "the seller" themselves — see the doc comment in
  * app/api/admin/escrow-cases/[id]/messages/route.ts for why that's the right line to
  * draw today, and what a future buyer/seller-facing surface would need to add.
+ *
+ * Paginated like /api/chat/history: page 1 is the most recent `limit` rows (queried
+ * newest-first, then reversed) so the default call still reads as "the tail of the
+ * thread" rather than its oldest messages.
  */
 export async function listEscrowCaseMessages(
   caseId: string,
-  includeSideChannel: boolean
-): Promise<EscrowCaseMessageItem[]> {
+  includeSideChannel: boolean,
+  pagination: { page: number; limit: number }
+): Promise<{ messages: EscrowCaseMessageItem[]; total: number }> {
   const visibilities: EscrowCaseMessageVisibility[] = includeSideChannel
     ? ["case", "agent_buyer", "agent_seller"]
     : ["case"]
+  const whereClause = and(
+    eq(escrowCaseMessage.caseId, caseId),
+    inArray(escrowCaseMessage.visibility, visibilities)
+  )
+  const { page, limit } = pagination
+  const offset = (page - 1) * limit
 
+  // Sequential, not Promise.all: this route has no timeout wrapper of its own, so keep
+  // to at most one pooler connection at a time here (same rationale as chat/history's
+  // primary queries).
   const rows = await db
     .select()
     .from(escrowCaseMessage)
-    .where(and(eq(escrowCaseMessage.caseId, caseId), inArray(escrowCaseMessage.visibility, visibilities)))
-    .orderBy(asc(escrowCaseMessage.createdAt))
+    .where(whereClause)
+    .orderBy(desc(escrowCaseMessage.createdAt))
+    .limit(limit)
+    .offset(offset)
+  const countRows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(escrowCaseMessage)
+    .where(whereClause)
 
-  return rows.map((r) => ({
-    id: r.id,
-    caseId: r.caseId,
-    senderId: r.senderId,
-    kind: r.kind,
-    visibility: r.visibility,
-    content: r.content,
-    fileUrl: r.fileUrl,
-    imageUrls: r.imageUrls ?? null,
-    attachmentType: r.attachmentType,
-    systemEventType: r.systemEventType,
-    systemEventPayload: r.systemEventPayload,
-    createdAt: toIso(r.createdAt),
-  }))
+  const messages = rows
+    .map((r) => ({
+      id: r.id,
+      caseId: r.caseId,
+      senderId: r.senderId,
+      kind: r.kind,
+      visibility: r.visibility,
+      content: r.content,
+      fileUrl: r.fileUrl,
+      imageUrls: r.imageUrls ?? null,
+      attachmentType: r.attachmentType,
+      systemEventType: r.systemEventType,
+      systemEventPayload: r.systemEventPayload,
+      createdAt: toIso(r.createdAt),
+    }))
+    .reverse()
+
+  return { messages, total: countRows[0]?.count ?? 0 }
 }
 
 /**

@@ -21,7 +21,7 @@ export async function broadcastChatEvents(
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey || targets.length === 0) return;
 
-  await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
+  const res = await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -36,4 +36,11 @@ export async function broadcastChatEvents(
       })),
     }),
   });
+  // fetch() only rejects on a network-level failure — a non-2xx response (rotated
+  // service-role key, rate limiting, Supabase-side outage) resolves normally and would
+  // otherwise be silently indistinguishable from "recipient was offline." Throw so the
+  // caller's existing `.catch(...)` logging picks it up.
+  if (!res.ok) {
+    throw new Error(`Supabase broadcast failed: ${res.status} ${await res.text().catch(() => "")}`);
+  }
 }

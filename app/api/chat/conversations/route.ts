@@ -5,10 +5,8 @@ import {
   getChatConversationsForUser,
 } from "@/features/chat/db/conversations-list";
 import { jsonError, jsonUncached } from "@/lib/api";
+import { clampPollIntervalMs } from "@/features/chat/lib/sse-poll-interval";
 
-const SSE_POLL_DEFAULT_MS = 4_000;
-const SSE_POLL_MIN_MS = 2_000;
-const SSE_POLL_MAX_MS = 30_000;
 const SSE_HEARTBEAT_MS = 25_000;
 // isOnline is derived from session activity, not messages, so the cheap signature
 // can't see it change — force the full pipeline at least this often.
@@ -17,13 +15,11 @@ const SSE_PRESENCE_REFRESH_MS = 30_000;
 // and leave DB connections open until statement_timeout fires. Client reconnects.
 const SSE_MAX_LIFETIME_MS = 240_000; // 4 minutes
 
-const textEncoder = new TextEncoder();
+/** Platform backstop above SSE_MAX_LIFETIME_MS: if the graceful close above ever fails
+ *  to fire, Vercel kills the invocation itself instead of it running indefinitely. */
+export const maxDuration = 260;
 
-function clampPollIntervalMs(raw: string | null): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return SSE_POLL_DEFAULT_MS;
-  return Math.min(SSE_POLL_MAX_MS, Math.max(SSE_POLL_MIN_MS, Math.floor(n)));
-}
+const textEncoder = new TextEncoder();
 
 /** Long-lived SSE: same auth as JSON GET; opt-in via query so normal clients are unchanged. */
 function wantsEventStream(request: NextRequest): boolean {
@@ -44,8 +40,9 @@ function sseCommentKeepAlive(): Uint8Array {
  * JSON snapshot (default), or **Server-Sent Events** when `?stream=1` (or `stream=true` / `stream=sse`):
  * pushes `{ success, conversations }` whenever the payload changes, plus periodic keep-alive comments.
  *
- * Query (SSE only): `intervalMs` — poll DB between **2000** and **30000** (default **4000**). Lower = fresher
- * `lastMessage` / `lastMessageTime` / `unreadCount` / `isOnline`, at higher DB load.
+ * Query (SSE only): `intervalMs` — poll DB between **15000** and **30000** (default **15000**). Lower = fresher
+ * `lastMessage` / `lastMessageTime` / `unreadCount` / `isOnline`, at higher DB load. The floor is set by
+ * the DB pooler's idle_timeout, not arbitrary — see SSE_POLL_MIN_MS's comment above.
  */
 export async function GET(request: NextRequest) {
   await connection();

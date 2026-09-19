@@ -1,4 +1,4 @@
-import { NextRequest, connection } from "next/server";
+import { NextRequest, connection, after } from "next/server";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { sendChatMessageNotification } from "@/features/notifications/services/c
 import { broadcastChatEvents } from "@/lib/supabase/chat-broadcast";
 import { withQueryTimeout, QueryTimeoutError } from "@/lib/query-timeout";
 import { getActiveRestriction } from "@/features/chat-moderation/db/restrictions";
+import { isBlockedEitherDirection } from "@/features/chat/db/blocks";
 
 const messageTypeValues = messageTypeEnum.enumValues;
 
@@ -85,6 +86,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Self-service block (either party blocked the other) — separate from the
+    // admin-issued restriction above. Checked before the recipient/rate-limit queries
+    // since a blocked send should never touch that pair's row-locking write path.
+    if (await isBlockedEitherDirection(senderId, recipientId)) {
+      return jsonError("You can't message this user", 403);
+    }
+
     // Both checks gate whether the send is ALLOWED to happen (recipient must exist, rate
     // limit must not be exceeded), so both are primary/fail-closed: run them sequentially
     // (not Promise.all, so this route never holds two pooler connections at once) and let a
@@ -155,13 +163,19 @@ export async function POST(request: NextRequest) {
 
     if (!saved) return jsonError("Failed to save message", 500);
 
-    void sendChatMessageNotification({
-      messageId: saved.id,
-      senderId,
-      recipientId,
-      senderName,
-      preview: messagePreview(saved),
-    }).catch((e) => console.error("Chat push notification failed:", e));
+    // after(), not a bare void/catch: this does its own DB reads/writes (presence check,
+    // FCM token lookup, stale-token cleanup) after the response has already streamed —
+    // after() keeps the invocation alive until it actually finishes instead of risking
+    // an abandoned in-flight query if the runtime freezes the function right away.
+    after(() =>
+      sendChatMessageNotification({
+        messageId: saved.id,
+        senderId,
+        recipientId,
+        senderName,
+        preview: messagePreview(saved),
+      }).catch((e) => console.error("Chat push notification failed:", e))
+    );
 
     const broadcastPayload = {
       id: saved.id,
@@ -176,10 +190,12 @@ export async function POST(request: NextRequest) {
       editedAt: saved.editedAt?.toISOString?.() ?? null,
       createdAt: saved.createdAt?.toISOString?.() ?? String(saved.createdAt),
     };
-    void broadcastChatEvents([
-      { userId: recipientId, event: "new_message", payload: broadcastPayload },
-      { userId: senderId,    event: "new_message", payload: broadcastPayload },
-    ]).catch((e) => console.error("Chat broadcast failed:", e));
+    after(() =>
+      broadcastChatEvents([
+        { userId: recipientId, event: "new_message", payload: broadcastPayload },
+        { userId: senderId,    event: "new_message", payload: broadcastPayload },
+      ]).catch((e) => console.error("Chat broadcast failed:", e))
+    );
 
     return jsonUncached({
       success: true,

@@ -140,6 +140,11 @@ export const escrowCaseMessage = pgTable(
     index("escrow_case_message_case_created_idx").on(table.caseId, table.createdAt),
     index("escrow_case_message_case_visibility_idx").on(table.caseId, table.visibility),
     index("escrow_case_message_sender_idx").on(table.senderId),
+    // Dedicated to the send-rate-limit count (senderId = ? AND createdAt > windowStart) —
+    // senderIdx alone has no createdAt column, so that query would otherwise heap-fetch
+    // every case message that sender has ever sent. Same rationale as messages'
+    // senderCreatedAtIdx in chat-schema.ts.
+    index("escrow_case_message_sender_created_at_idx").on(table.senderId, table.createdAt),
   ]
 ).enableRLS()
 
