@@ -13,7 +13,24 @@ vi.mock("@/drizzle/db", () => ({
 // env import inside drizzle/db chain is bypassed by the mock above, but
 // session-presence also touches db — same mock covers it transitively.
 
+// isEscrow tests exercise the full (non-early-exit) pipeline, which also calls
+// these three collaborators — mocked at their own module boundary rather than
+// simulated through db.select, since each has its own distinct query chain shape.
+vi.mock("@/features/chat/db/blocks", () => ({
+  getBlockedPeerIds: vi.fn(),
+}));
+vi.mock("@/features/chat/db/session-presence", () => ({
+  SESSION_PRESENCE_ONLINE_WINDOW_MS: 5 * 60 * 1000,
+  getPresenceMapsForUserIds: vi.fn(),
+}));
+vi.mock("@/features/escrow-service-settings/db/escrow-service-settings", () => ({
+  getEscrowServiceSettings: vi.fn(),
+}));
+
 import { db } from "@/drizzle/db";
+import { getBlockedPeerIds } from "@/features/chat/db/blocks";
+import { getPresenceMapsForUserIds } from "@/features/chat/db/session-presence";
+import { getEscrowServiceSettings } from "@/features/escrow-service-settings/db/escrow-service-settings";
 import {
   getChatActivitySignature,
   getChatConversationsForUser,
@@ -153,5 +170,75 @@ describe("getChatActivitySignature", () => {
   it("returns a stable empty signature when the user has no rows", async () => {
     vi.mocked(db.execute).mockResolvedValue([] as never);
     await expect(getChatActivitySignature("user-abc")).resolves.toBe("{}");
+  });
+});
+
+describe("getChatConversationsForUser isEscrow flag", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getBlockedPeerIds).mockResolvedValue(new Set());
+    vi.mocked(getPresenceMapsForUserIds).mockResolvedValue({
+      activeMap: new Map(),
+      touchMap: new Map(),
+    });
+  });
+
+  function mockLatestRowAndProfileQueries(peerId: string) {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        senderId: "user-abc",
+        recipientId: peerId,
+        content: "Hi",
+        fileUrl: null,
+        imageUrls: null,
+        messageType: "text",
+        createdAt: new Date("2026-07-01T00:00:00.000Z"),
+        peerId,
+      },
+    ] as never);
+    vi.mocked(db.select)
+      .mockReturnValueOnce({
+        from: () => ({ where: () => Promise.resolve([{ id: peerId, name: "Peer", image: null }]) }),
+      } as never)
+      .mockReturnValueOnce({
+        from: () => ({ where: () => ({ groupBy: () => Promise.resolve([]) }) }),
+      } as never);
+  }
+
+  // Validates the actual product signal: a conversation with the configured escrow
+  // account is flagged so mobile can build a separate "Escrow Chat" entry point.
+  it("marks the conversation isEscrow=true when the peer is the configured escrow account", async () => {
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue({
+      userId: "escrow-1",
+      serviceFee: "2.00",
+      serviceOverview: "",
+    });
+    mockLatestRowAndProfileQueries("escrow-1");
+
+    const [row] = await getChatConversationsForUser("user-abc");
+    expect(row.isEscrow).toBe(true);
+  });
+
+  // Validates ordinary buyer<->seller conversations stay unflagged.
+  it("marks the conversation isEscrow=false for an ordinary peer", async () => {
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue({
+      userId: "escrow-1",
+      serviceFee: "2.00",
+      serviceOverview: "",
+    });
+    mockLatestRowAndProfileQueries("seller-1");
+
+    const [row] = await getChatConversationsForUser("user-abc");
+    expect(row.isEscrow).toBe(false);
+  });
+
+  // Validates the no-escrow-account-configured edge: nothing is ever flagged, not even
+  // by accident, when escrow_service_setting has no user_id set.
+  it("marks every conversation isEscrow=false when no escrow account is configured", async () => {
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue(null);
+    mockLatestRowAndProfileQueries("seller-1");
+
+    const [row] = await getChatConversationsForUser("user-abc");
+    expect(row.isEscrow).toBe(false);
   });
 });

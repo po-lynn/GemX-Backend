@@ -601,6 +601,85 @@ included.
 - No drag-and-drop or clipboard-paste attach — picking a file requires the
   paperclip button's native file dialog.
 
+## Phase 9 — Real escrow detection, replacing the text-prefix heuristic
+
+**Ask:** separate "Buyer ↔ Seller" chat from "Buyer/Seller ↔ Escrow" chat as
+two distinct flows, so mobile can add a dedicated "Escrow Chat" entry point
+and the admin inbox's existing "Escrow" type filter is trustworthy.
+
+**Bug found while investigating:** `classifyType()`'s escrow branch matched
+only when a *message's own content* started with `"Escrow service request"`
+(a string composed client-side by the mobile app, not generated anywhere in
+this backend). Since `getTriageConversationsFromDb()` classifies a whole
+conversation from only its **latest** message, a conversation showed
+"Escrow" only until anyone replied with ordinary text — then it silently
+fell back to "chat" for the rest of its life, even though one participant
+was still the configured escrow account throughout.
+
+**Fix:** escrow is now determined by comparing `sender_id`/`recipient_id` to
+the currently-configured escrow account (`escrow_service_setting.user_id`
+— the same lookup `GET /api/mobile/escrow-chat-user` already performs, via
+`getEscrowServiceSettings()`), never by reading message content. This is
+correct for every message in a conversation, not just its first one, and is
+retroactively correct for all historical data with no backfill needed.
+
+**No schema change or migration** — deliberately. The original "Known
+gaps" note below called for "a real column set at message-send time," but
+that's unnecessary for escrow specifically: unlike "system"/"Contact Us"
+(which have no single stable account id to compare against), there is
+exactly one canonical escrow account at any given time, already looked up
+elsewhere in this codebase. A persisted column would only matter if the
+configured escrow account changed and old conversations with the *former*
+account needed to keep reading as escrow — judged not worth a migration for
+that edge case; revisit if it becomes a real problem.
+
+**Files changed:**
+- `features/messages/db/triage.ts` — `classifyType()` signature changed from
+  `(content: string, senderRole: string)` to `(params: { senderId,
+  recipientId, senderRole, escrowUserId })`. Both `getTriageConversationsFromDb()`
+  and `getTriageMessagesFromDb()` now fetch `escrowUserId` once via
+  `getEscrowServiceSettings()` (after the early-return-if-empty check, so the
+  existing "no query when there's nothing to classify" contract is
+  preserved) and pass it through per row.
+- `features/chat/db/conversations-list.ts` — `ChatConversationListItem`
+  gained `isEscrow: boolean`, computed the same way (`peerId === escrowUserId`),
+  for the mobile `GET /api/chat/conversations` response. This is the field
+  mobile uses to build the separate Escrow Chat entry point — see
+  `docs/MOBILE-API.md`.
+- No route files changed — both consumers (`app/admin/messages/page.tsx`,
+  `app/api/chat/conversations/route.ts`) already pass the query functions'
+  return values straight through.
+
+**Schema impact:** none.
+
+**Tests:** `tests/unit/triage-db.test.ts` — `classifyType()` cases rewritten
+for the new signature (escrow-by-sender, escrow-by-recipient, no
+special-wording-needed, no-escrow-account-configured), plus a regression
+test proving a plain reply with no magic text still classifies as escrow
+when a participant is the escrow account (the exact bug this fixes), plus
+an early-exit test asserting `getEscrowServiceSettings()` is never called
+when there are no messages. `tests/unit/chat-conversations-list-query.test.ts`
+— new `isEscrow` true/false/no-account-configured cases, with
+`getBlockedPeerIds`/`getPresenceMapsForUserIds`/`getEscrowServiceSettings`
+mocked at their own module boundary rather than simulated through
+`db.select`, since exercising this file's non-early-exit path for the first
+time would otherwise require juggling four different `db.select` chain
+shapes through one shared mock.
+
+## Known gaps / TODOs (Phase 9 addendum)
+
+- **"system"/"Contact Us" classification is still the old heuristic**
+  (sender's role is `admin`) — this phase only replaced the escrow branch.
+  There's still no single stable id to compare against for those, since any
+  admin/internal account's message currently counts; "Contact Us" still has
+  no path into the `messages` table at all (see the original "Known gaps"
+  entry below, only the escrow half of which this phase resolves).
+- **Historical `messages` rows sent with the old client-composed
+  `"Escrow service request…"` text are unaffected** — they were never
+  stamped with anything; this phase doesn't touch stored data at all, it
+  only changes how `type`/`isEscrow` are computed at read time, which is
+  retroactively correct without a migration.
+
 ## Phase 8 — Real "Awaiting reply" status, visible in the list
 
 **Ask:** make it easy to spot, at a glance in the conversation list, which

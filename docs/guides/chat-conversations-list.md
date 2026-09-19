@@ -21,7 +21,14 @@ const items = await getChatConversationsForUser(session.user.id);
 
 Each item carries the peer's profile, a human-readable preview of the last
 message (`"Sent photos"` / `"Voice message"` / `"Sent a file"` fallbacks),
-unread count, and an `isOnline` flag derived from session presence.
+unread count, an `isOnline` flag derived from session presence, and
+`isEscrow: boolean` — true when the peer is the currently-configured escrow
+chat account (`escrow_service_setting.user_id`, the same lookup `GET
+/api/mobile/escrow-chat-user` uses via `getEscrowServiceSettings()`).
+Clients use `isEscrow` to split this one list into two flows — an ordinary
+Buyer↔Seller inbox and a separate "Escrow Chat" entry point — without
+guessing from message content. See `docs/MOBILE-API.md`'s `GET
+/api/chat/conversations` section.
 
 Under the hood it runs 3 round-trips per call (latest-per-peer, profiles +
 unread, presence). The latest-per-peer query uses PostgreSQL `DISTINCT ON`
@@ -73,11 +80,18 @@ If you edit the query and that test fails, you have reintroduced the bug.
 
 ### Add a field to each conversation item
 
+If the field comes from the `messages` row itself:
 1. Add the column to the **inner** subquery select list (alias it in camelCase,
    e.g. `m.reply_to AS "replyTo"`).
 2. Add it to the `LatestSqlRow` type.
 3. Map it in the `items` construction and extend `ChatConversationListItem`.
 4. Update the regression test only if you changed `DISTINCT ON`/`ORDER BY`.
+
+If the field is derived from something *outside* `messages` (like `isEscrow`,
+compared against `getEscrowServiceSettings()`), fetch it once after the
+`latestRows.length === 0` early-return — not inside the row-mapping loop —
+and reference it in the map callback. Fetching it before that early return
+would run the extra query even when there's nothing to compute it for.
 
 ### Change the "latest message" tiebreaker
 

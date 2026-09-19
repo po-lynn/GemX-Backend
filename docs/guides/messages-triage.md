@@ -144,16 +144,28 @@ thumbnail(s), and mount `{viewer && <ImageViewer .../>}` once at the end of
 the component — see `ReadingPane.tsx` or `AdminAllConversationsView.tsx` for
 the exact pattern. Don't add a fourth copy of the component itself.
 
-**Give conversation `type` a real backing** (currently a text-pattern
-heuristic — see `classifyType()` in `features/messages/db/triage.ts` and the
-technical doc's "Schema impact"):
-1. Add a real `type` column (or similar) to whatever table ends up backing
-   conversations.
-2. Find every code path that sends an escrow-request or system/Contact-Us
-   message and have it stamp the new column directly at send time, instead
-   of relying on the heuristic.
-3. Delete `classifyType()` and read the real column in
-   `getTriageConversationsFromDb()`/`getTriageMessagesFromDb()` instead.
+**Give conversation `type` a real backing:** the escrow half of this is
+done (Phase 9, `docs/technical/messages-triage.md`) — `classifyType()` now
+compares `senderId`/`recipientId` to the configured escrow account
+(`getEscrowServiceSettings()`) instead of sniffing message content, so it's
+correct for every message in a thread, not just an unreplied first one, and
+needed no schema change (there's exactly one canonical escrow account id to
+compare against, already looked up elsewhere in this codebase). The
+`isEscrow` field on `GET /api/chat/conversations`
+(`features/chat/db/conversations-list.ts`) uses the same comparison.
+
+**Still open — "system"/"Contact Us" classification:** unlike escrow, there
+is no single stable account id to compare against here (`senderRole ===
+"admin"` still matches *any* admin account's message), and "Contact Us"
+still has no path into the `messages` table at all —
+`contactMessage` (`drizzle/schema/contact-message-schema.ts`) is a separate,
+unrelated table never linked to chat. Fixing this properly still needs a
+real column stamped at send time:
+1. Add a real `type`/`source` column to `messages`.
+2. Find every code path that sends a system or Contact-Us-originated message
+   and have it stamp the new column directly at send time.
+3. Read the real column in `classifyType()`'s `"admin"` branch instead of
+   the role check.
 
 ## Common errors
 

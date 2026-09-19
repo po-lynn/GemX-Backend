@@ -63,6 +63,11 @@ Conversation list: one row per peer with last message, unread count, presence.
     to 15000 — this floor changed from 2000 to 15000; any client hardcoding a shorter
     value keeps working, just gets throttled server-side.**
 - **JSON mode:** `200` `{ success: true, conversations: ChatConversationListItem[] }`
+  — each item now also carries `isEscrow: boolean`: true when the peer is
+  the account currently configured for escrow chat
+  (`GET /api/mobile/escrow-chat-user`'s `user.id`). Use it to split this one
+  list into a regular Buyer↔Seller inbox and a separate Escrow Chat screen —
+  see `docs/MOBILE-API.md`.
 - **SSE mode:** emits a `data:` line with the same payload whenever it changes,
   `: keep-alive` comments every 25s, closes after 4 min (client reconnects).
   Internally each tick runs a cheap change-detection aggregate and only executes

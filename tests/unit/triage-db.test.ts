@@ -9,7 +9,12 @@ vi.mock("@/drizzle/db", () => ({
   },
 }))
 
+vi.mock("@/features/escrow-service-settings/db/escrow-service-settings", () => ({
+  getEscrowServiceSettings: vi.fn(),
+}))
+
 import { db } from "@/drizzle/db"
+import { getEscrowServiceSettings } from "@/features/escrow-service-settings/db/escrow-service-settings"
 import {
   classifyType,
   getTriageConversationsFromDb,
@@ -21,22 +26,52 @@ import {
 const dialect = new PgDialect()
 
 describe("classifyType", () => {
-  // Validates the TEMPORARY heuristic: a fixed body prefix marks escrow messages,
-  // pending a real `type` column set at send time (see docs/technical/messages-triage.md).
-  it("classifies a body starting with the escrow-request prefix as escrow, case-insensitively", () => {
-    expect(classifyType("Escrow service request (buyer) for: Ring", "user")).toBe("escrow")
-    expect(classifyType("escrow SERVICE request from someone", "user")).toBe("escrow")
+  // Validates the real signal: either participant being the configured escrow account
+  // marks it escrow, regardless of what the message body says — replacing the old
+  // text-prefix heuristic (see docs/technical/messages-triage.md).
+  it("classifies as escrow when the sender is the configured escrow account", () => {
+    expect(
+      classifyType({ senderId: "escrow-1", recipientId: "buyer-1", senderRole: "internal", escrowUserId: "escrow-1" })
+    ).toBe("escrow")
   })
 
-  // Validates admin-sent messages (that aren't escrow requests) are classified as system/Contact Us.
+  it("classifies as escrow when the recipient is the configured escrow account", () => {
+    expect(
+      classifyType({ senderId: "buyer-1", recipientId: "escrow-1", senderRole: "user", escrowUserId: "escrow-1" })
+    ).toBe("escrow")
+  })
+
+  // Validates the fix: a plain reply with none of the old magic text still
+  // classifies as escrow, as long as a participant is the escrow account.
+  it("classifies as escrow even when the message body has no special wording", () => {
+    expect(
+      classifyType({ senderId: "escrow-1", recipientId: "buyer-1", senderRole: "internal", escrowUserId: "escrow-1" })
+    ).toBe("escrow")
+  })
+
+  // Validates admin-sent messages (that aren't with the escrow account) are classified as system/Contact Us.
   it("classifies non-escrow messages sent by an admin as system", () => {
-    expect(classifyType("Your listing has been approved", "admin")).toBe("system")
+    expect(
+      classifyType({ senderId: "admin-1", recipientId: "user-1", senderRole: "admin", escrowUserId: "escrow-1" })
+    ).toBe("system")
   })
 
   // Validates the default bucket for ordinary buyer/seller chat.
   it("classifies everything else as chat", () => {
-    expect(classifyType("Is this still available?", "user")).toBe("chat")
-    expect(classifyType("Is this still available?", "")).toBe("chat")
+    expect(
+      classifyType({ senderId: "buyer-1", recipientId: "seller-1", senderRole: "user", escrowUserId: "escrow-1" })
+    ).toBe("chat")
+    expect(
+      classifyType({ senderId: "buyer-1", recipientId: "seller-1", senderRole: "", escrowUserId: "escrow-1" })
+    ).toBe("chat")
+  })
+
+  // Validates the no-escrow-account-configured edge: nothing is ever misclassified
+  // as escrow when escrow_service_setting has no user_id set.
+  it("never classifies as escrow when no escrow account is configured", () => {
+    expect(
+      classifyType({ senderId: "buyer-1", recipientId: "seller-1", senderRole: "user", escrowUserId: null })
+    ).toBe("chat")
   })
 })
 
@@ -54,7 +89,10 @@ describe("pairKey / splitPairKey", () => {
 })
 
 describe("getTriageConversationsFromDb", () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue(null)
+  })
 
   // Validates the pair-grouping query dedups (A,B)/(B,A) via LEAST/GREATEST, same
   // convention as getAllConversationsForAdmin, and aggregates count + any-flagged per pair.
@@ -71,23 +109,32 @@ describe("getTriageConversationsFromDb", () => {
     expect(text).toContain("bool_or(starred) AS any_flagged")
   })
 
-  // Validates the early-exit contract: no profile lookup when there are no conversations.
-  it("returns [] without a profile lookup when there are no messages at all", async () => {
+  // Validates the early-exit contract: no profile lookup, and no escrow-account lookup
+  // either, when there are no conversations at all.
+  it("returns [] without a profile or escrow-account lookup when there are no messages at all", async () => {
     vi.mocked(db.execute).mockResolvedValue([] as never)
     const result = await getTriageConversationsFromDb()
     expect(result).toEqual([])
     expect(db.select).not.toHaveBeenCalled()
+    expect(getEscrowServiceSettings).not.toHaveBeenCalled()
   })
 
-  // Validates row shaping: participants, heuristic type, and flagged/messageCount mapping,
-  // with unknown profiles falling back gracefully instead of throwing.
-  it("maps a pair row into a TriageConversation, classifying type from the last message", async () => {
+  // Validates row shaping: participants, real (id-based) type, and flagged/messageCount
+  // mapping, with unknown profiles falling back gracefully instead of throwing. The
+  // message body deliberately carries none of the old magic text, proving classification
+  // no longer depends on it.
+  it("maps a pair row into a TriageConversation, classifying type by comparing ids to the configured escrow account", async () => {
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue({
+      userId: "user-a",
+      serviceFee: "2.00",
+      serviceOverview: "",
+    })
     vi.mocked(db.execute).mockResolvedValue([
       {
         pair_key: "user-a:user-b",
         sender_id: "user-a",
         recipient_id: "user-b",
-        content: "Escrow service request (buyer) for: Ring",
+        content: "Hi, is this ring still available?",
         created_at: new Date("2026-07-01T00:00:00.000Z"),
         message_count: 5,
         any_flagged: true,
@@ -106,6 +153,40 @@ describe("getTriageConversationsFromDb", () => {
     expect(row.type).toBe("escrow")
     expect(row.messageCount).toBe(5)
     expect(row.flagged).toBe(true)
+  })
+
+  // Regression test for the bug this replaces: previously classifyType() only looked at
+  // the LATEST message's content for a fixed prefix, so a conversation with the escrow
+  // account silently fell back to "chat" the moment anyone replied with ordinary text.
+  it("still classifies as escrow when the latest message is a plain reply with no special wording", async () => {
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue({
+      userId: "escrow-1",
+      serviceFee: "2.00",
+      serviceOverview: "",
+    })
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        pair_key: "buyer-1:escrow-1",
+        sender_id: "escrow-1",
+        recipient_id: "buyer-1",
+        content: "Sure, I can check that for you.",
+        created_at: new Date("2026-07-01T00:00:00.000Z"),
+        message_count: 6,
+        any_flagged: false,
+      },
+    ] as never)
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({
+        where: () =>
+          Promise.resolve([
+            { id: "buyer-1", name: "Buyer", role: "user" },
+            { id: "escrow-1", name: "Escrow", role: "internal" },
+          ]),
+      }),
+    } as never)
+
+    const [row] = await getTriageConversationsFromDb()
+    expect(row.type).toBe("escrow")
   })
 
   // Validates "awaiting reply": true only when a staff (admin/internal) account is one of
@@ -192,7 +273,14 @@ describe("getTriageConversationsFromDb", () => {
 })
 
 describe("getTriageMessagesFromDb", () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getEscrowServiceSettings).mockResolvedValue({
+      userId: "escrow-1",
+      serviceFee: "2.00",
+      serviceOverview: "",
+    })
+  })
 
   // Same awaitingReply rule as conversations, but computed per-message from that
   // single row's own sender/recipient role (no "latest in pair" lookup needed).
@@ -236,5 +324,10 @@ describe("getTriageMessagesFromDb", () => {
     const [inbound, outbound] = await getTriageMessagesFromDb()
     expect(inbound.awaitingReply).toBe(true)
     expect(outbound.awaitingReply).toBe(false)
+
+    // Both rows involve the escrow account and neither has the old magic text — the
+    // second especially proves classification isn't reading message content.
+    expect(inbound.type).toBe("escrow")
+    expect(outbound.type).toBe("escrow")
   })
 })

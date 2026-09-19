@@ -6,6 +6,7 @@
 
 ## Recent changes
 
+- **Chat conversations — `isEscrow` field for a separate Escrow Chat flow.** **GET `/api/chat/conversations`** items now include **`isEscrow`** (boolean): `true` when that conversation's peer is the account currently configured for escrow chat (the same `user.id` returned by **GET `/api/mobile/escrow-chat-user`**). This is a server-computed, id-based signal — not inferred from message text — so it's correct for every message in the thread, not just the first one, and reflects a **live** comparison against the currently-configured escrow account (a change to that configuration takes effect on the next fetch; it isn't stamped per-message). Use it to build **two separate flows** instead of one mixed inbox: filter `conversations` where `isEscrow === true` for a dedicated "Escrow Chat" entry point, and `isEscrow === false` for the regular Buyer↔Seller list. **Nothing else changes** — keep using **GET `/api/mobile/escrow-chat-user`** for the escrow account's id/name/image and **POST `/api/chat/messages`**/**GET `/api/chat/history`** exactly as today; there's no new endpoint and no new request field to send. See **5.4d**.
 - **⚠ Action required — stop using `GET /api/chat/conversations?stream=1` (SSE) for the chat inbox.** A pre-launch scalability audit found the mobile app's `useChatConversationsStream` hook (`features/chat/chat.hooks.ts`, wired up in `app/(tabs)/messages.tsx`) opens this stream at `intervalMs=4000` whenever the Messages tab is focused. The backend runs against a database connection pooler with only **15 backend connections total, shared across the entire app** (not just chat) — a poll interval shorter than the pooler's idle timeout means the connection backing an open SSE stream never gets released, so as few as ~10-15 concurrently active users on the Messages tab could exhaust the whole pool and break every other request in the app. **Backend mitigation already shipped** (no mobile change needed for safety): the server now clamps `intervalMs` to a floor of **15000ms** (was 2000) regardless of what the client requests — see updated **5.4d**. **Still required from mobile:** replace `useChatConversationsStream`/SSE with a plain `GET /api/chat/conversations` refetch triggered by the `new_message`/`read_update` events your app already subscribes to via Supabase Broadcast (`chat.realtime.ts`) — the plumbing for this already exists in `useUnreadChatCount` and can be mirrored into the inbox list. This is both safer for the backend and gives fresher updates than any polling interval. Also worth a look while in that code: `useChatConversationsStream`'s reconnect backoff (`chat.hooks.ts`) grows from 2s toward 30s but never resets after a successful cycle — moot once SSE is removed, but flag if any polling loop is kept.
 - **New: self-service block/unblock a chat user** – **GET `/api/chat/blocks`** (list who you've blocked), **POST `/api/chat/blocks`** (block a user, body `{ "userId", "reason"? }`), **DELETE `/api/chat/blocks/:userId`** (unblock). Once blocked (checked in both directions), `POST /api/chat/messages` returns **403** for either party, and the conversation disappears from both parties' **GET `/api/chat/conversations`** and unread preview. Blocking does **not** hide previously-exchanged history from **GET `/api/chat/history`**. Not yet wired up on mobile — pure net-new UI work (block button, blocked-users list). See **5.4d**.
 - **New: report a chat message** – **POST `/api/chat/messages/:messageId/report`** (body `{ "reason" }`), the mobile counterpart to the admin-only moderation report flow. Only the message's sender or recipient may file it; a repeat report from the same user against the same message returns the existing report instead of creating a duplicate. Not yet wired up on mobile — pure net-new UI work (report action on a message, e.g. via long-press menu). See **5.4d**.
@@ -1642,7 +1643,8 @@ Notification title = sender name; body = message preview.
       "lastMessage": "Thanks — shipped today.",
       "lastMessageTime": "2026-05-12T14:30:00.000Z",
       "unreadCount": 2,
-      "isOnline": true
+      "isOnline": true,
+      "isEscrow": false
     }
   ]
 }
@@ -1659,10 +1661,18 @@ Notification title = sender name; body = message preview.
 | `conversations[].lastMessageTime` | string | ISO 8601 — `created_at` of the **latest** message in that thread (either direction). |
 | `conversations[].unreadCount` | number | Count of messages **from this peer** to the current user with `is_read = false` (incoming unread only). |
 | `conversations[].isOnline` | boolean | `true` when the peer has a non-expired Better Auth session touched within the last **5 minutes** (same proxy as **GET `/api/profile/:id`** `presence`); otherwise `false`. |
+| `conversations[].isEscrow` | boolean | `true` when `userId` is the account currently configured for escrow chat (same account **GET `/api/mobile/escrow-chat-user`** returns). Computed server-side by comparing ids, not by reading message content — use it to build a separate "Escrow Chat" entry point (see below). |
 
 **Ordering:** `conversations` is sorted by **`lastMessageTime`** descending (most recently active thread first).
 
 **Caching:** Response uses **`Cache-Control: no-store`** (like **GET `/api/chat/history`**) so unread and presence are not stale.
+
+**Building a separate Escrow Chat flow:** `isEscrow` is the one thing that distinguishes an escrow conversation from an ordinary Buyer↔Seller one — everything else about how you talk to that peer is identical.
+
+1. Fetch **GET `/api/mobile/escrow-chat-user`** to get the escrow account's `user.id`/`name`/`image` (e.g. for a dedicated "Escrow Chat" button's avatar/label, or if `configured` is `false`, to hide/disable that entry point).
+2. Fetch **GET `/api/chat/conversations`** as normal. Partition the array by `isEscrow`: `isEscrow === false` → the regular Buyer↔Seller list; `isEscrow === true` → the Escrow Chat screen (there will be at most one such entry, since there's only one configured escrow account).
+3. Sending, history, media, search, block/report, and realtime (Supabase Broadcast) all work exactly as documented elsewhere in this section — **no new endpoint, no new request field.** Whether a screen is "Escrow Chat" or a regular thread is a client-side routing decision based on `isEscrow`/the peer id, not a different API call.
+4. Don't compose your own "Escrow service request…"-style message text to mark a request — that convention is no longer how conversations are classified on the backend (admin's own Escrow filter no longer reads it either). Send whatever the user actually typed as plain `content`.
 
 **API tests (conversations):**
 

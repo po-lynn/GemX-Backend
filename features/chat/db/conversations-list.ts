@@ -7,6 +7,7 @@ import {
   getPresenceMapsForUserIds,
 } from "@/features/chat/db/session-presence";
 import { getBlockedPeerIds } from "@/features/chat/db/blocks";
+import { getEscrowServiceSettings } from "@/features/escrow-service-settings/db/escrow-service-settings";
 
 export type ChatConversationListItem = {
   userId: string;
@@ -16,6 +17,11 @@ export type ChatConversationListItem = {
   lastMessageTime: string;
   unreadCount: number;
   isOnline: boolean;
+  /** True when this peer is the currently-configured escrow chat account
+   *  (`escrow_service_setting.user_id`) — lets a client separate escrow
+   *  conversations from ordinary buyer<->seller ones without guessing from
+   *  message content. */
+  isEscrow: boolean;
 };
 
 type LatestSqlRow = {
@@ -130,6 +136,12 @@ export async function getChatConversationsForUser(
   const latestRows = rawLatestRows.filter((r) => !blockedPeerIds.has(r.peerId));
   if (latestRows.length === 0) return [];
 
+  // The escrow account rarely changes; one cheap single-row lookup here (same
+  // helper GET /api/mobile/escrow-chat-user already uses) is simpler and more
+  // robust than sniffing message content for a client-composed convention.
+  const escrowSettings = await getEscrowServiceSettings();
+  const escrowUserId = escrowSettings?.userId ?? null;
+
   const peerIds = [...new Set(latestRows.map((r) => r.peerId))];
 
   const profiles = await db
@@ -176,6 +188,7 @@ export async function getChatConversationsForUser(
       lastMessageTime: toIsoTime(row.createdAt),
       unreadCount: unreadByPeer.get(row.peerId) ?? 0,
       isOnline,
+      isEscrow: row.peerId === escrowUserId,
     };
   });
 

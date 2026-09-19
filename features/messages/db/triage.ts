@@ -10,21 +10,30 @@ import { sql } from "drizzle-orm"
 import { db } from "@/drizzle/db"
 import { user } from "@/drizzle/schema/auth-schema"
 import { messages } from "@/drizzle/schema/chat-schema"
+import { getEscrowServiceSettings } from "@/features/escrow-service-settings/db/escrow-service-settings"
 import type { ConversationType, TriageConversation, TriageMessage } from "@/features/messages/types/triage"
 
 const senderUser = alias(user, "triage_sender")
 const recipientUser = alias(user, "triage_recipient")
 
-// TEMPORARY heuristic pending a real `type` column set at message-send time
-// (see docs/technical/messages-triage.md's "Known gaps" section — the user
-// explicitly asked for a real column over inferring from text long-term).
-// Escrow requests are identified today by a fixed body prefix used by the
-// escrow-request send path. "Contact Us" isn't representable at all yet —
+// Escrow is identified by either participant being the currently-configured
+// escrow chat account (`escrow_service_setting.user_id` — the same lookup
+// GET /api/mobile/escrow-chat-user already uses), not by sniffing message
+// content for a client-composed convention. That old heuristic (a fixed body
+// prefix) only ever matched a conversation's unreplied first message; the
+// moment anyone replied with ordinary text, the whole conversation silently
+// fell back to "chat". "Contact Us" isn't representable at all yet —
 // contactMessage is a separate, unrelated table (anonymous website
 // submissions) never linked to this messages table, so it never surfaces
 // here until that integration is built.
-export function classifyType(content: string, senderRole: string): ConversationType {
-  if (/^Escrow service request/i.test(content.trim())) return "escrow"
+export function classifyType(params: {
+  senderId: string
+  recipientId: string
+  senderRole: string
+  escrowUserId: string | null
+}): ConversationType {
+  const { senderId, recipientId, senderRole, escrowUserId } = params
+  if (escrowUserId !== null && (senderId === escrowUserId || recipientId === escrowUserId)) return "escrow"
   if (senderRole === "admin") return "system"
   return "chat"
 }
@@ -59,6 +68,9 @@ function toIso(value: Date | string): string {
 }
 
 export async function getTriageMessagesFromDb(): Promise<TriageMessage[]> {
+  const escrowSettings = await getEscrowServiceSettings()
+  const escrowUserId = escrowSettings?.userId ?? null
+
   const rows = await db
     .select({
       id: messages.id,
@@ -84,7 +96,12 @@ export async function getTriageMessagesFromDb(): Promise<TriageMessage[]> {
     to: { id: r.recipientId, name: r.recipientName ?? "Unknown user" },
     body: r.content,
     sentAt: toIso(r.createdAt),
-    type: classifyType(r.content, r.senderRole ?? ""),
+    type: classifyType({
+      senderId: r.senderId,
+      recipientId: r.recipientId,
+      senderRole: r.senderRole ?? "",
+      escrowUserId,
+    }),
     flagged: !!r.starred,
     awaitingReply: computeAwaitingReply(r.senderRole ?? "", r.recipientRole ?? ""),
     assignedToMe: false,
@@ -132,6 +149,9 @@ export async function getTriageConversationsFromDb(): Promise<TriageConversation
   const rows = [...result] as PairAggRow[]
   if (rows.length === 0) return []
 
+  const escrowSettings = await getEscrowServiceSettings()
+  const escrowUserId = escrowSettings?.userId ?? null
+
   const userIds = [...new Set(rows.flatMap((r) => [r.sender_id, r.recipient_id]))]
   const profiles = await db
     .select({ id: user.id, name: user.name, role: user.role })
@@ -147,7 +167,12 @@ export async function getTriageConversationsFromDb(): Promise<TriageConversation
       id: r.pair_key,
       participantA: { id: r.sender_id, name: senderProfile.name },
       participantB: { id: r.recipient_id, name: recipientProfile.name },
-      type: classifyType(r.content, senderProfile.role),
+      type: classifyType({
+        senderId: r.sender_id,
+        recipientId: r.recipient_id,
+        senderRole: senderProfile.role,
+        escrowUserId,
+      }),
       lastMessagePreview: r.content,
       lastMessageAt: toIso(r.created_at),
       messageCount: r.message_count,
