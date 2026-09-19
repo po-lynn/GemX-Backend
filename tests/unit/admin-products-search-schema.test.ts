@@ -49,6 +49,18 @@ describe("adminProductsSearchSchema", () => {
     expect(out.shape).toBe("Round")
   })
 
+  // currency filter for public/mine/profile product lists
+  it("accepts currency USD or MMK", () => {
+    expect(adminProductsSearchSchema.parse({ currency: "USD" }).currency).toBe("USD")
+    expect(adminProductsSearchSchema.parse({ currency: "MMK" }).currency).toBe("MMK")
+  })
+
+  it("rejects invalid currency", () => {
+    expect(() =>
+      adminProductsSearchSchema.parse({ currency: "EUR" })
+    ).toThrow()
+  })
+
   it("rejects invalid shape", () => {
     expect(() =>
       adminProductsSearchSchema.parse({ shape: "InvalidShape" })

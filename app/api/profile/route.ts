@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       stoneCut: searchParams.get("stoneCut") || undefined,
       shape: searchParams.get("shape") || undefined,
       origin: searchParams.get("origin") || undefined,
+      currency: searchParams.get("currency") || undefined,
       laboratoryId: searchParams.get("laboratoryId") || undefined,
     })
     type SearchParams = z.infer<typeof adminProductsSearchSchema>
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
       stoneCut,
       shape,
       origin,
+      currency,
       laboratoryId,
     } = data
     const limit = Math.min(Number(searchParams.get("limit")) || 20, 100)
@@ -71,6 +73,7 @@ export async function GET(request: NextRequest) {
       stoneCut: stoneCut ?? undefined,
       shape: shape ?? undefined,
       origin: origin ?? undefined,
+      currency: currency ?? undefined,
       laboratoryId: laboratoryId ?? undefined,
     })
     const isPremiumDealer = await isUserActivePremiumDealer(userId)

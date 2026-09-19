@@ -8,6 +8,7 @@ Added a new admin feature for managing app content areas, with a draft/publish w
 - `features/app-content/` — schemas, db layer, cache layer, permissions, actions, components
 - `features/rbac/feature-keys.ts` — `SETTINGS_APP_CONTENT` feature key
 - `app/admin/app-content/page.tsx` — the admin page
+- `export const instant = false` on that page — opts out of Cache Components Instant Navigation validation (`connection()` + session + draft DB read are request-time; same pattern as `app/admin/queue/page.tsx`)
 - `app/api/mobile/about-us`, `/follow-us`, `/help-support`, `/terms-conditions` — public read endpoints
 - `features/app-content/actions/app-content-icon.ts` — `uploadAppContentIconAction`, custom Follow Us icon upload (admin-only Server Action, not a route)
 - `components/admin/AdminSidebar.tsx` — "App Content" nav entry under Settings
